@@ -5,6 +5,34 @@
 # https://github.com/desktop-app/legal/blob/master/LEGAL
 
 {
+  'variables': {
+    'qrc_files': [
+      '<(submodules_loc)/lib_ui/fonts/fonts.qrc',
+    ],
+  },
+  'conditions': [
+    [ 'build_linux', {
+      'variables': {
+        'qrc_files': [
+          '<(submodules_loc)/lib_ui/qt_conf/linux.qrc',
+        ],
+      }
+    }],
+    [ 'build_mac', {
+      'variables': {
+        'qrc_files': [
+          '<(submodules_loc)/lib_ui/qt_conf/mac.qrc',
+        ],
+      },
+    }],
+    [ 'build_win', {
+      'variables': {
+        'qrc_files': [
+          '<(submodules_loc)/lib_ui/qt_conf/win.qrc',
+        ],
+      }
+    }],
+  ],
   'actions': [{
     'action_name': 'update_dependent_qrc',
     'inputs': [

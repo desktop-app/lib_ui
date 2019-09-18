@@ -249,15 +249,6 @@ radialSize: size(50px, 50px);
 radialLine: 3px;
 radialDuration: 350;
 radialPeriod: 3000;
-
-youtubeIcon: icon {
-	{ "media_youtube_play_bg", youtubePlayIconBg },
-	{ "media_youtube_play", youtubePlayIconFg, point(24px, 12px) },
-};
-videoIcon: icon {
-	{ "media_video_play_bg", videoPlayIconBg },
-	{ "media_video_play", videoPlayIconFg, point(12px, 12px) },
-};
 locationSize: size(320px, 240px);
 
 mediaPlayerSuppressDuration: 150;

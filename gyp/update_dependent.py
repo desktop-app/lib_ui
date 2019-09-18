@@ -35,7 +35,6 @@ def list_qrc_dependencies(file_path):
   dependencies = get_qrc_dependencies(file_path)
   for path in dependencies:
     print(path)
-  sys.exit(0)
 
 one_modified = 0
 def handle_qrc_dependencies(file_path):
@@ -160,6 +159,7 @@ elif request == 'qrc':
 elif request == 'qrc_list':
   for file_path in file_paths:
     list_qrc_dependencies(file_path)
+  sys.exit(0)
 else:
   eprint('Request required.')
 

@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/gui/fonts">
+    <file>OpenSans-Regular.ttf</file>
+    <file>OpenSans-Bold.ttf</file>
+    <file>OpenSans-Semibold.ttf</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/qt/etc">
+    <file alias="qt.conf">qt_linux.conf</file>
+  </qresource>
+  <qresource prefix="/fc">
+    <file>fc-custom.conf</file>
+  </qresource>
+</RCC>
