@@ -6,27 +6,27 @@
 
 {
   'includes': [
-    '../gyp_helpers/common/common.gypi',
+    '../gyp/helpers/common/common.gypi',
   ],
   'targets': [{
     'target_name': 'lib_ui',
     'hard_dependency': 1,
     'includes': [
-      '../gyp_helpers/common/library.gypi',
-      '../gyp_helpers/modules/qt.gypi',
-      '../gyp_helpers/modules/qt_moc.gypi',
-      '../gyp_helpers/modules/pch.gypi',
-      '../gyp_helpers/modules/openssl.gypi',
+      '../gyp/helpers/common/library.gypi',
+      '../gyp/helpers/modules/qt.gypi',
+      '../gyp/helpers/modules/qt_moc.gypi',
+      '../gyp/helpers/modules/pch.gypi',
+      '../gyp/helpers/modules/openssl.gypi',
       'gyp/styles_rule.gypi',
       'gyp/codegen_actions.gypi',
     ],
     'dependencies': [
-      '../codegen/codegen.gyp:codegen_emoji',
-      '../codegen/codegen.gyp:codegen_style',
-      '../lib_base/lib_base.gyp:lib_base',
+      '<(submodules_loc)/codegen/codegen.gyp:codegen_emoji',
+      '<(submodules_loc)/codegen/codegen.gyp:codegen_style',
+      '<(submodules_loc)/lib_base/lib_base.gyp:lib_base',
     ],
     'export_dependent_settings': [
-      '../lib_base/lib_base.gyp:lib_base',
+      '<(submodules_loc)/lib_base/lib_base.gyp:lib_base',
     ],
     'variables': {
       'src_loc': '.',
@@ -39,7 +39,7 @@
       'dependent_style_files': [
       ],
       'style_timestamp': '<(SHARED_INTERMEDIATE_DIR)/update_dependent_styles_ui.timestamp',
-      'list_sources_command': 'python ../lib_base/gyp/list_sources.py --input gyp/sources.txt --replace src_loc=<(src_loc)',
+      'list_sources_command': 'python <(submodules_loc)/lib_base/gyp/list_sources.py --input gyp/sources.txt --replace src_loc=<(src_loc)',
       'pch_source': '<(src_loc)/ui/ui_pch.cpp',
       'pch_header': '<(src_loc)/ui/ui_pch.h',
     },
