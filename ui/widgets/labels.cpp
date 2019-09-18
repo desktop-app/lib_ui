@@ -9,6 +9,7 @@
 #include "ui/text/text_entity.h"
 #include "ui/effects/animation_value.h"
 #include "ui/widgets/popup_menu.h"
+#include "ui/widgets/box_content_divider.h"
 #include "ui/basic_click_handlers.h" // UrlClickHandler
 #include "ui/inactive_press.h"
 
@@ -884,6 +885,16 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 	} else {
 		_text.draw(p, textLeft, _st.margin.top(), textWidth, _st.align, e->rect().y(), e->rect().bottom(), selection);
 	}
+}
+
+int DividerLabel::naturalWidth() const {
+	return -1;
+}
+
+void DividerLabel::resizeEvent(QResizeEvent *e) {
+	_background->lower();
+	_background->setGeometry(rect());
+	return PaddingWrap::resizeEvent(e);
 }
 
 } // namespace Ui

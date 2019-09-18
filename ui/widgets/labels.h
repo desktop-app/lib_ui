@@ -10,6 +10,7 @@
 #include "ui/wrap/padding_wrap.h"
 #include "ui/text/text.h"
 #include "ui/click_handler.h"
+#include "ui/widgets/box_content_divider.h"
 #include "styles/style_widgets.h"
 
 #include <QtCore/QTimer>
@@ -19,6 +20,7 @@ class QTouchEvent;
 namespace Ui {
 
 class PopupMenu;
+class BoxContentDivider;
 
 class CrossFadeAnimation {
 public:
@@ -213,6 +215,21 @@ private:
 	bool _touchInProgress = false;
 	QPoint _touchStart, _touchPrevPos, _touchPos;
 	QTimer _touchSelectTimer;
+
+};
+
+class DividerLabel : public PaddingWrap<FlatLabel> {
+public:
+	using PaddingWrap::PaddingWrap;
+
+	int naturalWidth() const override;
+
+protected:
+	void resizeEvent(QResizeEvent *e) override;
+
+private:
+	object_ptr<BoxContentDivider> _background
+		= object_ptr<BoxContentDivider>(this);
 
 };
 

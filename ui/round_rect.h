@@ -25,7 +25,10 @@ class RoundRect final {
 public:
 	RoundRect(ImageRoundRadius radius, const style::color &color);
 
-	void paint(QPainter &p, const QRect &rect) const;
+	void paint(
+		QPainter &p,
+		const QRect &rect,
+		RectParts parts = RectPart::Full) const;
 
 private:
 	style::color _color;

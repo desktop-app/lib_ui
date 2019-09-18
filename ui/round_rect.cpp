@@ -12,7 +12,6 @@
 
 namespace Ui {
 
-
 void DrawRoundedRect(
 		QPainter &p,
 		const QRect &rect,
@@ -75,8 +74,11 @@ RoundRect::RoundRect(
 	}, _lifetime);
 }
 
-void RoundRect::paint(QPainter &p, const QRect &rect) const {
-	DrawRoundedRect(p, rect, _color, _corners);
+void RoundRect::paint(
+		QPainter &p,
+		const QRect &rect,
+		RectParts parts) const {
+	DrawRoundedRect(p, rect, _color, _corners, parts);
 }
 
 } // namespace Ui

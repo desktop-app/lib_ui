@@ -34,6 +34,7 @@
       'style_files': [
         '<(src_loc)/ui/colors.palette',
         '<(src_loc)/ui/basic.style',
+        '<(src_loc)/ui/layers/layers.style',
         '<(src_loc)/ui/widgets/widgets.style',
       ],
       'dependent_style_files': [
