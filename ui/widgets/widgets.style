@@ -485,27 +485,6 @@ ImportantTooltip {
 	duration: int;
 }
 
-UserpicButton {
-	size: size;
-	photoSize: pixels;
-	photoPosition: point;
-	changeButton: RoundButton;
-	changeIcon: icon;
-	changeIconPosition: point;
-	duration: int;
-	uploadHeight: pixels;
-	uploadBg: color;
-	uploadIcon: icon;
-	uploadIconPosition: point;
-}
-
-FeedUserpicButton {
-	size: size;
-	innerSize: pixels;
-	innerPosition: point;
-	innerPart: UserpicButton;
-}
-
 InfoProfileButton {
 	textFg: color;
 	textFgOver: color;
@@ -988,45 +967,6 @@ defaultImportantTooltipLabel: FlatLabel(defaultFlatLabel) {
 		selectLinkFg: importantTooltipFgLink;
 	}
 }
-
-defaultChangeUserpicIcon: icon {{ "new_chat_photo", activeButtonFg }};
-defaultUploadUserpicIcon: icon {{ "upload_chat_photo", msgDateImgFg }};
-defaultUserpicButton: UserpicButton {
-	size: size(76px, 76px);
-	photoSize: 76px;
-	photoPosition: point(-1px, -1px);
-	changeButton: defaultActiveButton;
-	changeIcon: defaultChangeUserpicIcon;
-	changeIconPosition: point(23px, 25px);
-	duration: 500;
-	uploadHeight: 24px;
-	uploadBg: msgDateImgBgOver;
-	uploadIcon: defaultUploadUserpicIcon;
-	uploadIconPosition: point(-1px, 1px);
-}
-defaultFeedUserpicButton: FeedUserpicButton {
-	size: size(76px, 76px);
-	innerSize: 76px;
-	innerPosition: point(-1px, -1px);
-	innerPart: defaultUserpicButton;
-}
-
-historyToDownBelow: icon {
-	{ "history_down_shadow", historyToDownShadow },
-	{ "history_down_circle", historyToDownBg, point(4px, 4px) },
-};
-historyToDownBelowOver: icon {
-	{ "history_down_shadow", historyToDownShadow },
-	{ "history_down_circle", historyToDownBgOver, point(4px, 4px) },
-};
-contactsAddIconBelow: icon {
-	{ "history_down_shadow", historyToDownShadow },
-	{ "history_down_circle", activeButtonBg, point(4px, 4px) },
-};
-contactsAddIconBelowOver: icon {
-	{ "history_down_shadow", historyToDownShadow },
-	{ "history_down_circle", activeButtonBgOver, point(4px, 4px) },
-};
 
 BotKeyboardButton {
 	margin: pixels;
