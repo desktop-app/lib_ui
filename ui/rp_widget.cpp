@@ -27,6 +27,11 @@ void ResizeFitChild(
 	}, child->lifetime());
 }
 
+rpl::producer<not_null<QEvent*>> RpWidgetMethods::events() const {
+	auto &stream = eventStreams().events;
+	return stream.events();
+}
+
 rpl::producer<QRect> RpWidgetMethods::geometryValue() const {
 	auto &stream = eventStreams().geometry;
 	return stream.events_starting_with_copy(callGetGeometry());
@@ -110,11 +115,27 @@ rpl::lifetime &RpWidgetMethods::lifetime() {
 }
 
 bool RpWidgetMethods::handleEvent(QEvent *event) {
+	Expects(event != nullptr);
+
+	auto streams = _eventStreams.get();
+	if (!streams) {
+		return eventHook(event);
+	}
+	auto that = QPointer<QObject>();
+	if (streams->events.has_consumers()) {
+		that = callCreateWeak();
+		streams->events.fire_copy(event);
+		if (!that) {
+			return true;
+		}
+	}
 	switch (event->type()) {
 	case QEvent::Move:
 	case QEvent::Resize:
-		if (auto streams = _eventStreams.get()) {
-			auto that = callCreateWeak();
+		if (streams->geometry.has_consumers()) {
+			if (!that) {
+				that = callCreateWeak();
+			}
 			streams->geometry.fire_copy(callGetGeometry());
 			if (!that) {
 				return true;
@@ -123,10 +144,12 @@ bool RpWidgetMethods::handleEvent(QEvent *event) {
 		break;
 
 	case QEvent::Paint:
-		if (auto streams = _eventStreams.get()) {
-			auto that = callCreateWeak();
-			streams->paint.fire_copy(
-				static_cast<QPaintEvent*>(event)->rect());
+		if (streams->paint.has_consumers()) {
+			if (!that) {
+				that = callCreateWeak();
+			}
+			const auto rect = static_cast<QPaintEvent*>(event)->rect();
+			streams->paint.fire_copy(rect);
 			if (!that) {
 				return true;
 			}

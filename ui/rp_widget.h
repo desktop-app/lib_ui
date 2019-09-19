@@ -252,6 +252,7 @@ class RpWidgetWrap;
 
 class RpWidgetMethods {
 public:
+	rpl::producer<not_null<QEvent*>> events() const;
 	rpl::producer<QRect> geometryValue() const;
 	rpl::producer<QSize> sizeValue() const;
 	rpl::producer<int> heightValue() const;
@@ -275,7 +276,6 @@ public:
 		}, lifetime());
 	}
 
-
 	rpl::lifetime &lifetime();
 
 	virtual ~RpWidgetMethods() = default;
@@ -289,6 +289,7 @@ private:
 	friend class RpWidgetWrap;
 
 	struct EventStreams {
+		rpl::event_stream<not_null<QEvent*>> events;
 		rpl::event_stream<QRect> geometry;
 		rpl::event_stream<QRect> paint;
 		rpl::event_stream<bool> shown;
