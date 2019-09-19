@@ -6,7 +6,7 @@
 //
 #include "ui/ui_log.h"
 
-#include "ui/ui_integration.h"
+#include "ui/integration.h"
 
 namespace Ui {
 

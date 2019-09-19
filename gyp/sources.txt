@@ -100,6 +100,8 @@
 <(src_loc)/ui/focus_persister.h
 <(src_loc)/ui/inactive_press.cpp
 <(src_loc)/ui/inactive_press.h
+<(src_loc)/ui/integration.cpp
+<(src_loc)/ui/integration.h
 <(src_loc)/ui/main_queue_processor.cpp
 <(src_loc)/ui/main_queue_processor.h
 <(src_loc)/ui/painter.h
@@ -108,8 +110,6 @@
 <(src_loc)/ui/round_rect.h
 <(src_loc)/ui/rp_widget.cpp
 <(src_loc)/ui/rp_widget.h
-<(src_loc)/ui/ui_integration.cpp
-<(src_loc)/ui/ui_integration.h
 <(src_loc)/ui/ui_log.cpp
 <(src_loc)/ui/ui_log.h
 <(src_loc)/ui/ui_utility.cpp

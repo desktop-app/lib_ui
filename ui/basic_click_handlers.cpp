@@ -8,7 +8,7 @@
 
 #include "ui/widgets/tooltip.h"
 #include "ui/text/text_entity.h"
-#include "ui/ui_integration.h"
+#include "ui/integration.h"
 #include "base/qthelp_url.h"
 
 #include <QtCore/QUrl>

@@ -7,7 +7,7 @@
 #include "ui/abstract_button.h"
 
 #include "ui/ui_utility.h"
-#include "ui/ui_integration.h"
+#include "ui/integration.h"
 
 #include <QtGui/QtEvents>
 

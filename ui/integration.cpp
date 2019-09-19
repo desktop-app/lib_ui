@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/ui_integration.h"
+#include "ui/integration.h"
 
 #include "ui/text/text_entity.h"
 #include "ui/basic_click_handlers.h"
@@ -29,9 +29,9 @@ Integration &Integration::Instance() {
 void Integration::textActionsUpdated() {
 }
 
-void Integration::activationFromTopPanel() {		
+void Integration::activationFromTopPanel() {
 }
-	
+
 std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 		EntityType type,
 		const QString &text,

@@ -8,7 +8,7 @@
 
 #include "base/unique_qptr.h"
 #include "ui/rect_part.h"
-#include "ui/ui_integration.h"
+#include "ui/integration.h"
 
 #include <QtCore/QEvent>
 

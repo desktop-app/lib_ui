@@ -10,7 +10,7 @@
 #include "ui/text/text_block.h"
 #include "ui/text/text_isolated_emoji.h"
 #include "ui/emoji_config.h"
-#include "ui/ui_integration.h"
+#include "ui/integration.h"
 #include "base/platform/base_platform_info.h"
 
 #include <private/qfontengine_p.h>
