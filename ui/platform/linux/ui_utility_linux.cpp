@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/platform/linux/ui_platform_utility_linux.h"
+#include "ui/platform/linux/ui_utility_linux.h"
 
 #include "base/flat_set.h"
 #include "ui/ui_log.h"

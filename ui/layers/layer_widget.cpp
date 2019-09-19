@@ -697,8 +697,8 @@ void LayerStackWidget::showSpecialLayer(
 }
 
 bool LayerStackWidget::showSectionInternal(
-		not_null<Window::SectionMemento*> memento,
-		const Window::SectionShow &params) {
+		not_null<::Window::SectionMemento*> memento,
+		const ::Window::SectionShow &params) {
 	if (_specialLayer) {
 		return _specialLayer->showSectionInternal(memento, params);
 	}

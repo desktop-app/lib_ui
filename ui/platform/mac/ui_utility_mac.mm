@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/platform/mac/ui_platform_utility_mac.h"
+#include "ui/platform/mac/ui_platform_mac.h"
 
 #include "ui/integration.h"
 

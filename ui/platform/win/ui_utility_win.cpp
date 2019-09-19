@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/platform/win/ui_platform_utility_win.h"
+#include "ui/platform/win/ui_utility_win.h"
 
 #include <QtWidgets/QApplication>
 

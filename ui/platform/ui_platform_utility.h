@@ -35,9 +35,9 @@ void DrainMainQueue(); // Needed only if UseMainQueueGeneric() is false.
 // Platform dependent implementations.
 
 #ifdef Q_OS_MAC
-#include "ui/platform/mac/ui_platform_utility_mac.h"
+#include "ui/platform/mac/ui_utility_mac.h"
 #elif defined Q_OS_LINUX // Q_OS_MAC
-#include "ui/platform/linux/ui_platform_utility_linux.h"
+#include "ui/platform/linux/ui_utility_linux.h"
 #elif defined Q_OS_WINRT || defined Q_OS_WIN // Q_OS_MAC || Q_OS_LINUX
-#include "ui/platform/win/ui_platform_utility_win.h"
+#include "ui/platform/win/ui_utility_win.h"
 #endif // Q_OS_MAC || Q_OS_LINUX || Q_OS_WINRT || Q_OS_WIN

@@ -57,8 +57,8 @@ public:
 		return false;
 	}
 	virtual bool showSectionInternal(
-			not_null<Window::SectionMemento*> memento,
-			const Window::SectionShow &params) {
+			not_null<::Window::SectionMemento*> memento,
+			const ::Window::SectionShow &params) {
 		return false;
 	}
 	virtual bool closeByOutsideClick() const {
@@ -118,8 +118,8 @@ public:
 	void removeBodyCache();
 
 	bool showSectionInternal(
-		not_null<Window::SectionMemento*> memento,
-		const Window::SectionShow &params);
+		not_null<::Window::SectionMemento*> memento,
+		const ::Window::SectionShow &params);
 
 	bool layerShown() const;
 
