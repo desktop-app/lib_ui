@@ -1128,3 +1128,20 @@ defaultLevelMeter: LevelMeter {
 	activeFg: mediaPlayerActiveFg;
 	inactiveFg: mediaPlayerInactiveFg;
 }
+
+menuToggleIcon: icon {{ "title_menu_dots", menuIconFg }};
+menuToggleIconOver: icon {{ "title_menu_dots", menuIconFgOver }};
+menuToggle: IconButton {
+	width: 40px;
+	height: 40px;
+
+	icon: menuToggleIcon;
+	iconOver: menuToggleIconOver;
+	iconPosition: point(16px, 10px);
+
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 40px;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: windowBgOver;
+	}
+}

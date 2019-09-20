@@ -222,8 +222,8 @@ void DropdownMenu::childHiding(DropdownMenu *child) {
 
 void DropdownMenu::hideFinish() {
 	_menu->clearSelection();
-	if (_hiddenCallback) {
-		_hiddenCallback();
+	if (const auto onstack = _hiddenCallback) {
+		onstack();
 	}
 }
 

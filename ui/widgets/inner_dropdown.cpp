@@ -234,10 +234,13 @@ void InnerDropdown::hideFinished() {
 	_cache = QPixmap();
 	_ignoreShowEvents = false;
 	if (!isHidden()) {
-		if (_hiddenCallback) {
-			_hiddenCallback();
+		const auto weak = Ui::MakeWeak(this);
+		if (const auto onstack = _hiddenCallback) {
+			onstack();
 		}
-		hide();
+		if (weak) {
+			hide();
+		}
 	}
 }
 
@@ -256,19 +259,27 @@ void InnerDropdown::prepareCache() {
 }
 
 void InnerDropdown::startOpacityAnimation(bool hiding) {
+	const auto weak = Ui::MakeWeak(this);
 	if (hiding) {
-		if (_hideStartCallback) {
-			_hideStartCallback();
+		if (const auto onstack = _hideStartCallback) {
+			onstack();
 		}
-	} else if (_showStartCallback) {
-		_showStartCallback();
+	} else if (const auto onstack = _showStartCallback) {
+		onstack();
+	}
+	if (!weak) {
+		return;
 	}
 
 	_hiding = false;
 	prepareCache();
 	_hiding = hiding;
 	hideChildren();
-	_a_opacity.start([this] { opacityAnimationCallback(); }, _hiding ? 1. : 0., _hiding ? 0. : 1., _st.duration);
+	_a_opacity.start(
+		[=] { opacityAnimationCallback(); },
+		_hiding ? 1. : 0.,
+		_hiding ? 0. : 1.,
+		_st.duration);
 }
 
 void InnerDropdown::showStarted() {
