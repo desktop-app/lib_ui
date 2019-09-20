@@ -114,9 +114,9 @@ public:
 	String &operator=(const String &other);
 	String &operator=(String &&other);
 
-	int countWidth(int width) const;
-	int countHeight(int width) const;
-	void countLineWidths(int width, QVector<int> *lineWidths) const;
+	int countWidth(int width, bool breakEverywhere = false) const;
+	int countHeight(int width, bool breakEverywhere = false) const;
+	void countLineWidths(int width, QVector<int> *lineWidths, bool breakEverywhere = false) const;
 	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = _defaultOptions);
 	void setRichText(const style::TextStyle &st, const QString &text, TextParseOptions options = _defaultOptions);
 	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = _defaultOptions);
@@ -208,7 +208,7 @@ private:
 	// callback(lineWidth, lineHeight) will be called for all lines with:
 	// QFixed lineWidth, int lineHeight
 	template <typename Callback>
-	void enumerateLines(int w, Callback callback) const;
+	void enumerateLines(int w, bool breakEverywhere, Callback callback) const;
 
 	void recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir = Qt::LayoutDirectionAuto);
 

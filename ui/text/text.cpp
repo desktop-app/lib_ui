@@ -2890,13 +2890,13 @@ bool String::removeSkipBlock() {
 	return true;
 }
 
-int String::countWidth(int width) const {
+int String::countWidth(int width, bool breakEverywhere) const {
 	if (QFixed(width) >= _maxWidth) {
 		return _maxWidth.ceil().toInt();
 	}
 
 	QFixed maxLineWidth = 0;
-	enumerateLines(width, [&maxLineWidth](QFixed lineWidth, int lineHeight) {
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineHeight) {
 		if (lineWidth > maxLineWidth) {
 			maxLineWidth = lineWidth;
 		}
@@ -2904,25 +2904,28 @@ int String::countWidth(int width) const {
 	return maxLineWidth.ceil().toInt();
 }
 
-int String::countHeight(int width) const {
+int String::countHeight(int width, bool breakEverywhere) const {
 	if (QFixed(width) >= _maxWidth) {
 		return _minHeight;
 	}
 	int result = 0;
-	enumerateLines(width, [&result](QFixed lineWidth, int lineHeight) {
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineHeight) {
 		result += lineHeight;
 	});
 	return result;
 }
 
-void String::countLineWidths(int width, QVector<int> *lineWidths) const {
-	enumerateLines(width, [lineWidths](QFixed lineWidth, int lineHeight) {
+void String::countLineWidths(int width, QVector<int> *lineWidths, bool breakEverywhere) const {
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineHeight) {
 		lineWidths->push_back(lineWidth.ceil().toInt());
 	});
 }
 
 template <typename Callback>
-void String::enumerateLines(int w, Callback callback) const {
+void String::enumerateLines(
+		int w,
+		bool breakEverywhere,
+		Callback callback) const {
 	QFixed width = w;
 	if (width < _minResizeWidth) width = _minResizeWidth;
 
@@ -2994,7 +2997,7 @@ void String::enumerateLines(int w, Callback callback) const {
 					continue;
 				}
 
-				if (f != j) {
+				if (f != j && !breakEverywhere) {
 					j = f;
 					widthLeft = f_wLeft;
 					lineHeight = f_lineHeight;

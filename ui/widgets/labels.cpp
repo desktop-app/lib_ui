@@ -266,10 +266,10 @@ int FlatLabel::countTextWidth() const {
 		&& _tryMakeSimilarLines) {
 		auto large = _allowedWidth;
 		auto small = _allowedWidth / 2;
-		const auto largeHeight = _text.countHeight(large);
+		const auto largeHeight = _text.countHeight(large, _breakEverywhere);
 		while (large - small > 1) {
 			const auto middle = (large + small) / 2;
-			if (largeHeight == _text.countHeight(middle)) {
+			if (largeHeight == _text.countHeight(middle, _breakEverywhere)) {
 				large = middle;
 			} else {
 				small = middle;
@@ -281,8 +281,10 @@ int FlatLabel::countTextWidth() const {
 }
 
 int FlatLabel::countTextHeight(int textWidth) {
-	_fullTextHeight = _text.countHeight(textWidth);
-	return _st.maxHeight ? qMin(_fullTextHeight, _st.maxHeight) : _fullTextHeight;
+	_fullTextHeight = _text.countHeight(textWidth, _breakEverywhere);
+	return _st.maxHeight
+		? qMin(_fullTextHeight, _st.maxHeight)
+		: _fullTextHeight;
 }
 
 void FlatLabel::refreshSize() {
@@ -693,7 +695,7 @@ std::unique_ptr<CrossFadeAnimation> FlatLabel::CrossFade(
 		auto result = Data();
 		result.full = GrabWidgetToImage(label, QRect(), bg->c);
 		auto textWidth = label->width() - label->_st.margin.left() - label->_st.margin.right();
-		label->_text.countLineWidths(textWidth, &result.lineWidths);
+		label->_text.countLineWidths(textWidth, &result.lineWidths, label->_breakEverywhere);
 		result.lineHeight = label->_st.style.font->height;
 		auto addedHeight = (label->_st.style.lineHeight - result.lineHeight);
 		if (addedHeight > 0) {
