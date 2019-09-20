@@ -22,6 +22,8 @@
 <(src_loc)/ui/layers/box_layer_widget.h
 <(src_loc)/ui/layers/generic_box.cpp
 <(src_loc)/ui/layers/generic_box.h
+<(src_loc)/ui/layers/layer_manager.cpp
+<(src_loc)/ui/layers/layer_manager.h
 <(src_loc)/ui/layers/layer_widget.cpp
 <(src_loc)/ui/layers/layer_widget.h
 <(src_loc)/ui/platform/ui_platform_utility.h
