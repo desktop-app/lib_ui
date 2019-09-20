@@ -25,8 +25,8 @@ Manager::Manager(not_null<QWidget*> parent, const CreateTag &)
 bool Manager::eventFilter(QObject *o, QEvent *e) {
 	if (e->type() == QEvent::Resize) {
 		for (auto i = _toastByWidget.cbegin(), e = _toastByWidget.cend(); i != e; ++i) {
-			if (i.key()->parentWidget() == o) {
-				i.key()->onParentResized();
+			if (i->first->parentWidget() == o) {
+				i->first->onParentResized();
 			}
 		}
 	}
@@ -45,13 +45,13 @@ not_null<Manager*> Manager::instance(not_null<QWidget*> parent) {
 }
 
 void Manager::addToast(std::unique_ptr<Instance> &&toast) {
-	_toasts.push_back(toast.release());
-	Instance *t = _toasts.back();
-	Widget *widget = t->_widget.get();
+	_toasts.push_back(std::move(toast));
+	const auto t = _toasts.back().get();
+	const auto widget = t->_widget.get();
 
-	_toastByWidget.insert(widget, t);
+	_toastByWidget.emplace(widget, t);
 	connect(widget, SIGNAL(destroyed(QObject*)), this, SLOT(onToastWidgetDestroyed(QObject*)));
-	if (auto parent = widget->parentWidget()) {
+	if (const auto parent = widget->parentWidget()) {
 		auto found = false;
 		for (auto i = _toastParents.begin(); i != _toastParents.cend();) {
 			if (*i == parent) {
@@ -64,14 +64,16 @@ void Manager::addToast(std::unique_ptr<Instance> &&toast) {
 			}
 		}
 		if (!found) {
-			_toastParents.insert(parent);
+			_toastParents.push_back(parent);
 			parent->installEventFilter(this);
 		}
 	}
 
-	auto oldHideNearestMs = _toastByHideTime.isEmpty() ? 0LL : _toastByHideTime.firstKey();
-	_toastByHideTime.insert(t->_hideAtMs, t);
-	if (!oldHideNearestMs || _toastByHideTime.firstKey() < oldHideNearestMs) {
+	const auto nearestHide = _toastByHideTime.empty()
+		? 0LL
+		: _toastByHideTime.begin()->first;
+	_toastByHideTime.emplace(t->_hideAtMs, t);
+	if (!nearestHide || _toastByHideTime.begin()->first < nearestHide) {
 		startNextHideTimer();
 	}
 }
@@ -79,8 +81,8 @@ void Manager::addToast(std::unique_ptr<Instance> &&toast) {
 void Manager::hideByTimer() {
 	auto now = crl::now();
 	for (auto i = _toastByHideTime.begin(); i != _toastByHideTime.cend();) {
-		if (i.key() <= now) {
-			auto toast = i.value();
+		if (i->first <= now) {
+			const auto toast = i->second;
 			i = _toastByHideTime.erase(i);
 			toast->hideAnimated();
 		} else {
@@ -91,35 +93,40 @@ void Manager::hideByTimer() {
 }
 
 void Manager::onToastWidgetDestroyed(QObject *widget) {
-	auto i = _toastByWidget.find(static_cast<Widget*>(widget));
-	if (i != _toastByWidget.cend()) {
-		auto toast = i.value();
-		_toastByWidget.erase(i);
-		toast->_widget.release();
+	const auto i = _toastByWidget.find(static_cast<Widget*>(widget));
+	if (i == _toastByWidget.cend()) {
+		return;
+	}
+	const auto toast = i->second;
+	_toastByWidget.erase(i);
+	toast->_widget.release();
 
-		int index = _toasts.indexOf(toast);
-		if (index >= 0) {
-			_toasts.removeAt(index);
-			delete toast;
-		}
+	const auto j = ranges::find(
+		_toasts,
+		toast.get(),
+		&std::unique_ptr<Instance>::get);
+	if (j != end(_toasts)) {
+		_toasts.erase(j);
 	}
 }
 
 void Manager::startNextHideTimer() {
-	if (_toastByHideTime.isEmpty()) return;
+	if (_toastByHideTime.empty()) return;
 
 	auto ms = crl::now();
-	if (ms >= _toastByHideTime.firstKey()) {
+	if (ms >= _toastByHideTime.begin()->first) {
 		crl::on_main(this, [=] {
 			hideByTimer();
 		});
 	} else {
-		_hideTimer.callOnce(_toastByHideTime.firstKey() - ms);
+		_hideTimer.callOnce(_toastByHideTime.begin()->first - ms);
 	}
 }
 
 Manager::~Manager() {
 	ManagersMap.remove(parent());
+	_toastByWidget.clear();
+	_toasts.clear();
 }
 
 } // namespace internal

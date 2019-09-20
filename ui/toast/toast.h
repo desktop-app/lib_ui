@@ -16,11 +16,11 @@ class Manager;
 class Widget;
 } // namespace internal
 
-static constexpr const int DefaultDuration = 1500;
+inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
 	QString text;
 	QMargins padding;
-	int durationMs = DefaultDuration;
+	crl::time durationMs = kDefaultDuration;
 	int minWidth = 0;
 	int maxWidth = 0;
 	int maxLines = 16;

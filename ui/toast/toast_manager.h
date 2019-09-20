@@ -43,10 +43,10 @@ private:
 	base::Timer _hideTimer;
 	crl::time _nextHide = 0;
 
-	QMultiMap<crl::time, Instance*> _toastByHideTime;
-	QMap<Widget*, Instance*> _toastByWidget;
-	QList<Instance*> _toasts;
-	OrderedSet<QPointer<QWidget>> _toastParents;
+	base::flat_multi_map<crl::time, not_null<Instance*>> _toastByHideTime;
+	base::flat_map<not_null<Widget*>, not_null<Instance*>> _toastByWidget;
+	std::vector<std::unique_ptr<Instance>> _toasts;
+	std::vector<QPointer<QWidget>> _toastParents;
 
 };
 
