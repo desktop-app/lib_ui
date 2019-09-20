@@ -1145,3 +1145,19 @@ menuToggle: IconButton {
 		color: windowBgOver;
 	}
 }
+
+backButtonIcon: icon {{ "box_button_back", menuIconFg }};
+backButtonIconOver: icon {{ "box_button_back", menuIconFgOver }};
+backButton: IconButton(defaultIconButton) {
+	width: 40px;
+	height: 40px;
+
+	icon: backButtonIcon;
+	iconOver: backButtonIconOver;
+
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 40px;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: windowBgOver;
+	}
+}
