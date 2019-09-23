@@ -45,12 +45,16 @@ void CrossFadeAnimation::addLine(Part was, Part now) {
 	_lines.push_back(Line(std::move(was), std::move(now)));
 }
 
-void CrossFadeAnimation::paintFrame(Painter &p, float64 dt) {
+void CrossFadeAnimation::paintFrame(QPainter &p, float64 dt) {
 	auto progress = anim::linear(1., dt);
 	paintFrame(p, progress, 1. - progress, progress);
 }
 
-void CrossFadeAnimation::paintFrame(Painter &p, float64 positionReady, float64 alphaWas, float64 alphaNow) {
+void CrossFadeAnimation::paintFrame(
+		QPainter &p,
+		float64 positionReady,
+		float64 alphaWas,
+		float64 alphaNow) {
 	if (_lines.isEmpty()) return;
 
 	for (const auto &line : std::as_const(_lines)) {
@@ -58,7 +62,12 @@ void CrossFadeAnimation::paintFrame(Painter &p, float64 positionReady, float64 a
 	}
 }
 
-void CrossFadeAnimation::paintLine(Painter &p, const Line &line, float64 positionReady, float64 alphaWas, float64 alphaNow) {
+void CrossFadeAnimation::paintLine(
+		QPainter &p,
+		const Line &line,
+		float64 positionReady,
+		float64 alphaWas,
+		float64 alphaNow) {
 	auto &snapshotWas = line.was.snapshot;
 	auto &snapshotNow = line.now.snapshot;
 	if (snapshotWas.isNull() && snapshotNow.isNull()) {

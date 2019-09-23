@@ -32,8 +32,12 @@ public:
 	};
 	void addLine(Part was, Part now);
 
-	void paintFrame(Painter &p, float64 dt);
-	void paintFrame(Painter &p, float64 positionReady, float64 alphaWas, float64 alphaNow);
+	void paintFrame(QPainter &p, float64 dt);
+	void paintFrame(
+		QPainter &p,
+		float64 positionReady,
+		float64 alphaWas,
+		float64 alphaNow);
 
 private:
 	struct Line {
@@ -42,7 +46,12 @@ private:
 		Part was;
 		Part now;
 	};
-	void paintLine(Painter &p, const Line &line, float64 positionReady, float64 alphaWas, float64 alphaNow);
+	void paintLine(
+		QPainter &p,
+		const Line &line,
+		float64 positionReady,
+		float64 alphaWas,
+		float64 alphaNow);
 
 	style::color _bg;
 	QList<Line> _lines;
