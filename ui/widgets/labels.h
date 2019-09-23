@@ -24,7 +24,18 @@ class BoxContentDivider;
 
 class CrossFadeAnimation {
 public:
-	CrossFadeAnimation(style::color bg);
+	struct Data {
+		QImage full;
+		QVector<int> lineWidths;
+		QPoint position;
+		style::align align;
+		style::font font;
+		style::margins margin;
+		int lineHeight = 0;
+		int lineAddTop = 0;
+	};
+
+	CrossFadeAnimation(style::color bg, Data &&from, Data &&to);
 
 	struct Part {
 		QPixmap snapshot;
@@ -126,6 +137,10 @@ public:
 	// ClickHandlerHost interface
 	void clickHandlerActiveChanged(const ClickHandlerPtr &action, bool active) override;
 	void clickHandlerPressedChanged(const ClickHandlerPtr &action, bool pressed) override;
+
+	[[nodiscard]] CrossFadeAnimation::Data crossFadeData(
+		style::color bg,
+		QPoint basePosition = QPoint());
 
 	static std::unique_ptr<CrossFadeAnimation> CrossFade(
 		not_null<FlatLabel*> from,

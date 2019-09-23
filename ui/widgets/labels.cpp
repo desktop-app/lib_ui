@@ -38,7 +38,45 @@ TextParseOptions _labelMarkedOptions = {
 
 } // namespace
 
-CrossFadeAnimation::CrossFadeAnimation(style::color bg) : _bg(bg) {
+CrossFadeAnimation::CrossFadeAnimation(
+		style::color bg,
+		Data &&was,
+		Data &&now)
+: _bg(bg) {
+	const auto maxLines = qMax(was.lineWidths.size(), now.lineWidths.size());
+	auto fillDataTill = [&](Data &data) {
+		for (auto i = data.lineWidths.size(); i != maxLines; ++i) {
+			data.lineWidths.push_back(-1);
+		}
+	};
+	fillDataTill(was);
+	fillDataTill(now);
+	auto preparePart = [](const Data &data, int index, const Data &other) {
+		auto result = CrossFadeAnimation::Part();
+		auto lineWidth = data.lineWidths[index];
+		if (lineWidth < 0) {
+			lineWidth = other.lineWidths[index];
+		}
+		const auto pixelRatio = style::DevicePixelRatio();
+		auto fullWidth = data.full.width() / pixelRatio;
+		auto top = index * data.lineHeight + data.lineAddTop;
+		auto left = 0;
+		if (data.align & Qt::AlignHCenter) {
+			left += (fullWidth - lineWidth) / 2;
+		} else if (data.align & Qt::AlignRight) {
+			left += (fullWidth - lineWidth);
+		}
+		auto snapshotRect = data.full.rect().intersected(QRect(left * pixelRatio, top * pixelRatio, lineWidth * pixelRatio, data.font->height * pixelRatio));
+		if (!snapshotRect.isEmpty()) {
+			result.snapshot = PixmapFromImage(data.full.copy(snapshotRect));
+			result.snapshot.setDevicePixelRatio(pixelRatio);
+		}
+		result.position = data.position + QPoint(data.margin.left() + left, data.margin.top() + top);
+		return result;
+	};
+	for (int i = 0; i != maxLines; ++i) {
+		addLine(preparePart(was, i, now), preparePart(now, i, was));
+	}
 }
 
 void CrossFadeAnimation::addLine(Part was, Part now) {
@@ -92,9 +130,9 @@ void CrossFadeAnimation::paintLine(
 		if (topDelta > 0) {
 			p.fillRect(left, topWas - topDelta, snapshotWas.width() / pixelRatio, topDelta, _bg);
 		}
-	}
-	if (widthDelta > 0) {
-		p.fillRect(left + (snapshotWas.width() / pixelRatio), topNow, widthDelta, snapshotNow.height() / pixelRatio, _bg);
+		if (widthDelta > 0) {
+			p.fillRect(left + (snapshotWas.width() / pixelRatio), topNow, widthDelta, snapshotNow.height() / pixelRatio, _bg);
+		}
 	}
 
 	p.setOpacity(alphaNow);
@@ -103,9 +141,9 @@ void CrossFadeAnimation::paintLine(
 		if (topDelta < 0) {
 			p.fillRect(left, topNow + topDelta, snapshotNow.width() / pixelRatio, -topDelta, _bg);
 		}
-	}
-	if (widthDelta < 0) {
-		p.fillRect(left + (snapshotNow.width() / pixelRatio), topWas, -widthDelta, snapshotWas.height() / pixelRatio, _bg);
+		if (widthDelta < 0) {
+			p.fillRect(left + (snapshotNow.width() / pixelRatio), topWas, -widthDelta, snapshotWas.height() / pixelRatio, _bg);
+		}
 	}
 }
 
@@ -686,73 +724,36 @@ void FlatLabel::clickHandlerPressedChanged(const ClickHandlerPtr &action, bool a
 	update();
 }
 
+CrossFadeAnimation::Data FlatLabel::crossFadeData(
+		style::color bg,
+		QPoint basePosition) {
+	auto result = CrossFadeAnimation::Data();
+	result.full = GrabWidgetToImage(this, QRect(), bg->c);
+	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
+	_text.countLineWidths(textWidth, &result.lineWidths, _breakEverywhere);
+	result.lineHeight = _st.style.font->height;
+	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
+	if (addedHeight > 0) {
+		result.lineAddTop = addedHeight / 2;
+		result.lineHeight += addedHeight;
+	}
+	result.position = pos();
+	result.align = _st.align;
+	result.font = _st.style.font;
+	result.margin = _st.margin;
+	return result;
+}
+
 std::unique_ptr<CrossFadeAnimation> FlatLabel::CrossFade(
 		not_null<FlatLabel*> from,
 		not_null<FlatLabel*> to,
 		style::color bg,
 		QPoint fromPosition,
 		QPoint toPosition) {
-	auto result = std::make_unique<CrossFadeAnimation>(bg);
-
-	struct Data {
-		QImage full;
-		QVector<int> lineWidths;
-		int lineHeight = 0;
-		int lineAddTop = 0;
-	};
-	auto prepareData = [&bg](not_null<FlatLabel*> label) {
-		auto result = Data();
-		result.full = GrabWidgetToImage(label, QRect(), bg->c);
-		auto textWidth = label->width() - label->_st.margin.left() - label->_st.margin.right();
-		label->_text.countLineWidths(textWidth, &result.lineWidths, label->_breakEverywhere);
-		result.lineHeight = label->_st.style.font->height;
-		auto addedHeight = (label->_st.style.lineHeight - result.lineHeight);
-		if (addedHeight > 0) {
-			result.lineAddTop = addedHeight / 2;
-			result.lineHeight += addedHeight;
-		}
-		return result;
-	};
-	auto was = prepareData(from);
-	auto now = prepareData(to);
-
-	auto maxLines = qMax(was.lineWidths.size(), now.lineWidths.size());
-	auto fillDataTill = [maxLines](Data &data) {
-		for (auto i = data.lineWidths.size(); i != maxLines; ++i) {
-			data.lineWidths.push_back(-1);
-		}
-	};
-	fillDataTill(was);
-	fillDataTill(now);
-	auto preparePart = [](FlatLabel *label, QPoint position, Data &data, int index, Data &other) {
-		auto result = CrossFadeAnimation::Part();
-		auto lineWidth = data.lineWidths[index];
-		if (lineWidth < 0) {
-			lineWidth = other.lineWidths[index];
-		}
-		const auto pixelRatio = style::DevicePixelRatio();
-		auto fullWidth = data.full.width() / pixelRatio;
-		auto top = index * data.lineHeight + data.lineAddTop;
-		auto left = 0;
-		if (label->_st.align & Qt::AlignHCenter) {
-			left += (fullWidth - lineWidth) / 2;
-		} else if (label->_st.align & Qt::AlignRight) {
-			left += (fullWidth - lineWidth);
-		}
-		auto snapshotRect = data.full.rect().intersected(QRect(left * pixelRatio, top * pixelRatio, lineWidth * pixelRatio, label->_st.style.font->height * pixelRatio));
-		if (!snapshotRect.isEmpty()) {
-			result.snapshot = PixmapFromImage(data.full.copy(snapshotRect));
-			result.snapshot.setDevicePixelRatio(pixelRatio);
-		}
-		auto positionBase = position + label->pos();
-		result.position = positionBase + QPoint(label->_st.margin.left() + left, label->_st.margin.top() + top);
-		return result;
-	};
-	for (int i = 0; i != maxLines; ++i) {
-		result->addLine(preparePart(from, fromPosition, was, i, now), preparePart(to, toPosition, now, i, was));
-	}
-
-	return result;
+	return std::make_unique<CrossFadeAnimation>(
+		bg,
+		from->crossFadeData(bg, fromPosition),
+		to->crossFadeData(bg, toPosition));
 }
 
 Text::StateResult FlatLabel::dragActionUpdate() {
