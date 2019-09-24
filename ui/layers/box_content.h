@@ -73,6 +73,7 @@ public:
 	virtual void setNoContentMargin(bool noContentMargin) = 0;
 	virtual bool isBoxShown() const = 0;
 	virtual void closeBox() = 0;
+	virtual void triggerButton(int index) = 0;
 
 	template <typename BoxType>
 	QPointer<BoxType> show(
@@ -101,6 +102,9 @@ public:
 	}
 	void closeBox() {
 		getDelegate()->closeBox();
+	}
+	void triggerButton(int index) {
+		getDelegate()->triggerButton(index);
 	}
 
 	void setTitle(rpl::producer<QString> title);
@@ -158,7 +162,7 @@ public:
 		setFocus();
 	}
 
-	rpl::producer<> boxClosing() const {
+	[[nodiscard]] rpl::producer<> boxClosing() const {
 		return _boxClosingStream.events();
 	}
 	void notifyBoxClosing() {
@@ -171,7 +175,7 @@ public:
 		prepare();
 		finishPrepare();
 	}
-	not_null<BoxContentDelegate*> getDelegate() const {
+	[[nodiscard]] not_null<BoxContentDelegate*> getDelegate() const {
 		return _delegate;
 	}
 

@@ -72,6 +72,8 @@ public:
 	void setInnerFocus() override {
 		if (_focus) {
 			_focus();
+		} else {
+			BoxContent::setInnerFocus();
 		}
 	}
 

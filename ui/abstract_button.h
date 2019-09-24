@@ -51,6 +51,8 @@ public:
 			lifetime());
 	}
 
+	void clicked(Qt::KeyboardModifiers modifiers, Qt::MouseButton button);
+
 protected:
 	void enterEventHook(QEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
@@ -81,8 +83,6 @@ protected:
 
 	virtual void onStateChanged(State was, StateChangeSource source) {
 	}
-
-	void clicked(Qt::KeyboardModifiers modifiers, Qt::MouseButton button);
 
 private:
 	void updateCursor();

@@ -156,6 +156,12 @@ void BoxLayerWidget::setAdditionalTitle(rpl::producer<QString> additional) {
 	_additionalTitle = std::move(additional);
 }
 
+void BoxLayerWidget::triggerButton(int index) {
+	if (index < _buttons.size()) {
+		_buttons[index]->clicked(Qt::KeyboardModifiers(), Qt::LeftButton);
+	}
+}
+
 void BoxLayerWidget::setCloseByOutsideClick(bool close) {
 	_closeByOutsideClick = close;
 }

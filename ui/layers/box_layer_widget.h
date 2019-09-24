@@ -84,6 +84,7 @@ public:
 	void closeBox() override {
 		closeLayer();
 	}
+	void triggerButton(int index) override;
 
 	void setCloseByOutsideClick(bool close) override;
 	bool closeByOutsideClick() const override;
