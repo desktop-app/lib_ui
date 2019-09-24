@@ -30,6 +30,10 @@
 <(src_loc)/ui/layers/layer_widget.h
 <(src_loc)/ui/platform/linux/ui_utility_linux.cpp
 <(src_loc)/ui/platform/linux/ui_utility_linux.h
+<(src_loc)/ui/platform/mac/ui_window_mac.h
+<(src_loc)/ui/platform/mac/ui_window_mac.mm
+<(src_loc)/ui/platform/mac/ui_window_title_mac.h
+<(src_loc)/ui/platform/mac/ui_window_title_mac.mm
 <(src_loc)/ui/platform/mac/ui_utility_mac.h
 <(src_loc)/ui/platform/mac/ui_utility_mac.mm
 <(src_loc)/ui/platform/win/ui_window_shadow_win.cpp

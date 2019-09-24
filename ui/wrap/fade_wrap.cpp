@@ -33,6 +33,9 @@ FadeWrap<RpWidget> *FadeWrap<RpWidget>::toggle(
 		bool shown,
 		anim::type animated) {
 	auto changed = (shown != _animation.visible());
+	if (!_duration) {
+		animated = anim::type::instant;
+	}
 	if (shown) {
 		if (animated == anim::type::normal) {
 			if (!_animation.animating()) {
