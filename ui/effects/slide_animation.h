@@ -12,6 +12,13 @@ namespace Ui {
 
 class SlideAnimation {
 public:
+	struct State {
+		float64 leftProgress = 0.;
+		float64 leftAlpha = 0.;
+		float64 rightProgress = 0.;
+		float64 rightAlpha = 0.;
+	};
+
 	void setSnapshots(QPixmap leftSnapshot, QPixmap rightSnapshot);
 
 	void setOverflowHidden(bool hidden) {
@@ -23,7 +30,8 @@ public:
 
 	void paintFrame(QPainter &p, int x, int y, int outerWidth);
 
-	bool animating() const {
+	[[nodiscard]] State state() const;
+	[[nodiscard]] bool animating() const {
 		return _animation.animating();
 	}
 
