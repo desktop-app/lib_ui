@@ -14,6 +14,8 @@
 <(src_loc)/ui/effects/radial_animation.h
 <(src_loc)/ui/effects/ripple_animation.cpp
 <(src_loc)/ui/effects/ripple_animation.h
+<(src_loc)/ui/effects/slide_animation.cpp
+<(src_loc)/ui/effects/slide_animation.h
 <(src_loc)/ui/image/image_prepare.cpp
 <(src_loc)/ui/image/image_prepare.h
 <(src_loc)/ui/layers/box_content.cpp
