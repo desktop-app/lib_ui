@@ -18,13 +18,14 @@ void DrawRoundedRect(
 	QPainter &p,
 	const QRect &rect,
 	const QBrush &brush,
-	const std::array<QImage, 4> & corners,
+	const std::array<QImage, 4> &corners,
 	RectParts parts = RectPart::Full);
 
 class RoundRect final {
 public:
 	RoundRect(ImageRoundRadius radius, const style::color &color);
 
+	[[nodiscard]] const style::color &color() const;
 	void paint(
 		QPainter &p,
 		const QRect &rect,

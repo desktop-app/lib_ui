@@ -74,6 +74,10 @@ RoundRect::RoundRect(
 	}, _lifetime);
 }
 
+const style::color &RoundRect::color() const {
+	return _color;
+}
+
 void RoundRect::paint(
 		QPainter &p,
 		const QRect &rect,

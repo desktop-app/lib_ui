@@ -232,7 +232,9 @@ RoundButton::RoundButton(
 	const style::RoundButton &st)
 : RippleButton(parent, st.ripple)
 , _textFull(std::move(text))
-, _st(st) {
+, _st(st)
+, _roundRect(ImageRoundRadius::Small, _st.textBg)
+, _roundRectOver(ImageRoundRadius::Small, _st.textBgOver) {
 	_textFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
 		resizeToText(text);
@@ -336,29 +338,24 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 	if (_fullWidthOverride < 0) {
 		rounded = QRect(0, rounded.top(), innerWidth - _fullWidthOverride, rounded.height());
 	}
-	const auto drawRect = [&](const style::color &color) {
+	const auto drawRect = [&](const RoundRect &rect) {
 		const auto fill = myrtlrect(rounded);
 		if (_fullRadius) {
 			const auto radius = rounded.height() / 2;
 			PainterHighQualityEnabler hq(p);
 			p.setPen(Qt::NoPen);
-			p.setBrush(color);
+			p.setBrush(rect.color());
 			p.drawRoundedRect(fill, radius, radius);
 		} else {
-			PainterHighQualityEnabler hq(p);
-			p.setPen(Qt::NoPen);
-			p.setBrush(color);
-			p.drawRoundedRect(fill, st::buttonRadius, st::buttonRadius);
-			// #TODO ui
-			//App::roundRect(p, fill, color, ImageRoundRadius::Small);
+			rect.paint(p, fill);
 		}
 	};
-	drawRect(_st.textBg);
+	drawRect(_roundRect);
 
 	auto over = isOver();
 	auto down = isDown();
 	if (over || down) {
-		drawRect(_st.textBgOver);
+		drawRect(_roundRectOver);
 	}
 
 	paintRipple(p, rounded.x(), rounded.y());

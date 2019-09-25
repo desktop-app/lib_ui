@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/abstract_button.h"
+#include "ui/round_rect.h"
 #include "ui/effects/animations.h"
 #include "styles/style_widgets.h"
 
@@ -151,6 +152,8 @@ private:
 	int _fullWidthOverride = 0;
 
 	const style::RoundButton &_st;
+	RoundRect _roundRect;
+	RoundRect _roundRectOver;
 
 	TextTransform _transform = TextTransform::ToUpper;
 	bool _fullRadius = false;
