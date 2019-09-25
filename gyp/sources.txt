@@ -28,6 +28,8 @@
 <(src_loc)/ui/layers/layer_manager.h
 <(src_loc)/ui/layers/layer_widget.cpp
 <(src_loc)/ui/layers/layer_widget.h
+<(src_loc)/ui/platform/linux/ui_window_linux.cpp
+<(src_loc)/ui/platform/linux/ui_window_linux.h
 <(src_loc)/ui/platform/linux/ui_utility_linux.cpp
 <(src_loc)/ui/platform/linux/ui_utility_linux.h
 <(src_loc)/ui/platform/mac/ui_window_mac.h
