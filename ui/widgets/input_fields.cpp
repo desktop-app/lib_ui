@@ -3506,10 +3506,14 @@ void InputField::setEditLinkCallback(
 }
 
 void InputField::showError() {
-	setErrorShown(true);
+	showErrorNoFocus();
 	if (!hasFocus()) {
 		_inner->setFocus();
 	}
+}
+
+void InputField::showErrorNoFocus() {
+	setErrorShown(true);
 }
 
 void InputField::setErrorShown(bool error) {

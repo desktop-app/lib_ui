@@ -187,6 +187,7 @@ public:
 		const TextWithTags &value = TextWithTags());
 
 	void showError();
+	void showErrorNoFocus();
 
 	void setMaxLength(int maxLength);
 	void setMinHeight(int minHeight);
