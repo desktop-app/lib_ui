@@ -357,7 +357,6 @@ void FlatLabel::setLinksTrusted() {
 		return true;
 	};
 	setClickHandlerFilter(TrustedLinksFilter);
-
 }
 
 void FlatLabel::setClickHandlerFilter(ClickHandlerFilter &&filter) {
@@ -537,7 +536,9 @@ void FlatLabel::keyPressEvent(QKeyEvent *e) {
 }
 
 void FlatLabel::contextMenuEvent(QContextMenuEvent *e) {
-	if (!_selectable) return;
+	if (!_selectable && !_text.hasLinks()) {
+		return;
+	}
 
 	showContextMenu(e, ContextMenuReason::FromEvent);
 }
@@ -625,12 +626,14 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	}
 	auto state = dragActionUpdate();
 
-	bool hasSelection = !_selection.empty();
-	bool uponSelection = state.uponSymbol && (state.symbol >= _selection.from) && (state.symbol < _selection.to);
-	bool fullSelection = _text.isFullSelection(_selection);
-	if (reason == ContextMenuReason::FromTouch && hasSelection && !uponSelection) {
-		uponSelection = hasSelection;
-	}
+	const auto hasSelection = _selectable && !_selection.empty();
+	const auto uponSelection = _selectable
+		&& ((reason == ContextMenuReason::FromTouch && hasSelection)
+			|| (state.uponSymbol
+				&& (state.symbol >= _selection.from)
+				&& (state.symbol < _selection.to)));
+	const auto fullSelection = _selectable
+		&& _text.isFullSelection(_selection);
 
 	_contextMenu = new PopupMenu(this);
 
@@ -639,7 +642,7 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	} else if (uponSelection && !fullSelection) {
 		const auto text = Integration::Instance().phraseContextCopySelected();
 		_contextMenu->addAction(text, this, SLOT(onCopySelectedText()));
-	} else if (!hasSelection && !_contextCopyText.isEmpty()) {
+	} else if (_selectable && !hasSelection && !_contextCopyText.isEmpty()) {
 		_contextMenu->addAction(_contextCopyText, this, SLOT(onCopyContextText()));
 	}
 

@@ -57,6 +57,9 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 	Ui::Tooltip::Hide();
 	if (!Ui::Integration::Instance().handleUrlClick(url, context)
 		&& !url.isEmpty()) {
+		if (IsEmail(url)) {
+			url = "mailto: " + url;
+		}
 		QDesktopServices::openUrl(url);
 	}
 }
