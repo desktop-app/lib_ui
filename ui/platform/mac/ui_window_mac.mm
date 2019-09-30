@@ -75,9 +75,9 @@ private:
 class WindowHelper::Private final {
 public:
 	explicit Private(not_null<WindowHelper*> owner);
-	
+
 	[[nodiscard]] int customTitleHeight() const;
-	
+
 private:
 	void init();
 	void initOpenGL();
@@ -91,9 +91,9 @@ private:
 
 	NSWindow * __weak _nativeWindow = nil;
 	NSView * __weak _nativeView = nil;
-	
+
 	std::unique_ptr<LayerCreationChecker> _layerCreationChecker;
-	
+
 	int _customTitleHeight = 0;
 
 };
@@ -205,7 +205,14 @@ void WindowHelper::toggleCustomTitle(bool visible) {
 }
 
 void WindowHelper::setSizeMin(QSize size) {
-	_window->setMinimumSize(size.width(), _title->height() + size.height());
+	_window->setMinimumSize(
+		size.width(),
+		(_title ? _title->height() : 0) + size.height());
+}
+
+void WindowHelper::setGeometry(QRect rect) {
+	_window->setGeometry(
+		rect.marginsAdded({ 0, (_title ? _title->height() : 0), 0, 0 }));
 }
 
 void WindowHelper::init() {

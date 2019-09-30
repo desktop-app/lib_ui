@@ -103,6 +103,10 @@ void WindowHelper::setSizeMin(QSize size) {
 	_window->setMinimumSize(size.width(), _title->height() + size.height());
 }
 
+void WindowHelper::setGeometry(QRect rect) {
+	_window->setGeometry(rect.marginsAdded({ 0, _title->height(), 0, 0 }));
+}
+
 void WindowHelper::init() {
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {

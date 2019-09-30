@@ -42,4 +42,12 @@ void Window::setSizeMin(QSize size) {
 	}
 }
 
+void Window::setGeometry(QRect rect) {
+	if (_helper) {
+		_helper->setGeometry(rect);
+	} else {
+		RpWidget::setGeometry(rect);
+	}
+}
+
 } // namespace Ui

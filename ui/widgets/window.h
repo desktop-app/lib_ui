@@ -23,6 +23,7 @@ public:
 
 	void setTitle(const QString &title);
 	void setSizeMin(QSize size);
+	void setGeometry(QRect rect);
 
 private:
 	const std::unique_ptr<Platform::BasicWindowHelper> _helper;
