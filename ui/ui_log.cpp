@@ -11,7 +11,9 @@
 namespace Ui {
 
 void WriteLogEntry(const QString &message) {
-	Integration::Instance().writeLogEntry(message);
+	if (Integration::Exists()) {
+		Integration::Instance().writeLogEntry(message);
+	}
 }
 
 } // namespace Ui

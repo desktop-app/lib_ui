@@ -26,6 +26,10 @@ Integration &Integration::Instance() {
 	return *IntegrationInstance;
 }
 
+bool Integration::Exists() {
+	return (IntegrationInstance != nullptr);
+}
+
 void Integration::textActionsUpdated() {
 }
 
