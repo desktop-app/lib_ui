@@ -49,7 +49,7 @@ using phrase_value_array = std::array<
 	std::pair<not_null<phrase*>, rpl::producer<QString>>,
 	Count>;
 
-template <int Count>
+template <std::size_t Count>
 void set_values(phrase_value_array<Count> &&data) {
 	for (auto &[single, value] : data) {
 		single->value = std::move(value);

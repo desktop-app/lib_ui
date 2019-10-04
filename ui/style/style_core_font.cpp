@@ -14,6 +14,17 @@
 #include <QtGui/QFontInfo>
 #include <QtGui/QFontDatabase>
 
+void style_InitFontsResource() {
+	Q_INIT_RESOURCE(fonts);
+#ifdef Q_OS_WIN
+	Q_INIT_RESOURCE(win);
+#elif defined Q_OS_MAC // Q_OS_WIN
+	Q_INIT_RESOURCE(mac);
+#else // Q_OS_WIN || Q_OS_MAC
+	Q_INIT_RESOURCE(linux);
+#endif // Q_OS_WIN || Q_OS_MAC || Q_OS_LINUX
+}
+
 namespace style {
 namespace internal {
 namespace {
@@ -82,6 +93,8 @@ void StartFonts() {
 		return;
 	}
 	Started = true;
+
+	style_InitFontsResource();
 
 	auto regular = LoadCustomFont(":/gui/fonts/OpenSans-Regular.ttf", "Open Sans");
 	auto bold = LoadCustomFont(":/gui/fonts/OpenSans-Bold.ttf", "Open Sans", style::internal::FontBold);
