@@ -130,6 +130,8 @@
 <(src_loc)/ui/main_queue_processor.cpp
 <(src_loc)/ui/main_queue_processor.h
 <(src_loc)/ui/painter.h
+<(src_loc)/ui/ph.cpp
+<(src_loc)/ui/ph.h
 <(src_loc)/ui/rect_part.h
 <(src_loc)/ui/round_rect.cpp
 <(src_loc)/ui/round_rect.h
