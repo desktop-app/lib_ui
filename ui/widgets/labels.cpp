@@ -740,7 +740,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
 		result.lineAddTop = addedHeight / 2;
 		result.lineHeight += addedHeight;
 	}
-	result.position = pos();
+	result.position = basePosition + pos();
 	result.align = _st.align;
 	result.font = _st.style.font;
 	result.margin = _st.margin;
