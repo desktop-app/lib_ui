@@ -192,4 +192,6 @@ QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
 
 [[nodiscard]] QPixmap PixmapFromImage(QImage &&image);
 
+void DisableCustomScaling();
+
 } // namespace Ui

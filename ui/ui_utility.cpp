@@ -180,4 +180,11 @@ QPixmap PixmapFromImage(QImage &&image) {
 	return QPixmap::fromImage(std::move(image), Qt::ColorOnly);
 }
 
+void DisableCustomScaling() {
+	qunsetenv("QT_DEVICE_PIXEL_RATIO");
+	qunsetenv("QT_SCALE_FACTOR");
+	qunsetenv("QT_AUTO_SCREEN_SCALE_FACTOR");
+	qunsetenv("QT_SCREEN_SCALE_FACTORS");
+}
+
 } // namespace Ui
