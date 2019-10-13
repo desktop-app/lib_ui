@@ -66,15 +66,16 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 		return false;
 	}
 
-	auto found = [&familyName, regularId] {
+	const auto found = [&] {
 		for (auto &family : QFontDatabase::applicationFontFamilies(regularId)) {
+			UI_LOG(("Font: from '%1' loaded '%2'").arg(filePath).arg(family));
 			if (!family.trimmed().compare(familyName, Qt::CaseInsensitive)) {
 				return true;
 			}
 		}
 		return false;
-	};
-	if (!found()) {
+	}();
+	if (!found) {
 		UI_LOG(("Font Error: could not locate '%1' font in '%2'.").arg(familyName).arg(filePath));
 		return false;
 	}
@@ -82,9 +83,43 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 	return ValidateFont(familyName, flags);
 }
 
+enum {
+	FontTypeRegular = 0,
+	FontTypeRegularItalic,
+	FontTypeBold,
+	FontTypeBoldItalic,
+	FontTypeSemibold,
+	FontTypeSemiboldItalic,
+
+	FontTypesCount,
+};
+QString FontTypeNames[FontTypesCount] = {
+	"DAOpenSansRegular",
+	"DAOpenSansRegularItalic",
+	"DAOpenSansBold",
+	"DAOpenSansBoldItalic",
+	"DAOpenSansSemibold",
+	"DAOpenSansSemiboldItalic",
+};
+int32 FontTypeFlags[FontTypesCount] = {
+	0,
+	FontItalic,
+	FontBold,
+	FontBold | FontItalic,
+	0,
+	FontItalic,
+};
+QString FontTypeWindowsFallback[FontTypesCount] = {
+	"Segoe UI",
+	"Segoe UI",
+	"Segoe UI",
+	"Segoe UI",
+	"Segoe UI Semibold",
+	"Segoe UI Semibold",
+};
+
 bool Started = false;
-QString OpenSansOverride;
-QString OpenSansSemiboldOverride;
+QString Overrides[FontTypesCount];
 
 } // namespace
 
@@ -96,49 +131,66 @@ void StartFonts() {
 
 	style_InitFontsResource();
 
-	auto regular = LoadCustomFont(":/gui/fonts/OpenSans-Regular.ttf", "Open Sans");
-	auto bold = LoadCustomFont(":/gui/fonts/OpenSans-Bold.ttf", "Open Sans", style::internal::FontBold);
-	auto semibold = LoadCustomFont(":/gui/fonts/OpenSans-Semibold.ttf", "Open Sans Semibold");
-
+	bool areGood[FontTypesCount] = { false };
+	for (auto i = 0; i != FontTypesCount; ++i) {
+		const auto name = FontTypeNames[i];
+		const auto flags = FontTypeFlags[i];
+		areGood[i] = LoadCustomFont(":/gui/fonts/" + name + ".ttf", name, flags);
+		Overrides[i] = name;
 #ifdef Q_OS_WIN
-	// Attempt to workaround a strange font bug with Open Sans Semibold not loading.
-	// See https://github.com/telegramdesktop/tdesktop/issues/3276 for details.
-	// Crash happens on "options.maxh / _t->_st->font->height" with "division by zero".
-	// In that place "_t->_st->font" is "semiboldFont" is "font(13 "Open Sans Semibold").
-	if (!regular || !bold) {
-		if (ValidateFont("Segoe UI") && ValidateFont("Segoe UI", style::internal::FontBold)) {
-			OpenSansOverride = "Segoe UI";
-			UI_LOG(("Fonts Info: Using Segoe UI instead of Open Sans."));
+		// Attempt to workaround a strange font bug with Open Sans Semibold not loading.
+		// See https://github.com/telegramdesktop/tdesktop/issues/3276 for details.
+		// Crash happens on "options.maxh / _t->_st->font->height" with "division by zero".
+		// In that place "_t->_st->font" is "semiboldFont" is "font(13 "Open Sans Semibold").
+		const auto fallback = FontTypeWindowsFallback[i];
+		if (!areGood[i]) {
+			if (ValidateFont(fallback, flags)) {
+				Overrides[i] = fallback;
+				UI_LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback).arg(name));
+			}
 		}
+		// Disable default fallbacks to Segoe UI, see:
+		// https://github.com/telegramdesktop/tdesktop/issues/5368
+		//
+		//QFont::insertSubstitution(name, fallback);
+#endif // Q_OS_WIN
 	}
-	if (!semibold) {
-		if (ValidateFont("Segoe UI Semibold")) {
-			OpenSansSemiboldOverride = "Segoe UI Semibold";
-			UI_LOG(("Fonts Info: Using Segoe UI Semibold instead of Open Sans Semibold."));
-		}
-	}
-	// Disable default fallbacks to Segoe UI, see:
-	// https://github.com/telegramdesktop/tdesktop/issues/5368
-	//
-	//QFont::insertSubstitution("Open Sans", "Segoe UI");
-	//QFont::insertSubstitution("Open Sans Semibold", "Segoe UI Semibold");
-#elif defined Q_OS_MAC // Q_OS_WIN
+#ifdef Q_OS_MAC
 	auto list = QStringList();
 	list.append(".SF NS Text");
 	list.append("Helvetica Neue");
 	list.append("Lucida Grande");
-	QFont::insertSubstitutions("Open Sans", list);
-	QFont::insertSubstitutions("Open Sans Semibold", list);
-#endif // Q_OS_WIN || Q_OS_MAC
+	for (const auto &name : FontTypeNames) {
+		QFont::insertSubstitutions(name, list);
+	}
+#endif // Q_OS_MAC
 }
 
-QString GetFontOverride(const QString &familyName) {
+QString GetPossibleEmptyOverride(const QString &familyName, int32 flags) {
+	flags = flags & (FontBold | FontItalic);
 	if (familyName == qstr("Open Sans")) {
-		return OpenSansOverride.isEmpty() ? familyName : OpenSansOverride;
+		if (flags == (FontBold | FontItalic)) {
+			return Overrides[FontTypeBoldItalic];
+		} else if (flags == FontBold) {
+			return Overrides[FontTypeBold];
+		} else if (flags == FontItalic) {
+			return Overrides[FontTypeRegularItalic];
+		} else if (flags == 0) {
+			return Overrides[FontTypeRegular];
+		}
 	} else if (familyName == qstr("Open Sans Semibold")) {
-		return OpenSansSemiboldOverride.isEmpty() ? familyName : OpenSansSemiboldOverride;
+		if (flags == FontItalic) {
+			return Overrides[FontTypeSemiboldItalic];
+		} else if (flags == 0) {
+			return Overrides[FontTypeSemibold];
+		}
 	}
-	return familyName;
+	return QString();
+}
+
+QString GetFontOverride(const QString &familyName, int32 flags) {
+	const auto result = GetPossibleEmptyOverride(familyName, flags);
+	return result.isEmpty() ? familyName : result;
 }
 
 void destroyFonts() {
@@ -159,7 +211,7 @@ int registerFontFamily(const QString &family) {
 }
 
 FontData::FontData(int size, uint32 flags, int family, Font *other)
-: f(GetFontOverride(fontFamilies[family]))
+: f(GetFontOverride(fontFamilies[family], flags))
 , m(f)
 , _size(size)
 , _flags(flags)

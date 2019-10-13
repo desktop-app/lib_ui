@@ -15,7 +15,7 @@ namespace style {
 namespace internal {
 
 void StartFonts();
-[[nodiscard]] QString GetFontOverride(const QString &familyName);
+[[nodiscard]] QString GetFontOverride(const QString &familyName, int32 flags = 0);
 
 void destroyFonts();
 int registerFontFamily(const QString &family);
