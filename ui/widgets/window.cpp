@@ -34,6 +34,12 @@ void Window::setTitle(const QString &title) {
 	}
 }
 
+void Window::setTitleStyle(const style::WindowTitle &st) {
+	if (_helper) {
+		_helper->setTitleStyle(st);
+	}
+}
+
 void Window::setMinimumSize(QSize size) {
 	if (_helper) {
 		_helper->setMinimumSize(size);

@@ -23,6 +23,7 @@ public:
 
 	not_null<RpWidget*> body() override;
 	void setTitle(const QString &title) override;
+	void setTitleStyle(const style::WindowTitle &st) override;
 	void setMinimumSize(QSize size) override;
 	void setFixedSize(QSize size) override;
 	void setGeometry(QRect rect) override;

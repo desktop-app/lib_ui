@@ -545,7 +545,7 @@ LRESULT WindowShadow::windowCallback(
 
 	case WM_NCHITTEST: {
 		if (!_resizeEnabled) {
-			return HTTRANSPARENT;
+			return HTNOWHERE;
 		}
 		const auto xPos = GET_X_LPARAM(lParam);
 		const auto yPos = GET_Y_LPARAM(lParam);

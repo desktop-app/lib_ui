@@ -8,6 +8,10 @@
 
 #include "ui/rp_widget.h"
 
+namespace style {
+struct WindowTitle;
+} // namespace style
+
 namespace Ui {
 namespace Platform {
 class BasicWindowHelper;
@@ -22,6 +26,7 @@ public:
 	[[nodiscard]] not_null<const RpWidget*> body() const;
 
 	void setTitle(const QString &title);
+	void setTitleStyle(const style::WindowTitle &st);
 	void setMinimumSize(QSize size);
 	void setFixedSize(QSize size);
 	void setGeometry(QRect rect);

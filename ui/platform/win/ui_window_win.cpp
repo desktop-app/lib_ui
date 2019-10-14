@@ -99,6 +99,10 @@ void WindowHelper::setTitle(const QString &title) {
 	_window->setWindowTitle(title);
 }
 
+void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
+	_title->setStyle(st);
+}
+
 void WindowHelper::setMinimumSize(QSize size) {
 	_window->setMinimumSize(size.width(), _title->height() + size.height());
 }
@@ -494,7 +498,7 @@ HWND GetWindowHandle(not_null<RpWidget*> widget) {
 }
 
 std::unique_ptr<BasicWindowHelper> CreateWindowHelper(
-	not_null<RpWidget*> window) {
+		not_null<RpWidget*> window) {
 	return std::make_unique<WindowHelper>(window);
 }
 

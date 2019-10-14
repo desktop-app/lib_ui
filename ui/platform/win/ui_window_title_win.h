@@ -12,6 +12,10 @@
 #include <QtCore/QRect>
 #include <QtCore/QPoint>
 
+namespace style {
+struct WindowTitle;
+} // namespace style
+
 namespace Ui {
 
 class IconButton;
@@ -39,6 +43,7 @@ public:
 	explicit TitleWidget(not_null<RpWidget*> parent);
 
 	void setText(const QString &text);
+	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
 	void setResizeEnabled(bool enabled);
 
@@ -54,6 +59,8 @@ private:
 	void updateControlsVisibility();
 	void updateButtonsState();
 	void updateControlsPosition();
+
+	not_null<const style::WindowTitle*> _st;
 
 	object_ptr<Ui::IconButton> _minimize;
 	object_ptr<Ui::IconButton> _maximizeRestore;

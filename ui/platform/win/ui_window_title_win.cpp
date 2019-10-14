@@ -21,9 +21,10 @@ namespace Platform {
 
 TitleWidget::TitleWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
-, _minimize(this, st::titleButtonMinimize)
-, _maximizeRestore(this, st::titleButtonMaximize)
-, _close(this, st::titleButtonClose)
+, _st(&st::defaultWindowTitle)
+, _minimize(this, _st->minimize)
+, _maximizeRestore(this, _st->maximize)
+, _close(this, _st->close)
 , _shadow(this, st::titleShadow)
 , _maximizedState(parent->windowState() & Qt::WindowMaximized)
 , _activeState(parent->isActiveWindow()) {
@@ -32,6 +33,13 @@ TitleWidget::TitleWidget(not_null<RpWidget*> parent)
 
 void TitleWidget::setText(const QString &text) {
 	window()->setWindowTitle(text);
+}
+
+void TitleWidget::setStyle(const style::WindowTitle &st) {
+	_st = &st;
+	setGeometry(0, 0, window()->width(), _st->height);
+	updateButtonsState();
+	update();
 }
 
 not_null<RpWidget*> TitleWidget::window() const {
@@ -66,7 +74,7 @@ void TitleWidget::init() {
 
 	window()->widthValue(
 	) | rpl::start_with_next([=](int width) {
-		setGeometry(0, 0, width, st::titleHeight);
+		setGeometry(0, 0, width, _st->height);
 	}, lifetime());
 
 	window()->createWinId();
@@ -84,7 +92,7 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 		_activeState = active;
 		updateButtonsState();
 	}
-	QPainter(this).fillRect(e->rect(), active ? st::titleBgActive : st::titleBg);
+	QPainter(this).fillRect(e->rect(), active ? _st->bgActive : _st->bg);
 }
 
 void TitleWidget::updateControlsPosition() {
@@ -120,35 +128,35 @@ void TitleWidget::handleWindowStateChanged(Qt::WindowState state) {
 
 void TitleWidget::updateButtonsState() {
 	const auto minimize = _activeState
-		? &st::titleButtonMinimizeIconActive
-		: nullptr;
+		? &_st->minimizeIconActive
+		: &_st->minimize.icon;
 	const auto minimizeOver = _activeState
-		? &st::titleButtonMinimizeIconActiveOver
-		: nullptr;
+		? &_st->minimizeIconActiveOver
+		: &_st->minimize.iconOver;
 	_minimize->setIconOverride(minimize, minimizeOver);
 	if (_maximizedState) {
 		const auto restore = _activeState
-			? &st::titleButtonRestoreIconActive
-			: &st::titleButtonRestoreIcon;
+			? &_st->restoreIconActive
+			: &_st->restoreIcon;
 		const auto restoreOver = _activeState
-			? &st::titleButtonRestoreIconActiveOver
-			: &st::titleButtonRestoreIconOver;
+			? &_st->restoreIconActiveOver
+			: &_st->restoreIconOver;
 		_maximizeRestore->setIconOverride(restore, restoreOver);
 	} else {
 		const auto maximize = _activeState
-			? &st::titleButtonMaximizeIconActive
-			: nullptr;
+			? &_st->maximizeIconActive
+			: &_st->maximize.icon;
 		const auto maximizeOver = _activeState
-			? &st::titleButtonMaximizeIconActiveOver
-			: nullptr;
+			? &_st->maximizeIconActiveOver
+			: &_st->maximize.iconOver;
 		_maximizeRestore->setIconOverride(maximize, maximizeOver);
 	}
 	const auto close = _activeState
-		? &st::titleButtonCloseIconActive
-		: nullptr;
+		? &_st->closeIconActive
+		: &_st->close.icon;
 	const auto closeOver = _activeState
-		? &st::titleButtonCloseIconActiveOver
-		: nullptr;
+		? &_st->closeIconActiveOver
+		: &_st->close.iconOver;
 	_close->setIconOverride(close, closeOver);
 }
 

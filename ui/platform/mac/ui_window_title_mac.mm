@@ -21,6 +21,7 @@ namespace Platform {
 
 TitleWidget::TitleWidget(not_null<RpWidget*> parent, int height)
 : RpWidget(parent)
+, _st(&st::defaultWindowTitle)
 , _shadow(this, st::titleShadow) {
 	init(height);
 }
@@ -30,6 +31,11 @@ void TitleWidget::setText(const QString &text) {
 		_text = text;
 		update();
 	}
+}
+
+void TitleWidget::setStyle(const style::WindowTitle &st) {
+	_st = &st;
+	update();
 }
 
 QString TitleWidget::text() const {
@@ -42,10 +48,10 @@ not_null<RpWidget*> TitleWidget::window() const {
 
 void TitleWidget::init(int height) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
-	
+
 	window()->widthValue(
 	) | rpl::start_with_next([=](int width) {
-		setGeometry(0, 0, width, st::titleHeight);
+		setGeometry(0, 0, width, height);
 	}, lifetime());
 
 	const auto families = QStringList{
@@ -70,10 +76,10 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
 
 	const auto active = isActiveWindow();
-	p.fillRect(rect(), active ? st::titleBgActive : st::titleBg);
+	p.fillRect(rect(), active ? _st->bgActive : _st->bg);
 
 	p.setFont(_font);
-	p.setPen(active ? st::titleFgActive : st::titleFg);
+	p.setPen(active ? _st->fgActive : _st->fg);
 	p.drawText(rect(), _text, style::al_center);
 }
 

@@ -12,6 +12,10 @@
 #include <QtCore/QRect>
 #include <QtCore/QPoint>
 
+namespace style {
+struct WindowTitle;
+} // namespace style
+
 namespace Ui {
 
 class PlainShadow;
@@ -23,6 +27,7 @@ public:
 	TitleWidget(not_null<RpWidget*> parent, int height);
 
 	void setText(const QString &text);
+	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] QString text() const;
 
 protected:
@@ -35,6 +40,7 @@ private:
 
 	void init(int height);
 
+	not_null<const style::WindowTitle*> _st;
 	object_ptr<Ui::PlainShadow> _shadow;
 	QString _text;
 	QFont _font;
