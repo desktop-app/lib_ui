@@ -553,6 +553,31 @@ importantTooltipBg: toastBg;
 importantTooltipFg: toastFg;
 importantTooltipFgLink: mediaviewTextLinkFg;
 
-outdatedFg: #ffffff;
-outdateSoonBg: #e08543;
-outdatedBg: #e05745;
+outdatedFg: #ffffff; // operating system version is outdated bar text
+outdateSoonBg: #e08543; // operating system version is soon outdated bar background
+outdatedBg: #e05745; // operating system version is already outdated bar background
+
+walletTitleBg: #121213; // wallet window title background when window is inactive
+walletTitleBgActive: walletTitleBg; // wallet window title background when window is active
+walletTitleButtonBg: walletTitleBg; // wallet window title minimize/maximize/restore button background when window is inactive (Windows only)
+walletTitleButtonFg: #5a5a5b; // wallet window title minimize/maximize/restore button icon when window is inactive (Windows only)
+walletTitleButtonBgOver: walletTitleButtonBg; // wallet window title minimize/maximize/restore button background with mouse over when window is inactive (Windows only)
+walletTitleButtonFgOver: walletTitleButtonFg; // wallet window title minimize/maximize/restore button icon with mouse over when window is inactive (Windows only)
+walletTitleButtonBgActive: walletTitleButtonBg; // wallet window title minimize/maximize/restore button background when window is active (Windows only)
+walletTitleButtonFgActive: walletTitleButtonFg; // wallet window title minimize/maximize/restore button icon when window is active (Windows only)
+walletTitleButtonBgActiveOver: walletTitleButtonBgOver; // wallet window title minimize/maximize/restore button background with mouse over when window is active (Windows only)
+walletTitleButtonFgActiveOver: walletTitleButtonFgOver; // wallet window title minimize/maximize/restore button icon with mouse over when window is active (Windows only)
+walletTitleButtonCloseBg: walletTitleButtonBg; // wallet window title close button background when window is inactive (Windows only)
+walletTitleButtonCloseFg: walletTitleButtonFg; // wallet window title close button icon when window is inactive (Windows only)
+walletTitleButtonCloseBgOver: titleButtonCloseBgOver; // wallet window title close button background with mouse over when window is inactive (Windows only)
+walletTitleButtonCloseFgOver: titleButtonCloseFgOver; // wallet window title close button icon with mouse over when window is inactive (Windows only)
+walletTitleButtonCloseBgActive: walletTitleButtonCloseBg; // wallet window title close button background when window is active (Windows only)
+walletTitleButtonCloseFgActive: walletTitleButtonCloseFg; // wallet window title close button icon when window is active (Windows only)
+walletTitleButtonCloseBgActiveOver: walletTitleButtonCloseBgOver; // wallet window title close button background with mouse over when window is active (Windows only)
+walletTitleButtonCloseFgActiveOver: walletTitleButtonCloseFgOver; // wallet window title close button icon with mouse over when window is active (Windows only)
+walletTopBg: #1e1f21; // wallet top part background
+walletBalanceFg: #ffffff; // wallet balance text
+walletSubBalanceFg: #f9f9f9; // wallet balance label text
+walletTopLabelFg: #999999; // wallet top updated label text
+walletTopIconFg: walletTopLabelFg; // wallet top refresh and menu icons
+walletTopIconRipple: #ffffff12; // wallet top menu icon ripple effect
