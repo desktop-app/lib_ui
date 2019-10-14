@@ -22,6 +22,10 @@ phrase::phrase(const QString &initial) : value(initial) {
 	}
 }
 
+phrase::phrase(rpl::producer<QString> initial) : value(std::move(initial)) {
+}
+
+
 now_t start_phrase_count() {
 	PhraseCounter() = 1;
 	return now;

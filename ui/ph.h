@@ -26,6 +26,7 @@ struct phrase {
 	phrase(const char (&initial)[Size])
 	: phrase(QString::fromUtf8(initial, Size - 1)) {
 	}
+	explicit phrase(rpl::producer<QString> initial);
 
 	template <typename P = I, typename = Result<P>>
 	Result<P> operator()(ph::now_t, P p = P()) const {
