@@ -34,11 +34,19 @@ void Window::setTitle(const QString &title) {
 	}
 }
 
-void Window::setSizeMin(QSize size) {
+void Window::setMinimumSize(QSize size) {
 	if (_helper) {
-		_helper->setSizeMin(size);
+		_helper->setMinimumSize(size);
 	} else {
-		setMinimumSize(size);
+		RpWidget::setMinimumSize(size);
+	}
+}
+
+void Window::setFixedSize(QSize size) {
+	if (_helper) {
+		_helper->setFixedSize(size);
+	} else {
+		RpWidget::setFixedSize(size);
 	}
 }
 

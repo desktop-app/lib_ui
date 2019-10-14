@@ -514,6 +514,10 @@ void WindowShadow::updateWindow(int i, POINT *p, SIZE *s) {
 	}
 }
 
+void WindowShadow::setResizeEnabled(bool enabled) {
+	_resizeEnabled = enabled;
+}
+
 LRESULT CALLBACK WindowShadow::WindowCallback(
 		HWND hwnd,
 		UINT msg,
@@ -540,6 +544,9 @@ LRESULT WindowShadow::windowCallback(
 		return 0;
 
 	case WM_NCHITTEST: {
+		if (!_resizeEnabled) {
+			return HTTRANSPARENT;
+		}
 		const auto xPos = GET_X_LPARAM(lParam);
 		const auto yPos = GET_Y_LPARAM(lParam);
 		if (hwnd == _handles[0]) {

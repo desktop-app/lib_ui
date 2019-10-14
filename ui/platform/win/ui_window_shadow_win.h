@@ -43,6 +43,7 @@ public:
 	void setColor(QColor color);
 	void update(Changes changes, WINDOWPOS *pos = nullptr);
 	void updateWindow(int i, POINT *p, SIZE *s = nullptr);
+	void setResizeEnabled(bool enabled);
 
 private:
 	enum class Direction {
@@ -90,6 +91,7 @@ private:
 	std::vector<BYTE> _colors;
 
 	bool _hidden = true;
+	bool _resizeEnabled = true;
 
 	HWND _handles[4] = { nullptr };
 	HDC _contexts[4] = { nullptr };

@@ -38,6 +38,11 @@ not_null<RpWidget*> TitleWidget::window() const {
 	return static_cast<RpWidget*>(parentWidget());
 }
 
+void TitleWidget::setResizeEnabled(bool enabled) {
+	_resizeEnabled = enabled;
+	updateControlsVisibility();
+}
+
 void TitleWidget::init() {
 	_minimize->setClickedCallback([=] {
 		window()->setWindowState(Qt::WindowMinimized);
@@ -85,7 +90,10 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 void TitleWidget::updateControlsPosition() {
 	auto right = 0;
 	_close->moveToRight(right, 0); right += _close->width();
-	_maximizeRestore->moveToRight(right, 0); right += _maximizeRestore->width();
+	_maximizeRestore->moveToRight(right, 0);
+	if (_resizeEnabled) {
+		right += _maximizeRestore->width();
+	}
 	_minimize->moveToRight(right, 0);
 }
 
@@ -95,6 +103,7 @@ void TitleWidget::resizeEvent(QResizeEvent *e) {
 }
 
 void TitleWidget::updateControlsVisibility() {
+	_maximizeRestore->setVisible(_resizeEnabled);
 	updateControlsPosition();
 	update();
 }

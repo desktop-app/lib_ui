@@ -20,7 +20,8 @@ public:
 
 	not_null<RpWidget*> body() override;
 	void setTitle(const QString &title) override;
-	void setSizeMin(QSize size) override;
+	void setMinimumSize(QSize size) override;
+	void setFixedSize(QSize size) override;
 	void setGeometry(QRect rect) override;
 
 private:

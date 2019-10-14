@@ -39,7 +39,8 @@ public:
 	explicit TitleWidget(not_null<RpWidget*> parent);
 
 	void setText(const QString &text);
-	HitTestResult hitTest(QPoint point) const;
+	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
+	void setResizeEnabled(bool enabled);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -61,6 +62,7 @@ private:
 
 	bool _maximizedState = false;
 	bool _activeState = false;
+	bool _resizeEnabled = true;
 
 };
 

@@ -99,8 +99,14 @@ void WindowHelper::setTitle(const QString &title) {
 	_window->setWindowTitle(title);
 }
 
-void WindowHelper::setSizeMin(QSize size) {
+void WindowHelper::setMinimumSize(QSize size) {
 	_window->setMinimumSize(size.width(), _title->height() + size.height());
+}
+
+void WindowHelper::setFixedSize(QSize size) {
+	_window->setFixedSize(size.width(), _title->height() + size.height());
+	_title->setResizeEnabled(false);
+	_shadow.setResizeEnabled(false);
 }
 
 void WindowHelper::setGeometry(QRect rect) {
@@ -133,10 +139,20 @@ void WindowHelper::init() {
 
 	_menu = GetSystemMenu(_handle, FALSE);
 	updateSystemMenu();
+
+	const auto handleStateChanged = [=](Qt::WindowState state) {
+		updateSystemMenu(state);
+		if (fixedSize() && (state & Qt::WindowMaximized)) {
+			crl::on_main(_window.get(), [=] {
+				_window->setWindowState(
+					_window->windowState() & ~Qt::WindowMaximized);
+			});
+		}
+	};
 	Ui::Connect(
 		_window->windowHandle(),
 		&QWindow::windowStateChanged,
-		[=](Qt::WindowState state) { updateSystemMenu(state); });
+		handleStateChanged);
 }
 
 bool WindowHelper::handleNativeEvent(
@@ -188,6 +204,16 @@ bool WindowHelper::handleNativeEvent(
 		if (result) *result = 0;
 		return true;
 	}
+
+	case WM_NCLBUTTONDBLCLK:
+	case WM_NCMBUTTONDBLCLK:
+	case WM_NCRBUTTONDBLCLK:
+	case WM_NCXBUTTONDBLCLK: {
+		if (!fixedSize()) {
+			return false;
+		}
+		if (result) *result = 0;
+	} return true;
 
 	case WM_NCACTIVATE: {
 		if (IsCompositionEnabled()) {
@@ -288,7 +314,7 @@ bool WindowHelper::handleNativeEvent(
 	} return true;
 
 	case WM_SYSCOMMAND: {
-		if (wParam == SC_MOUSEMENU) {
+		if (wParam == SC_MOUSEMENU && !fixedSize()) {
 			POINTS p = MAKEPOINTS(lParam);
 			updateSystemMenu(_window->windowHandle()->windowState());
 			TrackPopupMenu(
@@ -313,7 +339,9 @@ bool WindowHelper::handleNativeEvent(
 			_window->setWindowState(Qt::WindowMinimized);
 			return true;
 		case SC_MAXIMIZE:
-			_window->setWindowState(Qt::WindowMaximized);
+			if (!fixedSize()) {
+				_window->setWindowState(Qt::WindowMaximized);
+			}
 			return true;
 		case SC_RESTORE:
 			_window->setWindowState(Qt::WindowNoState);
@@ -323,6 +351,10 @@ bool WindowHelper::handleNativeEvent(
 
 	}
 	return false;
+}
+
+bool WindowHelper::fixedSize() const {
+	return _window->minimumSize() == _window->maximumSize();
 }
 
 void WindowHelper::updateMargins() {

@@ -204,8 +204,14 @@ void WindowHelper::toggleCustomTitle(bool visible) {
 	_window->setWindowTitle(visible ? QString() : _title->text());
 }
 
-void WindowHelper::setSizeMin(QSize size) {
+void WindowHelper::setMinimumSize(QSize size) {
 	_window->setMinimumSize(
+		size.width(),
+		(_title ? _title->height() : 0) + size.height());
+}
+
+void WindowHelper::setFixedSize(QSize size) {
+	_window->setFixedSize(
 		size.width(),
 		(_title ? _title->height() : 0) + size.height());
 }

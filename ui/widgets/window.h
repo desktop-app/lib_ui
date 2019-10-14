@@ -22,7 +22,8 @@ public:
 	[[nodiscard]] not_null<const RpWidget*> body() const;
 
 	void setTitle(const QString &title);
-	void setSizeMin(QSize size);
+	void setMinimumSize(QSize size);
+	void setFixedSize(QSize size);
 	void setGeometry(QRect rect);
 
 private:

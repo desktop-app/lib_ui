@@ -16,7 +16,8 @@ class BasicWindowHelper {
 public:
 	[[nodiscard]] virtual not_null<RpWidget*> body() = 0;
 	virtual void setTitle(const QString &title) = 0;
-	virtual void setSizeMin(QSize size) = 0;
+	virtual void setMinimumSize(QSize size) = 0;
+	virtual void setFixedSize(QSize size) = 0;
 	virtual void setGeometry(QRect rect) = 0;
 	virtual ~BasicWindowHelper() = default;
 
