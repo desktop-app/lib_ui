@@ -24,6 +24,7 @@ void LayerManager::showBox(
 		anim::type animated) {
 	ensureLayerCreated();
 	_layer->showBox(std::move(box), options, animated);
+	setFocus();
 }
 
 void LayerManager::hideAll(anim::type animated) {
