@@ -56,8 +56,14 @@ BoxLayerWidget::BoxLayerWidget(
 BoxLayerWidget::~BoxLayerWidget() = default;
 
 void BoxLayerWidget::setLayerType(bool layerType) {
+	if (_layerType == layerType) {
+		return;
+	}
 	_layerType = layerType;
 	updateTitlePosition();
+	if (_maxContentHeight) {
+		setDimensions(width(), _maxContentHeight);
+	}
 }
 
 int BoxLayerWidget::titleHeight() const {
