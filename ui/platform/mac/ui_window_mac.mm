@@ -196,6 +196,12 @@ void WindowHelper::setTitle(const QString &title) {
 		(!_title || _title->isHidden()) ? title : QString());
 }
 
+void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
+	if (_title) {
+		_title->setStyle(st);
+	}
+}
+
 void WindowHelper::toggleCustomTitle(bool visible) {
 	if (!_title || _title->isHidden() != visible) {
 		return;
