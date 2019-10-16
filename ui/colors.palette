@@ -557,6 +557,9 @@ outdatedFg: #ffffff; // operating system version is outdated bar text
 outdateSoonBg: #e08543; // operating system version is soon outdated bar background
 outdatedBg: #e05745; // operating system version is already outdated bar background
 
+// spellcheck
+spellUnderline: #ff0000 | attentionButtonFg; // misspelled words
+
 walletTitleBg: #121213; // wallet window title background when window is inactive
 walletTitleBgActive: walletTitleBg; // wallet window title background when window is active
 walletTitleButtonBg: walletTitleBg; // wallet window title minimize/maximize/restore button background when window is inactive (Windows only)
