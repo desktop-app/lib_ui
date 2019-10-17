@@ -64,6 +64,7 @@ private:
 	int _size = 0;
 	std::vector<QPixmap> _sprites;
 	base::binary_guard _generating;
+	bool _unsupported = false;
 
 };
 
@@ -772,7 +773,9 @@ bool Instance::cached() const {
 }
 
 void Instance::draw(QPainter &p, EmojiPtr emoji, int x, int y) {
-	if (Universal && Universal->id() != _id) {
+	if (_unsupported) {
+		return;
+	} else if (Universal && Universal->id() != _id) {
 		generateCache();
 	}
 	const auto sprite = emoji->sprite();
@@ -805,8 +808,12 @@ void Instance::checkUniversalImages() {
 		_generating = nullptr;
 		_sprites.clear();
 	}
-	if (!Universal->ensureLoaded() && Universal->id() != 0) {
-		ClearCurrentSetIdSync();
+	if (!Universal->ensureLoaded()) {
+		if (Universal->id() != 0) {
+			ClearCurrentSetIdSync();
+		} else {
+			_unsupported = true;
+		}
 	}
 }
 
