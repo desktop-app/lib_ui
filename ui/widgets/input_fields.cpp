@@ -2210,6 +2210,7 @@ void InputField::onDocumentContentsChange(
 		_correcting = false;
 		QTextCursor(document->docHandle(), 0).endEditBlock();
 		handleContentsChanged();
+		_documentContentsChanges.fire({position, charsRemoved, charsAdded});
 	});
 
 	chopByMaxLength(insertPosition, insertLength);

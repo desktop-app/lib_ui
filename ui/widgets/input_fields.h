@@ -315,6 +315,15 @@ public:
 	int scrollTopMax() const;
 	void scrollTo(int top);
 
+	struct DocumentChangeInfo {
+		int position = 0;
+		int added = 0;
+		int removed = 0;
+	};
+	auto documentContentsChanges() {
+		return _documentContentsChanges.events();
+	}
+
 	~InputField();
 
 private slots:
@@ -513,6 +522,8 @@ private:
 
 	InstantReplaces _mutableInstantReplaces;
 	bool _instantReplacesEnabled = true;
+
+	rpl::event_stream<DocumentChangeInfo> _documentContentsChanges;
 
 };
 
