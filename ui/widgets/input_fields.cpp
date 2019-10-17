@@ -1413,6 +1413,16 @@ void InputField::onTouchTimer() {
 	_touchRightButton = true;
 }
 
+void InputField::setExtendedContextMenu(
+	rpl::producer<ExtendedContextMenu> value) {
+	std::move(
+		value
+	) | rpl::start_with_next([=](auto pair) {
+		auto &[menu, e] = pair;
+		contextMenuEventInner(&e, std::move(menu));
+	}, lifetime());
+}
+
 void InputField::setInstantReplaces(const InstantReplaces &replaces) {
 	_mutableInstantReplaces = replaces;
 }
@@ -3302,8 +3312,8 @@ bool InputField::revertFormatReplace() {
 	return false;
 }
 
-void InputField::contextMenuEventInner(QContextMenuEvent *e) {
-	if (const auto menu = _inner->createStandardContextMenu()) {
+void InputField::contextMenuEventInner(QContextMenuEvent *e, QMenu *m) {
+	if (const auto menu = m ? m : _inner->createStandardContextMenu()) {
 		addMarkdownActions(menu, e);
 		_contextMenu = base::make_unique_q<PopupMenu>(this, menu);
 		_contextMenu->popup(e->globalPos());

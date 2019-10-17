@@ -12,6 +12,7 @@
 #include "ui/text/text_entity.h"
 #include "styles/style_widgets.h"
 
+#include <QContextMenuEvent>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QTextEdit>
 #include <QtCore/QTimer>
@@ -238,11 +239,17 @@ public:
 			QString link,
 			EditLinkAction action)> callback);
 
+	struct ExtendedContextMenu {
+		QMenu *menu = nullptr;
+		QContextMenuEvent event;
+	};
+
 	void setAdditionalMargin(int margin);
 
 	void setInstantReplaces(const InstantReplaces &replaces);
 	void setInstantReplacesEnabled(rpl::producer<bool> enabled);
 	void setMarkdownReplacesEnabled(rpl::producer<bool> enabled);
+	void setExtendedContextMenu(rpl::producer<ExtendedContextMenu> value);
 	void commitInstantReplacement(int from, int till, const QString &with);
 	void commitMarkdownLinkEdit(
 		EditLinkSelection selection,
@@ -376,7 +383,7 @@ private:
 	void focusOutEventInner(QFocusEvent *e);
 	void setFocused(bool focused);
 	void keyPressEventInner(QKeyEvent *e);
-	void contextMenuEventInner(QContextMenuEvent *e);
+	void contextMenuEventInner(QContextMenuEvent *e, QMenu *m = nullptr);
 	void dropEventInner(QDropEvent *e);
 	void inputMethodEventInner(QInputMethodEvent *e);
 
