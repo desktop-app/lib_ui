@@ -17,19 +17,22 @@
 @interface WindowObserver : NSObject {
 }
 
-- (id) init:(Fn<void(bool)>)toggleCustomTitleVisibility;
+- (id) initWithToggle:(Fn<void(bool)>)toggleCustomTitleVisibility enforce:(Fn<void()>)enforceCorrectStyle;
 - (void) windowWillEnterFullScreen:(NSNotification *)aNotification;
 - (void) windowWillExitFullScreen:(NSNotification *)aNotification;
+- (void) windowDidExitFullScreen:(NSNotification *)aNotification;
 
 @end // @interface WindowObserver
 
 @implementation WindowObserver {
 	Fn<void(bool)> _toggleCustomTitleVisibility;
+	Fn<void()> _enforceCorrectStyle;
 }
 
-- (id) init:(Fn<void(bool)>)toggleCustomTitleVisibility {
+- (id) initWithToggle:(Fn<void(bool)>)toggleCustomTitleVisibility enforce:(Fn<void()>)enforceCorrectStyle {
 	if (self = [super init]) {
 		_toggleCustomTitleVisibility = toggleCustomTitleVisibility;
+		_enforceCorrectStyle = enforceCorrectStyle;
 	}
 	return self;
 }
@@ -39,7 +42,12 @@
 }
 
 - (void) windowWillExitFullScreen:(NSNotification *)aNotification {
+	_enforceCorrectStyle();
 	_toggleCustomTitleVisibility(true);
+}
+
+- (void) windowDidExitFullScreen:(NSNotification *)aNotification {
+	_enforceCorrectStyle();
 }
 
 @end // @implementation MainWindowObserver
@@ -85,6 +93,7 @@ private:
 	void initCustomTitle();
 
 	[[nodiscard]] Fn<void(bool)> toggleCustomTitleCallback();
+	[[nodiscard]] Fn<void()> enforceStyleCallback();
 
 	const not_null<WindowHelper*> _owner;
 	const WindowObserver *_observer = nullptr;
@@ -100,7 +109,7 @@ private:
 
 WindowHelper::Private::Private(not_null<WindowHelper*> owner)
 : _owner(owner)
-, _observer([[WindowObserver alloc] init:toggleCustomTitleCallback()]) {
+, _observer([[WindowObserver alloc] initWithToggle:toggleCustomTitleCallback() enforce:enforceStyleCallback()]) {
 	init();
 }
 
@@ -111,6 +120,14 @@ int WindowHelper::Private::customTitleHeight() const {
 Fn<void(bool)> WindowHelper::Private::toggleCustomTitleCallback() {
 	return [=](bool visible) {
 		_owner->toggleCustomTitle(visible);
+	};
+}
+
+Fn<void()> WindowHelper::Private::enforceStyleCallback() {
+	return [=] {
+		if (_nativeWindow && _customTitleHeight > 0) {
+			[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSFullSizeContentViewWindowMask];
+		}
 	};
 }
 
@@ -132,10 +149,12 @@ void WindowHelper::Private::initCustomTitle() {
 		|| ![_nativeWindow respondsToSelector:@selector(setTitlebarAppearsTransparent:)]) {
 		return;
 	}
+
 	[_nativeWindow setTitlebarAppearsTransparent:YES];
 
 	[[NSNotificationCenter defaultCenter] addObserver:_observer selector:@selector(windowWillEnterFullScreen:) name:NSWindowWillEnterFullScreenNotification object:_nativeWindow];
 	[[NSNotificationCenter defaultCenter] addObserver:_observer selector:@selector(windowWillExitFullScreen:) name:NSWindowWillExitFullScreenNotification object:_nativeWindow];
+	[[NSNotificationCenter defaultCenter] addObserver:_observer selector:@selector(windowDidExitFullScreen:) name:NSWindowDidExitFullScreenNotification object:_nativeWindow];
 
 	// Qt has bug with layer-backed widgets containing QOpenGLWidgets.
 	// See https://bugreports.qt.io/browse/QTBUG-64494
