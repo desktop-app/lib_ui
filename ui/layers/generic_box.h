@@ -17,7 +17,7 @@ extern const style::margins &boxRowPadding;
 
 namespace Ui {
 
-class GenericBox : public BoxContent {
+class GenericBox final : public BoxContent {
 public:
 	// InitMethod::operator()(not_null<GenericBox*> box, InitArgs...)
 	// init(box, args...)
@@ -76,6 +76,8 @@ public:
 			BoxContent::setInnerFocus();
 		}
 	}
+
+	using BoxContent::setNoContentMargin;
 
 protected:
 	void prepare() override;
