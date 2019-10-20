@@ -622,7 +622,7 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, const QFont &font) {
 	result.setWidth(width / factor);
 	result.setHeight(height / factor);
 	result.setName(emoji->toUrl());
-	result.setVerticalAlignment(QTextCharFormat::AlignBaseline);
+	result.setVerticalAlignment(QTextCharFormat::AlignBottom);
 	return result;
 }
 
