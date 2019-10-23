@@ -21,6 +21,11 @@ ServiceCheck {
 	duration: int;
 }
 
+Box {
+	buttonPadding: margins;
+	buttonHeight: pixels;
+}
+
 boxDuration: 200;
 boxRadius: 3px;
 
@@ -82,11 +87,9 @@ boxTitle: FlatLabel(defaultFlatLabel) {
 }
 boxTitlePosition: point(23px, 16px);
 boxTitleHeight: 56px;
-boxLayerTitlePosition: point(23px, 16px);
-boxLayerTitleHeight: 56px;
-boxLayerTitleAdditionalSkip: 9px;
-boxLayerTitleAdditionalFont: normalFont;
-boxLayerScroll: defaultSolidScroll;
+boxTitleAdditionalSkip: 9px;
+boxTitleAdditionalFont: normalFont;
+boxScroll: defaultSolidScroll;
 
 boxRowPadding: margins(23px, 0px, 23px, 0px);
 
@@ -123,8 +126,13 @@ boxMaxListHeight: 492px;
 boxLittleSkip: 10px;
 boxMediumSkip: 20px;
 
-boxButtonPadding: margins(8px, 12px, 13px, 12px);
-boxLayerButtonPadding: margins(8px, 8px, 8px, 8px);
+defaultBox: Box {
+	buttonPadding: margins(8px, 12px, 13px, 12px);
+	buttonHeight: 36px;
+}
+layerBox: Box(defaultBox) {
+	buttonPadding: margins(8px, 8px, 8px, 8px);
+}
 boxLabel: FlatLabel(defaultFlatLabel) {
 	minWidth: 274px;
 	align: align(topleft);

@@ -23,6 +23,7 @@ namespace style {
 struct RoundButton;
 struct IconButton;
 struct ScrollArea;
+struct Box;
 } // namespace style
 
 namespace Ui {
@@ -43,6 +44,7 @@ public:
 	void parentResized() override;
 
 	void setLayerType(bool layerType) override;
+	void setStyle(const style::Box &st) override;
 	void setTitle(rpl::producer<TextWithEntities> title) override;
 	void setAdditionalTitle(rpl::producer<QString> additional) override;
 	void showBox(
@@ -107,6 +109,7 @@ private:
 	void paintAdditionalTitle(Painter &p);
 	void updateTitlePosition();
 
+	[[nodiscard]] const style::Box &st() const;
 	[[nodiscard]] bool hasTitle() const;
 	[[nodiscard]] int titleHeight() const;
 	[[nodiscard]] int buttonsHeight() const;
@@ -117,6 +120,7 @@ private:
 	[[nodiscard]] QRect loadingRect() const;
 	void updateSize();
 
+	const style::Box *_st = nullptr;
 	not_null<LayerStackWidget*> _layer;
 	int _fullHeight = 0;
 

@@ -42,7 +42,7 @@ QPointer<RoundButton> BoxContent::addLeftButton(
 }
 
 void BoxContent::setInner(object_ptr<TWidget> inner) {
-	setInner(std::move(inner), st::boxLayerScroll);
+	setInner(std::move(inner), st::boxScroll);
 }
 
 void BoxContent::setInner(object_ptr<TWidget> inner, const style::ScrollArea &st) {

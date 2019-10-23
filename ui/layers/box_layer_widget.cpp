@@ -67,32 +67,36 @@ void BoxLayerWidget::setLayerType(bool layerType) {
 }
 
 int BoxLayerWidget::titleHeight() const {
-	return _layerType ? st::boxLayerTitleHeight : st::boxTitleHeight;
+	return st::boxTitleHeight;
+}
+
+const style::Box &BoxLayerWidget::st() const {
+	return _st
+		? *_st
+		: _layerType
+		? st::layerBox
+		: st::defaultBox;
+}
+
+void BoxLayerWidget::setStyle(const style::Box &st) {
+	_st = &st;
 }
 
 int BoxLayerWidget::buttonsHeight() const {
-	const auto padding = _layerType
-		? st::boxLayerButtonPadding
-		: st::boxButtonPadding;
-	return padding.top() + st::defaultBoxButton.height + padding.bottom();
+	const auto padding = st().buttonPadding;
+	return padding.top() + st().buttonHeight + padding.bottom();
 }
 
 int BoxLayerWidget::buttonsTop() const {
-	const auto padding = _layerType
-		? st::boxLayerButtonPadding
-		: st::boxButtonPadding;
-	return height() - padding.bottom() - st::defaultBoxButton.height;
+	const auto padding = st().buttonPadding;
+	return height() - padding.bottom() - st().buttonHeight;
 }
 
 QRect BoxLayerWidget::loadingRect() const {
-	const auto padding = _layerType
-		? st::boxLayerButtonPadding
-		: st::boxButtonPadding;
+	const auto padding = st().buttonPadding;
 	const auto size = st::boxLoadingSize;
-	const auto skipx = _layerType
-		? st::boxLayerTitlePosition.x()
-		: st::boxTitlePosition.x();
-	const auto skipy = (st::defaultBoxButton.height - size) / 2;
+	const auto skipx = st::boxTitlePosition.x();
+	const auto skipy = (st().buttonHeight - size) / 2;
 	return QRect(
 		skipx,
 		height() - padding.bottom() - skipy - size,
@@ -132,9 +136,9 @@ void BoxLayerWidget::paintEvent(QPaintEvent *e) {
 }
 
 void BoxLayerWidget::paintAdditionalTitle(Painter &p) {
-	p.setFont(st::boxLayerTitleAdditionalFont);
+	p.setFont(st::boxTitleAdditionalFont);
 	p.setPen(st::boxTitleAdditionalFg);
-	p.drawTextLeft(_titleLeft + (_title ? _title->width() : 0) + st::boxLayerTitleAdditionalSkip, _titleTop + st::boxTitleFont->ascent - st::boxLayerTitleAdditionalFont->ascent, width(), _additionalTitle.current());
+	p.drawTextLeft(_titleLeft + (_title ? _title->width() : 0) + st::boxTitleAdditionalSkip, _titleTop + st::boxTitleFont->ascent - st::boxTitleAdditionalFont->ascent, width(), _additionalTitle.current());
 }
 
 void BoxLayerWidget::parentResized() {
@@ -193,7 +197,7 @@ void BoxLayerWidget::updateSize() {
 
 void BoxLayerWidget::updateButtonsPositions() {
 	if (!_buttons.empty() || _leftButton) {
-		auto padding = _layerType ? st::boxLayerButtonPadding : st::boxButtonPadding;
+		auto padding = st().buttonPadding;
 		auto right = padding.right();
 		auto top = buttonsTop();
 		if (_leftButton) {
@@ -214,8 +218,8 @@ QPointer<QWidget> BoxLayerWidget::outerContainer() {
 }
 
 void BoxLayerWidget::updateTitlePosition() {
-	_titleLeft = _layerType ? st::boxLayerTitlePosition.x() : st::boxTitlePosition.x();
-	_titleTop = _layerType ? st::boxLayerTitlePosition.y() : st::boxTitlePosition.y();
+	_titleLeft = st::boxTitlePosition.x();
+	_titleTop = st::boxTitlePosition.y();
 	if (_title) {
 		_title->resizeToWidth(qMin(_title->naturalWidth(), width() - _titleLeft * 2));
 		_title->moveToLeft(_titleLeft, _titleTop);

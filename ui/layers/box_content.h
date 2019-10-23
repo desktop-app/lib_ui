@@ -19,6 +19,7 @@ namespace style {
 struct RoundButton;
 struct IconButton;
 struct ScrollArea;
+struct Box;
 } // namespace style
 
 namespace Ui {
@@ -43,6 +44,7 @@ class BoxContent;
 class BoxContentDelegate {
 public:
 	virtual void setLayerType(bool layerType) = 0;
+	virtual void setStyle(const style::Box &st) = 0;
 	virtual void setTitle(rpl::producer<TextWithEntities> title) = 0;
 	virtual void setAdditionalTitle(rpl::producer<QString> additional) = 0;
 	virtual void setCloseByOutsideClick(bool close) = 0;
@@ -156,6 +158,9 @@ public:
 	}
 	void updateButtonsGeometry() {
 		getDelegate()->updateButtonsPositions();
+	}
+	void setStyle(const style::Box &st) {
+		getDelegate()->setStyle(st);
 	}
 
 	virtual void setInnerFocus() {
