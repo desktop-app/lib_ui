@@ -2085,6 +2085,9 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 							action.intervalStart = fragmentPosition + (ch - textStart);
 							action.intervalEnd = action.intervalStart + emojiLength;
 						}
+						if (emojiLength > 1) {
+							_emojiSurrogateAmount += emojiLength - 1;
+						}
 						break;
 					}
 
@@ -2220,7 +2223,9 @@ void InputField::onDocumentContentsChange(
 		_correcting = false;
 		QTextCursor(document->docHandle(), 0).endEditBlock();
 		handleContentsChanged();
-		_documentContentsChanges.fire({position, charsRemoved, charsAdded});
+		const auto added = charsAdded - _emojiSurrogateAmount;
+		_documentContentsChanges.fire({position, charsRemoved, added});
+		_emojiSurrogateAmount = 0;
 	});
 
 	chopByMaxLength(insertPosition, insertLength);

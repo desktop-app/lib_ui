@@ -482,6 +482,10 @@ private:
 	int _realInsertPosition = -1;
 	int _realCharsAdded = 0;
 
+	// Calculate the amount of emoji extra chars
+	// before _documentContentsChanges fire.
+	int _emojiSurrogateAmount = 0;
+
 	std::unique_ptr<TagMimeProcessor> _tagMimeProcessor;
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
