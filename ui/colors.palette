@@ -561,8 +561,8 @@ walletTitleBg: #121213; // wallet window title background when window is inactiv
 walletTitleBgActive: walletTitleBg; // wallet window title background when window is active
 walletTitleButtonBg: walletTitleBg; // wallet window title minimize/maximize/restore button background when window is inactive (Windows only)
 walletTitleButtonFg: #5a5a5b; // wallet window title minimize/maximize/restore button icon when window is inactive (Windows only)
-walletTitleButtonBgOver: walletTitleButtonBg; // wallet window title minimize/maximize/restore button background with mouse over when window is inactive (Windows only)
-walletTitleButtonFgOver: walletTitleButtonFg; // wallet window title minimize/maximize/restore button icon with mouse over when window is inactive (Windows only)
+walletTitleButtonBgOver: #373738; // wallet window title minimize/maximize/restore button background with mouse over when window is inactive (Windows only)
+walletTitleButtonFgOver: #747475; // wallet window title minimize/maximize/restore button icon with mouse over when window is inactive (Windows only)
 walletTitleButtonBgActive: walletTitleButtonBg; // wallet window title minimize/maximize/restore button background when window is active (Windows only)
 walletTitleButtonFgActive: walletTitleButtonFg; // wallet window title minimize/maximize/restore button icon when window is active (Windows only)
 walletTitleButtonBgActiveOver: walletTitleButtonBgOver; // wallet window title minimize/maximize/restore button background with mouse over when window is active (Windows only)
