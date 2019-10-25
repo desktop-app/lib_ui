@@ -13,6 +13,41 @@
 #include <QtGui/QtEvents>
 
 namespace Ui {
+namespace {
+
+[[nodiscard]] TextWithEntities ParseMenuItem(const QString &text) {
+	auto result = TextWithEntities();
+	result.text.reserve(text.size());
+	auto afterAmpersand = false;
+	for (const auto ch : text) {
+		if (afterAmpersand) {
+			afterAmpersand = false;
+			if (ch == '&') {
+				result.text.append(ch);
+			} else {
+				result.entities.append(EntityInText{
+					EntityType::Underline,
+					result.text.size(),
+					1 });
+				result.text.append(ch);
+			}
+		} else if (ch == '&') {
+			afterAmpersand = true;
+		} else {
+			result.text.append(ch);
+		}
+	}
+	return result;
+}
+
+TextParseOptions MenuTextOptions = {
+	TextParseLinks | TextParseRichText, // flags
+	0, // maxw
+	0, // maxh
+	Qt::LayoutDirectionAuto, // dir
+};
+
+} // namespace
 
 struct Menu::ActionData {
 	Text::String text;
@@ -143,7 +178,7 @@ int Menu::processAction(not_null<QAction*> action, int index, int width) {
 		auto actionTextParts = action->text().split('\t');
 		auto actionText = actionTextParts.empty() ? QString() : actionTextParts[0];
 		auto actionShortcut = (actionTextParts.size() > 1) ? actionTextParts[1] : QString();
-		data.text.setText(_st.itemStyle, actionText);
+		data.text.setMarkedText(_st.itemStyle, ParseMenuItem(actionText), MenuTextOptions);
 		const auto textw = data.text.maxWidth();
 		int goodw = _st.itemPadding.left() + textw + _st.itemPadding.right();
 		if (data.hasSubmenu) {
