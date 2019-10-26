@@ -6,7 +6,7 @@
 //
 #include "ui/main_queue_processor.h"
 
-#include "base/base_integration.h"
+#include "base/integration.h"
 #include "ui/platform/ui_platform_utility.h"
 
 #include <QtCore/QMutex>
@@ -76,7 +76,7 @@ MainQueueProcessor::MainQueueProcessor() {
 		crl::init_main_queue(PushToMainQueueGeneric);
 	} else {
 		crl::wrap_main_queue([](void (*callable)(void*), void *argument) {
-			base::EnterFromEventLoop([&] {
+			base::Integration::Instance().enterFromEventLoop([&] {
 				callable(argument);
 			});
 		});
