@@ -17,6 +17,7 @@ namespace Ui {
 
 class RippleAnimation;
 class NumbersAnimation;
+class ToggleView;
 
 class LinkButton : public AbstractButton {
 public:
@@ -227,6 +228,46 @@ private:
 
 	crl::time _loadingStopMs = 0;
 	Ui::Animations::Basic _loadingAnimation;
+
+};
+
+class SettingsButton : public Ui::RippleButton {
+public:
+	SettingsButton(
+		QWidget *parent,
+		rpl::producer<QString> &&text);
+	SettingsButton(
+		QWidget *parent,
+		rpl::producer<QString> &&text,
+		const style::SettingsButton &st);
+
+	SettingsButton *toggleOn(rpl::producer<bool> &&toggled);
+	bool toggled() const;
+	rpl::producer<bool> toggledChanges() const;
+	rpl::producer<bool> toggledValue() const;
+
+	void setColorOverride(std::optional<QColor> textColorOverride);
+
+protected:
+	int resizeGetHeight(int newWidth) override;
+	void onStateChanged(
+		State was,
+		StateChangeSource source) override;
+
+	void paintEvent(QPaintEvent *e) override;
+
+private:
+	void setText(QString &&text);
+	QRect toggleRect() const;
+	void updateVisibleText(int newWidth);
+
+	const style::SettingsButton &_st;
+	QString _original;
+	QString _text;
+	int _originalWidth = 0;
+	int _textWidth = 0;
+	std::unique_ptr<Ui::ToggleView> _toggle;
+	std::optional<QColor> _textColorOverride;
 
 };
 

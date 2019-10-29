@@ -485,7 +485,7 @@ ImportantTooltip {
 	duration: int;
 }
 
-InfoProfileButton {
+SettingsButton {
 	textFg: color;
 	textFgOver: color;
 	textBg: color;
@@ -503,8 +503,8 @@ InfoProfileButton {
 	ripple: RippleAnimation;
 }
 
-InfoProfileCountButton {
-	button: InfoProfileButton;
+SettingsCountButton {
+	button: SettingsButton;
 	icon: icon;
 	iconPosition: point;
 	label: FlatLabel;
@@ -1181,6 +1181,30 @@ backButton: IconButton(defaultIconButton) {
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: windowBgOver;
 	}
+}
+
+defaultSettingsToggle: Toggle(defaultToggle) {
+	untoggledFg: menuIconFg;
+}
+defaultSettingsToggleOver: Toggle(defaultSettingsToggle) {
+	untoggledFg: menuIconFgOver;
+}
+defaultSettingsButton: SettingsButton {
+	textFg: windowBoldFg;
+	textFgOver: windowBoldFgOver;
+	textBg: windowBg;
+	textBgOver: windowBgOver;
+
+	font: boxTextFont;
+
+	height: 20px;
+	padding: margins(22px, 10px, 22px, 8px);
+
+	toggle: defaultSettingsToggle;
+	toggleOver: defaultSettingsToggleOver;
+	toggleSkip: 23px;
+
+	ripple: defaultRippleAnimation;
 }
 
 // Windows specific title
