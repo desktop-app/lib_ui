@@ -1978,7 +1978,7 @@ bool InputField::isRedoAvailable() const {
 void InputField::processFormatting(int insertPosition, int insertEnd) {
 	// Tilde formatting.
 	const auto tildeFormatting = (_st.font->f.pixelSize() * style::DevicePixelRatio() == 13)
-		&& (_st.font->f.family() == qstr("Open Sans"));
+		&& (_st.font->f.family() == qstr("DAOpenSansRegular"));
 	auto isTildeFragment = false;
 	const auto tildeFixedFont = AdjustFont(st::semiboldFont, _st.font);
 
