@@ -13,6 +13,7 @@
 #include "base/openssl_help.h"
 #include "base/platform/base_platform_info.h"
 #include "emoji_suggestions_helper.h"
+#include "styles/palette.h"
 
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
@@ -967,6 +968,8 @@ FlatInput::FlatInput(
 void FlatInput::updatePalette() {
 	auto p = palette();
 	p.setColor(QPalette::Text, _st.textColor->c);
+	p.setColor(QPalette::Highlight, st::msgInBgSelected->c);
+	p.setColor(QPalette::HighlightedText, st::historyTextInFgSelected->c);
 	setPalette(p);
 }
 
@@ -1368,6 +1371,8 @@ bool InputField::viewportEventInner(QEvent *e) {
 void InputField::updatePalette() {
 	auto p = _inner->palette();
 	p.setColor(QPalette::Text, _st.textFg->c);
+	p.setColor(QPalette::Highlight, st::msgInBgSelected->c);
+	p.setColor(QPalette::HighlightedText, st::historyTextInFgSelected->c);
 	_inner->setPalette(p);
 
 	_defaultCharFormat.merge(PrepareTagFormat(_st, QString()));
@@ -3595,6 +3600,8 @@ MaskedInputField::MaskedInputField(
 void MaskedInputField::updatePalette() {
 	auto p = palette();
 	p.setColor(QPalette::Text, _st.textFg->c);
+	p.setColor(QPalette::Highlight, st::msgInBgSelected->c);
+	p.setColor(QPalette::HighlightedText, st::historyTextInFgSelected->c);
 	setPalette(p);
 }
 
