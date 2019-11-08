@@ -1,7 +1,9 @@
 add_library(lib_ui OBJECT)
 init_target(lib_ui)
 
+include(cmake/generate_palette.cmake)
 include(cmake/generate_styles.cmake)
+include(cmake/generate_emoji.cmake)
 
 get_filename_component(src_loc . REALPATH)
 
