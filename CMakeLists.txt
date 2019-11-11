@@ -12,13 +12,23 @@ set(style_files
     ui/layers/layers.style
     ui/widgets/widgets.style
 )
+set(qrc_files
+    fonts/fonts.qrc
+    qt_conf/linux.qrc
+    qt_conf/mac.qrc
+    qt_conf/win.qrc
+)
 
 generate_palette(lib_ui ui/colors.palette)
 generate_styles(lib_ui ${src_loc} "${style_files}" ui/colors.palette)
 generate_emoji(lib_ui emoji_suggestions/emoji_autocomplete.json)
 
+set_target_properties(lib_ui PROPERTIES AUTOMOC ON)
+set_target_properties(lib_ui PROPERTIES AUTORCC ON)
+
 set(lib_ui_sources
 PRIVATE
+    ${qrc_files}
     ${style_files}
     ui/colors.palette
     emoji_suggestions/emoji_autocomplete.json
@@ -170,9 +180,9 @@ PRIVATE
     emoji_suggestions/emoji_suggestions.h
     emoji_suggestions/emoji_suggestions_helper.h
 )
+nice_target_sources(lib_ui ${src_loc} "${lib_ui_sources}")
 
 force_include(lib_ui ui/ui_pch.h)
-nice_target_sources(lib_ui ${src_loc} "${lib_ui_sources}")
 
 target_include_directories(lib_ui
 PUBLIC
