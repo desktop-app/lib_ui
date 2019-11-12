@@ -184,6 +184,14 @@ public:
 		return _delegate;
 	}
 
+	void setNoContentMargin(bool noContentMargin) {
+		if (_noContentMargin != noContentMargin) {
+			_noContentMargin = noContentMargin;
+			setAttribute(Qt::WA_OpaquePaintEvent, !_noContentMargin);
+		}
+		getDelegate()->setNoContentMargin(noContentMargin);
+	}
+
 public slots:
 	void onScrollToY(int top, int bottom = -1);
 
@@ -196,13 +204,6 @@ protected:
 		getDelegate()->setLayerType(layerType);
 	}
 
-	void setNoContentMargin(bool noContentMargin) {
-		if (_noContentMargin != noContentMargin) {
-			_noContentMargin = noContentMargin;
-			setAttribute(Qt::WA_OpaquePaintEvent, !_noContentMargin);
-		}
-		getDelegate()->setNoContentMargin(noContentMargin);
-	}
 	void setDimensions(
 			int newWidth,
 			int maxHeight,
