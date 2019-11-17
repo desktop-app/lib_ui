@@ -182,7 +182,7 @@ PRIVATE
 )
 nice_target_sources(lib_ui ${src_loc} "${lib_ui_sources}")
 
-force_include(lib_ui ui/ui_pch.h)
+target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
 
 target_include_directories(lib_ui
 PUBLIC
