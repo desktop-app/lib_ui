@@ -1,4 +1,11 @@
+# This file is part of Desktop App Toolkit,
+# a set of libraries for developing nice desktop applications.
+#
+# For license and copyright information please follow this link:
+# https://github.com/desktop-app/legal/blob/master/LEGAL
+
 add_library(lib_ui OBJECT)
+add_library(desktop-app::lib_ui ALIAS lib_ui)
 init_target(lib_ui)
 
 include(cmake/generate_palette.cmake)
@@ -192,5 +199,5 @@ PUBLIC
 
 target_link_libraries(lib_ui
 PUBLIC
-    lib_base
+    desktop-app::lib_base
 )
