@@ -1,5 +1,7 @@
 function(generate_styles target_name src_loc style_files dependent_style_files)
     set(gen_dst ${CMAKE_CURRENT_BINARY_DIR}/gen)
+    file(MAKE_DIRECTORY ${gen_dst})
+
     set(full_generated_files "")
     set(full_dependencies_list ${dependent_style_files})
     foreach (file ${style_files})

@@ -1,5 +1,7 @@
 function(generate_emoji target_name suggestions_json)
     set(gen_dst ${CMAKE_CURRENT_BINARY_DIR}/gen)
+    file(MAKE_DIRECTORY ${gen_dst})
+
     set(gen_src ${CMAKE_CURRENT_SOURCE_DIR}/${suggestions_json})
     set(generated_files
         ${gen_dst}/emoji.cpp

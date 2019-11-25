@@ -30,8 +30,7 @@ generate_palette(lib_ui ui/colors.palette)
 generate_styles(lib_ui ${src_loc} "${style_files}" ui/colors.palette)
 generate_emoji(lib_ui emoji_suggestions/emoji_autocomplete.json)
 
-set_target_properties(lib_ui PROPERTIES AUTOMOC ON)
-set_target_properties(lib_ui PROPERTIES AUTORCC ON)
+set_target_properties(lib_ui PROPERTIES AUTOMOC ON AUTORCC ON)
 
 set(lib_ui_sources
 PRIVATE
