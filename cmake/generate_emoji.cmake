@@ -8,10 +8,16 @@ function(generate_emoji target_name suggestions_json)
         ${gen_dst}/emoji.h
         ${gen_dst}/emoji_suggestions_data.cpp
         ${gen_dst}/emoji_suggestions_data.h
+        ${gen_dst}/emoji.timestamp
     )
     add_custom_command(
     OUTPUT
-        ${generated_files}
+        ${gen_dst}/emoji.timestamp
+    BYPRODUCTS
+        ${gen_dst}/emoji.cpp
+        ${gen_dst}/emoji.h
+        ${gen_dst}/emoji_suggestions_data.cpp
+        ${gen_dst}/emoji_suggestions_data.h
     COMMAND
         codegen_emoji
         -o${gen_dst}

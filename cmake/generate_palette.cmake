@@ -6,10 +6,14 @@ function(generate_palette target_name palette_file)
     set(generated_files
         ${gen_dst}/styles/palette.cpp
         ${gen_dst}/styles/palette.h
+        ${gen_dst}/styles/palette.timestamp
     )
     add_custom_command(
     OUTPUT
-        ${generated_files}
+        ${gen_dst}/styles/palette.timestamp
+    BYPRODUCTS
+        ${gen_dst}/styles/palette.cpp
+        ${gen_dst}/styles/palette.h
     COMMAND
         codegen_style
         -I${gen_dst}

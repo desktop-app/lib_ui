@@ -14,11 +14,15 @@ function(generate_styles target_name src_loc style_files dependent_style_files)
         set(generated_files
             ${gen_dst}/styles/style_${file_name}.cpp
             ${gen_dst}/styles/style_${file_name}.h
+            ${gen_dst}/styles/style_${file_name}.timestamp
         )
         list(APPEND full_generated_files ${generated_files})
         add_custom_command(
         OUTPUT
-            ${generated_files}
+            ${gen_dst}/styles/style_${file_name}.timestamp
+        BYPRODUCTS
+            ${gen_dst}/styles/style_${file_name}.cpp
+            ${gen_dst}/styles/style_${file_name}.h
         COMMAND
             codegen_style
             -I${src_loc}
