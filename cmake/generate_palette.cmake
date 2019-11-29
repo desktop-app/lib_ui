@@ -18,6 +18,7 @@ function(generate_palette target_name palette_file)
         codegen_style
         -I${gen_dst}
         -o${gen_dst}/styles
+        -t${gen_dst}/styles/palette
         -w${CMAKE_CURRENT_SOURCE_DIR}
         ${gen_src}
     COMMENT "Generating palette (${target_name})"
