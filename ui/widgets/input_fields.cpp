@@ -2230,11 +2230,10 @@ void InputField::onDocumentContentsChange(
 		_emojiSurrogateAmount = 0;
 	});
 
-	chopByMaxLength(insertPosition, insertLength);
-
 	if (document->availableRedoSteps() == 0 && insertLength > 0) {
 		const auto pageSize = document->pageSize();
 		processFormatting(insertPosition, insertPosition + insertLength);
+		chopByMaxLength(insertPosition, insertLength - _emojiSurrogateAmount);
 		if (document->pageSize() != pageSize) {
 			document->setPageSize(pageSize);
 		}
@@ -2249,37 +2248,18 @@ void InputField::onCursorPositionChanged() {
 	}
 }
 
+// For proper working the insertLength should be subtracted with amount
+// of emoji surrogates.
 void InputField::chopByMaxLength(int insertPosition, int insertLength) {
 	Expects(_correcting);
 
 	if (_maxLength < 0) {
 		return;
 	}
-
 	auto cursor = QTextCursor(document()->docHandle(), 0);
-	cursor.movePosition(QTextCursor::End);
-	const auto fullSize = cursor.position();
-	const auto toRemove = fullSize - _maxLength;
-	if (toRemove > 0) {
-		if (toRemove > insertLength) {
-			if (insertLength) {
-				cursor.setPosition(insertPosition);
-				cursor.setPosition(
-					(insertPosition + insertLength),
-					QTextCursor::KeepAnchor);
-				cursor.removeSelectedText();
-			}
-			cursor.setPosition(fullSize - (toRemove - insertLength));
-			cursor.setPosition(fullSize, QTextCursor::KeepAnchor);
-			cursor.removeSelectedText();
-		} else {
-			cursor.setPosition(
-				insertPosition + (insertLength - toRemove));
-			cursor.setPosition(
-				insertPosition + insertLength,
-				QTextCursor::KeepAnchor);
-			cursor.removeSelectedText();
-		}
+	cursor.setPosition(insertPosition + insertLength);
+	while (characterCount() > _maxLength) {
+		cursor.deletePreviousChar();
 	}
 }
 
