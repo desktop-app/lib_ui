@@ -306,6 +306,9 @@ public:
 	void ensureCursorVisible();
 	not_null<QTextEdit*> rawTextEdit();
 	not_null<const QTextEdit*> rawTextEdit() const;
+	int characterCount() const {
+		return document()->characterCount() - 1;
+	}
 
 	enum class MimeAction {
 		Check,

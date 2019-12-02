@@ -1480,9 +1480,7 @@ void InputField::setMaxLength(int length) {
 				handleContentsChanged();
 			});
 
-			auto cursor = QTextCursor(document->docHandle(), 0);
-			cursor.movePosition(QTextCursor::End);
-			chopByMaxLength(0, cursor.position());
+			chopByMaxLength(0, characterCount());
 		}
 	}
 }
@@ -2201,10 +2199,9 @@ void InputField::onDocumentContentsChange(
 
 	// Qt bug workaround https://bugreports.qt.io/browse/QTBUG-49062
 	if (!position) {
-		auto cursor = QTextCursor(document->docHandle(), 0);
-		cursor.movePosition(QTextCursor::End);
-		if (position + charsAdded > cursor.position()) {
-			const auto delta = position + charsAdded - cursor.position();
+		const auto end = characterCount();
+		if (position + charsAdded > end) {
+			const auto delta = position + charsAdded - end;
 			if (charsRemoved >= delta) {
 				charsAdded -= delta;
 				charsRemoved -= delta;
@@ -2338,9 +2335,7 @@ void InputField::highlightMarkdown() {
 				? QColor(0, 128, 0)
 				: QColor(128, 0, 0)));
 	}
-	auto cursor = textCursor();
-	cursor.movePosition(QTextCursor::End);
-	if (const auto till = cursor.position(); till > from) {
+	if (const auto till = characterCount(); till > from) {
 		applyColor(from, till, QColor(0, 0, 0));
 	}
 }
@@ -3053,11 +3048,7 @@ bool InputField::commitMarkdownReplacement(
 		int till,
 		const QString &tag,
 		const QString &edge) {
-	const auto end = [&] {
-		auto cursor = QTextCursor(document()->docHandle(), 0);
-		cursor.movePosition(QTextCursor::End);
-		return cursor.position();
-	}();
+	const auto end = characterCount();
 
 	// In case of 'pre' tag extend checked text by one symbol.
 	// So that we'll know if we need to insert additional newlines.
