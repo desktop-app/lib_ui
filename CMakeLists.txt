@@ -32,7 +32,8 @@ generate_emoji(lib_ui emoji_suggestions/emoji_autocomplete.json)
 
 set_target_properties(lib_ui PROPERTIES AUTOMOC ON AUTORCC ON)
 
-set(lib_ui_sources
+target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
+nice_target_sources(lib_ui ${src_loc}
 PRIVATE
     ${qrc_files}
     ${style_files}
@@ -186,9 +187,6 @@ PRIVATE
     emoji_suggestions/emoji_suggestions.h
     emoji_suggestions/emoji_suggestions_helper.h
 )
-nice_target_sources(lib_ui ${src_loc} "${lib_ui_sources}")
-
-target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
 
 target_include_directories(lib_ui
 PUBLIC

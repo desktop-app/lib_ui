@@ -2,13 +2,14 @@ function(generate_styles target_name src_loc style_files dependent_style_files)
     set(gen_dst ${CMAKE_CURRENT_BINARY_DIR}/gen)
     file(MAKE_DIRECTORY ${gen_dst})
 
-    set(full_generated_files "")
+    set(gen_timestamp ${gen_dst}/styles/${target_name}_style.timestamp)
+    set(gen_files "")
     set(full_generation_sources "")
     set(full_dependencies_list ${dependent_style_files})
     foreach (file ${style_files})
         list(APPEND full_generation_sources ${src_loc}/${file})
         get_filename_component(file_name ${file} NAME_WLE)
-        list(APPEND full_generated_files
+        list(APPEND gen_files
             ${gen_dst}/styles/style_${file_name}.cpp
             ${gen_dst}/styles/style_${file_name}.h
         )
@@ -17,9 +18,9 @@ function(generate_styles target_name src_loc style_files dependent_style_files)
 
     add_custom_command(
     OUTPUT
-        ${gen_dst}/styles/${target_name}_style.timestamp
+        ${gen_timestamp}
     BYPRODUCTS
-        ${full_generated_files}
+        ${gen_files}
     COMMAND
         codegen_style
         -I${src_loc}
@@ -35,6 +36,5 @@ function(generate_styles target_name src_loc style_files dependent_style_files)
         ${full_dependencies_list}
     )
 
-    list(APPEND full_generated_files ${gen_dst}/styles/${target_name}_style.timestamp)
-    generate_target(${target_name} styles "${full_generated_files}" ${gen_dst})
+    generate_target(${target_name} styles ${gen_timestamp} "${gen_files}" ${gen_dst})
 endfunction()
