@@ -144,7 +144,14 @@ void InfiniteRadialAnimation::draw(
 		QPainter &p,
 		QPoint position,
 		int outerWidth) {
-	draw(p, position, _st.size, outerWidth);
+	Draw(
+		p,
+		computeState(),
+		position,
+		_st.size,
+		outerWidth,
+		_st.color,
+		_st.thickness);
 }
 
 void InfiniteRadialAnimation::draw(
@@ -152,8 +159,24 @@ void InfiniteRadialAnimation::draw(
 		QPoint position,
 		QSize size,
 		int outerWidth) {
-	const auto state = computeState();
+	Draw(
+		p,
+		computeState(),
+		position,
+		size,
+		outerWidth,
+		_st.color,
+		_st.thickness);
+}
 
+void InfiniteRadialAnimation::Draw(
+		QPainter &p,
+		const RadialState &state,
+		QPoint position,
+		QSize size,
+		int outerWidth,
+		QPen pen,
+		int thickness) {
 	auto o = p.opacity();
 	p.setOpacity(o * state.shown);
 
@@ -166,10 +189,9 @@ void InfiniteRadialAnimation::draw(
 	const auto was = p.pen();
 	const auto brush = p.brush();
 	if (anim::Disabled()) {
-		anim::DrawStaticLoading(p, rect, _st.thickness, _st.color);
+		anim::DrawStaticLoading(p, rect, thickness, pen);
 	} else {
-		auto pen = _st.color->p;
-		pen.setWidth(_st.thickness);
+		pen.setWidth(thickness);
 		pen.setCapStyle(Qt::RoundCap);
 		p.setPen(pen);
 

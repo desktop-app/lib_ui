@@ -27,10 +27,10 @@ public:
 	template <typename Callback>
 	RadialAnimation(Callback &&callback);
 
-	float64 opacity() const {
+	[[nodiscard]] float64 opacity() const {
 		return _opacity;
 	}
-	bool animating() const {
+	[[nodiscard]] bool animating() const {
 		return _animation.animating();
 	}
 
@@ -44,7 +44,7 @@ public:
 		int32 thickness,
 		style::color color) const;
 
-	RadialState computeState() const;
+	[[nodiscard]] RadialState computeState() const;
 
 private:
 	crl::time _firstStart = 0;
@@ -88,6 +88,15 @@ public:
 		QPoint position,
 		QSize size,
 		int outerWidth);
+
+	static void Draw(
+		QPainter &p,
+		const RadialState &state,
+		QPoint position,
+		QSize size,
+		int outerWidth,
+		QPen pen,
+		int thickness);
 
 	[[nodiscard]] RadialState computeState();
 
