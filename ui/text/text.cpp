@@ -3214,6 +3214,17 @@ TextForMimeData String::toText(
 	if (composeExpanded) {
 		result.expanded.reserve(_text.size());
 	}
+	const auto insertEntity = [&](EntityInText &&entity) {
+		auto i = result.rich.entities.end();
+		while (i != result.rich.entities.begin()) {
+			auto j = i;
+			if ((--j)->offset() <= entity.offset()) {
+				break;
+			}
+			i = j;
+		}
+		result.rich.entities.insert(i, std::move(entity));
+	};
 	auto linkStart = 0;
 	auto markdownTrackers = composeEntities
 		? std::vector<MarkdownTagTracker>{
@@ -3231,7 +3242,7 @@ TextForMimeData String::toText(
 		for (auto &tracker : markdownTrackers) {
 			const auto flag = tracker.flag;
 			if ((oldFlags & flag) && !(newFlags & flag)) {
-				result.rich.entities.push_back({
+				insertEntity({
 					tracker.type,
 					tracker.start,
 					result.rich.text.size() - tracker.start });
@@ -3264,7 +3275,7 @@ TextForMimeData String::toText(
 			}
 		}
 		if (composeEntities) {
-			result.rich.entities.push_back({
+			insertEntity({
 				entity.type,
 				linkStart,
 				full.size(),

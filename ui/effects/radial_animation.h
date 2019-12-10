@@ -72,7 +72,7 @@ public:
 		Callback &&callback,
 		const style::InfiniteRadialAnimation &st);
 
-	bool animating() const {
+	[[nodiscard]] bool animating() const {
 		return _animation.animating();
 	}
 
@@ -89,7 +89,7 @@ public:
 		QSize size,
 		int outerWidth);
 
-	RadialState computeState();
+	[[nodiscard]] RadialState computeState();
 
 private:
 	const style::InfiniteRadialAnimation &_st;
