@@ -794,7 +794,7 @@ SettingsSlider {
 	barFg: color;
 	barFgActive: color;
 	labelTop: pixels;
-	labelFont: font;
+	labelStyle: TextStyle;
 	labelFg: color;
 	labelFgActive: color;
 	duration: int;
@@ -812,7 +812,7 @@ defaultSettingsSlider: SettingsSlider {
 	barFg: sliderBgInactive;
 	barFgActive: sliderBgActive;
 	labelTop: 17px;
-	labelFont: normalFont;
+	labelStyle: defaultTextStyle;
 	labelFg: windowActiveTextFg;
 	labelFgActive: windowActiveTextFg;
 	duration: 150;
@@ -824,7 +824,7 @@ defaultTabsSlider: SettingsSlider(defaultSettingsSlider) {
 	barSkip: 0px;
 	barFg: transparent;
 	labelTop: 19px;
-	labelFont: semiboldFont;
+	labelStyle: semiboldTextStyle;
 	labelFg: windowSubTextFg;
 	labelFgActive: lightButtonFg;
 	rippleBottomSkip: 1px;
