@@ -516,7 +516,6 @@ void prepareRound(
 	}
 	Assert(!image.isNull());
 
-	image.setDevicePixelRatio(style::DevicePixelRatio());
 	image = std::move(image).convertToFormat(
 		QImage::Format_ARGB32_Premultiplied);
 	Assert(!image.isNull());
