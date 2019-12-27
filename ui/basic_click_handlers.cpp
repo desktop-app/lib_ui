@@ -16,12 +16,17 @@
 #include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
 
+QString TextClickHandler::readable() const {
+	const auto result = url();
+	return result.startsWith(qstr("internal:")) ? QString() : result;
+}
+
 UrlClickHandler::UrlClickHandler(const QString &url, bool fullDisplayed)
 : TextClickHandler(fullDisplayed)
 , _originalUrl(url) {
 	if (isEmail()) {
 		_readable = _originalUrl;
-	} else {
+	} else if (!_originalUrl.startsWith(qstr("internal:"))) {
 		const auto original = QUrl(_originalUrl);
 		const auto good = QUrl(original.isValid()
 			? original.toEncoded()
