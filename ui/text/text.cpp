@@ -3267,14 +3267,16 @@ TextForMimeData String::toText(
 		if (!composeExpanded && !composeEntities) {
 			return;
 		}
+		const auto skipLink = (entity.type == EntityType::CustomUrl)
+			&& (entity.data.startsWith(qstr("internal:")));
 		if (composeExpanded) {
 			result.expanded.append(full);
-			if (entity.type == EntityType::CustomUrl) {
+			if (entity.type == EntityType::CustomUrl && !skipLink) {
 				const auto &url = entity.data;
 				result.expanded.append(qstr(" (")).append(url).append(')');
 			}
 		}
-		if (composeEntities) {
+		if (composeEntities && !skipLink) {
 			insertEntity({
 				entity.type,
 				linkStart,
