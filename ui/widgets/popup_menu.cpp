@@ -519,7 +519,8 @@ PopupMenu::~PopupMenu() {
 		delete submenu;
 	}
 	if (const auto parent = parentWidget()) {
-		if (QApplication::focusWidget() != nullptr) {
+		if (QApplication::focusWidget() != nullptr
+			&& Ui::InFocusChain(parent)) {
 			ActivateWindowDelayed(parent);
 		}
 	}
