@@ -330,6 +330,9 @@ public:
 	auto documentContentsChanges() {
 		return _documentContentsChanges.events();
 	}
+	auto markdownTagApplies() {
+		return _markdownTagApplies.events();
+	}
 
 	~InputField();
 
@@ -535,6 +538,7 @@ private:
 	bool _instantReplacesEnabled = true;
 
 	rpl::event_stream<DocumentChangeInfo> _documentContentsChanges;
+	rpl::event_stream<MarkdownTag> _markdownTagApplies;
 
 };
 

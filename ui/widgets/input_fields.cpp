@@ -3152,6 +3152,10 @@ bool InputField::commitMarkdownReplacement(
 
 	cursor.setCharFormat(_defaultCharFormat);
 	_inner->setTextCursor(cursor);
+
+	// Fire the tag to the spellchecker.
+	_markdownTagApplies.fire({ from, till, -1, -1, false, tag });
+
 	return true;
 }
 
