@@ -8,8 +8,8 @@
 
 #include "ui/style/style_core.h"
 
+#include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
-#include <QtGui/QGuiApplication>
 #include <QtGui/QtEvents>
 
 #include <array>
@@ -81,6 +81,10 @@ void SendPendingEventsRecursive(QWidget *target, bool parentHiddenFlag) {
 }
 
 } // namespace
+
+bool AppInFocus() {
+	return QApplication::focusWidget() != nullptr;
+}
 
 void SendPendingMoveResizeEvents(not_null<QWidget*> target) {
 	CreateWidgetStateRecursive(target);

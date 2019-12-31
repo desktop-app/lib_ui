@@ -28,10 +28,6 @@ public:
 		return QMargins();
 	}
 
-	bool inFocusChain() const {
-		return Ui::InFocusChain(this);
-	}
-
 	void hideChildren() {
 		for (auto child : Base::children()) {
 			if (child->isWidgetType()) {

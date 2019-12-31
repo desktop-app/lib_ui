@@ -462,10 +462,10 @@ void LayerStackWidget::setCacheImages() {
 
 void LayerStackWidget::closeLayer(not_null<LayerWidget*> layer) {
 	const auto weak = Ui::MakeWeak(layer.get());
-	if (weak->inFocusChain()) {
+	if (Ui::InFocusChain(layer)) {
 		setFocus();
 	}
-	if (!weak || !weak->setClosing()) {
+	if (!layer->setClosing()) {
 		// This layer is already closing.
 		return;
 	} else if (!weak) {
@@ -734,9 +734,11 @@ void LayerStackWidget::appendBox(
 LayerWidget *LayerStackWidget::pushBox(
 		object_ptr<BoxContent> box,
 		anim::type animated) {
-	auto oldLayer = currentLayer();
+	const auto oldLayer = currentLayer();
 	if (oldLayer) {
-		if (oldLayer->inFocusChain()) setFocus();
+		if (Ui::InFocusChain(oldLayer)) {
+			setFocus();
+		}
 		oldLayer->hide();
 	}
 	_layers.push_back(
@@ -793,7 +795,7 @@ void LayerStackWidget::clearClosingLayers() {
 	while (!_closingLayers.empty()) {
 		const auto index = _closingLayers.size() - 1;
 		const auto layer = _closingLayers.back().get();
-		if (layer->inFocusChain()) {
+		if (Ui::InFocusChain(layer)) {
 			setFocus();
 		}
 

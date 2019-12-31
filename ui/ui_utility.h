@@ -98,6 +98,8 @@ inline not_null<std::decay_t<Value>*> AttachAsChild(
 		std::forward<Value>(value))->value();
 }
 
+[[nodiscard]] bool AppInFocus();
+
 [[nodiscard]] inline bool InFocusChain(not_null<const QWidget*> widget) {
 	if (const auto top = widget->window()) {
 		if (auto focused = top->focusWidget()) {
