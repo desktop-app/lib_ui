@@ -198,6 +198,7 @@ private:
 	crl::time _lastUpdateTime = 0;
 	int _timerId = 0;
 	bool _updating = false;
+	bool _removedWhileUpdating = false;
 	bool _scheduled = false;
 	bool _forceImmediateUpdate = false;
 	std::vector<ActiveBasicPointer> _active;

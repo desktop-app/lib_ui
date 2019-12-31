@@ -113,6 +113,7 @@ void Manager::stop(not_null<Basic*> animation) {
 		const auto i = ranges::find(_active, value, proj);
 		if (i != end(_active)) {
 			*i = nullptr;
+			_removedWhileUpdating = true;
 		}
 	} else if (empty(_active)) {
 		stopTimer();
@@ -137,6 +138,12 @@ void Manager::update() {
 		return !element.call(now);
 	};
 	_active.erase(ranges::remove_if(_active, isFinished), end(_active));
+
+	if (_removedWhileUpdating) {
+		_removedWhileUpdating = false;
+		const auto proj = &ActiveBasicPointer::get;
+		_active.erase(ranges::remove(_active, nullptr, proj), end(_active));
+	}
 
 	if (!empty(_starting)) {
 		_active.insert(
