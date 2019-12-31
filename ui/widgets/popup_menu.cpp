@@ -520,7 +520,7 @@ PopupMenu::~PopupMenu() {
 	}
 	if (const auto parent = parentWidget()) {
 		if (QApplication::focusWidget() != nullptr
-			&& Ui::InFocusChain(parent)) {
+			&& Ui::InFocusChain(parent->window())) {
 			ActivateWindowDelayed(parent);
 		}
 	}
