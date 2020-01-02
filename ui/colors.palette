@@ -558,7 +558,7 @@ outdateSoonBg: #e08543; // operating system version is soon outdated bar backgro
 outdatedBg: #e05745; // operating system version is already outdated bar background
 
 // spellcheck
-spellUnderline: #ff000088; // misspelled words
+spellUnderline: #ff000088 | attentionButtonFg; // misspelled words
 
 walletTitleBg: #121213; // wallet window title background when window is inactive
 walletTitleBgActive: walletTitleBg; // wallet window title background when window is active
