@@ -338,9 +338,12 @@ bool WindowHelper::handleNativeEvent(
 		}
 		const auto command = LOWORD(wParam);
 		switch (command) {
-		case SC_CLOSE: _window->close(); return true;
+		case SC_CLOSE:
+			_window->close();
+			return true;
 		case SC_MINIMIZE:
-			_window->setWindowState(Qt::WindowMinimized);
+			_window->setWindowState(
+				_window->windowState() | Qt::WindowMinimized);
 			return true;
 		case SC_MAXIMIZE:
 			if (!fixedSize()) {

@@ -53,7 +53,8 @@ void TitleWidget::setResizeEnabled(bool enabled) {
 
 void TitleWidget::init() {
 	_minimize->setClickedCallback([=] {
-		window()->setWindowState(Qt::WindowMinimized);
+		window()->setWindowState(
+			window()->windowState() | Qt::WindowMinimized);
 		_minimize->clearState();
 	});
 	_minimize->setPointerCursor(false);
