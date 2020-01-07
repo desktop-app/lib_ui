@@ -8,6 +8,8 @@
 
 #include <QtWidgets/QApplication>
 
+#include "base/platform/win/base_windows_h.h"
+
 namespace Ui {
 namespace Platform {
 
@@ -25,6 +27,19 @@ void UpdateOverlayed(not_null<QWidget*> widget) {
 	QGuiApplication::sendEvent(widget, &e);
 	if (!wm) widget->setAttribute(Qt::WA_Mapped, false);
 	if (!wv) widget->setAttribute(Qt::WA_WState_Visible, false);
+}
+
+void IgnoreAllActivation(not_null<QWidget*> widget) {
+	const auto handle = reinterpret_cast<HWND>(widget->winId());
+	Assert(handle != nullptr);
+
+	ShowWindow(handle, SW_HIDE);
+	const auto style = GetWindowLong(handle, GWL_EXSTYLE);
+	SetWindowLong(
+		handle,
+		GWL_EXSTYLE,
+		style | WS_EX_NOACTIVATE | WS_EX_APPWINDOW);
+	ShowWindow(handle, SW_SHOW);
 }
 
 } // namespace Platform

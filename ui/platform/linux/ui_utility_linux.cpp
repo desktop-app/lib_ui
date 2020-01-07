@@ -43,5 +43,8 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 	return false;
 }
 
+void IgnoreAllActivation(not_null<QWidget*> widget) {
+}
+
 } // namespace Platform
 } // namespace Ui

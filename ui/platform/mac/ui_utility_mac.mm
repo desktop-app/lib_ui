@@ -91,5 +91,8 @@ void DrainMainQueue() {
 	_dispatch_main_queue_callback_4CF(nullptr);
 }
 
+void IgnoreAllActivation(not_null<QWidget*> widget) {
+}
+
 } // namespace Platform
 } // namespace Ui
