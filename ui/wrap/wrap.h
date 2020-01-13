@@ -77,6 +77,8 @@ public:
 		return RpWidget::naturalWidth();
 	}
 
+	using WrapParentType = RpWidget;
+
 protected:
 	int resizeGetHeight(int newWidth) override {
 		if (auto weak = wrapped()) {
