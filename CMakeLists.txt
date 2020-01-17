@@ -21,10 +21,13 @@ set(style_files
 )
 set(qrc_files
     fonts/fonts.qrc
-    qt_conf/linux.qrc
     qt_conf/mac.qrc
     qt_conf/win.qrc
 )
+
+if (NOT DESKTOP_APP_USE_PACKAGED)
+    set(qrc_files qt_conf/linux.qrc)
+endif()
 
 generate_palette(lib_ui ui/colors.palette)
 generate_styles(lib_ui ${src_loc} "${style_files}" ui/colors.palette)
