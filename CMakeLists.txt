@@ -19,15 +19,6 @@ set(style_files
     ui/layers/layers.style
     ui/widgets/widgets.style
 )
-set(qrc_files
-    fonts/fonts.qrc
-    qt_conf/mac.qrc
-    qt_conf/win.qrc
-)
-
-if (NOT DESKTOP_APP_USE_PACKAGED)
-    set(qrc_files qt_conf/linux.qrc)
-endif()
 
 generate_palette(lib_ui ui/colors.palette)
 generate_styles(lib_ui ${src_loc} "${style_files}" ui/colors.palette)
@@ -38,10 +29,13 @@ set_target_properties(lib_ui PROPERTIES AUTOMOC ON AUTORCC ON)
 target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
 nice_target_sources(lib_ui ${src_loc}
 PRIVATE
-    ${qrc_files}
     ${style_files}
     ui/colors.palette
     emoji_suggestions/emoji_autocomplete.json
+
+    fonts/fonts.qrc
+    qt_conf/mac.qrc
+    qt_conf/win.qrc
 
     ui/effects/animation_value.cpp
     ui/effects/animation_value.h
@@ -190,6 +184,10 @@ PRIVATE
     emoji_suggestions/emoji_suggestions.h
     emoji_suggestions/emoji_suggestions_helper.h
 )
+
+if (NOT DESKTOP_APP_USE_PACKAGED)
+    nice_target_sources(lib_ui ${src_loc} PRIVATE qt_conf/linux.qrc)
+endif()
 
 target_include_directories(lib_ui
 PUBLIC
