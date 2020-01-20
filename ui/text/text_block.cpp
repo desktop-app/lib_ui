@@ -7,6 +7,7 @@
 #include "ui/text/text_block.h"
 
 #include "styles/style_basic.h"
+#include "base/integration.h"
 
 #include <private/qfontengine_p.h>
 
@@ -124,6 +125,10 @@ struct LineBreakHelper
 
 //const QFixed LineBreakHelper::RightBearingNotCalculated = QFixed(1);
 
+QString DebugCurrentParsingString, DebugCurrentParsingPart;
+int DebugCurrentParsingFrom = 0;
+int DebugCurrentParsingLength = 0;
+
 static inline void addNextCluster(int &pos, int end, ScriptLine &line, int &glyphCount,
 	const QScriptItem &current, const unsigned short *logClusters,
 	const QGlyphLayout &glyphs)
@@ -139,6 +144,15 @@ static inline void addNextCluster(int &pos, int end, ScriptLine &line, int &glyp
 		++glyphPosition;
 	} while (glyphPosition < current.num_glyphs && !glyphs.attributes[glyphPosition].clusterStart);
 
+	if (!((pos == end && glyphPosition == current.num_glyphs) || logClusters[pos] == glyphPosition)) {
+		auto str = QStringList();
+		for (auto i = 0; i < pos; ++i) {
+			str.append(QString::number(logClusters[i]));
+		}
+		base::Integration::Instance().logAssertionViolation(QString("text: %1 (from: %2, length: %3) part: %4").arg(DebugCurrentParsingString).arg(DebugCurrentParsingFrom).arg(DebugCurrentParsingLength).arg(DebugCurrentParsingPart));
+		base::Integration::Instance().logAssertionViolation(QString("pos: %1, end: %2, glyphPosition: %3, glyphCount: %4, lineLength: %5, num_glyphs: %6, logClusters[0..pos]: %7").arg(pos).arg(end).arg(glyphPosition).arg(glyphCount).arg(line.length).arg(current.num_glyphs).arg(str.join(",")));
+		Unexpected("Values in addNextCluster()");
+	}
 	Q_ASSERT((pos == end && glyphPosition == current.num_glyphs) || logClusters[pos] == glyphPosition);
 
 	++glyphCount;
@@ -329,7 +343,10 @@ TextBlock::TextBlock(const style::font &font, const QString &str, QFixed minResi
 			}
 		}
 
-		const auto part = str.mid(_from, length);
+		DebugCurrentParsingString = str;
+		DebugCurrentParsingFrom = _from;
+		DebugCurrentParsingLength = length;
+		const auto part = DebugCurrentParsingPart = str.mid(_from, length);
 
 		QStackTextEngine engine(part, blockFont->f);
 		BlockParser parser(&engine, this, minResizeWidth, _from, part);
