@@ -831,9 +831,10 @@ void Instance::generateCache() {
 		universal = Universal,
 		guard = _generating.make_guard()
 	]() mutable {
+		auto image = universal->generate(size, index);
 		crl::on_main(std::move(guard), [
 			=,
-			image = universal->generate(size, index)
+			image = std::move(image)
 		]() mutable {
 			if (universal != Universal) {
 				return;
