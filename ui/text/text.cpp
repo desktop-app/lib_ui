@@ -760,6 +760,26 @@ void Parser::parseCurrentChar() {
 			if (_ptr + 1 >= _end || !(_ptr + 1)->isLowSurrogate()) {
 				return true;
 			}
+			const auto ucs4 = QChar::surrogateToUcs4(_ch, *(_ptr + 1));
+			if (ucs4 >= 0xE0000) {
+				// Unicode tags are skipped.
+				// Only place they work is in some flag emoji,
+				// but in that case they were already parsed as emoji before.
+				//
+				// For unknown reason in some unknown cases strings with such
+				// symbols lead to crashes on some Linux distributions, see
+				// https://github.com/telegramdesktop/tdesktop/issues/7005
+				//
+				// At least one crashing text was starting that way:
+				//
+				// 0xd83d 0xdcda 0xdb40 0xdc69 0xdb40 0xdc64 0xdb40 0xdc6a
+				// 0xdb40 0xdc77 0xdb40 0xdc7f 0x32 ... simple text here ...
+				//
+				// or in codepoints:
+				//
+				// 0x1f4da 0xe0069 0xe0064 0xe006a 0xe0077 0xe007f 0x32 ...
+				return true;
+			}
 		}
 		return false;
 	}();
