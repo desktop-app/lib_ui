@@ -469,10 +469,10 @@ void prepareRound(
 	Assert(image.bytesPerLine() == (imageIntsPerLine << 2));
 
 	auto ints = reinterpret_cast<uint32*>(image.bits());
-	auto intsTopLeft = ints + target.x() + target.y() * imageWidth;
-	auto intsTopRight = ints + target.x() + target.width() - cornerWidth + target.y() * imageWidth;
-	auto intsBottomLeft = ints + target.x() + (target.y() + target.height() - cornerHeight) * imageWidth;
-	auto intsBottomRight = ints + target.x() + target.width() - cornerWidth + (target.y() + target.height() - cornerHeight) * imageWidth;
+	auto intsTopLeft = ints + target.x() + target.y() * imageIntsPerLine;
+	auto intsTopRight = ints + target.x() + target.width() - cornerWidth + target.y() * imageIntsPerLine;
+	auto intsBottomLeft = ints + target.x() + (target.y() + target.height() - cornerHeight) * imageIntsPerLine;
+	auto intsBottomRight = ints + target.x() + target.width() - cornerWidth + (target.y() + target.height() - cornerHeight) * imageIntsPerLine;
 	auto maskCorner = [&](uint32 *imageInts, const QImage &mask) {
 		auto maskWidth = mask.width();
 		auto maskHeight = mask.height();
