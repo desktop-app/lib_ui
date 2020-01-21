@@ -33,7 +33,6 @@ PRIVATE
     ui/colors.palette
     emoji_suggestions/emoji_autocomplete.json
 
-    fonts/fonts.qrc
     qt_conf/mac.qrc
     qt_conf/win.qrc
 
@@ -187,6 +186,10 @@ PRIVATE
 
 if (NOT DESKTOP_APP_USE_PACKAGED)
     nice_target_sources(lib_ui ${src_loc} PRIVATE qt_conf/linux.qrc)
+endif()
+
+if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
+    nice_target_sources(lib_ui ${src_loc} PRIVATE fonts/fonts.qrc)
 endif()
 
 target_include_directories(lib_ui

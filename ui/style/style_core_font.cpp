@@ -15,7 +15,9 @@
 #include <QtGui/QFontDatabase>
 
 void style_InitFontsResource() {
+#ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 	Q_INIT_RESOURCE(fonts);
+#endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 #ifdef Q_OS_WIN
 	Q_INIT_RESOURCE(win);
 #elif defined Q_OS_MAC // Q_OS_WIN
@@ -93,6 +95,7 @@ enum {
 
 	FontTypesCount,
 };
+#ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 QString FontTypeNames[FontTypesCount] = {
 	"DAOpenSansRegular",
 	"DAOpenSansRegularItalic",
@@ -101,6 +104,7 @@ QString FontTypeNames[FontTypesCount] = {
 	"DAOpenSansSemibold",
 	"DAOpenSansSemiboldItalic",
 };
+#endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 int32 FontTypeFlags[FontTypesCount] = {
 	0,
 	FontItalic,
@@ -109,6 +113,7 @@ int32 FontTypeFlags[FontTypesCount] = {
 	0,
 	FontItalic,
 };
+#ifdef Q_OS_WIN
 QString FontTypeWindowsFallback[FontTypesCount] = {
 	"Segoe UI",
 	"Segoe UI",
@@ -117,6 +122,7 @@ QString FontTypeWindowsFallback[FontTypesCount] = {
 	"Segoe UI Semibold",
 	"Segoe UI Semibold",
 };
+#endif // Q_OS_WIN
 
 bool Started = false;
 QString Overrides[FontTypesCount];
@@ -131,6 +137,7 @@ void StartFonts() {
 
 	style_InitFontsResource();
 
+#ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 	bool areGood[FontTypesCount] = { false };
 	for (auto i = 0; i != FontTypesCount; ++i) {
 		const auto name = FontTypeNames[i];
@@ -155,6 +162,7 @@ void StartFonts() {
 		//QFont::insertSubstitution(name, fallback);
 #endif // Q_OS_WIN
 	}
+#endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 #ifdef Q_OS_MAC
 	auto list = QStringList();
 	list.append(".SF NS Text");
