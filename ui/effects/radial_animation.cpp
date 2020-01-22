@@ -31,7 +31,8 @@ void RadialAnimation::start(float64 prg) {
 
 bool RadialAnimation::update(float64 prg, bool finished, crl::time ms) {
 	const auto iprg = qRound(qMax(prg, 0.0001) * kAlmostFullArcLength);
-	const auto result = (iprg != qRound(_arcEnd.to()));
+	const auto result = (iprg != qRound(_arcEnd.to()))
+		|| (_finished != finished);
 	if (_finished != finished) {
 		_arcEnd.start(iprg);
 		_finished = finished;
