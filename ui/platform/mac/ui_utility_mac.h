@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/platform/base_platform_info.h"
 #include <QtCore/QPoint>
 
 namespace Ui {
@@ -19,7 +20,7 @@ inline void UpdateOverlayed(not_null<QWidget*> widget) {
 }
 
 inline constexpr bool UseMainQueueGeneric() {
-	return false;
+	return ::Platform::IsMacStoreBuild();
 }
 
 } // namespace Platform

@@ -14,9 +14,11 @@
 
 #include <Cocoa/Cocoa.h>
 
+#ifndef OS_MAC_STORE
 extern "C" {
 void _dispatch_main_queue_callback_4CF(mach_msg_header_t *msg);
 } // extern "C"
+#endif // OS_MAC_STORE
 
 namespace Ui {
 namespace Platform {
@@ -88,7 +90,9 @@ void BringToBack(not_null<QWidget*> widget) {
 }
 
 void DrainMainQueue() {
+#ifndef OS_MAC_STORE
 	_dispatch_main_queue_callback_4CF(nullptr);
+#endif // OS_MAC_STORE
 }
 
 void IgnoreAllActivation(not_null<QWidget*> widget) {
