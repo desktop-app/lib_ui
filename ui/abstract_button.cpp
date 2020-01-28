@@ -91,8 +91,10 @@ void AbstractButton::clicked(
 		Qt::MouseButton button) {
 	_modifiers = modifiers;
 	const auto weak = MakeWeak(this);
-	if (const auto callback = _clickedCallback) {
-		callback();
+	if (button == Qt::LeftButton) {
+		if (const auto callback = _clickedCallback) {
+			callback();
+		}
 	}
 	if (weak) {
 		_clicks.fire_copy(button);
