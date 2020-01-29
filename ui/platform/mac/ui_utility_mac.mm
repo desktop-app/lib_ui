@@ -67,12 +67,12 @@ void ReInitOnTopPanel(not_null<QWidget*> panel) {
 	[platformPanel setCollectionBehavior:newBehavior];
 }
 
-void StartTranslucentPaint(QPainter &p, QPaintEvent *e) {
-#ifdef OS_MAC_OLD
+void StartTranslucentPaint(QPainter &p, gsl::span<const QRect> rects) {
 	p.setCompositionMode(QPainter::CompositionMode_Source);
-	p.fillRect(e->rect(), Qt::transparent);
+	for (const auto &r : rects) {
+		p.fillRect(r, Qt::transparent);
+	}
 	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-#endif // OS_MAC_OLD
 }
 
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {

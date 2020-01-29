@@ -30,6 +30,8 @@ void UpdateOverlayed(not_null<QWidget*> widget) {
 }
 
 void IgnoreAllActivation(not_null<QWidget*> widget) {
+	widget->createWinId();
+
 	const auto handle = reinterpret_cast<HWND>(widget->winId());
 	Assert(handle != nullptr);
 

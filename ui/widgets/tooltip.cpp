@@ -132,8 +132,6 @@ void Tooltip::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	if (_useTransparency) {
-		Platform::StartTranslucentPaint(p, e);
-
 		p.setPen(_st->textBorder);
 		p.setBrush(_st->textBg);
 		PainterHighQualityEnabler hq(p);

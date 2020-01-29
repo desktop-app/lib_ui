@@ -16,7 +16,7 @@ namespace Platform {
 [[nodiscard]] bool IsApplicationActive();
 
 [[nodiscard]] bool TranslucentWindowsSupported(QPoint globalPosition);
-void StartTranslucentPaint(QPainter &p, QPaintEvent *e);
+void StartTranslucentPaint(QPainter &p, gsl::span<const QRect> rects);
 
 void InitOnTopPanel(not_null<QWidget*> panel);
 void DeInitOnTopPanel(not_null<QWidget*> panel);

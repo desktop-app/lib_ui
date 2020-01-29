@@ -121,10 +121,6 @@ const std::vector<not_null<QAction*>> &PopupMenu::actions() const {
 void PopupMenu::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
 
-	if (_useTransparency) {
-		Platform::StartTranslucentPaint(p, e);
-	}
-
 	if (_a_show.animating()) {
 		if (auto opacity = _a_opacity.value(_hiding ? 0. : 1.)) {
 			_showAnimation->paintFrame(p, 0, 0, width(), _a_show.value(1.), opacity);
