@@ -43,8 +43,8 @@ void InitOnTopPanel(not_null<QWidget*> panel) {
 	auto platformPanel = static_cast<NSPanel*>(platformWindow);
 	[platformPanel setLevel:NSPopUpMenuWindowLevel];
 	[platformPanel setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces|NSWindowCollectionBehaviorStationary|NSWindowCollectionBehaviorFullScreenAuxiliary|NSWindowCollectionBehaviorIgnoresCycle];
-	[platformPanel setFloatingPanel:YES];
 	[platformPanel setHidesOnDeactivate:NO];
+	//[platformPanel setFloatingPanel:YES];
 
 	Integration::Instance().activationFromTopPanel();
 }
