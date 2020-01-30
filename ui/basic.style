@@ -23,8 +23,6 @@ TextStyle {
 	lineHeight: pixels;
 }
 
-semibold: "Open Sans Semibold";
-
 fsize: 13px;
 normalFont: font(fsize);
 semiboldFont: font(fsize semibold);

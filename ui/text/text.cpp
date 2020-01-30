@@ -2014,24 +2014,18 @@ private:
 		}
 		auto result = f;
 		if ((flags & TextBlockFPre) || (flags & TextBlockFCode)) {
-			result = style::MonospaceFont();
-			if (result->size() != f->size() || result->flags() != f->flags()) {
-				result = style::font(f->size(), f->flags(), result->family());
-			}
+			result = result->monospace();
 		} else {
 			if (flags & TextBlockFBold) {
 				result = result->bold();
 			} else if (flags & TextBlockFSemibold) {
-				result = st::semiboldFont;
-				if (result->size() != f->size() || result->flags() != f->flags()) {
-					result = style::font(f->size(), f->flags(), result->family());
-				}
+				result = result->semibold();
 			}
 			if (flags & TextBlockFItalic) result = result->italic();
 			if (flags & TextBlockFUnderline) result = result->underline();
 			if (flags & TextBlockFStrikeOut) result = result->strikeout();
 			if (flags & TextBlockFTilde) { // tilde fix in OpenSans
-				result = st::semiboldFont;
+				result = result->semibold();
 			}
 		}
 		return result;

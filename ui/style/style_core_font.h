@@ -15,7 +15,7 @@ namespace style {
 namespace internal {
 
 void StartFonts();
-[[nodiscard]] QString GetFontOverride(const QString &familyName, int32 flags = 0);
+[[nodiscard]] QString GetFontOverride(int32 flags = 0);
 
 void destroyFonts();
 int registerFontFamily(const QString &family);
@@ -59,8 +59,10 @@ enum FontFlags {
 	FontItalic = 0x02,
 	FontUnderline = 0x04,
 	FontStrikeOut = 0x08,
+	FontSemibold = 0x10,
+	FontMonospace = 0x20,
 
-	FontDifferentFlags = 0x10,
+	FontDifferentFlags = 0x40,
 };
 
 class FontData {
@@ -83,6 +85,8 @@ public:
 	Font italic(bool set = true) const;
 	Font underline(bool set = true) const;
 	Font strikeout(bool set = true) const;
+	Font semibold(bool set = true) const;
+	Font monospace(bool set = true) const;
 
 	int size() const;
 	uint32 flags() const;
