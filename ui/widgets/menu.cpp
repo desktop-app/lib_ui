@@ -90,7 +90,9 @@ void Menu::init() {
 
 	setMouseTracking(true);
 
-	setAttribute(Qt::WA_OpaquePaintEvent);
+	if (_st.itemBg->c.alpha() == 255) {
+		setAttribute(Qt::WA_OpaquePaintEvent);
+	}
 }
 
 not_null<QAction*> Menu::addAction(const QString &text, const QObject *receiver, const char* member, const style::icon *icon, const style::icon *iconOver) {

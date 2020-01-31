@@ -32,6 +32,7 @@ public:
 	void deleteOnHide(bool del);
 	void popup(const QPoint &p);
 	void hideMenu(bool fast = false);
+	void setForcedOrigin(PanelAnimation::Origin origin);
 
 	void setDestroyedCallback(Fn<void()> callback) {
 		_destroyedCallback = std::move(callback);
@@ -109,6 +110,7 @@ private:
 	SubmenuPointer _activeSubmenu;
 
 	PanelAnimation::Origin _origin = PanelAnimation::Origin::TopLeft;
+	std::optional<PanelAnimation::Origin> _forcedOrigin;
 	std::unique_ptr<PanelAnimation> _showAnimation;
 	Animations::Simple _a_show;
 
