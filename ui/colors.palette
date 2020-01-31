@@ -521,6 +521,14 @@ mediaviewPlaybackInactiveOver: #474747; // video playback progress upcoming (not
 mediaviewPlaybackProgressFg: #ffffffc7; // video playback progress text
 mediaviewPlaybackIconFg: mediaviewPlaybackActive; // video playback controls icon
 mediaviewPlaybackIconFgOver: mediaviewPlaybackActiveOver; // video playback controls icon with mouse over
+mediaviewPlaybackIconRipple: #ffffff14; // video playback controls ripple effect
+
+mediaviewPipControlsFg: #ffffffd9; // picture-in-picture controls
+mediaviewPipControlsFgOver: #ffffff; // picture-in-picture controls with mouse over
+mediaviewPipFade: #00000095; // picture-in-picture gradient fade controls background
+mediaviewPipPlaybackActive: #ffffffda; // picture-in-picture playback progress already played part
+mediaviewPipPlaybackInactive: #ffffff26; // picture-in-picture playback progress upcoming (not played yet) part
+
 mediaviewTransparentBg: #ffffff; // transparent filling part (when viewing a transparent .png file in Media Viewer)
 mediaviewTransparentFg: #cccccc; // another transparent filling part
 
