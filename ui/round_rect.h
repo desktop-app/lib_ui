@@ -30,6 +30,10 @@ public:
 		QPainter &p,
 		const QRect &rect,
 		RectParts parts = RectPart::Full) const;
+	void paintSomeRounded(
+		QPainter &p,
+		const QRect &rect,
+		RectParts corners) const;
 
 private:
 	style::color _color;

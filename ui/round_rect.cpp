@@ -23,8 +23,8 @@ void DrawRoundedRect(
 	const auto y = rect.y();
 	const auto w = rect.width();
 	const auto h = rect.height();
-	auto cornerWidth = corners[0].width() / pixelRatio;
-	auto cornerHeight = corners[0].height() / pixelRatio;
+	const auto cornerWidth = corners[0].width() / pixelRatio;
+	const auto cornerHeight = corners[0].height() / pixelRatio;
 	if (w < 2 * cornerWidth || h < 2 * cornerHeight) return;
 	if (w > 2 * cornerWidth) {
 		if (parts & RectPart::Top) {
@@ -83,6 +83,49 @@ void RoundRect::paint(
 		const QRect &rect,
 		RectParts parts) const {
 	DrawRoundedRect(p, rect, _color, _corners, parts);
+}
+
+void RoundRect::paintSomeRounded(
+		QPainter &p,
+		const QRect &rect,
+		RectParts corners) const {
+	DrawRoundedRect(
+		p,
+		rect,
+		_color,
+		_corners,
+		corners | RectPart::Top | RectPart::NoTopBottom | RectPart::Bottom);
+
+	const auto pixelRatio = style::DevicePixelRatio();
+	const auto cornerWidth = _corners[0].width() / pixelRatio;
+	const auto cornerHeight = _corners[0].height() / pixelRatio;
+	if (!(corners & RectPart::TopLeft)) {
+		p.fillRect(rect.x(), rect.y(), cornerWidth, cornerHeight, _color);
+	}
+	if (!(corners & RectPart::TopRight)) {
+		p.fillRect(
+			rect.x() + rect.width() - cornerWidth,
+			rect.y(),
+			cornerWidth,
+			cornerHeight,
+			_color);
+	}
+	if (!(corners & RectPart::BottomRight)) {
+		p.fillRect(
+			rect.x() + rect.width() - cornerWidth,
+			rect.y() + rect.height() - cornerHeight,
+			cornerWidth,
+			cornerHeight,
+			_color);
+	}
+	if (!(corners & RectPart::BottomLeft)) {
+		p.fillRect(
+			rect.x(),
+			rect.y() + rect.height() - cornerHeight,
+			cornerWidth,
+			cornerHeight,
+			_color);
+	}
 }
 
 } // namespace Ui
