@@ -165,6 +165,7 @@ void StartFonts() {
 #endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 #ifdef Q_OS_MAC
 	auto list = QStringList();
+	list.append("STIXGeneral");
 	list.append(".SF NS Text");
 	list.append("Helvetica Neue");
 	list.append("Lucida Grande");
