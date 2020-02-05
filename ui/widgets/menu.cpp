@@ -263,6 +263,9 @@ void Menu::paintEvent(QPaintEvent *e) {
 			} else {
 				auto enabled = action->isEnabled();
 				auto selected = ((i == _selected || i == _pressed) && enabled);
+				if (selected && _st.itemBgOver->c.alpha() < 255) {
+					p.fillRect(0, 0, width(), actionHeight, _st.itemBg);
+				}
 				p.fillRect(0, 0, width(), actionHeight, selected ? _st.itemBgOver : _st.itemBg);
 				if (data.ripple) {
 					data.ripple->paint(p, 0, 0, width());
