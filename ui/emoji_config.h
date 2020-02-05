@@ -29,18 +29,9 @@ void Clear();
 
 void ClearIrrelevantCache();
 
-struct Set {
-	int id = 0;
-	int postId = 0;
-	int size = 0;
-	QString name;
-	QString previewPath;
-};
-
 // Thread safe, callback is called on main thread.
 void SwitchToSet(int id, Fn<void(bool)> callback);
 
-std::vector<Set> Sets();
 int CurrentSetId();
 bool SetIsReady(int id);
 rpl::producer<> Updated();

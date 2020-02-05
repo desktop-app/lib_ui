@@ -37,13 +37,6 @@ constexpr auto kMaxId = uint32(1 << 8);
 
 constexpr auto kScaleForTouchBar = 150;
 
-const auto kSets = {
-	Set{ 0,   0,         0, "Mac",       ":/gui/emoji/set0_preview.webp" },
-	Set{ 1, 246, 7'336'383, "Android",   ":/gui/emoji/set1_preview.webp" },
-	Set{ 2, 206, 5'038'738, "Twemoji",   ":/gui/emoji/set2_preview.webp" },
-	Set{ 3, 238, 6'992'260, "JoyPixels", ":/gui/emoji/set3_preview.webp" },
-};
-
 // Right now we can't allow users of Ui::Emoji to create custom sizes.
 // Any Instance::Instance() can invalidate Universal.id() and sprites.
 // So all Instance::Instance() should happen before async generations.
@@ -525,10 +518,6 @@ void ClearIrrelevantCache() {
 			}
 		}
 	});
-}
-
-std::vector<Set> Sets() {
-	return kSets | ranges::to_vector;
 }
 
 int CurrentSetId() {
