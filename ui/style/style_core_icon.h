@@ -153,7 +153,7 @@ public:
 	}
 	Icon(const Icon &other) : _data(other._data) {
 	}
-	Icon(Icon &&other) : _data(base::take(other._data)), _owner(base::take(_owner)) {
+	Icon(Icon &&other) : _data(base::take(other._data)), _owner(base::take(other._owner)) {
 	}
 	Icon &operator=(const Icon &other) {
 		Expects(!_owner);
