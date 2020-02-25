@@ -463,12 +463,17 @@ void prepareRound(
 	if (imageWidth < 2 * cornerWidth || imageHeight < 2 * cornerHeight) {
 		return;
 	}
+
+	// We need to detach image first (if it is shared), before we
+	// count some offsets using QImage::bytesPerLine etc, because
+	// bytesPerLine may change on detach, this leads to crashes:
+	// Real image bytesPerLine is smaller than the one we use for offsets.
+	auto ints = reinterpret_cast<uint32*>(image.bits());
+
 	constexpr auto imageIntsPerPixel = 1;
 	auto imageIntsPerLine = (image.bytesPerLine() >> 2);
 	Assert(image.depth() == static_cast<int>((imageIntsPerPixel * sizeof(uint32)) << 3));
 	Assert(image.bytesPerLine() == (imageIntsPerLine << 2));
-
-	auto ints = reinterpret_cast<uint32*>(image.bits());
 	auto intsTopLeft = ints + target.x() + target.y() * imageIntsPerLine;
 	auto intsTopRight = ints + target.x() + target.width() - cornerWidth + target.y() * imageIntsPerLine;
 	auto intsBottomLeft = ints + target.x() + (target.y() + target.height() - cornerHeight) * imageIntsPerLine;
