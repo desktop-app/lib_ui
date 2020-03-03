@@ -544,6 +544,22 @@ WindowTitle {
 	closeIconActiveOver: icon;
 }
 
+SideBarMenu {
+	margins: margins;
+	textTop: pixels;
+	minTextWidth: pixels;
+	bottomSkip: pixels;
+	style: TextStyle;
+	textBg: color;
+	textFg: color;
+	textFgActive: color;
+	rippleBg: color;
+	badgeBg: color;
+	badgeBgMuted: color;
+	badgeFg: color;
+	shadow: icon;
+}
+
 defaultLabelSimple: LabelSimple {
 	font: normalFont;
 	maxWidth: 0px;
@@ -1205,6 +1221,24 @@ defaultSettingsButton: SettingsButton {
 	toggleSkip: 23px;
 
 	ripple: defaultRippleAnimation;
+}
+
+defaultSideBarMenu: SideBarMenu {
+	margins: margins(6px, 6px, 6px, 6px);
+	textTop: 42px;
+	minTextWidth: 48px;
+	bottomSkip: 7px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(11px semibold);
+	}
+	textBg: sideBarBg;
+	textFg: sideBarTextFg;
+	textFgActive: sideBarTextFgActive;
+	rippleBg: shadowFg;
+	badgeBg: sideBarBadgeBg;
+	badgeBgMuted: sideBarBadgeFgMuted;
+	badgeFg: sideBarBadgeFg;
+	shadow: icon {{ "slide_shadow", slideFadeOutShadowFg }};
 }
 
 // Windows specific title
