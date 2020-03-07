@@ -593,11 +593,13 @@ walletTopLabelFg: #999999; // wallet top updated label text
 walletTopIconFg: walletTopLabelFg; // wallet top refresh and menu icons
 walletTopIconRipple: #ffffff12; // wallet top menu icon ripple effect
 
-sideBarBg: #36434c; // filters side bar background
-sideBarTextFg: #93999e; // filters side bar text
+sideBarBg: #293a4c; // filters side bar background
+sideBarBgActive: #17212c; // filters side bar active background
+sideBarBgRipple: #1c2835; // filters side bar ripple effect
+sideBarTextFg: #8897a6; // filters side bar text
 sideBarTextFgActive: #64b9fa; // filters side bar active item text
-sideBarIconFg: #979797; // filters side bar icon
+sideBarIconFg: #8393a3; // filters side bar icon
 sideBarIconFgActive: #5eb5f7; // filters side bar active item icon
 sideBarBadgeBg: #5eb5f7; // filters side bar badge background
-sideBarBadgeFgMuted: #aaaaaa; // filters side bar unimportant badge background
+sideBarBadgeBgMuted: #aaaaaa; // filters side bar unimportant badge background
 sideBarBadgeFg: #ffffff; // filters side bar badge text

@@ -551,13 +551,13 @@ SideBarMenu {
 	bottomSkip: pixels;
 	style: TextStyle;
 	textBg: color;
+	textBgActive: color;
 	textFg: color;
 	textFgActive: color;
 	rippleBg: color;
 	badgeBg: color;
 	badgeBgMuted: color;
 	badgeFg: color;
-	shadow: icon;
 }
 
 defaultLabelSimple: LabelSimple {
@@ -1232,13 +1232,13 @@ defaultSideBarMenu: SideBarMenu {
 		font: font(11px semibold);
 	}
 	textBg: sideBarBg;
+	textBgActive: sideBarBgActive;
 	textFg: sideBarTextFg;
 	textFgActive: sideBarTextFgActive;
-	rippleBg: shadowFg;
+	rippleBg: sideBarBgRipple;
 	badgeBg: sideBarBadgeBg;
-	badgeBgMuted: sideBarBadgeFgMuted;
+	badgeBgMuted: sideBarBadgeBgMuted;
 	badgeFg: sideBarBadgeFg;
-	shadow: icon {{ "slide_shadow", slideFadeOutShadowFg }};
 }
 
 // Windows specific title

@@ -226,13 +226,6 @@ void SideBarMenu::paint(Painter &p, QRect clip) const {
 		- _st.margins.left()
 		- _st.margins.right();
 	p.fillRect(clip, _st.textBg);
-	_st.shadow.fill(
-		p,
-		QRect(
-			fullWidth - _st.shadow.width(),
-			0,
-			_st.shadow.width(),
-			_inner->height()));
 	for (const auto &item : _items) {
 		if (y + item.height <= clip.y()) {
 			y += item.height;
@@ -240,13 +233,16 @@ void SideBarMenu::paint(Painter &p, QRect clip) const {
 		} else if (y >= clip.y() + clip.height()) {
 			break;
 		}
+		const auto active = (item.data.id == _activeId);
+		if (active) {
+			p.fillRect(0, y, fullWidth, item.height, _st.textBgActive);
+		}
 		if (item.ripple) {
 			item.ripple->paint(p, 0, y, fullWidth, &_st.rippleBg->c);
 			if (item.ripple->empty()) {
 				item.ripple = nullptr;
 			}
 		}
-		const auto active = (item.data.id == _activeId);
 		const auto icon = (active ? item.data.iconActive : item.data.icon);
 		const auto x = (fullWidth - icon->width()) / 2;
 		icon->paint(p, x, y + item.data.iconTop, fullWidth);
