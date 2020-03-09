@@ -544,20 +544,24 @@ WindowTitle {
 	closeIconActiveOver: icon;
 }
 
-SideBarMenu {
-	margins: margins;
+SideBarButton {
+	icon: icon;
+	iconActive: icon;
+	iconPosition: point;
 	textTop: pixels;
+	textSkip: pixels;
 	minTextWidth: pixels;
-	bottomSkip: pixels;
+	minHeight: pixels;
 	style: TextStyle;
+	badgeStyle: TextStyle;
 	textBg: color;
 	textBgActive: color;
 	textFg: color;
 	textFgActive: color;
-	rippleBg: color;
 	badgeBg: color;
 	badgeBgMuted: color;
 	badgeFg: color;
+	ripple: RippleAnimation;
 }
 
 defaultLabelSimple: LabelSimple {
@@ -1223,22 +1227,17 @@ defaultSettingsButton: SettingsButton {
 	ripple: defaultRippleAnimation;
 }
 
-defaultSideBarMenu: SideBarMenu {
-	margins: margins(6px, 6px, 6px, 6px);
-	textTop: 42px;
-	minTextWidth: 48px;
-	bottomSkip: 7px;
-	style: TextStyle(defaultTextStyle) {
-		font: font(11px semibold);
-	}
+defaultSideBarButton: SideBarButton {
 	textBg: sideBarBg;
 	textBgActive: sideBarBgActive;
 	textFg: sideBarTextFg;
 	textFgActive: sideBarTextFgActive;
-	rippleBg: sideBarBgRipple;
 	badgeBg: sideBarBadgeBg;
 	badgeBgMuted: sideBarBadgeBgMuted;
 	badgeFg: sideBarBadgeFg;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: sideBarBgRipple;
+	}
 }
 
 // Windows specific title

@@ -135,8 +135,8 @@ PRIVATE
     ui/widgets/popup_menu.h
     ui/widgets/scroll_area.cpp
     ui/widgets/scroll_area.h
-    ui/widgets/side_bar_menu.cpp
-    ui/widgets/side_bar_menu.h
+    ui/widgets/side_bar_button.cpp
+    ui/widgets/side_bar_button.h
     ui/widgets/shadow.cpp
     ui/widgets/shadow.h
     ui/widgets/tooltip.cpp
