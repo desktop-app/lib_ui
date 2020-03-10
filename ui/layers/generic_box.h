@@ -77,6 +77,8 @@ public:
 		}
 	}
 
+	[[nodiscard]] not_null<Ui::VerticalLayout*> verticalLayout();
+
 	using BoxContent::setNoContentMargin;
 
 protected:

@@ -25,4 +25,8 @@ void GenericBox::addSkip(int height) {
 	addRow(object_ptr<Ui::FixedHeightWidget>(this, height));
 }
 
+not_null<Ui::VerticalLayout*> GenericBox::verticalLayout() {
+	return _content.data();
+}
+
 } // namespace Ui
