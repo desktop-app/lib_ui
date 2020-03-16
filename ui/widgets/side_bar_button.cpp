@@ -26,6 +26,12 @@ SideBarButton::SideBarButton(
 , _text(_st.minTextWidth) {
 	_text.setText(_st.style, title);
 	setAttribute(Qt::WA_OpaquePaintEvent);
+
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		_iconCache = _iconCacheActive = QImage();
+		update();
+	}, lifetime());
 }
 
 void SideBarButton::setActive(bool active) {
