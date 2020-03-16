@@ -554,6 +554,10 @@ SideBarButton {
 	minHeight: pixels;
 	style: TextStyle;
 	badgeStyle: TextStyle;
+	badgeSkip: pixels;
+	badgeHeight: pixels;
+	badgeStroke: pixels;
+	badgePosition: point;
 	textBg: color;
 	textBgActive: color;
 	textFg: color;

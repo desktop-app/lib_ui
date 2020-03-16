@@ -36,11 +36,19 @@ void SideBarButton::setActive(bool active) {
 	update();
 }
 
-void SideBarButton::setBadge(const QString &badge) {
-	if (_badge.toString() == badge) {
+void SideBarButton::setBadge(const QString &badge, bool muted) {
+	if (_badge.toString() == badge && _badgeMuted == muted) {
 		return;
 	}
 	_badge.setText(_st.badgeStyle, badge);
+	_badgeMuted = muted;
+	const auto width = badge.isEmpty()
+		? 0
+		: std::max(_st.badgeHeight, _badge.maxWidth() + 2 * _st.badgeSkip);
+	if (_iconCacheBadgeWidth != width) {
+		_iconCacheBadgeWidth = width;
+		_iconCache = _iconCacheActive = QImage();
+	}
 	update();
 }
 
@@ -66,7 +74,12 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 	const auto y = (_st.iconPosition.y() < 0)
 		? (height() - icon.height()) / 2
 		: _st.iconPosition.y();
-	icon.paint(p, x, y, width());
+	if (_iconCacheBadgeWidth) {
+		validateIconCache();
+		p.drawImage(x, y, _active ? _iconCacheActive : _iconCache);
+	} else {
+		icon.paint(p, x, y, width());
+	}
 	p.setPen(_active ? _st.textFgActive : _st.textFg);
 	_text.drawElided(
 		p,
@@ -75,6 +88,55 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 		(width() - 2 * _st.textSkip),
 		kMaxLabelLines,
 		style::al_top);
+
+	if (_iconCacheBadgeWidth) {
+		const auto x = width() / 2 + _st.badgePosition.x();
+		const auto y = _st.badgePosition.y();
+
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush((_badgeMuted && !_active)
+			? _st.badgeBgMuted
+			: _st.badgeBg);
+		const auto r = _st.badgeHeight / 2;
+		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
+
+		p.setPen(_st.badgeFg);
+		_badge.draw(
+			p,
+			x + (_iconCacheBadgeWidth - _badge.maxWidth()) / 2,
+			y + (_st.badgeHeight - _st.badgeStyle.font->height) / 2,
+			width());
+	}
+}
+
+void SideBarButton::validateIconCache() {
+	Expects(_st.iconPosition.x() < 0);
+	Expects(_st.iconPosition.y() >= 0);
+
+	if (!(_active ? _iconCacheActive : _iconCache).isNull()) {
+		return;
+	}
+	const auto &icon = _active ? _st.iconActive : _st.icon;
+	auto image = QImage(
+		icon.size() * style::DevicePixelRatio(),
+		QImage::Format_ARGB32_Premultiplied);
+	image.fill(Qt::transparent);
+	{
+		auto p = QPainter(&image);
+		icon.paint(p, 0, 0, icon.width());
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setBrush(Qt::transparent);
+		auto pen = QPen(Qt::transparent);
+		pen.setWidth(2 * _st.badgeStroke);
+		p.setPen(pen);
+		auto hq = PainterHighQualityEnabler(p);
+		const auto x = (icon.width() / 2) + _st.badgePosition.x();
+		const auto y = _st.badgePosition.y() - _st.iconPosition.y();
+		const auto r = _st.badgeHeight / 2.;
+		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
+	}
+	(_active ? _iconCacheActive : _iconCache) = std::move(image);
 }
 
 } // namespace Ui
