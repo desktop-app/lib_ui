@@ -633,12 +633,21 @@ void LayerStackWidget::prepareForAnimation() {
 		show();
 	}
 	if (_mainMenu) {
+		if (Ui::InFocusChain(_mainMenu)) {
+			setFocus();
+		}
 		_mainMenu->hide();
 	}
 	if (_specialLayer) {
+		if (Ui::InFocusChain(_specialLayer)) {
+			setFocus();
+		}
 		_specialLayer->hide();
 	}
 	if (const auto layer = currentLayer()) {
+		if (Ui::InFocusChain(layer)) {
+			setFocus();
+		}
 		layer->hide();
 	}
 }
