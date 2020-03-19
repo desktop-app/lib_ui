@@ -127,6 +127,7 @@ void SideBarButton::validateIconCache() {
 	auto image = QImage(
 		icon.size() * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
+	image.setDevicePixelRatio(style::DevicePixelRatio());
 	image.fill(Qt::transparent);
 	{
 		auto p = QPainter(&image);
