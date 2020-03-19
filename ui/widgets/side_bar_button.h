@@ -26,15 +26,21 @@ public:
 
 	void setActive(bool active);
 	void setBadge(const QString &badge, bool muted);
+	void setIconOverride(
+		const style::icon *iconOverride,
+		const style::icon *iconOverrideActive = nullptr);
 
 	int resizeGetHeight(int newWidth) override;
 
 private:
 	void paintEvent(QPaintEvent *e) override;
 
+	[[nodiscard]] const style::icon &computeIcon() const;
 	void validateIconCache();
 
 	const style::SideBarButton &_st;
+	const style::icon *_iconOverride = nullptr;
+	const style::icon *_iconOverrideActive = nullptr;
 	Ui::Text::String _text;
 	Ui::Text::String _badge;
 	QImage _iconCache;

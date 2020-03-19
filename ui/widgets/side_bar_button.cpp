@@ -58,6 +58,14 @@ void SideBarButton::setBadge(const QString &badge, bool muted) {
 	update();
 }
 
+void SideBarButton::setIconOverride(
+		const style::icon *iconOverride,
+		const style::icon *iconOverrideActive) {
+	_iconOverride = iconOverride;
+	_iconOverrideActive = iconOverrideActive;
+	update();
+}
+
 int SideBarButton::resizeGetHeight(int newWidth) {
 	auto result = _st.minHeight;
 	const auto text = _text.countHeight(newWidth - _st.textSkip * 2);
@@ -73,7 +81,7 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 
 	RippleButton::paintRipple(p, 0, 0);
 
-	const auto &icon = _active ? _st.iconActive : _st.icon;
+	const auto &icon = computeIcon();
 	const auto x = (_st.iconPosition.x() < 0)
 		? (width() - icon.width()) / 2
 		: _st.iconPosition.x();
@@ -116,6 +124,20 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 	}
 }
 
+const style::icon &SideBarButton::computeIcon() const {
+	return _active
+		? (_iconOverrideActive
+			? *_iconOverrideActive
+			: !_st.iconActive.empty()
+			? _st.iconActive
+			: _iconOverride
+			? *_iconOverride
+			: _st.icon)
+		: _iconOverride
+		? *_iconOverride
+		: _st.icon;
+}
+
 void SideBarButton::validateIconCache() {
 	Expects(_st.iconPosition.x() < 0);
 	Expects(_st.iconPosition.y() >= 0);
@@ -123,7 +145,7 @@ void SideBarButton::validateIconCache() {
 	if (!(_active ? _iconCacheActive : _iconCache).isNull()) {
 		return;
 	}
-	const auto &icon = _active ? _st.iconActive : _st.icon;
+	const auto &icon = computeIcon();
 	auto image = QImage(
 		icon.size() * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
