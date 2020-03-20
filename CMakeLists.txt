@@ -151,6 +151,8 @@ PRIVATE
     ui/wrap/slide_wrap.h
     ui/wrap/vertical_layout.cpp
     ui/wrap/vertical_layout.h
+    ui/wrap/vertical_layout_reorder.cpp
+    ui/wrap/vertical_layout_reorder.h
     ui/wrap/wrap.h
     ui/abstract_button.cpp
     ui/abstract_button.h

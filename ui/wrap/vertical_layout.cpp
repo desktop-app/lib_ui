@@ -48,6 +48,25 @@ int VerticalLayout::naturalWidth() const {
 	return result;
 }
 
+void VerticalLayout::setVerticalShift(int index, int shift) {
+	Expects(index >= 0 && index < _rows.size());
+
+	auto &row = _rows[index];
+	if (const auto delta = shift - row.verticalShift) {
+		row.verticalShift = shift;
+		row.widget->move(row.widget->x(), row.widget->y() + delta);
+	}
+}
+
+void VerticalLayout::reorderRows(int oldIndex, int newIndex) {
+	Expects(oldIndex >= 0 && oldIndex < _rows.size());
+	Expects(newIndex >= 0 && newIndex < _rows.size());
+	Expects(!_inResize);
+
+	base::reorder(_rows, oldIndex, newIndex);
+	resizeToWidth(width());
+}
+
 int VerticalLayout::resizeGetHeight(int newWidth) {
 	_inResize = true;
 	auto guard = gsl::finally([&] { _inResize = false; });
@@ -60,7 +79,7 @@ int VerticalLayout::resizeGetHeight(int newWidth) {
 			row.widget,
 			row.margin,
 			newWidth,
-			result);
+			result + row.verticalShift);
 		result += row.margin.top()
 			+ row.widget->heightNoMargins()
 			+ row.margin.bottom();
@@ -100,18 +119,12 @@ RpWidget *VerticalLayout::insertChild(
 		object_ptr<RpWidget> child,
 		const style::margins &margin) {
 	Expects(atPosition >= 0 && atPosition <= _rows.size());
+	Expects(!_inResize);
 
 	if (const auto weak = AttachParentChild(this, child)) {
 		_rows.insert(
 			begin(_rows) + atPosition,
 			{ std::move(child), margin });
-		const auto margins = getMargins();
-		updateChildGeometry(
-			margins,
-			weak,
-			margin,
-			width() - margins.left() - margins.right(),
-			height() - margins.top() - margins.bottom());
 		weak->heightValue(
 		) | rpl::start_with_next_done([=] {
 			if (!_inResize) {

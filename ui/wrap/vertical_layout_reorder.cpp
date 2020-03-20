@@ -1,0 +1,214 @@
+// This file is part of Desktop App Toolkit,
+// a set of libraries for developing nice desktop applications.
+//
+// For license and copyright information please follow this link:
+// https://github.com/desktop-app/legal/blob/master/LEGAL
+//
+#include "ui/wrap/vertical_layout_reorder.h"
+
+#include "ui/wrap/vertical_layout.h"
+
+#include <QtGui/QtEvents>
+#include <QtWidgets/QApplication>
+
+namespace Ui {
+
+VerticalLayoutReorder::VerticalLayoutReorder(
+	not_null<VerticalLayout*> layout)
+: _layout(layout) {
+}
+
+void VerticalLayoutReorder::cancel() {
+	if (_currentWidget) {
+		cancelCurrent(indexOf(_currentWidget));
+	}
+	_lifetime.destroy();
+	for (auto i = 0, count = _layout->count(); i != count; ++i) {
+		_layout->setVerticalShift(i, 0);
+	}
+	_entries.clear();
+}
+
+void VerticalLayoutReorder::start() {
+	const auto count = _layout->count();
+	if (count < 2) {
+		return;
+	}
+	for (auto i = 0; i != count; ++i) {
+		const auto widget = _layout->widgetAt(i);
+		widget->events(
+		) | rpl::start_with_next_done([=](not_null<QEvent*> e) {
+			switch (e->type()) {
+			case QEvent::MouseMove:
+				mouseMove(
+					widget,
+					static_cast<QMouseEvent*>(e.get())->globalPos());
+				break;
+			case QEvent::MouseButtonPress:
+				mousePress(
+					widget,
+					static_cast<QMouseEvent*>(e.get())->button(),
+					static_cast<QMouseEvent*>(e.get())->globalPos());
+				break;
+			case QEvent::MouseButtonRelease:
+				mouseRelease(
+					widget,
+					static_cast<QMouseEvent*>(e.get())->button());
+				break;
+			}
+		}, [=] {
+			cancel();
+		}, _lifetime);
+		_entries.push_back({ widget });
+	}
+}
+
+void VerticalLayoutReorder::mouseMove(
+		not_null<RpWidget*> widget,
+		QPoint position) {
+	if (_currentWidget != widget) {
+		return;
+	} else if (_currentState != State::Started) {
+		checkForStart(position);
+	} else {
+		updateOrder(indexOf(_currentWidget), position);
+	}
+}
+
+void VerticalLayoutReorder::checkForStart(QPoint position) {
+	const auto shift = position.y() - _currentStart;
+	const auto delta = QApplication::startDragDistance();
+	if (std::abs(shift) <= delta) {
+		return;
+	}
+	_currentWidget->raise();
+	_currentState = State::Started;
+	_currentStart += (shift > 0) ? delta : -delta;
+
+	const auto index = indexOf(_currentWidget);
+	_currentDesiredIndex = index;
+	_updates.fire({ _currentWidget, index, index, _currentState });
+
+	updateOrder(index, position);
+}
+
+void VerticalLayoutReorder::updateOrder(int index, QPoint position) {
+	const auto shift = position.y() - _currentStart;
+	auto &current = _entries[index];
+	current.shift = shift;
+	_layout->setVerticalShift(index, shift);
+
+	const auto count = _entries.size();
+	const auto currentHeight = current.widget->height();
+	const auto currentMiddle = current.widget->y() + currentHeight / 2;
+	_currentDesiredIndex = index;
+	if (shift > 0) {
+		auto top = current.widget->y() - shift;
+		for (auto next = index + 1; next != count; ++next) {
+			const auto &entry = _entries[next];
+			top += entry.widget->height();
+			if (currentMiddle < top) {
+				moveToShift(next, 0);
+			} else {
+				_currentDesiredIndex = next;
+				moveToShift(next, -currentHeight);
+			}
+		}
+		for (auto prev = index - 1; prev >= 0; --prev) {
+			moveToShift(prev, 0);
+		}
+	} else {
+		for (auto next = index + 1; next != count; ++next) {
+			moveToShift(next, 0);
+		}
+		for (auto prev = index - 1; prev >= 0; --prev) {
+			const auto &entry = _entries[prev];
+			if (currentMiddle >= entry.widget->y() - entry.shift + currentHeight) {
+				moveToShift(prev, 0);
+			} else {
+				_currentDesiredIndex = prev;
+				moveToShift(prev, currentHeight);
+			}
+		}
+	}
+}
+
+void VerticalLayoutReorder::mousePress(
+		not_null<RpWidget*> widget,
+		Qt::MouseButton button,
+		QPoint position) {
+	if (button != Qt::LeftButton) {
+		return;
+	}
+	cancelCurrent();
+	_currentWidget = widget;
+	_currentStart = position.y();
+}
+
+void VerticalLayoutReorder::mouseRelease(
+		not_null<RpWidget*> widget,
+		Qt::MouseButton button) {
+	if (button != Qt::LeftButton) {
+		return;
+	}
+	finishCurrent();
+}
+
+void VerticalLayoutReorder::cancelCurrent() {
+	if (_currentWidget) {
+		cancelCurrent(indexOf(_currentWidget));
+	}
+}
+
+void VerticalLayoutReorder::cancelCurrent(int index) {
+	Expects(_currentWidget != nullptr);
+
+	if (_currentState == State::Started) {
+		_currentState = State::Cancelled;
+		_updates.fire({ _currentWidget, index, index, _currentState });
+	}
+	_currentWidget = nullptr;
+	for (auto i = 0, count = int(_entries.size()); i != count; ++i) {
+		moveToShift(i, 0);
+	}
+}
+
+void VerticalLayoutReorder::finishCurrent() {
+	if (!_currentWidget) {
+		return;
+	}
+	const auto index = indexOf(_currentWidget);
+	if (_currentDesiredIndex == index || _currentState != State::Started) {
+		cancelCurrent(index);
+		return;
+	}
+	const auto result = _currentDesiredIndex;
+	const auto widget = _currentWidget;
+	_currentState = State::Cancelled;
+	_currentWidget = nullptr;
+	for (auto i = 0, count = int(_entries.size()); i != count; ++i) {
+		moveToShift(i, 0);
+	}
+
+	_layout->reorderRows(index, _currentDesiredIndex);
+	base::reorder(_entries, index, result);
+
+	_updates.fire({ widget, index, result, State::Applied });
+}
+
+void VerticalLayoutReorder::moveToShift(int index, int shift) {
+	_layout->setVerticalShift(index, shift);
+	_entries[index].shift = shift;
+}
+
+int VerticalLayoutReorder::indexOf(not_null<RpWidget*> widget) const {
+	const auto i = ranges::find(_entries, widget, &Entry::widget);
+	Assert(i != end(_entries));
+	return i - begin(_entries);
+}
+
+auto VerticalLayoutReorder::updates() const -> rpl::producer<Single> {
+	return _updates.events();
+}
+
+} // namespace Ui

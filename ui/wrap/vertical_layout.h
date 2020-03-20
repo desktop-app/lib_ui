@@ -15,8 +15,13 @@ class VerticalLayout : public RpWidget {
 public:
 	using RpWidget::RpWidget;
 
-	int count() const {
+	[[nodiscard]] int count() const {
 		return _rows.size();
+	}
+	[[nodiscard]] not_null<RpWidget*> widgetAt(int index) const {
+		Expects(index >= 0 && index < count());
+
+		return _rows[index].widget.data();
 	}
 
 	template <
@@ -46,6 +51,9 @@ public:
 	QMargins getMargins() const override;
 	int naturalWidth() const override;
 
+	void setVerticalShift(int index, int shift);
+	void reorderRows(int oldIndex, int newIndex);
+
 protected:
 	int resizeGetHeight(int newWidth) override;
 	void visibleTopBottomUpdated(
@@ -69,6 +77,7 @@ private:
 	struct Row {
 		object_ptr<RpWidget> widget;
 		style::margins margin;
+		int verticalShift = 0;
 	};
 	std::vector<Row> _rows;
 	bool _inResize = false;
