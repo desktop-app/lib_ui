@@ -7,6 +7,7 @@
 #include "ui/wrap/vertical_layout_reorder.h"
 
 #include "ui/wrap/vertical_layout.h"
+#include "styles/style_basic.h"
 
 #include <QtGui/QtEvents>
 #include <QtWidgets/QApplication>
@@ -95,7 +96,8 @@ void VerticalLayoutReorder::checkForStart(QPoint position) {
 void VerticalLayoutReorder::updateOrder(int index, QPoint position) {
 	const auto shift = position.y() - _currentStart;
 	auto &current = _entries[index];
-	current.shift = shift;
+	current.shiftAnimation.stop();
+	current.shift = current.finalShift = shift;
 	_layout->setVerticalShift(index, shift);
 
 	const auto count = _entries.size();
@@ -186,19 +188,69 @@ void VerticalLayoutReorder::finishCurrent() {
 	const auto widget = _currentWidget;
 	_currentState = State::Cancelled;
 	_currentWidget = nullptr;
+
+	auto &current = _entries[index];
+	const auto height = current.widget->height();
+	if (index < result) {
+		auto sum = 0;
+		for (auto i = index; i != result; ++i) {
+			auto &entry = _entries[i + 1];
+			const auto widget = entry.widget;
+			entry.deltaShift += height;
+			updateShift(widget, i + 1);
+			sum += widget->height();
+		}
+		current.finalShift -= sum;
+	} else if (index > result) {
+		auto sum = 0;
+		for (auto i = result; i != index; ++i) {
+			auto &entry = _entries[i];
+			const auto widget = entry.widget;
+			entry.deltaShift -= height;
+			updateShift(widget, i);
+			sum += widget->height();
+		}
+		current.finalShift += sum;
+	}
+	base::reorder(_entries, index, result);
+	_layout->reorderRows(index, _currentDesiredIndex);
 	for (auto i = 0, count = int(_entries.size()); i != count; ++i) {
 		moveToShift(i, 0);
 	}
-
-	_layout->reorderRows(index, _currentDesiredIndex);
-	base::reorder(_entries, index, result);
 
 	_updates.fire({ widget, index, result, State::Applied });
 }
 
 void VerticalLayoutReorder::moveToShift(int index, int shift) {
-	_layout->setVerticalShift(index, shift);
-	_entries[index].shift = shift;
+	auto &entry = _entries[index];
+	if (entry.finalShift + entry.deltaShift == shift) {
+		return;
+	}
+	const auto widget = entry.widget;
+	entry.shiftAnimation.start(
+		[=] { updateShift(widget, index); },
+		entry.finalShift,
+		shift - entry.deltaShift,
+		st::slideWrapDuration);
+	entry.finalShift = shift - entry.deltaShift;
+}
+
+void VerticalLayoutReorder::updateShift(
+		not_null<RpWidget*> widget,
+		int indexHint) {
+	Expects(indexHint >= 0 && indexHint < _entries.size());
+
+	const auto index = (_entries[indexHint].widget == widget)
+		? indexHint
+		: indexOf(widget);
+	auto &entry = _entries[index];
+	entry.shift = std::round(entry.shiftAnimation.value(entry.finalShift))
+		+ entry.deltaShift;
+	if (entry.deltaShift && !entry.shiftAnimation.animating()) {
+		entry.finalShift += entry.deltaShift;
+		entry.deltaShift = 0;
+	}
+	_layout->setVerticalShift(index, entry.shift);
 }
 
 int VerticalLayoutReorder::indexOf(not_null<RpWidget*> widget) const {

@@ -55,6 +55,7 @@ void VerticalLayout::setVerticalShift(int index, int shift) {
 	if (const auto delta = shift - row.verticalShift) {
 		row.verticalShift = shift;
 		row.widget->move(row.widget->x(), row.widget->y() + delta);
+		row.widget->update();
 	}
 }
 

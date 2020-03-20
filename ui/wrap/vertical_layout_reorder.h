@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/effects/animations.h"
+
 namespace Ui {
 
 class RpWidget;
@@ -34,7 +36,10 @@ public:
 private:
 	struct Entry {
 		not_null<RpWidget*> widget;
+		Ui::Animations::Simple shiftAnimation;
 		int shift = 0;
+		int finalShift = 0;
+		int deltaShift = 0;
 	};
 
 	void mouseMove(not_null<RpWidget*> widget, QPoint position);
@@ -52,6 +57,7 @@ private:
 
 	[[nodiscard]] int indexOf(not_null<RpWidget*> widget) const;
 	void moveToShift(int index, int shift);
+	void updateShift(not_null<RpWidget*> widget, int indexHint);
 
 	const not_null<Ui::VerticalLayout*> _layout;
 
