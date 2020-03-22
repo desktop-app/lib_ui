@@ -212,6 +212,10 @@ void VerticalLayoutReorder::finishCurrent() {
 		}
 		current.finalShift += sum;
 	}
+	if (!(current.finalShift + current.deltaShift)) {
+		current.shift = 0;
+		_layout->setVerticalShift(index, 0);
+	}
 	base::reorder(_entries, index, result);
 	_layout->reorderRows(index, _currentDesiredIndex);
 	for (auto i = 0, count = int(_entries.size()); i != count; ++i) {
