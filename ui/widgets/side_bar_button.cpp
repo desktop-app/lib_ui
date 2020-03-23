@@ -68,7 +68,9 @@ void SideBarButton::setIconOverride(
 
 int SideBarButton::resizeGetHeight(int newWidth) {
 	auto result = _st.minHeight;
-	const auto text = _text.countHeight(newWidth - _st.textSkip * 2);
+	const auto text = std::min(
+		_text.countHeight(newWidth - _st.textSkip * 2),
+		_st.style.font->height * kMaxLabelLines);
 	const auto add = text - _st.style.font->height;
 	return result + std::max(add, 0);
 }
