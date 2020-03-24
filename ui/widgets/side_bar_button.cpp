@@ -106,7 +106,10 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 		style::al_top);
 
 	if (_iconCacheBadgeWidth) {
-		const auto x = width() / 2 + _st.badgePosition.x();
+		const auto desiredLeft = width() / 2 + _st.badgePosition.x();
+		const auto x = std::min(
+			desiredLeft,
+			width() - _iconCacheBadgeWidth - st::defaultScrollArea.width);
 		const auto y = _st.badgePosition.y();
 
 		auto hq = PainterHighQualityEnabler(p);
@@ -162,7 +165,14 @@ void SideBarButton::validateIconCache() {
 		pen.setWidth(2 * _st.badgeStroke);
 		p.setPen(pen);
 		auto hq = PainterHighQualityEnabler(p);
-		const auto x = (icon.width() / 2) + _st.badgePosition.x();
+		const auto desiredLeft = (icon.width() / 2) + _st.badgePosition.x();
+		const auto x = std::min(
+			desiredLeft,
+			(width()
+				- _iconCacheBadgeWidth
+				- st::defaultScrollArea.width
+				- (width() / 2)
+				+ (icon.width() / 2)));
 		const auto y = _st.badgePosition.y() - _st.iconPosition.y();
 		const auto r = _st.badgeHeight / 2.;
 		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
