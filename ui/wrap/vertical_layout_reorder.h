@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/effects/animations.h"
+#include "ui/widgets/scroll_area.h"
 
 namespace Ui {
 
@@ -27,7 +28,9 @@ public:
 		State state = State::Started;
 	};
 
-	VerticalLayoutReorder(not_null<VerticalLayout*> layout);
+	VerticalLayoutReorder(
+		not_null<VerticalLayout*> layout,
+		not_null<ScrollArea*> scroll);
 
 	void start();
 	void cancel();
@@ -59,7 +62,14 @@ private:
 	void moveToShift(int index, int shift);
 	void updateShift(not_null<RpWidget*> widget, int indexHint);
 
+	void updateScrollCallback();
+	void checkForScrollAnimation();
+	int deltaFromEdge();
+
 	const not_null<Ui::VerticalLayout*> _layout;
+	const not_null<Ui::ScrollArea*> _scroll;
+
+	Ui::Animations::Basic _scrollAnimation;
 
 	RpWidget *_currentWidget = nullptr;
 	int _currentStart = 0;

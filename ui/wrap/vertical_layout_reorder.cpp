@@ -14,9 +14,18 @@
 
 namespace Ui {
 
+namespace {
+
+constexpr auto kScrollFactor = 0.05;
+
+} // namespace
+
 VerticalLayoutReorder::VerticalLayoutReorder(
-	not_null<VerticalLayout*> layout)
-: _layout(layout) {
+	not_null<VerticalLayout*> layout,
+	not_null<ScrollArea*> scroll)
+: _layout(layout)
+, _scroll(scroll)
+, _scrollAnimation([=] { updateScrollCallback(); }) {
 }
 
 void VerticalLayoutReorder::cancel() {
@@ -100,6 +109,8 @@ void VerticalLayoutReorder::updateOrder(int index, QPoint position) {
 	current.shift = current.finalShift = shift;
 	_layout->setVerticalShift(index, shift);
 
+	checkForScrollAnimation();
+
 	const auto count = _entries.size();
 	const auto currentHeight = current.widget->height();
 	const auto currentMiddle = current.widget->y() + currentHeight / 2;
@@ -153,6 +164,7 @@ void VerticalLayoutReorder::mouseRelease(
 	if (button != Qt::LeftButton) {
 		return;
 	}
+	_scrollAnimation.stop();
 	finishCurrent();
 }
 
@@ -265,6 +277,43 @@ int VerticalLayoutReorder::indexOf(not_null<RpWidget*> widget) const {
 
 auto VerticalLayoutReorder::updates() const -> rpl::producer<Single> {
 	return _updates.events();
+}
+
+void VerticalLayoutReorder::updateScrollCallback() {
+	const auto delta = deltaFromEdge();
+	const auto oldTop = _scroll->scrollTop();
+	_scroll->scrollToY(oldTop + delta);
+	const auto newTop = _scroll->scrollTop();
+
+	_currentStart += oldTop - newTop;
+	if (newTop == 0 || newTop == _scroll->scrollTopMax()) {
+		_scrollAnimation.stop();
+	}
+}
+
+void VerticalLayoutReorder::checkForScrollAnimation() {
+	if (!deltaFromEdge() || _scrollAnimation.animating()) {
+		return;
+	}
+	_scrollAnimation.start();
+}
+
+int VerticalLayoutReorder::deltaFromEdge() {
+	Expects(_currentWidget != nullptr);
+
+	const auto globalPosition = _currentWidget->mapToGlobal(QPoint(0, 0));
+	const auto localTop = _scroll->mapFromGlobal(globalPosition).y();
+	const auto localBottom = localTop
+		+ _currentWidget->height()
+		- _scroll->height();
+
+	const auto isTopEdge = (localTop < 0);
+	const auto isBottomEdge = (localBottom > 0);
+	if (!isTopEdge && !isBottomEdge) {
+		_scrollAnimation.stop();
+		return 0;
+	}
+	return int((isBottomEdge ? localBottom : localTop) * kScrollFactor);
 }
 
 } // namespace Ui
