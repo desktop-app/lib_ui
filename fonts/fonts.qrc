@@ -7,4 +7,7 @@
     <file>DAOpenSansSemibold.ttf</file>
     <file>DAOpenSansSemiboldItalic.ttf</file>
   </qresource>
+  <qresource prefix="/fc">
+    <file>fc-custom.conf</file>
+  </qresource>
 </RCC>
