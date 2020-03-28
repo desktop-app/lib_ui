@@ -34,6 +34,7 @@ public:
 
 	void start();
 	void cancel();
+	void finishReordering();
 	[[nodiscard]] rpl::producer<Single> updates() const;
 
 private:
@@ -50,7 +51,7 @@ private:
 		not_null<RpWidget*> widget,
 		Qt::MouseButton button,
 		QPoint position);
-	void mouseRelease(not_null<RpWidget*> widget, Qt::MouseButton button);
+	void mouseRelease(Qt::MouseButton button);
 
 	void checkForStart(QPoint position);
 	void updateOrder(int index, QPoint position);

@@ -61,9 +61,7 @@ void VerticalLayoutReorder::start() {
 					static_cast<QMouseEvent*>(e.get())->globalPos());
 				break;
 			case QEvent::MouseButtonRelease:
-				mouseRelease(
-					widget,
-					static_cast<QMouseEvent*>(e.get())->button());
+				mouseRelease(static_cast<QMouseEvent*>(e.get())->button());
 				break;
 			}
 		}, [=] {
@@ -158,14 +156,11 @@ void VerticalLayoutReorder::mousePress(
 	_currentStart = position.y();
 }
 
-void VerticalLayoutReorder::mouseRelease(
-		not_null<RpWidget*> widget,
-		Qt::MouseButton button) {
+void VerticalLayoutReorder::mouseRelease(Qt::MouseButton button) {
 	if (button != Qt::LeftButton) {
 		return;
 	}
-	_scrollAnimation.stop();
-	finishCurrent();
+	finishReordering();
 }
 
 void VerticalLayoutReorder::cancelCurrent() {
@@ -185,6 +180,11 @@ void VerticalLayoutReorder::cancelCurrent(int index) {
 	for (auto i = 0, count = int(_entries.size()); i != count; ++i) {
 		moveToShift(i, 0);
 	}
+}
+
+void VerticalLayoutReorder::finishReordering() {
+	_scrollAnimation.stop();
+	finishCurrent();
 }
 
 void VerticalLayoutReorder::finishCurrent() {
