@@ -6,8 +6,9 @@
 //
 #include "ui/style/style_core_font.h"
 
-#include "base/algorithm.h"
 #include "ui/ui_log.h"
+#include "base/algorithm.h"
+#include "ui/integration.h"
 
 #include <QtCore/QMap>
 #include <QtCore/QVector>
@@ -137,6 +138,11 @@ void StartFonts() {
 
 	style_InitFontsResource();
 
+	const auto integrationExists = Ui::Integration::Exists();
+	if (integrationExists) {
+		Ui::Integration::Instance().startFontsBegin();
+	}
+
 #ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 	bool areGood[FontTypesCount] = { false };
 	for (auto i = 0; i != FontTypesCount; ++i) {
@@ -173,6 +179,10 @@ void StartFonts() {
 		QFont::insertSubstitutions(name, list);
 	}
 #endif // Q_OS_MAC
+
+	if (integrationExists) {
+		Ui::Integration::Instance().startFontsEnd();
+	}
 }
 
 QString GetPossibleEmptyOverride(const QString &familyName, int32 flags) {

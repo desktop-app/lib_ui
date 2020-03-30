@@ -39,6 +39,9 @@ public:
 	virtual void textActionsUpdated();
 	virtual void activationFromTopPanel();
 
+	virtual void startFontsBegin();
+	virtual void startFontsEnd();
+
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(
 		EntityType type,
 		const QString &text,

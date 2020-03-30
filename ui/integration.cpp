@@ -36,6 +36,12 @@ void Integration::textActionsUpdated() {
 void Integration::activationFromTopPanel() {
 }
 
+void Integration::startFontsBegin() {
+}
+
+void Integration::startFontsEnd() {
+}
+
 std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 		EntityType type,
 		const QString &text,
