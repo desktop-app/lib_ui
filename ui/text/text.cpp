@@ -1245,7 +1245,7 @@ public:
 						_wLeft -= _elideRemoveFromEnd;
 					}
 
-					longWordLine = true;
+					longWordLine = !wordEndsHere;
 					f = j + 1;
 					f_wLeft = _wLeft;
 					f_lineHeight = _lineHeight;
@@ -3031,7 +3031,7 @@ void String::enumerateLines(
 				last_rPadding = j->f_rpadding();
 				widthLeft = width - (j_width - last_rBearing);
 
-				longWordLine = true;
+				longWordLine = !wordEndsHere;
 				f = j + 1;
 				f_wLeft = widthLeft;
 				f_lineHeight = lineHeight;
