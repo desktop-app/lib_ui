@@ -271,6 +271,10 @@ inlineResultsMinWidth: 48px;
 inlineDurationMargin: 3px;
 
 toastTextStyle: defaultTextStyle;
+toastTextPalette: TextPalette(defaultTextPalette) {
+	linkFg: mediaviewTextLinkFg;
+	monoFg: mediaviewCaptionFg;
+}
 toastMaxWidth: 480px;
 toastMinMargin: 13px;
 toastPadding: margins(19px, 13px, 19px, 12px);

@@ -1321,6 +1321,12 @@ QString SingleLine(const QString &text) {
 	return result;
 }
 
+TextWithEntities SingleLine(const TextWithEntities &text) {
+	auto copy = text;
+	Trim(copy);
+	return { SingleLine(copy.text), std::move(copy.entities) };
+}
+
 QString RemoveAccents(const QString &text) {
 	auto result = text;
 	auto copying = false;

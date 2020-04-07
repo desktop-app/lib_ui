@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/effects/animations.h"
+#include "ui/text/text_entity.h"
 
 namespace Ui {
 namespace Toast {
@@ -18,7 +19,7 @@ class Widget;
 
 inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
-	QString text;
+	TextWithEntities text;
 	QMargins padding;
 	crl::time durationMs = kDefaultDuration;
 	int minWidth = 0;

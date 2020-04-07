@@ -50,13 +50,13 @@ void Show(const Config &config) {
 
 void Show(not_null<QWidget*> parent, const QString &text) {
 	auto config = Config();
-	config.text = text;
+	config.text = { text };
 	Show(parent, config);
 }
 
 void Show(const QString &text) {
 	auto config = Config();
-	config.text = text;
+	config.text = { text };
 	Show(config);
 }
 
