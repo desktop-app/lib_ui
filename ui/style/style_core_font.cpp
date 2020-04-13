@@ -87,29 +87,20 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 
 QString MonospaceFont() {
 	static const auto family = [&]() -> QString {
-#ifdef Q_OS_WIN
-		const auto tryFont = [&](const QString &attempt) {
-			return !QFontInfo(QFont(attempt)).family().trimmed().compare(
-				attempt,
-				Qt::CaseInsensitive);
+#ifndef Q_OS_LINUX
+		const auto kTryFirst = std::initializer_list<QString>{
+			"Consolas",
+			"Liberation Mono",
+			"Menlo",
+			"Courier"
 		};
-
-		if (tryFont("Consolas")) {
-			return "Consolas";
+		for (const auto &family : kTryFirst) {
+			const auto resolved = QFontInfo(QFont(family)).family();
+			if (!resolved.trimmed().compare(family, Qt::CaseInsensitive)) {
+				return family;
+			}
 		}
-
-		if (tryFont("Liberation Mono")) {
-			return "Liberation Mono";
-		}
-
-		if (tryFont("Menlo")) {
-			return "Menlo";
-		}
-
-		if (tryFont("Courier")) {
-			return "Courier";
-		}
-#endif // Q_OS_WIN
+#endif // !Q_OS_LINUX
 
 		const auto type = QFontDatabase::FixedFont;
 		return QFontDatabase::systemFont(type).family();
