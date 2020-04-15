@@ -215,8 +215,7 @@ void StartFonts() {
 #endif // Q_OS_MAC
 #endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 
-	auto appFont = QFont(GetFontOverride());
-	appFont.setPixelSize(13);
+	auto appFont = QApplication::font();
 	appFont.setStyleStrategy(QFont::PreferQuality);
 	QApplication::setFont(appFont);
 
