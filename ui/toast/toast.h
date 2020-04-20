@@ -8,6 +8,7 @@
 
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
+#include "ui/click_handler.h"
 
 namespace Ui {
 namespace Toast {
@@ -16,6 +17,8 @@ namespace internal {
 class Manager;
 class Widget;
 } // namespace internal
+
+using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 
 inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
@@ -26,6 +29,7 @@ struct Config {
 	int maxWidth = 0;
 	int maxLines = 16;
 	bool multiline = false;
+	ClickHandlerFilter filter;
 };
 void SetDefaultParent(not_null<QWidget*> parent);
 void Show(not_null<QWidget*> parent, const Config &config);

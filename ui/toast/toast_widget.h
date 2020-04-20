@@ -49,6 +49,8 @@ private:
 	int _textWidth = 0;
 	Text::String _text;
 
+	ClickHandlerFilter _clickHandlerFilter;
+
 };
 
 } // namespace internal

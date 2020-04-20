@@ -24,7 +24,8 @@ Widget::Widget(QWidget *parent, const Config &config)
 , _maxTextWidth(widthWithoutPadding(_maxWidth))
 , _maxTextHeight(
 	st::toastTextStyle.font->height * (_multiline ? config.maxLines : 1))
-, _text(_multiline ? widthWithoutPadding(config.minWidth) : QFIXED_MAX) {
+, _text(_multiline ? widthWithoutPadding(config.minWidth) : QFIXED_MAX)
+, _clickHandlerFilter(config.filter) {
 	const auto toastOptions = TextParseOptions{
 		TextParseMultiline,
 		_maxTextWidth,
@@ -116,10 +117,13 @@ void Widget::mouseReleaseEvent(QMouseEvent *e) {
 		return;
 	}
 	if (const auto handler = ClickHandler::unpressed()) {
-		handler->onClick({ e->button() });
+		const auto button = e->button();
+		if (!_clickHandlerFilter
+			|| _clickHandlerFilter(handler, button)) {
+			ActivateClickHandler(this, handler, button);
+		}
 	}
 }
-
 
 } // namespace internal
 } // namespace Toast
