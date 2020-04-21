@@ -19,6 +19,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 : TWidget(parent)
 , _roundRect(ImageRoundRadius::Large, st::toastBg)
 , _multiline(config.multiline)
+, _dark(config.dark)
 , _maxWidth((config.maxWidth > 0) ? config.maxWidth : st::toastMaxWidth)
 , _padding((config.padding.left() > 0) ? config.padding : st::toastPadding)
 , _maxTextWidth(widthWithoutPadding(_maxWidth))
@@ -69,6 +70,9 @@ void Widget::paintEvent(QPaintEvent *e) {
 
 	p.setOpacity(_shownLevel);
 	_roundRect.paint(p, rect());
+	if (_dark) {
+		_roundRect.paint(p, rect());
+	}
 
 	p.setTextPalette(st::toastTextPalette);
 

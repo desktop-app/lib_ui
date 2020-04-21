@@ -29,6 +29,7 @@ struct Config {
 	int maxWidth = 0;
 	int maxLines = 16;
 	bool multiline = false;
+	bool dark = false;
 	ClickHandlerFilter filter;
 };
 void SetDefaultParent(not_null<QWidget*> parent);

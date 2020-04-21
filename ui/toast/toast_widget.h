@@ -41,6 +41,7 @@ private:
 
 	float64 _shownLevel = 0;
 	bool _multiline = false;
+	bool _dark = false;
 	int _maxWidth = 0;
 	QMargins _padding;
 
