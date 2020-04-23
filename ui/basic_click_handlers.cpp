@@ -69,6 +69,44 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 	}
 }
 
+bool UrlClickHandler::IsSuspicious(const QString &url) {
+	static const auto Check1 = QRegularExpression(
+		"^(https?://)?([^/#\\:]+)([/#\\:]|$)",
+		QRegularExpression::CaseInsensitiveOption);
+	const auto match1 = Check1.match(url);
+	if (!match1.hasMatch()) {
+		return false;
+	}
+	const auto domain = match1.capturedRef(2);
+	static const auto Check2 = QRegularExpression("^(.*)\\.[a-zA-Z]+$");
+	const auto match2 = Check2.match(domain);
+	if (!match2.hasMatch()) {
+		return false;
+	}
+	const auto part = match2.capturedRef(1);
+	static const auto Check3 = QRegularExpression("[^a-zA-Z0-9\\.\\-]");
+	return Check3.match(part).hasMatch();
+}
+
+
+QString UrlClickHandler::ShowEncoded(const QString &url) {
+	if (const auto u = QUrl(url); u.isValid()) {
+		return QString::fromUtf8(u.toEncoded());
+	}
+	static const auto Check1 = QRegularExpression(
+		"^(https?://)?([^/#\\:]+)([/#\\:]|$)",
+		QRegularExpression::CaseInsensitiveOption);
+	if (const auto match1 = Check1.match(url); match1.hasMatch()) {
+		const auto domain = match1.captured(1).append(match1.capturedRef(2));
+		if (const auto u = QUrl(domain); u.isValid()) {
+			return QString(
+			).append(QString::fromUtf8(u.toEncoded())
+			).append(url.midRef(match1.capturedEnd(2)));
+		}
+	}
+	return url;
+}
+
 auto UrlClickHandler::getTextEntity() const -> TextEntity {
 	const auto type = isEmail() ? EntityType::Email : EntityType::Url;
 	return { type, _originalUrl };

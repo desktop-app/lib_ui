@@ -59,6 +59,8 @@ public:
 		const auto at = url.indexOf('@'), slash = url.indexOf('/');
 		return ((at > 0) && (slash < 0 || slash > at));
 	}
+	[[nodiscard]] static bool IsSuspicious(const QString &url);
+	[[nodiscard]] static QString ShowEncoded(const QString &url);
 
 protected:
 	QString url() const override;
