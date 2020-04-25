@@ -288,17 +288,17 @@ FontData::FontData(int size, uint32 flags, int family, Font *other)
 		f.setFamily(GetFontOverride(flags));
 	}
 
-#ifdef DESKTOP_APP_USE_PACKAGED_FONTS
-	if (_flags & FontSemibold) {
-		f.setWeight(QFont::DemiBold);
-	}
-#endif // DESKTOP_APP_USE_PACKAGED_FONTS
-
 	f.setPixelSize(size);
 	f.setBold(_flags & FontBold);
 	f.setItalic(_flags & FontItalic);
 	f.setUnderline(_flags & FontUnderline);
 	f.setStrikeOut(_flags & FontStrikeOut);
+
+#ifdef DESKTOP_APP_USE_PACKAGED_FONTS
+	if (_flags & FontSemibold) {
+		f.setWeight(QFont::DemiBold);
+	}
+#endif // DESKTOP_APP_USE_PACKAGED_FONTS
 
 	m = QFontMetrics(f);
 	height = m.height();
