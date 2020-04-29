@@ -8,6 +8,7 @@
 
 #include "ui/toast/toast_manager.h"
 #include "ui/toast/toast_widget.h"
+#include "styles/style_widgets.h"
 
 namespace Ui {
 namespace Toast {
@@ -21,13 +22,14 @@ Instance::Instance(
 	const Config &config,
 	not_null<QWidget*> widgetParent,
 	const Private &)
-: _hideAtMs(crl::now() + config.durationMs) {
+: _st(config.st)
+, _hideAtMs(crl::now() + config.durationMs) {
 	_widget = std::make_unique<internal::Widget>(widgetParent, config);
 	_a_opacity.start(
 		[=] { opacityAnimationCallback(); },
 		0.,
 		1.,
-		st::toastFadeInDuration);
+		_st->durationFadeIn);
 }
 
 void SetDefaultParent(not_null<QWidget*> parent) {
@@ -49,15 +51,11 @@ void Show(const Config &config) {
 }
 
 void Show(not_null<QWidget*> parent, const QString &text) {
-	auto config = Config();
-	config.text = { text };
-	Show(parent, config);
+	Show(parent, Config{ .text = { text }, .st = &st::defaultToast });
 }
 
 void Show(const QString &text) {
-	auto config = Config();
-	config.text = { text };
-	Show(config);
+	Show(Config{ .text = { text }, .st = &st::defaultToast });
 }
 
 void Instance::opacityAnimationCallback() {
@@ -72,7 +70,11 @@ void Instance::opacityAnimationCallback() {
 
 void Instance::hideAnimated() {
 	_hiding = true;
-	_a_opacity.start([this] { opacityAnimationCallback(); }, 1., 0., st::toastFadeOutDuration);
+	_a_opacity.start(
+		[=] { opacityAnimationCallback(); },
+		1.,
+		0.,
+		_st->durationFadeOut);
 }
 
 void Instance::hide() {

@@ -268,17 +268,6 @@ inlineRowFileDescriptionTop: 23px;
 inlineResultsMinWidth: 48px;
 inlineDurationMargin: 3px;
 
-toastTextStyle: defaultTextStyle;
-toastTextPalette: TextPalette(defaultTextPalette) {
-	linkFg: mediaviewTextLinkFg;
-	monoFg: mediaviewCaptionFg;
-}
-toastMaxWidth: 480px;
-toastMinMargin: 13px;
-toastPadding: margins(19px, 13px, 19px, 12px);
-toastFadeInDuration: 200;
-toastFadeOutDuration: 1000;
-
 historyReplyCancelIcon: icon {{ "box_button_close", historyReplyCancelFg }};
 historyReplyCancelIconOver: icon {{ "box_button_close", historyReplyCancelFgOver }};
 boxTitleCloseIcon: icon {{ "box_button_close", boxTitleCloseFg }};

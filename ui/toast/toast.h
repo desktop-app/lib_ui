@@ -10,6 +10,10 @@
 #include "ui/text/text_entity.h"
 #include "ui/click_handler.h"
 
+namespace style {
+struct Toast;
+} // namespace style
+
 namespace Ui {
 namespace Toast {
 
@@ -23,10 +27,8 @@ using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
 	TextWithEntities text;
-	QMargins padding;
+	not_null<const style::Toast*> st;
 	crl::time durationMs = kDefaultDuration;
-	int minWidth = 0;
-	int maxWidth = 0;
 	int maxLines = 16;
 	bool multiline = false;
 	bool dark = false;
@@ -55,6 +57,8 @@ public:
 
 private:
 	void opacityAnimationCallback();
+
+	const not_null<const style::Toast*> _st;
 
 	bool _hiding = false;
 	Ui::Animations::Simple _a_opacity;

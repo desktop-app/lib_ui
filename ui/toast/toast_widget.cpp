@@ -8,6 +8,7 @@
 
 #include "ui/image/image_prepare.h"
 #include "styles/palette.h"
+#include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
 
@@ -17,15 +18,14 @@ namespace internal {
 
 Widget::Widget(QWidget *parent, const Config &config)
 : TWidget(parent)
+, _st(config.st)
 , _roundRect(ImageRoundRadius::Large, st::toastBg)
 , _multiline(config.multiline)
 , _dark(config.dark)
-, _maxWidth((config.maxWidth > 0) ? config.maxWidth : st::toastMaxWidth)
-, _padding((config.padding.left() > 0) ? config.padding : st::toastPadding)
-, _maxTextWidth(widthWithoutPadding(_maxWidth))
+, _maxTextWidth(widthWithoutPadding(_st->maxWidth))
 , _maxTextHeight(
-	st::toastTextStyle.font->height * (_multiline ? config.maxLines : 1))
-, _text(_multiline ? widthWithoutPadding(config.minWidth) : QFIXED_MAX)
+	config.st->style.font->height * (_multiline ? config.maxLines : 1))
+, _text(_multiline ? widthWithoutPadding(config.st->minWidth) : QFIXED_MAX)
 , _clickHandlerFilter(config.filter) {
 	const auto toastOptions = TextParseOptions{
 		TextParseMultiline,
@@ -34,7 +34,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 		Qt::LayoutDirectionAuto
 	};
 	_text.setMarkedText(
-		st::toastTextStyle,
+		_st->style,
 		_multiline ? config.text : TextUtilities::SingleLine(config.text),
 		toastOptions);
 
@@ -49,15 +49,25 @@ Widget::Widget(QWidget *parent, const Config &config)
 }
 
 void Widget::onParentResized() {
-	auto newWidth = _maxWidth;
-	accumulate_min(newWidth, _padding.left() + _text.maxWidth() + _padding.right());
-	accumulate_min(newWidth, parentWidget()->width() - 2 * st::toastMinMargin);
+	auto newWidth = _st->maxWidth;
+	accumulate_min(
+		newWidth,
+		_st->padding.left() + _text.maxWidth() + _st->padding.right());
+	accumulate_min(
+		newWidth,
+		parentWidget()->width() - _st->margin.left() - _st->margin.right());
 	_textWidth = widthWithoutPadding(newWidth);
 	const auto textHeight = _multiline
 		? qMin(_text.countHeight(_textWidth), _maxTextHeight)
 		: _text.minHeight();
-	const auto newHeight = _padding.top() + textHeight + _padding.bottom();
-	setGeometry((parentWidget()->width() - newWidth) / 2, (parentWidget()->height() - newHeight) / 2, newWidth, newHeight);
+	const auto newHeight = _st->padding.top()
+		+ textHeight
+		+ _st->padding.bottom();
+	setGeometry(
+		(parentWidget()->width() - newWidth) / 2,
+		(parentWidget()->height() - newHeight) / 2,
+		newWidth,
+		newHeight);
 }
 
 void Widget::setShownLevel(float64 shownLevel) {
@@ -74,11 +84,16 @@ void Widget::paintEvent(QPaintEvent *e) {
 		_roundRect.paint(p, rect());
 	}
 
-	p.setTextPalette(st::toastTextPalette);
+	p.setTextPalette(_st->palette);
 
-	const auto lines = _maxTextHeight / st::toastTextStyle.font->height;
+	const auto lines = _maxTextHeight / _st->style.font->height;
 	p.setPen(st::toastFg);
-	_text.drawElided(p, _padding.left(), _padding.top(), _textWidth + 1, lines);
+	_text.drawElided(
+		p,
+		_st->padding.left(),
+		_st->padding.top(),
+		_textWidth + 1,
+		lines);
 }
 
 void Widget::leaveEventHook(QEvent *e) {
@@ -96,8 +111,9 @@ void Widget::mouseMoveEvent(QMouseEvent *e) {
 	if (!_text.hasLinks()) {
 		return;
 	}
-	const auto point = e->pos() - QPoint(_padding.left(), _padding.top());
-	const auto lines = _maxTextHeight / st::toastTextStyle.font->height;
+	const auto point = e->pos()
+		- QPoint(_st->padding.left(), _st->padding.top());
+	const auto lines = _maxTextHeight / _st->style.font->height;
 	const auto state = _text.getStateElided(point, _textWidth + 1);
 	const auto was = ClickHandler::getActive();
 	if (was != state.link) {
@@ -127,6 +143,10 @@ void Widget::mouseReleaseEvent(QMouseEvent *e) {
 			ActivateClickHandler(this, handler, button);
 		}
 	}
+}
+
+int Widget::widthWithoutPadding(int w) const {
+	return w - _st->padding.left() - _st->padding.right();
 }
 
 } // namespace internal
