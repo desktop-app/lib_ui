@@ -85,13 +85,13 @@ boxTitle: FlatLabel(defaultFlatLabel) {
 		linkFontOver: font(17px semibold underline);
 	}
 }
-boxTitlePosition: point(23px, 16px);
+boxTitlePosition: point(22px, 16px);
 boxTitleHeight: 56px;
 boxTitleAdditionalSkip: 9px;
 boxTitleAdditionalFont: normalFont;
 boxScroll: defaultSolidScroll;
 
-boxRowPadding: margins(23px, 0px, 23px, 0px);
+boxRowPadding: margins(22px, 0px, 22px, 0px);
 
 boxTopMargin: 6px;
 
@@ -121,7 +121,7 @@ boxOptionInputSkip: 6px;
 boxVerticalMargin: 10px;
 boxWidth: 320px;
 boxWideWidth: 364px;
-boxPadding: margins(23px, 30px, 23px, 8px);
+boxPadding: margins(22px, 30px, 22px, 8px);
 boxMaxListHeight: 492px;
 boxLittleSkip: 10px;
 boxMediumSkip: 20px;

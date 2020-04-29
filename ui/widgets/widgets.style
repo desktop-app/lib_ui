@@ -1262,7 +1262,7 @@ defaultSettingsButton: SettingsButton {
 
 	toggle: defaultSettingsToggle;
 	toggleOver: defaultSettingsToggleOver;
-	toggleSkip: 23px;
+	toggleSkip: 22px;
 
 	ripple: defaultRippleAnimation;
 }
