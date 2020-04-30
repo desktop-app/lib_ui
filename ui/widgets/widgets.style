@@ -570,6 +570,8 @@ SideBarButton {
 
 Toast {
 	style: TextStyle;
+	icon: icon;
+	iconPosition: point;
 	palette: TextPalette;
 	padding: margins;
 	margin: margins;

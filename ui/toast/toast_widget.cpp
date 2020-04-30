@@ -62,12 +62,17 @@ void Widget::updateGeometry() {
 		width,
 		parentWidget()->width() - _st->margin.left() - _st->margin.right());
 	_textWidth = widthWithoutPadding(width);
-	const auto textHeight = _multiline
+	_textHeight = _multiline
 		? qMin(_text.countHeight(_textWidth), _maxTextHeight)
 		: _text.minHeight();
-	const auto height = _st->padding.top()
-		+ textHeight
+	const auto minHeight = _st->icon.empty()
+		? 0
+		: (_st->icon.height() + 2 * _st->iconPosition.y());
+	const auto normalHeight = _st->padding.top()
+		+ _textHeight
 		+ _st->padding.bottom();
+	const auto height = std::max(minHeight, normalHeight);
+	_textTop = _st->padding.top() + ((height - normalHeight) / 2);
 	const auto rect = QRect(0, 0, width, height);
 	const auto outer = parentWidget()->size();
 	const auto full = QPoint(outer.width(), outer.height());
@@ -123,6 +128,14 @@ void Widget::paintEvent(QPaintEvent *e) {
 		_roundRect.paint(p, rect());
 	}
 
+	if (!_st->icon.empty()) {
+		_st->icon.paint(
+			p,
+			_st->iconPosition.x(),
+			_st->iconPosition.y(),
+			width());
+	}
+
 	p.setTextPalette(_st->palette);
 
 	const auto lines = _maxTextHeight / _st->style.font->height;
@@ -130,7 +143,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 	_text.drawElided(
 		p,
 		_st->padding.left(),
-		_st->padding.top(),
+		_textTop,
 		_textWidth + 1,
 		lines);
 }
@@ -151,7 +164,7 @@ void Widget::mouseMoveEvent(QMouseEvent *e) {
 		return;
 	}
 	const auto point = e->pos()
-		- QPoint(_st->padding.left(), _st->padding.top());
+		- QPoint(_st->padding.left(), _textTop);
 	const auto lines = _maxTextHeight / _st->style.font->height;
 	const auto state = _text.getStateElided(point, _textWidth + 1);
 	const auto was = ClickHandler::getActive();

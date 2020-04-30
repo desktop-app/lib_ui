@@ -47,6 +47,8 @@ private:
 	int _maxTextWidth = 0;
 	int _maxTextHeight = 0;
 	int _textWidth = 0;
+	int _textHeight = 0;
+	int _textTop = 0;
 	Text::String _text;
 
 	ClickHandlerFilter _clickHandlerFilter;
