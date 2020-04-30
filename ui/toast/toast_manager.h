@@ -37,7 +37,6 @@ private:
 	void hideByTimer();
 
 	base::Timer _hideTimer;
-	crl::time _nextHide = 0;
 
 	base::flat_multi_map<crl::time, not_null<Instance*>> _toastByHideTime;
 	base::flat_map<not_null<Widget*>, not_null<Instance*>> _toastByWidget;
