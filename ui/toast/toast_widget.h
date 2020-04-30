@@ -15,7 +15,7 @@ namespace Ui {
 namespace Toast {
 namespace internal {
 
-class Widget : public TWidget {
+class Widget final : public RpWidget {
 public:
 	Widget(QWidget *parent, const Config &config);
 
@@ -34,9 +34,11 @@ protected:
 
 private:
 	[[nodiscard]] int widthWithoutPadding(int w) const;
+	void updateGeometry();
 
 	const not_null<const style::Toast*> _st;
 	RoundRect _roundRect;
+	RectPart _slideSide = RectPart::None;
 
 	float64 _shownLevel = 0;
 	bool _multiline = false;

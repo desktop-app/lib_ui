@@ -9,6 +9,9 @@
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
 #include "ui/click_handler.h"
+#include "ui/rect_part.h"
+#include "ui/rp_widget.h"
+#include "base/weak_ptr.h"
 
 namespace style {
 struct Toast;
@@ -32,15 +35,13 @@ struct Config {
 	int maxLines = 16;
 	bool multiline = false;
 	bool dark = false;
+	RectPart slideSide = RectPart::None;
 	ClickHandlerFilter filter;
 };
-void SetDefaultParent(not_null<QWidget*> parent);
-void Show(not_null<QWidget*> parent, const Config &config);
-void Show(const Config &config);
-void Show(not_null<QWidget*> parent, const QString &text);
-void Show(const QString &text);
 
-class Instance {
+void SetDefaultParent(not_null<QWidget*> parent);
+
+class Instance final : public base::has_weak_ptr {
 	struct Private {
 	};
 
@@ -55,22 +56,35 @@ public:
 	void hideAnimated();
 	void hide();
 
+	[[nodiscard]] not_null<RpWidget*> widget() const;
+
 private:
-	void opacityAnimationCallback();
+	void shownAnimationCallback();
 
 	const not_null<const style::Toast*> _st;
+	const crl::time _hideAt = 0;
 
+	Ui::Animations::Simple _shownAnimation;
 	bool _hiding = false;
-	Ui::Animations::Simple _a_opacity;
-
-	const crl::time _hideAtMs;
+	bool _sliding = false;
 
 	// ToastManager should reset _widget pointer if _widget is destroyed.
 	friend class internal::Manager;
-	friend void Show(not_null<QWidget*> parent, const Config &config);
+	friend base::weak_ptr<Instance> Show(
+		not_null<QWidget*> parent,
+		const Config &config);
 	std::unique_ptr<internal::Widget> _widget;
 
 };
+
+base::weak_ptr<Instance> Show(
+	not_null<QWidget*> parent,
+	const Config &config);
+base::weak_ptr<Instance>  Show(const Config &config);
+base::weak_ptr<Instance>  Show(
+	not_null<QWidget*> parent,
+	const QString &text);
+base::weak_ptr<Instance>  Show(const QString &text);
 
 } // namespace Toast
 } // namespace Ui

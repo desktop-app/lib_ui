@@ -23,45 +23,50 @@ Instance::Instance(
 	not_null<QWidget*> widgetParent,
 	const Private &)
 : _st(config.st)
-, _hideAtMs(crl::now() + config.durationMs) {
-	_widget = std::make_unique<internal::Widget>(widgetParent, config);
-	_a_opacity.start(
-		[=] { opacityAnimationCallback(); },
+, _hideAt(crl::now() + config.durationMs)
+, _sliding(config.slideSide != RectPart::None)
+, _widget(std::make_unique<internal::Widget>(widgetParent, config)) {
+	_shownAnimation.start(
+		[=] { shownAnimationCallback(); },
 		0.,
 		1.,
-		_st->durationFadeIn);
+		_sliding ? _st->durationSlide : _st->durationFadeIn);
 }
 
 void SetDefaultParent(not_null<QWidget*> parent) {
 	DefaultParent = parent;
 }
 
-void Show(not_null<QWidget*> parent, const Config &config) {
+base::weak_ptr<Instance> Show(
+		not_null<QWidget*> parent,
+		const Config &config) {
 	const auto manager = internal::Manager::instance(parent);
-	manager->addToast(std::make_unique<Instance>(
+	return manager->addToast(std::make_unique<Instance>(
 		config,
 		parent,
 		Instance::Private()));
 }
 
-void Show(const Config &config) {
+base::weak_ptr<Instance> Show(const Config &config) {
 	if (const auto parent = DefaultParent.data()) {
-		Show(parent, config);
+		return Show(parent, config);
 	}
+	return nullptr;
 }
 
-void Show(not_null<QWidget*> parent, const QString &text) {
-	Show(parent, Config{ .text = { text }, .st = &st::defaultToast });
+base::weak_ptr<Instance> Show(
+		not_null<QWidget*> parent,
+		const QString &text) {
+	return Show(parent, Config{ .text = { text }, .st = &st::defaultToast });
 }
 
-void Show(const QString &text) {
-	Show(Config{ .text = { text }, .st = &st::defaultToast });
+base::weak_ptr<Instance> Show(const QString &text) {
+	return Show(Config{ .text = { text }, .st = &st::defaultToast });
 }
 
-void Instance::opacityAnimationCallback() {
-	_widget->setShownLevel(_a_opacity.value(_hiding ? 0. : 1.));
-	_widget->update();
-	if (!_a_opacity.animating()) {
+void Instance::shownAnimationCallback() {
+	_widget->setShownLevel(_shownAnimation.value(_hiding ? 0. : 1.));
+	if (!_shownAnimation.animating()) {
 		if (_hiding) {
 			hide();
 		}
@@ -70,16 +75,20 @@ void Instance::opacityAnimationCallback() {
 
 void Instance::hideAnimated() {
 	_hiding = true;
-	_a_opacity.start(
-		[=] { opacityAnimationCallback(); },
+	_shownAnimation.start(
+		[=] { shownAnimationCallback(); },
 		1.,
 		0.,
-		_st->durationFadeOut);
+		_sliding ? _st->durationSlide : _st->durationFadeOut);
 }
 
 void Instance::hide() {
 	_widget->hide();
 	_widget->deleteLater();
+}
+
+not_null<RpWidget*> Instance::widget() const {
+	return _widget.get();
 }
 
 } // namespace Toast

@@ -44,13 +44,16 @@ not_null<Manager*> Manager::instance(not_null<QWidget*> parent) {
 	return i->second;
 }
 
-void Manager::addToast(std::unique_ptr<Instance> &&toast) {
+base::weak_ptr<Instance> Manager::addToast(
+		std::unique_ptr<Instance> &&toast) {
 	_toasts.push_back(std::move(toast));
 	const auto t = _toasts.back().get();
 	const auto widget = t->_widget.get();
 
 	_toastByWidget.emplace(widget, t);
-	connect(widget, SIGNAL(destroyed(QObject*)), this, SLOT(onToastWidgetDestroyed(QObject*)));
+	connect(widget, &QObject::destroyed, [=] {
+		toastWidgetDestroyed(widget);
+	});
 	if (const auto parent = widget->parentWidget()) {
 		auto found = false;
 		for (auto i = _toastParents.begin(); i != _toastParents.cend();) {
@@ -72,10 +75,11 @@ void Manager::addToast(std::unique_ptr<Instance> &&toast) {
 	const auto nearestHide = _toastByHideTime.empty()
 		? 0LL
 		: _toastByHideTime.begin()->first;
-	_toastByHideTime.emplace(t->_hideAtMs, t);
+	_toastByHideTime.emplace(t->_hideAt, t);
 	if (!nearestHide || _toastByHideTime.begin()->first < nearestHide) {
 		startNextHideTimer();
 	}
+	return make_weak(t);
 }
 
 void Manager::hideByTimer() {
@@ -92,7 +96,7 @@ void Manager::hideByTimer() {
 	startNextHideTimer();
 }
 
-void Manager::onToastWidgetDestroyed(QObject *widget) {
+void Manager::toastWidgetDestroyed(QObject *widget) {
 	const auto i = _toastByWidget.find(static_cast<Widget*>(widget));
 	if (i == _toastByWidget.cend()) {
 		return;
@@ -100,6 +104,13 @@ void Manager::onToastWidgetDestroyed(QObject *widget) {
 	const auto toast = i->second;
 	_toastByWidget.erase(i);
 	toast->_widget.release();
+
+	for (auto i = begin(_toastByHideTime); i != end(_toastByHideTime); ++i) {
+		if (i->second == toast) {
+			_toastByHideTime.erase(i);
+			break;
+		}
+	}
 
 	const auto j = ranges::find(
 		_toasts,
@@ -111,7 +122,9 @@ void Manager::onToastWidgetDestroyed(QObject *widget) {
 }
 
 void Manager::startNextHideTimer() {
-	if (_toastByHideTime.empty()) return;
+	if (_toastByHideTime.empty()) {
+		return;
+	}
 
 	auto ms = crl::now();
 	if (ms >= _toastByHideTime.begin()->first) {

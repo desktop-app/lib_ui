@@ -1289,7 +1289,7 @@ defaultToast: Toast {
 	maxWidth: 480px;
 	durationFadeIn: 200;
 	durationFadeOut: 1000;
-	durationSlide: 400;
+	durationSlide: 160;
 }
 
 // Windows specific title

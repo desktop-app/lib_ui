@@ -14,9 +14,7 @@ namespace Toast {
 namespace internal {
 
 class Widget;
-class Manager : public QObject {
-	Q_OBJECT
-
+class Manager final : public QObject {
 	struct CreateTag {
 	};
 
@@ -28,15 +26,13 @@ public:
 
 	static not_null<Manager*> instance(not_null<QWidget*> parent);
 
-	void addToast(std::unique_ptr<Instance> &&toast);
+	base::weak_ptr<Instance> addToast(std::unique_ptr<Instance> &&toast);
 
 protected:
 	bool eventFilter(QObject *o, QEvent *e);
 
-private slots:
-	void onToastWidgetDestroyed(QObject *widget);
-
 private:
+	void toastWidgetDestroyed(QObject *widget);
 	void startNextHideTimer();
 	void hideByTimer();
 

@@ -17,9 +17,10 @@ namespace Toast {
 namespace internal {
 
 Widget::Widget(QWidget *parent, const Config &config)
-: TWidget(parent)
+: RpWidget(parent)
 , _st(config.st)
 , _roundRect(ImageRoundRadius::Large, st::toastBg)
+, _slideSide(config.slideSide)
 , _multiline(config.multiline)
 , _dark(config.dark)
 , _maxTextWidth(widthWithoutPadding(_st->maxWidth))
@@ -49,36 +50,74 @@ Widget::Widget(QWidget *parent, const Config &config)
 }
 
 void Widget::onParentResized() {
-	auto newWidth = _st->maxWidth;
+	updateGeometry();
+}
+
+void Widget::updateGeometry() {
+	auto width = _st->maxWidth;
 	accumulate_min(
-		newWidth,
+		width,
 		_st->padding.left() + _text.maxWidth() + _st->padding.right());
 	accumulate_min(
-		newWidth,
+		width,
 		parentWidget()->width() - _st->margin.left() - _st->margin.right());
-	_textWidth = widthWithoutPadding(newWidth);
+	_textWidth = widthWithoutPadding(width);
 	const auto textHeight = _multiline
 		? qMin(_text.countHeight(_textWidth), _maxTextHeight)
 		: _text.minHeight();
-	const auto newHeight = _st->padding.top()
+	const auto height = _st->padding.top()
 		+ textHeight
 		+ _st->padding.bottom();
-	setGeometry(
-		(parentWidget()->width() - newWidth) / 2,
-		(parentWidget()->height() - newHeight) / 2,
-		newWidth,
-		newHeight);
+	const auto rect = QRect(0, 0, width, height);
+	const auto outer = parentWidget()->size();
+	const auto full = QPoint(outer.width(), outer.height());
+	const auto middle = QPoint(
+		(outer.width() - width) / 2,
+		(outer.height() - height) / 2);
+	const auto interpolated = [&](int from, int to) {
+		return anim::interpolate(from, to, _shownLevel);
+	};
+	setGeometry(rect.translated([&] {
+		switch (_slideSide) {
+		case RectPart::None:
+			return middle;
+		case RectPart::Left:
+			return QPoint(
+				interpolated(-width, _st->margin.left()),
+				middle.y());
+		case RectPart::Top:
+			return QPoint(
+				middle.x(),
+				interpolated(-height, _st->margin.top()));
+		case RectPart::Right:
+			return QPoint(
+				full.x() - interpolated(0, width + _st->margin.right()),
+				middle.y());
+		case RectPart::Bottom:
+			return QPoint(
+				middle.x(),
+				full.y() - interpolated(0, height + _st->margin.bottom()));
+		}
+		Unexpected("Slide side in Toast::Widget::updateGeometry.");
+	}()));
 }
 
 void Widget::setShownLevel(float64 shownLevel) {
 	_shownLevel = shownLevel;
+	if (_slideSide != RectPart::None) {
+		updateGeometry();
+	} else {
+		update();
+	}
 }
 
 void Widget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	PainterHighQualityEnabler hq(p);
 
-	p.setOpacity(_shownLevel);
+	if (_slideSide == RectPart::None) {
+		p.setOpacity(_shownLevel);
+	}
 	_roundRect.paint(p, rect());
 	if (_dark) {
 		_roundRect.paint(p, rect());
