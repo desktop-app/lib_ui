@@ -192,17 +192,6 @@ void StartFonts() {
 #endif // Q_OS_WIN
 	}
 
-#ifdef Q_OS_WIN
-	auto list = QStringList();
-	list.append("Microsoft YaHei");
-	list.append("Microsoft JhengHei UI");
-	list.append("Yu Gothic UI");
-	list.append("\xEB\xA7\x91\xEC\x9D\x80 \xEA\xB3\xA0\xEB\x94\x95");
-	for (const auto &name : FontTypeNames) {
-		QFont::insertSubstitutions(name, list);
-	}
-#endif // Q_OS_WIN
-
 #ifdef Q_OS_MAC
 	auto list = QStringList();
 	list.append("STIXGeneral");
