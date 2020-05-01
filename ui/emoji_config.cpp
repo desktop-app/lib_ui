@@ -32,7 +32,7 @@ constexpr auto kImagesPerRow = 32;
 constexpr auto kImageRowsPerSprite = 16;
 
 constexpr auto kSetVersion = uint32(1);
-constexpr auto kCacheVersion = uint32(3);
+constexpr auto kCacheVersion = uint32(4);
 constexpr auto kMaxId = uint32(1 << 8);
 
 constexpr auto kScaleForTouchBar = 150;
