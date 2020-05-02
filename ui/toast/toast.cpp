@@ -21,16 +21,22 @@ QPointer<QWidget> DefaultParent;
 Instance::Instance(
 	const Config &config,
 	not_null<QWidget*> widgetParent,
+	bool animateAppearance,
 	const Private &)
 : _st(config.st)
 , _hideAt(crl::now() + config.durationMs)
 , _sliding(config.slideSide != RectPart::None)
+, _collapseKey(config.collapseKey)
 , _widget(std::make_unique<internal::Widget>(widgetParent, config)) {
-	_shownAnimation.start(
-		[=] { shownAnimationCallback(); },
-		0.,
-		1.,
-		_sliding ? _st->durationSlide : _st->durationFadeIn);
+	if (animateAppearance) {
+		_shownAnimation.start(
+			[=] { shownAnimationCallback(); },
+			0.,
+			1.,
+			_sliding ? _st->durationSlide : _st->durationFadeIn);
+	} else {
+		_widget->setShownLevel(1);
+	}
 }
 
 void SetDefaultParent(not_null<QWidget*> parent) {
@@ -41,9 +47,15 @@ base::weak_ptr<Instance> Show(
 		not_null<QWidget*> parent,
 		const Config &config) {
 	const auto manager = internal::Manager::instance(parent);
+
+	if (config.collapseKey) {
+		auto prev = manager->findByKey(config.collapseKey);
+		if (prev) prev->hide();
+	}
 	return manager->addToast(std::make_unique<Instance>(
 		config,
 		parent,
+		!config.collapseKey || !manager->findByKey(config.collapseKey),
 		Instance::Private()));
 }
 
@@ -62,6 +74,13 @@ base::weak_ptr<Instance> Show(
 
 base::weak_ptr<Instance> Show(const QString &text) {
 	return Show(Config{ .text = { text }, .st = &st::defaultToast });
+}
+
+base::weak_ptr<Instance> Last(void *key) {
+	const auto parent = DefaultParent.data();
+	if (!parent) return nullptr;
+	const auto manager = internal::Manager::instance(parent);
+	return key ? manager->findByKey(key) : manager->getLastToast();
 }
 
 void Instance::shownAnimationCallback() {

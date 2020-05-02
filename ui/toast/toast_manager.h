@@ -28,10 +28,12 @@ public:
 
 	base::weak_ptr<Instance> addToast(std::unique_ptr<Instance> &&toast);
 
-protected:
-	bool eventFilter(QObject *o, QEvent *e);
+	base::weak_ptr<Instance> getLastToast();
+	base::weak_ptr<Instance> findByKey(void *key);
 
 private:
+	bool eventFilter(QObject *o, QEvent *e);
+
 	void toastWidgetDestroyed(QObject *widget);
 	void startNextHideTimer();
 	void hideByTimer();

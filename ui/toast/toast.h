@@ -37,6 +37,7 @@ struct Config {
 	bool dark = false;
 	RectPart slideSide = RectPart::None;
 	ClickHandlerFilter filter;
+	void *collapseKey = nullptr;
 };
 
 void SetDefaultParent(not_null<QWidget*> parent);
@@ -49,6 +50,7 @@ public:
 	Instance(
 		const Config &config,
 		not_null<QWidget*> widgetParent,
+		bool animateAppearance,
 		const Private &);
 	Instance(const Instance &other) = delete;
 	Instance &operator=(const Instance &other) = delete;
@@ -67,6 +69,7 @@ private:
 	Ui::Animations::Simple _shownAnimation;
 	bool _hiding = false;
 	bool _sliding = false;
+	void *_collapseKey = nullptr;
 
 	// ToastManager should reset _widget pointer if _widget is destroyed.
 	friend class internal::Manager;
@@ -80,11 +83,13 @@ private:
 base::weak_ptr<Instance> Show(
 	not_null<QWidget*> parent,
 	const Config &config);
-base::weak_ptr<Instance>  Show(const Config &config);
-base::weak_ptr<Instance>  Show(
+base::weak_ptr<Instance> Show(const Config &config);
+base::weak_ptr<Instance> Show(
 	not_null<QWidget*> parent,
 	const QString &text);
-base::weak_ptr<Instance>  Show(const QString &text);
+base::weak_ptr<Instance> Show(const QString &text);
+
+[[nodiscard]] base::weak_ptr<Instance> Last(void *key = nullptr);
 
 } // namespace Toast
 } // namespace Ui

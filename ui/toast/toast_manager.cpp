@@ -44,8 +44,7 @@ not_null<Manager*> Manager::instance(not_null<QWidget*> parent) {
 	return i->second;
 }
 
-base::weak_ptr<Instance> Manager::addToast(
-		std::unique_ptr<Instance> &&toast) {
+base::weak_ptr<Instance> Manager::addToast(std::unique_ptr<Instance> &&toast) {
 	_toasts.push_back(std::move(toast));
 	const auto t = _toasts.back().get();
 	const auto widget = t->_widget.get();
@@ -80,6 +79,21 @@ base::weak_ptr<Instance> Manager::addToast(
 		startNextHideTimer();
 	}
 	return make_weak(t);
+}
+
+base::weak_ptr<Instance> Manager::getLastToast() {
+	if (_toasts.empty()) return nullptr;
+	return _toasts.back();
+}
+
+base::weak_ptr<Instance> Manager::findByKey(void *key) {
+	auto iter = std::find_if(
+		_toasts.rbegin(),
+		_toasts.rend(),
+		[=](auto &&elem) {
+			return elem->_collapseKey == key;
+		});
+	return iter != _toasts.rend() ? make_weak(*iter) : nullptr;
 }
 
 void Manager::hideByTimer() {
