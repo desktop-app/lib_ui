@@ -26,6 +26,15 @@ generate_emoji(lib_ui emoji_suggestions/emoji_autocomplete.json)
 
 set_target_properties(lib_ui PROPERTIES AUTOMOC ON AUTORCC ON)
 
+# Workaround for error: Objective-C 1 was disabled in PCH file but is currently enabled
+if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
+    file(GLOB ObjcFiles ui/platform/mac/*.mm)
+    set_source_files_properties(${ObjcFiles} PROPERTIES
+        SKIP_PRECOMPILE_HEADERS ON
+        COMPILE_FLAGS "--include ui/ui_pch.h -fobjc-weak"
+    )
+endif()
+
 target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
 nice_target_sources(lib_ui ${src_loc}
 PRIVATE
