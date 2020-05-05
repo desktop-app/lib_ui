@@ -85,25 +85,42 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 	return ValidateFont(familyName, flags);
 }
 
+[[nodiscard]] QString SystemMonospaceFont() {
+	const auto type = QFontDatabase::FixedFont;
+	return QFontDatabase::systemFont(type).family();
+}
+
+[[nodiscard]] QString ManualMonospaceFont() {
+	const auto kTryFirst = std::initializer_list<QString>{
+		"Consolas",
+		"Liberation Mono",
+		"Menlo",
+		"Courier"
+	};
+	for (const auto &family : kTryFirst) {
+		const auto resolved = QFontInfo(QFont(family)).family();
+		if (!resolved.trimmed().compare(family, Qt::CaseInsensitive)) {
+			return family;
+		}
+	}
+	return QString();
+}
+
 QString MonospaceFont() {
 	static const auto family = [&]() -> QString {
-#ifndef Q_OS_LINUX
-		const auto kTryFirst = std::initializer_list<QString>{
-			"Consolas",
-			"Liberation Mono",
-			"Menlo",
-			"Courier"
-		};
-		for (const auto &family : kTryFirst) {
-			const auto resolved = QFontInfo(QFont(family)).family();
-			if (!resolved.trimmed().compare(family, Qt::CaseInsensitive)) {
-				return family;
-			}
-		}
-#endif // !Q_OS_LINUX
+		const auto manual = ManualMonospaceFont();
+		const auto system = SystemMonospaceFont();
 
-		const auto type = QFontDatabase::FixedFont;
-		return QFontDatabase::systemFont(type).family();
+#if defined Q_OS_WIN || defined Q_OS_MAC
+		// Prefer our monospace font.
+		const auto useSystem = manual.isEmpty();
+#else // Q_OS_WIN || Q_OS_MAC
+		// Prefer system monospace font.
+		const auto metrics = QFontMetrics(QFont(system));
+		const auto useSystem = manual.isEmpty()
+			|| (metrics.charWidth("i", 0) == metrics.charWidth("W", 0));
+#endif // Q_OS_WIN || Q_OS_MAC
+		return useSystem ? system : manual;
 	}();
 
 	return family;
