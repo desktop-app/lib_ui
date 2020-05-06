@@ -1,4 +1,4 @@
-function(generate_emoji target_name suggestions_json)
+function(generate_emoji target_name emoji_map suggestions_json)
     set(gen_dst ${CMAKE_CURRENT_BINARY_DIR}/gen)
     file(MAKE_DIRECTORY ${gen_dst})
 
@@ -10,7 +10,10 @@ function(generate_emoji target_name suggestions_json)
         ${gen_dst}/emoji_suggestions_data.h
     )
 
-    set(gen_src ${CMAKE_CURRENT_SOURCE_DIR}/${suggestions_json})
+    set(gen_src
+        ${CMAKE_CURRENT_SOURCE_DIR}/${emoji_map}
+        ${CMAKE_CURRENT_SOURCE_DIR}/${suggestions_json}
+    )
     add_custom_command(
     OUTPUT
         ${gen_timestamp}
