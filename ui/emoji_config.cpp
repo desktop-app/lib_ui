@@ -31,11 +31,17 @@ constexpr auto kUniversalSize = 72;
 constexpr auto kImagesPerRow = 32;
 constexpr auto kImageRowsPerSprite = 16;
 
-constexpr auto kSetVersion = uint32(1);
-constexpr auto kCacheVersion = uint32(5);
+constexpr auto kSetVersion = uint32(2);
+constexpr auto kCacheVersion = uint32(6);
 constexpr auto kMaxId = uint32(1 << 8);
 
 constexpr auto kScaleForTouchBar = 150;
+
+enum class ConfigResult {
+	Invalid,
+	BadVersion,
+	Good,
+};
 
 // Right now we can't allow users of Ui::Emoji to create custom sizes.
 // Any Instance::Instance() can invalidate Universal.id() and sprites.
@@ -69,6 +75,7 @@ auto InstanceNormal = std::unique_ptr<Instance>();
 auto InstanceLarge = std::unique_ptr<Instance>();
 auto Universal = std::shared_ptr<UniversalImages>();
 auto CanClearUniversal = false;
+auto WaitingToSwitchBackToId = 0;
 auto Updates = rpl::event_stream<>();
 
 #if defined Q_OS_MAC && !defined OS_MAC_OLD
@@ -138,7 +145,17 @@ int ReadCurrentSetId() {
 		: 0;
 }
 
+void ApplyUniversalImages(std::shared_ptr<UniversalImages> images) {
+	Universal = std::move(images);
+	CanClearUniversal = false;
+	MainEmojiMap.clear();
+	OtherEmojiMap.clear();
+	Updates.fire({});
+}
+
 void SwitchToSetPrepared(int id, std::shared_ptr<UniversalImages> images) {
+	WaitingToSwitchBackToId = 0;
+
 	auto setting = QFile(CurrentSettingPath());
 	if (!id) {
 		setting.remove();
@@ -147,11 +164,34 @@ void SwitchToSetPrepared(int id, std::shared_ptr<UniversalImages> images) {
 		stream.setVersion(QDataStream::Qt_5_1);
 		stream << qint32(id);
 	}
-	Universal = std::move(images);
-	CanClearUniversal = false;
-	MainEmojiMap.clear();
-	OtherEmojiMap.clear();
-	Updates.fire({});
+	ApplyUniversalImages(std::move(images));
+}
+
+[[nodiscard]] ConfigResult ValidateConfig(int id) {
+	Expects(IsValidSetId(id));
+
+	if (!id) {
+		return ConfigResult::Good;
+	}
+	constexpr auto kSizeLimit = 65536;
+	auto config = QFile(internal::SetDataPath(id) + "/config.json");
+	if (!config.open(QIODevice::ReadOnly) || config.size() > kSizeLimit) {
+		return ConfigResult::Invalid;
+	}
+	auto error = QJsonParseError{ 0, QJsonParseError::NoError };
+	const auto document = QJsonDocument::fromJson(
+		base::parse::stripComments(config.readAll()),
+		&error);
+	config.close();
+	if (error.error != QJsonParseError::NoError) {
+		return ConfigResult::Invalid;
+	}
+	if (document.object()["id"].toInt() != id) {
+		return ConfigResult::Invalid;
+	} else if (document.object()["version"].toInt() != kSetVersion) {
+		return ConfigResult::BadVersion;
+	}
+	return ConfigResult::Good;
 }
 
 void ClearCurrentSetIdSync() {
@@ -161,12 +201,14 @@ void ClearCurrentSetIdSync() {
 	if (!id) {
 		return;
 	}
-	QDir(internal::SetDataPath(id)).removeRecursively();
 
 	const auto newId = 0;
 	auto universal = std::make_shared<UniversalImages>(newId);
 	universal->ensureLoaded();
-	SwitchToSetPrepared(newId, std::move(universal));
+
+	// Start loading the set when possible.
+	ApplyUniversalImages(std::move(universal));
+	WaitingToSwitchBackToId = id;
 }
 
 void SaveToFile(int id, const QImage &image, int size, int index) {
@@ -288,37 +330,12 @@ std::vector<QImage> LoadSprites(int id) {
 	}) | ranges::to_vector;
 }
 
-bool ValidateConfig(int id) {
-	Expects(IsValidSetId(id));
-
-	if (!id) {
-		return true;
-	}
-	constexpr auto kSizeLimit = 65536;
-	auto config = QFile(internal::SetDataPath(id) + "/config.json");
-	if (!config.open(QIODevice::ReadOnly) || config.size() > kSizeLimit) {
-		return false;
-	}
-	auto error = QJsonParseError{ 0, QJsonParseError::NoError };
-	const auto document = QJsonDocument::fromJson(
-		base::parse::stripComments(config.readAll()),
-		&error);
-	config.close();
-	if (error.error != QJsonParseError::NoError) {
-		return false;
-	}
-	if (document.object()["id"].toInt() != id
-		|| document.object()["version"].toInt() != kSetVersion) {
-		return false;
-	}
-	return true;
-}
-
 std::vector<QImage> LoadAndValidateSprites(int id) {
 	Expects(IsValidSetId(id));
 	Expects(SpritesCount > 0);
 
-	if (!ValidateConfig(id)) {
+	const auto config = ValidateConfig(id);
+	if (config != ConfigResult::Good) {
 		return {};
 	}
 	auto result = LoadSprites(id);
@@ -524,6 +541,18 @@ int CurrentSetId() {
 	Expects(Universal != nullptr);
 
 	return Universal->id();
+}
+
+int NeedToSwitchBackToId() {
+	return WaitingToSwitchBackToId;
+}
+
+void ClearNeedSwitchToId() {
+	if (!WaitingToSwitchBackToId) {
+		return;
+	}
+	WaitingToSwitchBackToId = 0;
+	QFile(CurrentSettingPath()).remove();
 }
 
 void SwitchToSet(int id, Fn<void(bool)> callback) {

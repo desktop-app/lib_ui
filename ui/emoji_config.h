@@ -32,14 +32,16 @@ void ClearIrrelevantCache();
 // Thread safe, callback is called on main thread.
 void SwitchToSet(int id, Fn<void(bool)> callback);
 
-int CurrentSetId();
-bool SetIsReady(int id);
-rpl::producer<> Updated();
+[[nodiscard]] int CurrentSetId();
+[[nodiscard]] int NeedToSwitchBackToId();
+void ClearNeedSwitchToId();
+[[nodiscard]] bool SetIsReady(int id);
+[[nodiscard]] rpl::producer<> Updated();
 
-int GetSizeNormal();
-int GetSizeLarge();
+[[nodiscard]] int GetSizeNormal();
+[[nodiscard]] int GetSizeLarge();
 #if defined Q_OS_MAC && !defined OS_MAC_OLD
-int GetSizeTouchbar();
+[[nodiscard]] int GetSizeTouchbar();
 #endif
 
 class One {
@@ -113,7 +115,7 @@ private:
 
 };
 
-inline EmojiPtr FromUrl(const QString &url) {
+[[nodiscard]] inline EmojiPtr FromUrl(const QString &url) {
 	auto start = qstr("emoji://e.");
 	if (url.startsWith(start)) {
 		return internal::ByIndex(url.midRef(start.size()).toInt()); // skip emoji://e.
@@ -121,21 +123,21 @@ inline EmojiPtr FromUrl(const QString &url) {
 	return nullptr;
 }
 
-inline EmojiPtr Find(const QChar *start, const QChar *end, int *outLength = nullptr) {
+[[nodiscard]] inline EmojiPtr Find(const QChar *start, const QChar *end, int *outLength = nullptr) {
 	return internal::Find(start, end, outLength);
 }
 
-inline EmojiPtr Find(const QString &text, int *outLength = nullptr) {
+[[nodiscard]] inline EmojiPtr Find(const QString &text, int *outLength = nullptr) {
 	return Find(text.constBegin(), text.constEnd(), outLength);
 }
 
-QString IdFromOldKey(uint64 oldKey);
+[[nodiscard]] QString IdFromOldKey(uint64 oldKey);
 
-inline EmojiPtr FromOldKey(uint64 oldKey) {
+[[nodiscard]] inline EmojiPtr FromOldKey(uint64 oldKey) {
 	return Find(IdFromOldKey(oldKey));
 }
 
-inline int ColorIndexFromCode(uint32 code) {
+[[nodiscard]] inline int ColorIndexFromCode(uint32 code) {
 	switch (code) {
 	case 0xD83CDFFBU: return 1;
 	case 0xD83CDFFCU: return 2;
@@ -146,7 +148,7 @@ inline int ColorIndexFromCode(uint32 code) {
 	return 0;
 }
 
-inline int ColorIndexFromOldKey(uint64 oldKey) {
+[[nodiscard]] inline int ColorIndexFromOldKey(uint64 oldKey) {
 	return ColorIndexFromCode(uint32(oldKey & 0xFFFFFFFFLLU));
 }
 
@@ -175,7 +177,7 @@ private:
 
 };
 
-const std::shared_ptr<UniversalImages> &SourceImages();
+[[nodiscard]] const std::shared_ptr<UniversalImages> &SourceImages();
 void ClearSourceImages(const std::shared_ptr<UniversalImages> &images);
 
 } // namespace Emoji
