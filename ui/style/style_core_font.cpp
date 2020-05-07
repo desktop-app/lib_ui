@@ -145,6 +145,14 @@ QString FontTypeNames[FontTypesCount] = {
 	"DAOpenSansSemibold",
 	"DAOpenSansSemiboldItalic",
 };
+QString FontTypePersianFallback[FontTypesCount] = {
+	"DAVazirRegular",
+	"DAVazirRegular",
+	"DAVazirBold",
+	"DAVazirBold",
+	"DAVazirMedium",
+	"DAVazirMedium",
+};
 #endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 int32 FontTypeFlags[FontTypesCount] = {
 	0,
@@ -184,12 +192,17 @@ void StartFonts() {
 	}
 
 #ifndef DESKTOP_APP_USE_PACKAGED_FONTS
+	LoadCustomFont(":/gui/fonts/DAVazirRegular.ttf", "DAVazirRegular");
+	LoadCustomFont(":/gui/fonts/DAVazirBold.ttf", "DAVazirBold", style::internal::FontBold);
+	LoadCustomFont(":/gui/fonts/DAVazirMedium.ttf", "DAVazirMedium", style::internal::FontSemibold);
+
 	bool areGood[FontTypesCount] = { false };
 	for (auto i = 0; i != FontTypesCount; ++i) {
 		const auto name = FontTypeNames[i];
 		const auto flags = FontTypeFlags[i];
 		areGood[i] = LoadCustomFont(":/gui/fonts/" + name + ".ttf", name, flags);
 		Overrides[i] = name;
+
 #ifdef Q_OS_WIN
 		// Attempt to workaround a strange font bug with Open Sans Semibold not loading.
 		// See https://github.com/telegramdesktop/tdesktop/issues/3276 for details.
@@ -207,6 +220,11 @@ void StartFonts() {
 		//
 		//QFont::insertSubstitution(name, fallback);
 #endif // Q_OS_WIN
+
+#if defined Q_OS_WIN || defined Q_OS_LINUX
+		const auto persianFallback = FontTypePersianFallback[i];
+		QFont::insertSubstitution(name, persianFallback);
+#endif // Q_OS_WIN || Q_OS_LINUX
 	}
 
 #ifdef Q_OS_MAC
