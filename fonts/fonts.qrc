@@ -6,6 +6,9 @@
     <file>DAOpenSansBoldItalic.ttf</file>
     <file>DAOpenSansSemibold.ttf</file>
     <file>DAOpenSansSemiboldItalic.ttf</file>
+    <file>DAVazirRegular.ttf</file>
+    <file>DAVazirBold.ttf</file>
+    <file>DAVazirMedium.ttf</file>
   </qresource>
   <qresource prefix="/fc">
     <file>fc-custom.conf</file>
