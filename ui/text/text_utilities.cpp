@@ -29,6 +29,10 @@ TextWithEntities Bold(const QString &text) {
 	return WithSingleEntity(text, EntityType::Bold);
 }
 
+TextWithEntities Semibold(const QString &text) {
+	return WithSingleEntity(text, EntityType::Semibold);
+}
+
 TextWithEntities Italic(const QString &text) {
 	return WithSingleEntity(text, EntityType::Italic);
 }

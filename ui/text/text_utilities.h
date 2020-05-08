@@ -24,39 +24,44 @@ struct ToUpperType {
 } // namespace details
 
 inline constexpr auto Upper = details::ToUpperType{};
-TextWithEntities Bold(const QString &text);
-TextWithEntities Italic(const QString &text);
-TextWithEntities Link(
+[[nodiscard]] TextWithEntities Bold(const QString &text);
+[[nodiscard]] TextWithEntities Semibold(const QString &text);
+[[nodiscard]] TextWithEntities Italic(const QString &text);
+[[nodiscard]] TextWithEntities Link(
 	const QString &text,
 	const QString &url = "internal:action");
-TextWithEntities RichLangValue(const QString &text);
-inline TextWithEntities WithEntities(const QString &text) {
+[[nodiscard]] TextWithEntities RichLangValue(const QString &text);
+[[nodiscard]] inline TextWithEntities WithEntities(const QString &text) {
 	return { text };
 }
 
-inline auto ToUpper() {
+[[nodiscard]] inline auto ToUpper() {
 	return rpl::map(Upper);
 }
 
-inline auto ToBold() {
+[[nodiscard]] inline auto ToBold() {
 	return rpl::map(Bold);
 }
 
-inline auto ToItalic() {
+[[nodiscard]] inline auto ToSemibold() {
+	return rpl::map(Semibold);
+}
+
+[[nodiscard]] inline auto ToItalic() {
 	return rpl::map(Italic);
 }
 
-inline auto ToLink(const QString &url = "internal:action") {
+[[nodiscard]] inline auto ToLink(const QString &url = "internal:action") {
 	return rpl::map([=](const QString &text) {
 		return Link(text, url);
 	});
 }
 
-inline auto ToRichLangValue() {
+[[nodiscard]] inline auto ToRichLangValue() {
 	return rpl::map(RichLangValue);
 }
 
-inline auto ToWithEntities() {
+[[nodiscard]] inline auto ToWithEntities() {
 	return rpl::map(WithEntities);
 }
 

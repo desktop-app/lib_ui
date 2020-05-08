@@ -25,6 +25,7 @@ enum class EntityType {
 	BotCommand,
 
 	Bold,
+	Semibold,
 	Italic,
 	Underline,
 	StrikeOut,

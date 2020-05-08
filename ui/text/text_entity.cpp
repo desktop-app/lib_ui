@@ -2011,6 +2011,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 			}
 		} else if (tag.id == Ui::InputField::kTagBold) {
 			push(EntityType::Bold);
+		//} else if (tag.id == Ui::InputField::kTagSemibold) {
+		//	push(EntityType::Semibold); // Semibold is for UI parts only.
 		} else if (tag.id == Ui::InputField::kTagItalic) {
 			push(EntityType::Italic);
 		} else if (tag.id == Ui::InputField::kTagUnderline) {
@@ -2054,6 +2056,9 @@ TextWithTags::Tags ConvertEntitiesToTextTags(const EntitiesInText &entities) {
 			}
 		} break;
 		case EntityType::Bold: push(Ui::InputField::kTagBold); break;
+		//case EntityType::Semibold: // Semibold is for UI parts only.
+		//	push(Ui::InputField::kTagSemibold);
+		//	break;
 		case EntityType::Italic: push(Ui::InputField::kTagItalic); break;
 		case EntityType::Underline:
 			push(Ui::InputField::kTagUnderline);

@@ -83,6 +83,7 @@ TextWithEntities PrepareRichFromRich(
 					(type == EntityType::Cashtag && !parseHashtags) ||
 					(type == EntityType::BotCommand && !parseBotCommands) || // #TODO entities
 					(!parseMarkdown && (type == EntityType::Bold
+						|| type == EntityType::Semibold
 						|| type == EntityType::Italic
 						|| type == EntityType::Underline
 						|| type == EntityType::StrikeOut
@@ -542,6 +543,8 @@ bool Parser::checkEntities() {
 	const auto entityEnd = entityBegin + entityLength;
 	if (entityType == EntityType::Bold) {
 		flags = TextBlockFBold;
+	} else if (entityType == EntityType::Semibold) {
+		flags = TextBlockFSemibold;
 	} else if (entityType == EntityType::Italic) {
 		flags = TextBlockFItalic;
 	} else if (entityType == EntityType::Underline) {
@@ -3244,6 +3247,7 @@ TextForMimeData String::toText(
 		? std::vector<MarkdownTagTracker>{
 			{ TextBlockFItalic, EntityType::Italic },
 			{ TextBlockFBold, EntityType::Bold },
+			{ TextBlockFSemibold, EntityType::Semibold },
 			{ TextBlockFUnderline, EntityType::Underline },
 			{ TextBlockFStrikeOut, EntityType::StrikeOut },
 			{ TextBlockFCode, EntityType::Code }, // #TODO entities
