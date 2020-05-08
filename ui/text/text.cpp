@@ -541,7 +541,7 @@ bool Parser::checkEntities() {
 	const auto entityBegin = _start + _waitingEntity->offset();
 	const auto entityEnd = entityBegin + entityLength;
 	if (entityType == EntityType::Bold) {
-		flags = TextBlockFSemibold;
+		flags = TextBlockFBold;
 	} else if (entityType == EntityType::Italic) {
 		flags = TextBlockFItalic;
 	} else if (entityType == EntityType::Underline) {
@@ -3243,7 +3243,7 @@ TextForMimeData String::toText(
 	auto markdownTrackers = composeEntities
 		? std::vector<MarkdownTagTracker>{
 			{ TextBlockFItalic, EntityType::Italic },
-			{ TextBlockFSemibold, EntityType::Bold },
+			{ TextBlockFBold, EntityType::Bold },
 			{ TextBlockFUnderline, EntityType::Underline },
 			{ TextBlockFStrikeOut, EntityType::StrikeOut },
 			{ TextBlockFCode, EntityType::Code }, // #TODO entities

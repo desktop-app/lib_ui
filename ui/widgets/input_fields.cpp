@@ -664,7 +664,7 @@ QTextCharFormat PrepareTagFormat(
 		result.setFont(st.font);
 	} else if (tag == kTagBold) {
 		result.setForeground(st.textFg);
-		result.setFont(st.font->semibold());
+		result.setFont(st.font->bold());
 	} else if (tag == kTagItalic) {
 		result.setForeground(st.textFg);
 		result.setFont(st.font->italic());
