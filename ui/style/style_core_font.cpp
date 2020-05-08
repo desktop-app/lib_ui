@@ -137,19 +137,27 @@ enum {
 	FontTypesCount,
 };
 #ifndef DESKTOP_APP_USE_PACKAGED_FONTS
+QString FontTypeFiles[FontTypesCount] = {
+	"DAOpenSansRegular",
+	"DAOpenSansRegularItalic",
+	"DAOpenSansSemiboldAsBold",
+	"DAOpenSansSemiboldItalicAsBold",
+	"DAOpenSansSemiboldAsBold",
+	"DAOpenSansSemiboldItalicAsBold",
+};
 QString FontTypeNames[FontTypesCount] = {
 	"DAOpenSansRegular",
 	"DAOpenSansRegularItalic",
-	"DAOpenSansBold",
-	"DAOpenSansBoldItalic",
+	"DAOpenSansSemibold",
+	"DAOpenSansSemiboldItalic",
 	"DAOpenSansSemibold",
 	"DAOpenSansSemiboldItalic",
 };
 QString FontTypePersianFallback[FontTypesCount] = {
 	"DAVazirRegular",
 	"DAVazirRegular",
-	"DAVazirBold",
-	"DAVazirBold",
+	"DAVazirMedium",
+	"DAVazirMedium",
 	"DAVazirMedium",
 	"DAVazirMedium",
 };
@@ -193,14 +201,15 @@ void StartFonts() {
 
 #ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 	LoadCustomFont(":/gui/fonts/DAVazirRegular.ttf", "DAVazirRegular");
-	LoadCustomFont(":/gui/fonts/DAVazirBold.ttf", "DAVazirBold", style::internal::FontBold);
-	LoadCustomFont(":/gui/fonts/DAVazirMedium.ttf", "DAVazirMedium", style::internal::FontSemibold);
+	LoadCustomFont(":/gui/fonts/DAVazirMediumAsBold.ttf", "DAVazirMedium", style::internal::FontBold);
+	LoadCustomFont(":/gui/fonts/DAVazirMediumAsBold.ttf", "DAVazirMedium", style::internal::FontSemibold);
 
 	bool areGood[FontTypesCount] = { false };
 	for (auto i = 0; i != FontTypesCount; ++i) {
+		const auto file = FontTypeFiles[i];
 		const auto name = FontTypeNames[i];
 		const auto flags = FontTypeFlags[i];
-		areGood[i] = LoadCustomFont(":/gui/fonts/" + name + ".ttf", name, flags);
+		areGood[i] = LoadCustomFont(":/gui/fonts/" + file + ".ttf", name, flags);
 		Overrides[i] = name;
 
 #ifdef Q_OS_WIN
@@ -309,12 +318,12 @@ FontData::FontData(int size, uint32 flags, int family, Font *other)
 	}
 
 	f.setPixelSize(size);
-	f.setBold(_flags & FontBold);
+	f.setBold((_flags & FontBold) || (_flags & FontSemibold));
 	f.setItalic(_flags & FontItalic);
 	f.setUnderline(_flags & FontUnderline);
 	f.setStrikeOut(_flags & FontStrikeOut);
 
-	if (_flags & FontSemibold) {
+	if ((_flags & FontBold) || (_flags & FontSemibold)) {
 		f.setStyleName("Semibold");
 	}
 

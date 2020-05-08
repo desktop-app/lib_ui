@@ -2,12 +2,12 @@
   <qresource prefix="/gui/fonts">
     <file>DAOpenSansRegular.ttf</file>
     <file>DAOpenSansRegularItalic.ttf</file>
-    <file>DAOpenSansBold.ttf</file>
-    <file>DAOpenSansBoldItalic.ttf</file>
+    <file>DAOpenSansSemiboldAsBold.ttf</file>
+    <file>DAOpenSansSemiboldItalicAsBold.ttf</file>
     <file>DAOpenSansSemibold.ttf</file>
     <file>DAOpenSansSemiboldItalic.ttf</file>
     <file>DAVazirRegular.ttf</file>
-    <file>DAVazirBold.ttf</file>
+    <file>DAVazirMediumAsBold.ttf</file>
     <file>DAVazirMedium.ttf</file>
   </qresource>
   <qresource prefix="/fc">
