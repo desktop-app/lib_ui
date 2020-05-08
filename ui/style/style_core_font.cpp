@@ -168,8 +168,8 @@ QString FontTypeWindowsFallback[FontTypesCount] = {
 	"Segoe UI",
 	"Segoe UI",
 	"Segoe UI",
-	"Segoe UI Semibold",
-	"Segoe UI Semibold",
+	"Segoe UI",
+	"Segoe UI",
 };
 #endif // Q_OS_WIN
 
@@ -269,12 +269,8 @@ QString GetPossibleEmptyOverride(int32 flags) {
 }
 
 QString GetFontOverride(int32 flags) {
-	const auto familyName = (flags & FontSemibold)
-		? "Open Sans Semibold"
-		: "Open Sans";
-
 	const auto result = GetPossibleEmptyOverride(flags);
-	return result.isEmpty() ? familyName : result;
+	return result.isEmpty() ? "Open Sans" : result;
 }
 
 void destroyFonts() {
@@ -318,11 +314,9 @@ FontData::FontData(int size, uint32 flags, int family, Font *other)
 	f.setUnderline(_flags & FontUnderline);
 	f.setStrikeOut(_flags & FontStrikeOut);
 
-#ifdef DESKTOP_APP_USE_PACKAGED_FONTS
 	if (_flags & FontSemibold) {
-		f.setWeight(QFont::DemiBold);
+		f.setStyleName("Semibold");
 	}
-#endif // DESKTOP_APP_USE_PACKAGED_FONTS
 
 	m = QFontMetrics(f);
 	height = m.height();
