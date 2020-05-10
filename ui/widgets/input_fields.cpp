@@ -1968,7 +1968,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 	const auto tildeFormatting = (_st.font->f.pixelSize() * style::DevicePixelRatio() == 13)
 		&& (_st.font->f.family() == qstr("DAOpenSansRegular"));
 	auto isTildeFragment = false;
-	const auto tildeFixedFont = _st.font->semibold();
+	auto tildeFixedFont = _st.font->semibold()->f;
 
 	// First tag handling (the one we inserted text to).
 	bool startTagFound = false;
@@ -2018,6 +2018,11 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					break;
 				}
 				if (tildeFormatting) {
+					const auto formatFont = format.font();
+					if (!tildeFixedFont.styleName().isEmpty()
+						&& formatFont.styleName().isEmpty()) {
+						tildeFixedFont.setStyleName(QString());
+					}
 					isTildeFragment = (format.font() == tildeFixedFont);
 				}
 
