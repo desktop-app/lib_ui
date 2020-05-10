@@ -22,6 +22,9 @@ bool IsApplicationActive() {
 }
 
 bool TranslucentWindowsSupported(QPoint globalPosition) {
+	if (QGuiApplication::platformName().startsWith(qsl("wayland"), Qt::CaseInsensitive)) {
+		return true;
+	}
 	if (const auto native = QGuiApplication::platformNativeInterface()) {
 		if (const auto desktop = QApplication::desktop()) {
 			const auto index = desktop->screenNumber(globalPosition);
