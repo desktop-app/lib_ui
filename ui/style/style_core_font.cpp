@@ -230,10 +230,8 @@ void StartFonts() {
 		//QFont::insertSubstitution(name, fallback);
 #endif // Q_OS_WIN
 
-#if defined Q_OS_WIN || defined Q_OS_LINUX
 		const auto persianFallback = FontTypePersianFallback[i];
 		QFont::insertSubstitution(name, persianFallback);
-#endif // Q_OS_WIN || Q_OS_LINUX
 	}
 
 #ifdef Q_OS_MAC
