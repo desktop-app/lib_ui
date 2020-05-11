@@ -16,6 +16,22 @@
 
 #include <windowsx.h>
 
+// WM_POINTER support from Windows 8 onwards (WINVER >= 0x0602)
+#ifndef WM_POINTERUPDATE
+#  define WM_NCPOINTERUPDATE 0x0241
+#  define WM_NCPOINTERDOWN   0x0242
+#  define WM_NCPOINTERUP     0x0243
+#  define WM_POINTERUPDATE   0x0245
+#  define WM_POINTERDOWN     0x0246
+#  define WM_POINTERUP       0x0247
+#  define WM_POINTERENTER    0x0249
+#  define WM_POINTERLEAVE    0x024A
+#  define WM_POINTERACTIVATE 0x024B
+#  define WM_POINTERCAPTURECHANGED 0x024C
+#  define WM_POINTERWHEEL    0x024E
+#  define WM_POINTERHWHEEL   0x024F
+#endif // WM_POINTERUPDATE
+
 namespace Ui {
 namespace Platform {
 namespace {
@@ -197,7 +213,7 @@ void WindowShadow::init(QColor color) {
 			return;
 		}
 		ShadowByHandle.emplace(_handles[i], this);
-		SetWindowLong(_handles[i], GWL_HWNDPARENT, (LONG)_handle);
+		SetWindowLongPtr(_handles[i], GWLP_HWNDPARENT, (LONG)_handle);
 
 		_contexts[i] = CreateCompatibleDC(_screenContext);
 		if (!_contexts[i]) {
