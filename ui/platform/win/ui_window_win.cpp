@@ -70,7 +70,7 @@ bool WindowHelper::NativeFilter::nativeEventFilter(
 			msg->message,
 			msg->wParam,
 			msg->lParam,
-			static_cast<LRESULT*>(result))
+			reinterpret_cast<LRESULT*>(result))
 		: false;
 }
 
@@ -269,7 +269,7 @@ bool WindowHelper::handleNativeEvent(
 	} return false;
 
 	case WM_SHOWWINDOW: {
-		const auto style = GetWindowLong(_handle, GWL_STYLE);
+		const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 		const auto changes = WindowShadow::Change::Resized
 			| ((wParam && !(style & (WS_MAXIMIZE | WS_MINIMIZE)))
 				? WindowShadow::Change::Shown
@@ -375,8 +375,8 @@ void WindowHelper::updateMargins() {
 	GetClientRect(_handle, &r);
 	a = r;
 
-	const auto style = GetWindowLong(_handle, GWL_STYLE);
-	const auto styleEx = GetWindowLong(_handle, GWL_EXSTYLE);
+	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
+	const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
 	AdjustWindowRectEx(&a, style, false, styleEx);
 	auto margins = QMargins(
 		a.left - r.left,
