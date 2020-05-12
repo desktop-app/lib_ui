@@ -2689,6 +2689,8 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		const auto oldPosition = textCursor().position();
 		if (enter && ctrl) {
 			e->setModifiers(e->modifiers() & ~Qt::ControlModifier);
+		} else if (enter && shift) {
+			e->setModifiers(e->modifiers() & ~Qt::ShiftModifier);
 		}
 		_inner->QTextEdit::keyPressEvent(e);
 		auto cursor = textCursor();
