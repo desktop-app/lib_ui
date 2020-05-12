@@ -2755,7 +2755,7 @@ void String::recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir) {
 
 	_maxWidth = _minHeight = 0;
 	int32 lineHeight = 0;
-	int32 result = 0, lastNewlineStart = 0;
+	int32 lastNewlineStart = 0;
 	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
 	for (auto i = _blocks.cbegin(), e = _blocks.cend(); i != e; ++i) {
 		auto b = i->get();
@@ -2821,6 +2821,63 @@ void String::recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir) {
 		_minHeight += lineHeight;
 		accumulate_max(_maxWidth, _width);
 	}
+}
+
+int String::countMaxMonospaceWidth() const {
+	NewlineBlock *lastNewline = 0;
+
+	auto result = QFixed();
+	auto paragraphWidth = QFixed();
+	auto lastNewlineStart = 0;
+	auto fullMonospace = true;
+	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
+	for (auto i = _blocks.cbegin(), e = _blocks.cend(); i != e; ++i) {
+		auto b = i->get();
+		auto _btype = b->type();
+		if (_btype == TextBlockTNewline) {
+			lastNewlineStart = b->from();
+			lastNewline = static_cast<NewlineBlock*>(b);
+
+			last_rBearing = b->f_rbearing();
+			last_rPadding = b->f_rpadding();
+
+			if (fullMonospace) {
+				accumulate_max(paragraphWidth, _width);
+				accumulate_max(result, paragraphWidth);
+				paragraphWidth = 0;
+			} else {
+				fullMonospace = true;
+			}
+			_width = (b->f_width() - last_rBearing);
+			continue;
+		}
+		if (!(b->flags() & (TextBlockFPre | TextBlockFCode))
+			&& (b->type() != TextBlockTSkip)) {
+			fullMonospace = false;
+		}
+		auto b__f_rbearing = b->f_rbearing(); // cache
+
+		// We need to accumulate max width after each block, because
+		// some blocks have width less than -1 * previous right bearing.
+		// In that cases the _width gets _smaller_ after moving to the next block.
+		//
+		// But when we layout block and we're sure that _maxWidth is enough
+		// for all the blocks to fit on their line we check each block, even the
+		// intermediate one with a large negative right bearing.
+		if (fullMonospace) {
+			accumulate_max(paragraphWidth, _width);
+		}
+		_width += last_rBearing + (last_rPadding + b->f_width() - b__f_rbearing);
+
+		last_rBearing = b__f_rbearing;
+		last_rPadding = b->f_rpadding();
+		continue;
+	}
+	if (_width > 0 && fullMonospace) {
+		accumulate_max(paragraphWidth, _width);
+		accumulate_max(result, paragraphWidth);
+	}
+	return result.ceil().toInt();
 }
 
 void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options) {

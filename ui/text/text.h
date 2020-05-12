@@ -128,12 +128,13 @@ public:
 	bool updateSkipBlock(int width, int height);
 	bool removeSkipBlock();
 
-	int32 maxWidth() const {
+	int maxWidth() const {
 		return _maxWidth.ceil().toInt();
 	}
-	int32 minHeight() const {
+	int minHeight() const {
 		return _minHeight;
 	}
+	int countMaxMonospaceWidth() const;
 
 	void draw(Painter &p, int32 left, int32 top, int32 width, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, TextSelection selection = { 0, 0 }, bool fullWidthSelection = true) const;
 	void drawElided(Painter &p, int32 left, int32 top, int32 width, int32 lines = 1, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, int32 removeFromEnd = 0, bool breakEverywhere = false, TextSelection selection = { 0, 0 }) const;
