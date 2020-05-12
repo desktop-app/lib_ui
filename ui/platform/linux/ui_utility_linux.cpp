@@ -22,7 +22,7 @@ bool IsApplicationActive() {
 }
 
 bool TranslucentWindowsSupported(QPoint globalPosition) {
-	if (QGuiApplication::platformName().startsWith(qsl("wayland"), Qt::CaseInsensitive)) {
+	if (QGuiApplication::platformName().startsWith("wayland", Qt::CaseInsensitive)) {
 		return true;
 	}
 	if (const auto native = QGuiApplication::platformNativeInterface()) {
