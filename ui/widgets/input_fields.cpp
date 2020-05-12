@@ -2084,7 +2084,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 						break;
 					}
 
-					if (breakTagOnNotLetter && !ch->isLetter()) {
+					if (breakTagOnNotLetter && !ch->isLetterOrNumber()) {
 						// Remove tag name till the end if no current action is prepared.
 						if (action.type != ActionType::Invalid) {
 							break;
@@ -2183,6 +2183,22 @@ void InputField::onDocumentContentsChange(
 		int charsAdded) {
 	if (_correcting) {
 		return;
+	}
+
+	// In case of input method events Qt emits
+	// document content change signals for a whole
+	// text block where the even took place.
+	// This breaks our wysiwyg markup, so we adjust
+	// the parameters to match the real change.
+	if (_inputMethodCommit.has_value()
+		&& charsAdded > _inputMethodCommit->size()
+		&& charsRemoved > 0) {
+		const auto inBlockBefore = charsAdded - _inputMethodCommit->size();
+		if (charsRemoved >= inBlockBefore) {
+			charsAdded -= inBlockBefore;
+			charsRemoved -= inBlockBefore;
+			position += inBlockBefore;
+		}
 	}
 
 	const auto document = _inner->document();
@@ -2882,8 +2898,9 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 		_lastPreEditText = preedit;
 		startPlaceholderAnimation();
 	}
-	const auto text = e->commitString();
+	_inputMethodCommit = e->commitString();
 	_inner->QTextEdit::inputMethodEvent(e);
+	const auto text = *base::take(_inputMethodCommit);
 	if (!processMarkdownReplaces(text)) {
 		processInstantReplaces(text);
 	}

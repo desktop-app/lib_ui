@@ -462,19 +462,21 @@ private:
 	int _maxLength = -1;
 	int _minHeight = -1;
 	int _maxHeight = -1;
-	bool _forcePlaceholderHidden = false;
-	bool _reverseMarkdownReplacement = false;
 
 	const std::unique_ptr<Inner> _inner;
 
-	TextWithTags _lastTextWithTags;
-	std::vector<MarkdownTag> _lastMarkdownTags;
-	QString _lastPreEditText;
 	Fn<bool(
 		EditLinkSelection selection,
 		QString text,
 		QString link,
 		EditLinkAction action)> _editLinkCallback;
+	TextWithTags _lastTextWithTags;
+	std::vector<MarkdownTag> _lastMarkdownTags;
+	QString _lastPreEditText;
+	std::optional<QString> _inputMethodCommit;
+
+	bool _forcePlaceholderHidden = false;
+	bool _reverseMarkdownReplacement = false;
 
 	// Tags list which we should apply while setText() call or insert from mime data.
 	TagList _insertedTags;
