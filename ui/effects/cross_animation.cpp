@@ -10,6 +10,7 @@
 #include "ui/painter.h"
 
 #include <QtCore/QtMath>
+#include <QtGui/QPainterPath>
 
 namespace Ui {
 namespace {
