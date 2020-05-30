@@ -10,6 +10,8 @@
 
 #include "ui/style/style_core.h"
 
+#include <QtGui/QPainterPath>
+
 namespace anim {
 
 enum class type {
