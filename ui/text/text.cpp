@@ -934,7 +934,7 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 	}
 	_t->_links.squeeze();
-	_t->_blocks.shrink_to_fit();
+	_t->_blocks.squeeze();
 	_t->_text.squeeze();
 }
 
