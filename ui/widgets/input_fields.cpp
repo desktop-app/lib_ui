@@ -104,12 +104,12 @@ QString GetFullSimpleTextTag(const TextWithTags &textWithTags) {
 	auto from = 0;
 	auto till = int(text.size());
 	for (; from != till; ++from) {
-		if (!IsNewline(text[from]) && !chIsSpace(text[from])) {
+		if (!IsNewline(text[from]) && !Text::IsSpace(text[from])) {
 			break;
 		}
 	}
 	while (till != from) {
-		if (!IsNewline(text[till - 1]) && !chIsSpace(text[till - 1])) {
+		if (!IsNewline(text[till - 1]) && !Text::IsSpace(text[till - 1])) {
 			break;
 		}
 		--till;
@@ -3100,7 +3100,7 @@ bool InputField::commitMarkdownReplacement(
 			const auto ch = outer.at(check);
 			if (IsNewline(ch)) {
 				return check + 1;
-			} else if (!chIsSpace(ch)) {
+			} else if (!Text::IsSpace(ch)) {
 				break;
 			}
 		}

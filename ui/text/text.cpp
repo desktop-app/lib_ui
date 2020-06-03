@@ -21,10 +21,14 @@ namespace Text {
 namespace {
 
 constexpr auto kStringLinkIndexShift = uint16(0x8000);
+constexpr auto kMaxDiacAfterSymbol = 2;
 
-Qt::LayoutDirection StringDirection(const QString &str, int32 from, int32 to) {
-	const ushort *p = reinterpret_cast<const ushort*>(str.unicode()) + from;
-	const ushort *end = p + (to - from);
+Qt::LayoutDirection StringDirection(
+		const QString &str,
+		int from,
+		int to) {
+	auto p = reinterpret_cast<const ushort*>(str.unicode()) + from;
+	const auto end = p + (to - from);
 	while (p < end) {
 		uint ucs4 = *p;
 		if (QChar::isHighSurrogate(ucs4) && p < end - 1) {
@@ -98,7 +102,9 @@ TextWithEntities PrepareRichFromRich(
 	return result;
 }
 
-QFixed ComputeStopAfter(const TextParseOptions &options, const style::TextStyle &st) {
+QFixed ComputeStopAfter(
+		const TextParseOptions &options,
+		const style::TextStyle &st) {
 	return (options.maxw > 0 && options.maxh > 0)
 		? ((options.maxh / st.font->height) + 1) * options.maxw
 		: QFIXED_MAX;
@@ -112,11 +118,17 @@ bool ComputeCheckTilde(const style::TextStyle &st) {
 		&& (font->f.family() == qstr("DAOpenSansRegular"));
 }
 
-} // namespace
-} // namespace Text
-} // namespace Ui
+bool IsParagraphSeparator(QChar ch) {
+	switch (ch.unicode()) {
+	case QChar::LineFeed:
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
 
-bool chIsBad(QChar ch) {
+bool IsBad(QChar ch) {
 	return (ch == 0)
 		|| (ch >= 8232 && ch < 8237)
 		|| (ch >= 65024 && ch < 65040 && ch != 65039)
@@ -130,8 +142,12 @@ bool chIsBad(QChar ch) {
 			&& !Platform::IsMac10_12OrGreater()
 			&& ch >= 0x0B00
 			&& ch <= 0x0B7F
-			&& chIsDiac(ch));
+			&& IsDiac(ch));
 }
+
+} // namespace
+} // namespace Text
+} // namespace Ui
 
 QString textcmdSkipBlock(ushort w, ushort h) {
 	static QString cmd(5, TextCommand);
@@ -745,18 +761,18 @@ bool Parser::readCommand() {
 void Parser::parseCurrentChar() {
 	_ch = ((_ptr < _end) ? *_ptr : 0);
 	_emojiLookback = 0;
-	const auto isNewLine = _multiline && chIsNewline(_ch);
-	const auto isSpace = chIsSpace(_ch);
-	const auto isDiac = chIsDiac(_ch);
+	const auto isNewLine = _multiline && IsNewline(_ch);
+	const auto isSpace = IsSpace(_ch);
+	const auto isDiac = IsDiac(_ch);
 	const auto isTilde = _checkTilde && (_ch == '~');
 	const auto skip = [&] {
-		if (chIsBad(_ch) || _ch.isLowSurrogate()) {
+		if (IsBad(_ch) || _ch.isLowSurrogate()) {
 			return true;
 		} else if (_ch == 0xFE0F && Platform::IsMac()) {
 			// Some sequences like 0x0E53 0xFE0F crash OS X harfbuzz text processing :(
 			return true;
 		} else if (isDiac) {
-			if (_lastSkipped || _emoji || ++_diacs > chMaxDiacAfterSymbol()) {
+			if (_lastSkipped || _emoji || ++_diacs > kMaxDiacAfterSymbol) {
 				return true;
 			}
 		} else if (_ch.isHighSurrogate()) {
@@ -891,10 +907,10 @@ void Parser::trimSourceRange() {
 		_source.entities,
 		_end - _start);
 
-	while (_ptr != _end && chIsTrimmed(*_ptr, _rich) && _ptr != _start + firstMonospaceOffset) {
+	while (_ptr != _end && IsTrimmed(*_ptr, _rich) && _ptr != _start + firstMonospaceOffset) {
 		++_ptr;
 	}
-	while (_ptr != _end && chIsTrimmed(*(_end - 1), _rich)) {
+	while (_ptr != _end && IsTrimmed(*(_end - 1), _rich)) {
 		--_end;
 	}
 }
@@ -2838,7 +2854,7 @@ void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &t
 //		for (const QChar *ch = text.constData(), *e = ch + text.size(); ch != e; ++ch) {
 //			if (*ch == TextCommand) {
 //				break;
-//			} else if (chIsNewline(*ch)) {
+//			} else if (IsNewline(*ch)) {
 //				newText.append("},").append(*ch).append("\t{ ");
 //			} else {
 //				if (ch->isHighSurrogate() || ch->isLowSurrogate()) {
@@ -3103,31 +3119,31 @@ TextSelection String::adjustSelection(TextSelection selection, TextSelectType se
 	if (from < _text.size() && from <= to) {
 		if (to > _text.size()) to = _text.size();
 		if (selectType == TextSelectType::Paragraphs) {
-			if (!chIsParagraphSeparator(_text.at(from))) {
-				while (from > 0 && !chIsParagraphSeparator(_text.at(from - 1))) {
+			if (!IsParagraphSeparator(_text.at(from))) {
+				while (from > 0 && !IsParagraphSeparator(_text.at(from - 1))) {
 					--from;
 				}
 			}
 			if (to < _text.size()) {
-				if (chIsParagraphSeparator(_text.at(to))) {
+				if (IsParagraphSeparator(_text.at(to))) {
 					++to;
 				} else {
-					while (to < _text.size() && !chIsParagraphSeparator(_text.at(to))) {
+					while (to < _text.size() && !IsParagraphSeparator(_text.at(to))) {
 						++to;
 					}
 				}
 			}
 		} else if (selectType == TextSelectType::Words) {
-			if (!chIsWordSeparator(_text.at(from))) {
-				while (from > 0 && !chIsWordSeparator(_text.at(from - 1))) {
+			if (!IsWordSeparator(_text.at(from))) {
+				while (from > 0 && !IsWordSeparator(_text.at(from - 1))) {
 					--from;
 				}
 			}
 			if (to < _text.size()) {
-				if (chIsWordSeparator(_text.at(to))) {
+				if (IsWordSeparator(_text.at(to))) {
 					++to;
 				} else {
-					while (to < _text.size() && !chIsWordSeparator(_text.at(to))) {
+					while (to < _text.size() && !IsWordSeparator(_text.at(to))) {
 						++to;
 					}
 				}
@@ -3353,6 +3369,114 @@ void String::clearFields() {
 	_links.clear();
 	_maxWidth = _minHeight = 0;
 	_startDir = Qt::LayoutDirectionAuto;
+}
+
+bool IsWordSeparator(QChar ch) {
+	switch (ch.unicode()) {
+	case QChar::Space:
+	case QChar::LineFeed:
+	case '.':
+	case ',':
+	case '?':
+	case '!':
+	case '@':
+	case '#':
+	case '$':
+	case ':':
+	case ';':
+	case '-':
+	case '<':
+	case '>':
+	case '[':
+	case ']':
+	case '(':
+	case ')':
+	case '{':
+	case '}':
+	case '=':
+	case '/':
+	case '+':
+	case '%':
+	case '&':
+	case '^':
+	case '*':
+	case '\'':
+	case '"':
+	case '`':
+	case '~':
+	case '|':
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
+
+bool IsAlmostLinkEnd(QChar ch) {
+	switch (ch.unicode()) {
+	case '?':
+	case ',':
+	case '.':
+	case '"':
+	case ':':
+	case '!':
+	case '\'':
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
+
+bool IsLinkEnd(QChar ch) {
+	return (ch == TextCommand)
+		|| IsBad(ch)
+		|| IsSpace(ch)
+		|| IsNewline(ch)
+		|| ch.isLowSurrogate()
+		|| ch.isHighSurrogate();
+}
+
+bool IsNewline(QChar ch) {
+	return (ch == QChar::LineFeed)
+		|| (ch == 156);
+}
+
+bool IsSpace(QChar ch, bool rich) {
+	return ch.isSpace()
+		|| (ch < 32 && !(rich && ch == TextCommand))
+		|| (ch == QChar::ParagraphSeparator)
+		|| (ch == QChar::LineSeparator)
+		|| (ch == QChar::ObjectReplacementCharacter)
+		|| (ch == QChar::CarriageReturn)
+		|| (ch == QChar::Tabulation)
+		|| (ch == QChar(8203)/*Zero width space.*/);
+}
+
+bool IsDiac(QChar ch) { // diac and variation selectors
+	return (ch.category() == QChar::Mark_NonSpacing)
+		|| (ch == 1652)
+		|| (ch >= 64606 && ch <= 64611);
+}
+
+bool IsReplacedBySpace(QChar ch) {
+	// \xe2\x80[\xa8 - \xac\xad] // 8232 - 8237
+	// QString from1 = QString::fromUtf8("\xe2\x80\xa8"), to1 = QString::fromUtf8("\xe2\x80\xad");
+	// \xcc[\xb3\xbf\x8a] // 819, 831, 778
+	// QString bad1 = QString::fromUtf8("\xcc\xb3"), bad2 = QString::fromUtf8("\xcc\xbf"), bad3 = QString::fromUtf8("\xcc\x8a");
+	// [\x00\x01\x02\x07\x08\x0b-\x1f] // '\t' = 0x09
+	return (/*code >= 0x00 && */ch <= 0x02)
+		|| (ch >= 0x07 && ch <= 0x09)
+		|| (ch >= 0x0b && ch <= 0x1f)
+		|| (ch == 819)
+		|| (ch == 831)
+		|| (ch == 778)
+		|| (ch >= 8232 && ch <= 8237);
+}
+
+bool IsTrimmed(QChar ch, bool rich) {
+	return (!rich || ch != TextCommand)
+		&& (IsSpace(ch) || IsBad(ch));
 }
 
 } // namespace Text
