@@ -8,6 +8,7 @@
 
 #include "base/flat_set.h"
 #include "ui/ui_log.h"
+#include "base/platform/base_platform_info.h"
 
 #include <QtCore/QPoint>
 #include <QtWidgets/QApplication>
@@ -22,7 +23,7 @@ bool IsApplicationActive() {
 }
 
 bool TranslucentWindowsSupported(QPoint globalPosition) {
-	if (QGuiApplication::platformName().startsWith("wayland", Qt::CaseInsensitive)) {
+	if (::Platform::IsWayland()) {
 		return true;
 	}
 	if (const auto native = QGuiApplication::platformNativeInterface()) {
