@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/text/text_entity.h"
+#include "ui/text/text_block.h"
 #include "ui/painter.h"
 #include "ui/click_handler.h"
 #include "base/flags.h"
@@ -69,7 +70,6 @@ static constexpr TextSelection AllTextSelection = { 0, 0xFFFF };
 namespace Ui {
 namespace Text {
 
-class AbstractBlock;
 struct IsolatedEmoji;
 
 struct StateRequest {
@@ -108,11 +108,17 @@ struct StateRequestElided : public StateRequest {
 class String {
 public:
 	String(int32 minResizeWidth = QFIXED_MAX);
-	String(const style::TextStyle &st, const QString &text, const TextParseOptions &options = _defaultOptions, int32 minResizeWidth = QFIXED_MAX, bool richText = false);
-	String(const String &other);
-	String(String &&other);
-	String &operator=(const String &other);
-	String &operator=(String &&other);
+	String(
+		const style::TextStyle &st,
+		const QString &text,
+		const TextParseOptions &options = _defaultOptions,
+		int32 minResizeWidth = QFIXED_MAX,
+		bool richText = false);
+	String(const String &other) = default;
+	String(String &&other) = default;
+	String &operator=(const String &other) = default;
+	String &operator=(String &&other) = default;
+	~String() = default;
 
 	int countWidth(int width, bool breakEverywhere = false) const;
 	int countHeight(int width, bool breakEverywhere = false) const;
@@ -168,34 +174,14 @@ public:
 		TextSelection selection = AllTextSelection) const;
 	IsolatedEmoji toIsolatedEmoji() const;
 
-	bool lastDots(int32 dots, int32 maxdots = 3) { // hack for typing animation
-		if (_text.size() < maxdots) return false;
-
-		int32 nowDots = 0, from = _text.size() - maxdots, to = _text.size();
-		for (int32 i = from; i < to; ++i) {
-			if (_text.at(i) == QChar('.')) {
-				++nowDots;
-			}
-		}
-		if (nowDots == dots) return false;
-		for (int32 j = from; j < from + dots; ++j) {
-			_text[j] = QChar('.');
-		}
-		for (int32 j = from + dots; j < to; ++j) {
-			_text[j] = QChar(' ');
-		}
-		return true;
-	}
-
 	const style::TextStyle *style() const {
 		return _st;
 	}
 
 	void clear();
-	~String();
 
 private:
-	using TextBlocks = std::vector<std::unique_ptr<AbstractBlock>>;
+	using TextBlocks = QVector<Block>;
 	using TextLinks = QVector<ClickHandlerPtr>;
 
 	uint16 countBlockEnd(const TextBlocks::const_iterator &i, const TextBlocks::const_iterator &e) const;

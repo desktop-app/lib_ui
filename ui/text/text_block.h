@@ -34,16 +34,13 @@ enum TextBlockFlags {
 
 class AbstractBlock {
 public:
-	AbstractBlock(const style::font &font, const QString &str, uint16 from, uint16 length, uchar flags, uint16 lnkIndex) : _from(from), _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12)) {
-	}
-
 	uint16 from() const {
 		return _from;
 	}
-	int32 width() const {
+	int width() const {
 		return _width.toInt();
 	}
-	int32 rpadding() const {
+	int rpadding() const {
 		return _rpadding.toInt();
 	}
 	QFixed f_width() const {
@@ -70,11 +67,18 @@ public:
 		return (_flags & 0xFF);
 	}
 
-	virtual std::unique_ptr<AbstractBlock> clone() const = 0;
-	virtual ~AbstractBlock() {
+protected:
+	AbstractBlock(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		uint16 length,
+		uchar flags,
+		uint16 lnkIndex)
+	: _from(from)
+	, _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12)) {
 	}
 
-protected:
 	uint16 _from = 0;
 
 	uint32 _flags = 0; // 4 bits empty, 16 bits lnkIndex, 4 bits type, 8 bits flags
@@ -90,9 +94,16 @@ protected:
 
 };
 
-class NewlineBlock : public AbstractBlock {
+class NewlineBlock final : public AbstractBlock {
 public:
-	NewlineBlock(const style::font &font, const QString &str, uint16 from, uint16 length, uchar flags, uint16 lnkIndex) : AbstractBlock(font, str, from, length, flags, lnkIndex), _nextDir(Qt::LayoutDirectionAuto) {
+	NewlineBlock(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		uint16 length,
+		uchar flags,
+		uint16 lnkIndex)
+	: AbstractBlock(font, str, from, length, flags, lnkIndex) {
 		_flags |= ((TextBlockTNewline & 0x0F) << 8);
 	}
 
@@ -100,12 +111,8 @@ public:
 		return _nextDir;
 	}
 
-	std::unique_ptr<AbstractBlock> clone() const override {
-		return std::make_unique<NewlineBlock>(*this);
-	}
-
 private:
-	Qt::LayoutDirection _nextDir;
+	Qt::LayoutDirection _nextDir = Qt::LayoutDirectionAuto;
 
 	friend class String;
 	friend class Parser;
@@ -113,14 +120,16 @@ private:
 
 };
 
-class TextWord {
+class TextWord final {
 public:
 	TextWord() = default;
 	TextWord(uint16 from, QFixed width, QFixed rbearing, QFixed rpadding = 0)
-		: _from(from)
-		, _width(width)
-		, _rpadding(rpadding)
-		, _rbearing(rbearing.value() > 0x7FFF ? 0x7FFF : (rbearing.value() < -0x7FFF ? -0x7FFF : rbearing.value())) {
+	: _from(from)
+	, _rbearing((rbearing.value() > 0x7FFF)
+		? 0x7FFF
+		: (rbearing.value() < -0x7FFF ? -0x7FFF : rbearing.value()))
+	, _width(width)
+	, _rpadding(rpadding) {
 	}
 	uint16 from() const {
 		return _from;
@@ -140,45 +149,50 @@ public:
 
 private:
 	uint16 _from = 0;
-	QFixed _width, _rpadding;
 	int16 _rbearing = 0;
+	QFixed _width, _rpadding;
 
 };
 
-class TextBlock : public AbstractBlock {
+class TextBlock final : public AbstractBlock {
 public:
-	TextBlock(const style::font &font, const QString &str, QFixed minResizeWidth, uint16 from, uint16 length, uchar flags, uint16 lnkIndex);
-
-	std::unique_ptr<AbstractBlock> clone() const override {
-		return std::make_unique<TextBlock>(*this);
-	}
+	TextBlock(
+		const style::font &font,
+		const QString &str,
+		QFixed minResizeWidth,
+		uint16 from,
+		uint16 length,
+		uchar flags,
+		uint16 lnkIndex);
 
 private:
-	friend class AbstractBlock;
 	QFixed real_f_rbearing() const {
 		return _words.isEmpty() ? 0 : _words.back().f_rbearing();
 	}
 
-	using TextWords = QVector<TextWord>;
-	TextWords _words;
+	QVector<TextWord> _words;
 
 	friend class String;
 	friend class Parser;
 	friend class Renderer;
 	friend class BlockParser;
+	friend class AbstractBlock;
 
 };
 
-class EmojiBlock : public AbstractBlock {
+class EmojiBlock final : public AbstractBlock {
 public:
-	EmojiBlock(const style::font &font, const QString &str, uint16 from, uint16 length, uchar flags, uint16 lnkIndex, EmojiPtr emoji);
-
-	std::unique_ptr<AbstractBlock> clone() const override {
-		return std::make_unique<EmojiBlock>(*this);
-	}
+	EmojiBlock(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		uint16 length,
+		uchar flags,
+		uint16 lnkIndex,
+		EmojiPtr emoji);
 
 private:
-	EmojiPtr emoji = nullptr;
+	EmojiPtr _emoji = nullptr;
 
 	friend class String;
 	friend class Parser;
@@ -186,24 +200,261 @@ private:
 
 };
 
-class SkipBlock : public AbstractBlock {
+class SkipBlock final : public AbstractBlock {
 public:
-	SkipBlock(const style::font &font, const QString &str, uint16 from, int32 w, int32 h, uint16 lnkIndex);
+	SkipBlock(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		int32 w,
+		int32 h,
+		uint16 lnkIndex)
+	: AbstractBlock(font, str, from, 1, 0, lnkIndex)
+	, _height(h) {
+		_flags |= ((TextBlockTSkip & 0x0F) << 8);
+		_width = w;
+	}
 
-	int32 height() const {
+	int height() const {
 		return _height;
 	}
 
-	std::unique_ptr<AbstractBlock> clone() const override {
-		return std::make_unique<SkipBlock>(*this);
-	}
-
 private:
-	int32 _height;
+	int _height = 0;
 
 	friend class String;
 	friend class Parser;
 	friend class Renderer;
+
+};
+
+class Block final {
+public:
+	Block() {
+		Unexpected("Should not be called.");
+	}
+	Block(const Block &other) {
+		switch (other->type()) {
+		case TextBlockTNewline:
+			emplace<NewlineBlock>(other.unsafe<NewlineBlock>());
+			break;
+		case TextBlockTText:
+			emplace<TextBlock>(other.unsafe<TextBlock>());
+			break;
+		case TextBlockTEmoji:
+			emplace<EmojiBlock>(other.unsafe<EmojiBlock>());
+			break;
+		case TextBlockTSkip:
+			emplace<SkipBlock>(other.unsafe<SkipBlock>());
+			break;
+		default:
+			Unexpected("Bad text block type in Block(const Block&).");
+		}
+	}
+	Block(Block &&other) {
+		switch (other->type()) {
+		case TextBlockTNewline:
+			emplace<NewlineBlock>(std::move(other.unsafe<NewlineBlock>()));
+			break;
+		case TextBlockTText:
+			emplace<TextBlock>(std::move(other.unsafe<TextBlock>()));
+			break;
+		case TextBlockTEmoji:
+			emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
+			break;
+		case TextBlockTSkip:
+			emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
+			break;
+		default:
+			Unexpected("Bad text block type in Block(Block&&).");
+		}
+	}
+	Block &operator=(const Block &other) {
+		if (&other == this) {
+			return *this;
+		}
+		destroy();
+		switch (other->type()) {
+		case TextBlockTNewline:
+			emplace<NewlineBlock>(other.unsafe<NewlineBlock>());
+			break;
+		case TextBlockTText:
+			emplace<TextBlock>(other.unsafe<TextBlock>());
+			break;
+		case TextBlockTEmoji:
+			emplace<EmojiBlock>(other.unsafe<EmojiBlock>());
+			break;
+		case TextBlockTSkip:
+			emplace<SkipBlock>(other.unsafe<SkipBlock>());
+			break;
+		default:
+			Unexpected("Bad text block type in operator=(const Block&).");
+		}
+		return *this;
+	}
+	Block &operator=(Block &&other) {
+		if (&other == this) {
+			return *this;
+		}
+		destroy();
+		switch (other->type()) {
+		case TextBlockTNewline:
+			emplace<NewlineBlock>(std::move(other.unsafe<NewlineBlock>()));
+			break;
+		case TextBlockTText:
+			emplace<TextBlock>(std::move(other.unsafe<TextBlock>()));
+			break;
+		case TextBlockTEmoji:
+			emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
+			break;
+		case TextBlockTSkip:
+			emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
+			break;
+		default:
+			Unexpected("Bad text block type in operator=(Block&&).");
+		}
+		return *this;
+	}
+	~Block() {
+		destroy();
+	}
+
+	[[nodiscard]] static Block Newline(
+			const style::font &font,
+			const QString &str,
+			uint16 from,
+			uint16 length,
+			uchar flags,
+			uint16 lnkIndex) {
+		return New<NewlineBlock>(font, str, from, length, flags, lnkIndex);
+	}
+
+	[[nodiscard]] static Block Text(
+			const style::font &font,
+			const QString &str,
+			QFixed minResizeWidth,
+			uint16 from,
+			uint16 length,
+			uchar flags,
+			uint16 lnkIndex) {
+		return New<TextBlock>(
+			font,
+			str,
+			minResizeWidth,
+			from,
+			length,
+			flags,
+			lnkIndex);
+	}
+
+	[[nodiscard]] static Block Emoji(
+			const style::font &font,
+			const QString &str,
+			uint16 from,
+			uint16 length,
+			uchar flags,
+			uint16 lnkIndex,
+			EmojiPtr emoji) {
+		return New<EmojiBlock>(
+			font,
+			str,
+			from,
+			length,
+			flags,
+			lnkIndex,
+			emoji);
+	}
+
+	[[nodiscard]] static Block Skip(
+			const style::font &font,
+			const QString &str,
+			uint16 from,
+			int32 w,
+			int32 h,
+			uint16 lnkIndex) {
+		return New<SkipBlock>(font, str, from, w, h, lnkIndex);
+	}
+
+	template <typename FinalBlock>
+	[[nodiscard]] FinalBlock &unsafe() {
+		return *reinterpret_cast<FinalBlock*>(&_data);
+	}
+
+	template <typename FinalBlock>
+	[[nodiscard]] const FinalBlock &unsafe() const {
+		return *reinterpret_cast<const FinalBlock*>(&_data);
+	}
+
+	[[nodiscard]] AbstractBlock *get() {
+		return &unsafe<AbstractBlock>();
+	}
+
+	[[nodiscard]] const AbstractBlock *get() const {
+		return &unsafe<AbstractBlock>();
+	}
+
+	[[nodiscard]] AbstractBlock *operator->() {
+		return get();
+	}
+
+	[[nodiscard]] const AbstractBlock *operator->() const {
+		return get();
+	}
+
+	[[nodiscard]] AbstractBlock &operator*() {
+		return *get();
+	}
+
+	[[nodiscard]] const AbstractBlock &operator*() const {
+		return *get();
+	}
+
+private:
+	struct Tag {
+	};
+
+	explicit Block(const Tag &) {
+	}
+
+	template <typename FinalType, typename ...Args>
+	[[nodiscard]] static Block New(Args &&...args) {
+		auto result = Block(Tag{});
+		result.emplace<FinalType>(std::forward<Args>(args)...);
+		return result;
+	}
+
+	template <typename FinalType, typename ...Args>
+	void emplace(Args &&...args) {
+		new (&_data) FinalType(std::forward<Args>(args)...);
+	}
+
+	void destroy() {
+		switch (get()->type()) {
+		case TextBlockTNewline:
+			unsafe<NewlineBlock>().~NewlineBlock();
+			break;
+		case TextBlockTText:
+			unsafe<TextBlock>().~TextBlock();
+			break;
+		case TextBlockTEmoji:
+			unsafe<EmojiBlock>().~EmojiBlock();
+			break;
+		case TextBlockTSkip:
+			unsafe<SkipBlock>().~SkipBlock();
+			break;
+		default:
+			Unexpected("Bad text block type in Block(Block&&).");
+		}
+	}
+
+	static_assert(sizeof(NewlineBlock) <= sizeof(TextBlock));
+	static_assert(alignof(NewlineBlock) <= alignof(AbstractBlock));
+	static_assert(sizeof(EmojiBlock) <= sizeof(TextBlock));
+	static_assert(alignof(EmojiBlock) <= alignof(AbstractBlock));
+	static_assert(sizeof(SkipBlock) <= sizeof(TextBlock));
+	static_assert(alignof(SkipBlock) <= alignof(AbstractBlock));
+
+	std::aligned_storage_t<sizeof(TextBlock), alignof(AbstractBlock)> _data;
 
 };
 

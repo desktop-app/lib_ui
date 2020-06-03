@@ -461,13 +461,13 @@ void Parser::createBlock(int32 skipBack) {
 		}
 		_lastSkipped = false;
 		if (_emoji) {
-			_t->_blocks.push_back(std::make_unique<EmojiBlock>(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _emoji));
+			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _emoji));
 			_emoji = nullptr;
 			_lastSkipped = true;
 		} else if (newline) {
-			_t->_blocks.push_back(std::make_unique<NewlineBlock>(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex));
+			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex));
 		} else {
-			_t->_blocks.push_back(std::make_unique<TextBlock>(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex));
+			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex));
 		}
 		_blockStart += len;
 		blockCreated();
@@ -477,7 +477,7 @@ void Parser::createBlock(int32 skipBack) {
 void Parser::createSkipBlock(int32 w, int32 h) {
 	createBlock();
 	_t->_text.push_back('_');
-	_t->_blocks.push_back(std::make_unique<SkipBlock>(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex));
+	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex));
 	blockCreated();
 }
 
@@ -913,15 +913,14 @@ void Parser::checkForElidedSkipBlock() {
 
 void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.resize(_maxLnkIndex);
-	for (const auto &block : _t->_blocks) {
-		const auto b = block.get();
-		const auto shiftedIndex = b->lnkIndex();
+	for (auto &block : _t->_blocks) {
+		const auto shiftedIndex = block->lnkIndex();
 		if (shiftedIndex <= kStringLinkIndexShift) {
 			continue;
 		}
 		const auto realIndex = (shiftedIndex - kStringLinkIndexShift);
 		const auto index = _maxLnkIndex + realIndex;
-		b->setLnkIndex(index);
+		block->setLnkIndex(index);
 		if (_t->_links.size() >= index) {
 			continue;
 		}
@@ -1165,7 +1164,7 @@ public:
 					_wLeft -= _elideRemoveFromEnd;
 				}
 
-				_parDirection = static_cast<NewlineBlock*>(b)->nextDirection();
+				_parDirection = static_cast<const NewlineBlock*>(b)->nextDirection();
 				if (_parDirection == Qt::LayoutDirectionAuto) _parDirection = style::LayoutDirection();
 				initNextParagraph(i + 1);
 
@@ -1187,7 +1186,7 @@ public:
 			}
 
 			if (_btype == TextBlockTText) {
-				auto t = static_cast<TextBlock*>(b);
+				auto t = static_cast<const TextBlock*>(b);
 				if (t->_words.isEmpty()) { // no words in this block, spaces only => layout this block in the same line
 					_last_rPadding += b->f_rpadding();
 
@@ -1678,7 +1677,7 @@ private:
 					}
 					Emoji::Draw(
 						*_p,
-						static_cast<EmojiBlock*>(currentBlock)->emoji,
+						static_cast<const EmojiBlock*>(currentBlock)->_emoji,
 						Emoji::GetSizeNormal(),
 						(glyphX + st::emojiPadding).toInt(),
 						_y + _yDelta + emojiY);
@@ -1847,7 +1846,7 @@ private:
 		_p->fillRect(left, _y + _yDelta, width, _fontHeight, _textPalette->selectBg);
 	}
 
-	void elideSaveBlock(int32 blockIndex, AbstractBlock *&_endBlock, int32 elideStart, int32 elideWidth) {
+	void elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock, int32 elideStart, int32 elideWidth) {
 		if (_elideSavedBlock) {
 			restoreAfterElided();
 		}
@@ -1855,7 +1854,7 @@ private:
 		_elideSavedIndex = blockIndex;
 		auto mutableText = const_cast<String*>(_t);
 		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
-		mutableText->_blocks[blockIndex] = std::make_unique<TextBlock>(_t->_st->font, _t->_text, QFIXED_MAX, elideStart, 0, _elideSavedBlock->flags(), _elideSavedBlock->lnkIndex());
+		mutableText->_blocks[blockIndex] = Block::Text(_t->_st->font, _t->_text, QFIXED_MAX, elideStart, 0, (*_elideSavedBlock)->flags(), (*_elideSavedBlock)->lnkIndex());
 		_blocksSize = blockIndex + 1;
 		_endBlock = (blockIndex + 1 < _t->_blocks.size() ? _t->_blocks[blockIndex + 1].get() : nullptr);
 	}
@@ -1870,7 +1869,7 @@ private:
 		}
 	}
 
-	void prepareElidedLine(QString &lineText, int32 lineStart, int32 &lineLength, AbstractBlock *&_endBlock, int repeat = 0) {
+	void prepareElidedLine(QString &lineText, int32 lineStart, int32 &lineLength, const AbstractBlock *&_endBlock, int repeat = 0) {
 		static const auto _Elide = QString::fromLatin1("...");
 
 		_f = _t->_st->font;
@@ -1980,7 +1979,7 @@ private:
 
 	void restoreAfterElided() {
 		if (_elideSavedBlock) {
-			const_cast<String*>(_t)->_blocks[_elideSavedIndex] = std::move(_elideSavedBlock);
+			const_cast<String*>(_t)->_blocks[_elideSavedIndex] = std::move(*_elideSavedBlock);
 		}
 	}
 
@@ -2034,7 +2033,7 @@ private:
 		return result;
 	}
 
-	void eSetFont(AbstractBlock *block) {
+	void eSetFont(const AbstractBlock *block) {
 		const auto flags = block->flags();
 		const auto usedFont = [&] {
 			if (const auto index = block->lnkIndex()) {
@@ -2609,7 +2608,7 @@ private:
 	}
 
 private:
-	void applyBlockProperties(AbstractBlock *block) {
+	void applyBlockProperties(const AbstractBlock *block) {
 		eSetFont(block);
 		if (_p) {
 			if (block->lnkIndex()) {
@@ -2660,7 +2659,7 @@ private:
 	// elided hack support
 	int _blocksSize = 0;
 	int _elideSavedIndex = 0;
-	std::unique_ptr<AbstractBlock> _elideSavedBlock;
+	std::optional<Block> _elideSavedBlock;
 
 	int _lineStart = 0;
 	int _localFrom = 0;
@@ -2679,66 +2678,13 @@ private:
 String::String(int32 minResizeWidth) : _minResizeWidth(minResizeWidth) {
 }
 
-String::String(const style::TextStyle &st, const QString &text, const TextParseOptions &options, int32 minResizeWidth, bool richText) : _minResizeWidth(minResizeWidth) {
+String::String(const style::TextStyle &st, const QString &text, const TextParseOptions &options, int32 minResizeWidth, bool richText)
+: _minResizeWidth(minResizeWidth) {
 	if (richText) {
 		setRichText(st, text, options);
 	} else {
 		setText(st, text, options);
 	}
-}
-
-String::String(const String &other)
-: _minResizeWidth(other._minResizeWidth)
-, _maxWidth(other._maxWidth)
-, _minHeight(other._minHeight)
-, _text(other._text)
-, _st(other._st)
-, _links(other._links)
-, _startDir(other._startDir) {
-	_blocks.reserve(other._blocks.size());
-	for (auto &block : other._blocks) {
-		_blocks.push_back(block->clone());
-	}
-}
-
-String::String(String &&other)
-: _minResizeWidth(other._minResizeWidth)
-, _maxWidth(other._maxWidth)
-, _minHeight(other._minHeight)
-, _text(other._text)
-, _st(other._st)
-, _blocks(std::move(other._blocks))
-, _links(other._links)
-, _startDir(other._startDir) {
-	other.clearFields();
-}
-
-String &String::operator=(const String &other) {
-	_minResizeWidth = other._minResizeWidth;
-	_maxWidth = other._maxWidth;
-	_minHeight = other._minHeight;
-	_text = other._text;
-	_st = other._st;
-	_blocks = TextBlocks(other._blocks.size());
-	_links = other._links;
-	_startDir = other._startDir;
-	for (int32 i = 0, l = _blocks.size(); i < l; ++i) {
-		_blocks[i] = other._blocks.at(i)->clone();
-	}
-	return *this;
-}
-
-String &String::operator=(String &&other) {
-	_minResizeWidth = other._minResizeWidth;
-	_maxWidth = other._maxWidth;
-	_minHeight = other._minHeight;
-	_text = other._text;
-	_st = other._st;
-	_blocks = std::move(other._blocks);
-	_links = other._links;
-	_startDir = other._startDir;
-	other.clearFields();
-	return *this;
 }
 
 void String::setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options) {
@@ -2757,8 +2703,8 @@ void String::recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir) {
 	int32 lineHeight = 0;
 	int32 lastNewlineStart = 0;
 	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
-	for (auto i = _blocks.cbegin(), e = _blocks.cend(); i != e; ++i) {
-		auto b = i->get();
+	for (auto &block : _blocks) {
+		auto b = block.get();
 		auto _btype = b->type();
 		auto blockHeight = countBlockHeight(b, _st);
 		if (_btype == TextBlockTNewline) {
@@ -2775,7 +2721,7 @@ void String::recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir) {
 				}
 			}
 			lastNewlineStart = b->from();
-			lastNewline = static_cast<NewlineBlock*>(b);
+			lastNewline = &block.unsafe<NewlineBlock>();
 
 			_minHeight += lineHeight;
 			lineHeight = 0;
@@ -2824,19 +2770,19 @@ void String::recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir) {
 }
 
 int String::countMaxMonospaceWidth() const {
-	NewlineBlock *lastNewline = 0;
+	const NewlineBlock *lastNewline = nullptr;
 
 	auto result = QFixed();
 	auto paragraphWidth = QFixed();
 	auto lastNewlineStart = 0;
 	auto fullMonospace = true;
 	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
-	for (auto i = _blocks.cbegin(), e = _blocks.cend(); i != e; ++i) {
-		auto b = i->get();
+	for (auto &block : _blocks) {
+		auto b = block.get();
 		auto _btype = b->type();
 		if (_btype == TextBlockTNewline) {
 			lastNewlineStart = b->from();
-			lastNewline = static_cast<NewlineBlock*>(b);
+			lastNewline = &block.unsafe<NewlineBlock>();
 
 			last_rBearing = b->f_rbearing();
 			last_rPadding = b->f_rpadding();
@@ -2943,7 +2889,7 @@ bool String::updateSkipBlock(int width, int height) {
 		_blocks.pop_back();
 	}
 	_text.push_back('_');
-	_blocks.push_back(std::make_unique<SkipBlock>(
+	_blocks.push_back(Block::Skip(
 		_st->font,
 		_text,
 		_text.size() - 1,
@@ -3036,7 +2982,7 @@ void String::enumerateLines(
 		}
 
 		if (_btype == TextBlockTText) {
-			auto t = static_cast<TextBlock*>(b.get());
+			const auto t = &b.unsafe<TextBlock>();
 			if (t->_words.isEmpty()) { // no words in this block, spaces only => layout this block in the same line
 				last_rPadding += b->f_rpadding();
 
@@ -3389,7 +3335,7 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 		if (block->lnkIndex()) {
 			return IsolatedEmoji();
 		} else if (type == TextBlockTEmoji) {
-			result.items[index++] = static_cast<EmojiBlock*>(block.get())->emoji;
+			result.items[index++] = block.unsafe<EmojiBlock>()._emoji;
 		} else if (type != TextBlockTSkip) {
 			return IsolatedEmoji();
 		}
@@ -3408,8 +3354,6 @@ void String::clearFields() {
 	_maxWidth = _minHeight = 0;
 	_startDir = Qt::LayoutDirectionAuto;
 }
-
-String::~String() = default;
 
 } // namespace Text
 } // namespace Ui
