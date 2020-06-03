@@ -448,13 +448,13 @@ private:
 	}
 
 	static_assert(sizeof(NewlineBlock) <= sizeof(TextBlock));
-	static_assert(alignof(NewlineBlock) <= alignof(AbstractBlock));
+	static_assert(alignof(NewlineBlock) <= alignof(void*));
 	static_assert(sizeof(EmojiBlock) <= sizeof(TextBlock));
-	static_assert(alignof(EmojiBlock) <= alignof(AbstractBlock));
+	static_assert(alignof(EmojiBlock) <= alignof(void*));
 	static_assert(sizeof(SkipBlock) <= sizeof(TextBlock));
-	static_assert(alignof(SkipBlock) <= alignof(AbstractBlock));
+	static_assert(alignof(SkipBlock) <= alignof(void*));
 
-	std::aligned_storage_t<sizeof(TextBlock), alignof(AbstractBlock)> _data;
+	std::aligned_storage_t<sizeof(TextBlock), alignof(void*)> _data;
 
 };
 
