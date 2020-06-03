@@ -71,13 +71,13 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 
 bool UrlClickHandler::IsSuspicious(const QString &url) {
 	static const auto Check1 = QRegularExpression(
-		"^(https?://)?([^/#\\:]+)([/#\\:]|$)",
+		"^((https?|s?ftp)://)?([^/#\\:]+)([/#\\:]|$)",
 		QRegularExpression::CaseInsensitiveOption);
 	const auto match1 = Check1.match(url);
 	if (!match1.hasMatch()) {
 		return false;
 	}
-	const auto domain = match1.capturedRef(2);
+	const auto domain = match1.capturedRef(3);
 	static const auto Check2 = QRegularExpression("^(.*)\\.[a-zA-Z]+$");
 	const auto match2 = Check2.match(domain);
 	if (!match2.hasMatch()) {
