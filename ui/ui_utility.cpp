@@ -31,11 +31,6 @@ void CreateWidgetStateRecursive(not_null<QWidget*> target) {
 		if (!target->isWindow()) {
 			CreateWidgetStateRecursive(target->parentWidget());
 			WidgetCreator::Create(target);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0) \
-	&& QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
-		} else {
-			WidgetCreator::Create(target);
-#endif // Qt >= 5.6
 		}
 	}
 }
