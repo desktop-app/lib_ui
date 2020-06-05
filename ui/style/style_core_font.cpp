@@ -6,6 +6,7 @@
 //
 #include "ui/style/style_core_font.h"
 
+#include "ui/style/style_core_custom_font.h"
 #include "ui/ui_log.h"
 #include "base/algorithm.h"
 #include "ui/integration.h"
@@ -104,26 +105,6 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 		}
 	}
 	return QString();
-}
-
-QString MonospaceFont() {
-	static const auto family = [&]() -> QString {
-		const auto manual = ManualMonospaceFont();
-		const auto system = SystemMonospaceFont();
-
-#if defined Q_OS_WIN || defined Q_OS_MAC
-		// Prefer our monospace font.
-		const auto useSystem = manual.isEmpty();
-#else // Q_OS_WIN || Q_OS_MAC
-		// Prefer system monospace font.
-		const auto metrics = QFontMetrics(QFont(system));
-		const auto useSystem = manual.isEmpty()
-			|| (metrics.charWidth("i", 0) == metrics.charWidth("W", 0));
-#endif // Q_OS_WIN || Q_OS_MAC
-		return useSystem ? system : manual;
-	}();
-
-	return family;
 }
 
 enum {
@@ -277,6 +258,26 @@ QString GetFontOverride(int32 flags) {
 	return result.isEmpty() ? "Open Sans" : result;
 }
 
+QString MonospaceFont() {
+	static const auto family = [&]() -> QString {
+		const auto manual = ManualMonospaceFont();
+		const auto system = SystemMonospaceFont();
+
+#if defined Q_OS_WIN || defined Q_OS_MAC
+		// Prefer our monospace font.
+		const auto useSystem = manual.isEmpty();
+#else // Q_OS_WIN || Q_OS_MAC
+		// Prefer system monospace font.
+		const auto metrics = QFontMetrics(QFont(system));
+		const auto useSystem = manual.isEmpty()
+			|| (metrics.charWidth("i", 0) == metrics.charWidth("W", 0));
+#endif // Q_OS_WIN || Q_OS_MAC
+		return useSystem ? system : manual;
+	}();
+
+	return family;
+}
+
 void destroyFonts() {
 	for (auto fontData : fontsMap) {
 		delete fontData;
@@ -295,7 +296,8 @@ int registerFontFamily(const QString &family) {
 }
 
 FontData::FontData(int size, uint32 flags, int family, Font *other)
-: m(f)
+: f(ResolveFont(flags, size))
+, m(f)
 , _size(size)
 , _flags(flags)
 , _family(family) {
@@ -306,32 +308,6 @@ FontData::FontData(int size, uint32 flags, int family, Font *other)
 	}
 	modified[_flags] = Font(this);
 
-	if (_flags & FontMonospace) {
-		f.setFamily(MonospaceFont());
-	} else {
-		f.setFamily(GetFontOverride(flags));
-	}
-
-	f.setPixelSize(size);
-	f.setItalic(_flags & FontItalic);
-	f.setUnderline(_flags & FontUnderline);
-	f.setStrikeOut(_flags & FontStrikeOut);
-
-	if ((_flags & FontBold) || (_flags & FontSemibold)) {
-#ifdef DESKTOP_APP_USE_PACKAGED_FONTS
-		f.setWeight(QFont::DemiBold);
-#else // DESKTOP_APP_USE_PACKAGED_FONTS
-		f.setBold(true);
-#endif // !DESKTOP_APP_USE_PACKAGED_FONTS
-
-		if (_flags & FontItalic) {
-			f.setStyleName("Semibold Italic");
-		} else {
-			f.setStyleName("Semibold");
-		}
-	}
-
-	m = QFontMetrics(f);
 	height = m.height();
 	ascent = m.ascent();
 	descent = m.descent();
