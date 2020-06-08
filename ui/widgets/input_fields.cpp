@@ -2901,10 +2901,15 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 		startPlaceholderAnimation();
 	}
 	_inputMethodCommit = e->commitString();
+
+	const auto weak = Ui::MakeWeak(this);
 	_inner->QTextEdit::inputMethodEvent(e);
-	const auto text = *base::take(_inputMethodCommit);
-	if (!processMarkdownReplaces(text)) {
-		processInstantReplaces(text);
+
+	if (weak) {
+		const auto text = *base::take(_inputMethodCommit);
+		if (!processMarkdownReplaces(text)) {
+			processInstantReplaces(text);
+		}
 	}
 }
 
