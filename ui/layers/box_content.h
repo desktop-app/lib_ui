@@ -192,10 +192,10 @@ public:
 		getDelegate()->setNoContentMargin(noContentMargin);
 	}
 
+	void scrollByDraggingDelta(int delta);
+
 public slots:
 	void onScrollToY(int top, int bottom = -1);
-
-	void onDraggingScrollDelta(int delta);
 
 protected:
 	virtual void prepare() = 0;

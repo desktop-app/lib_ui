@@ -101,7 +101,7 @@ void BoxContent::onScrollToY(int top, int bottom) {
 	}
 }
 
-void BoxContent::onDraggingScrollDelta(int delta) {
+void BoxContent::scrollByDraggingDelta(int delta) {
 	_draggingScrollDelta = _scroll ? delta : 0;
 	if (_draggingScrollDelta) {
 		if (!_draggingScrollTimer) {
