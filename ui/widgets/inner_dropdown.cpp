@@ -247,15 +247,16 @@ void InnerDropdown::hideFinished() {
 void InnerDropdown::prepareCache() {
 	if (_a_opacity.animating()) return;
 
+	const auto animating = _a_show.animating();
 	auto showAnimation = base::take(_a_show);
 	auto showAnimationData = base::take(_showAnimation);
 	showChildren();
 	_cache = GrabWidget(this);
-	_showAnimation = base::take(showAnimationData);
-	_a_show = base::take(showAnimation);
-	if (_a_show.animating()) {
+	if (animating) {
 		hideChildren();
 	}
+	_showAnimation = base::take(showAnimationData);
+	_a_show = base::take(showAnimation);
 }
 
 void InnerDropdown::startOpacityAnimation(bool hiding) {
