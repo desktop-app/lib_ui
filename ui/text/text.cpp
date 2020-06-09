@@ -263,31 +263,16 @@ public:
 	Parser(
 		not_null<String*> string,
 		const QString &text,
-		const TextParseOptions &options);
+		const TextParseOptions &options,
+		const std::any &context);
 	Parser(
 		not_null<String*> string,
 		const TextWithEntities &textWithEntities,
-		const TextParseOptions &options);
+		const TextParseOptions &options,
+		const std::any &context);
 
 private:
 	struct ReadyToken {
-	};
-
-	enum LinkDisplayStatus {
-		LinkDisplayedFull,
-		LinkDisplayedElided,
-	};
-
-	struct TextLinkData {
-		TextLinkData() = default;
-		TextLinkData(
-			EntityType type,
-			const QString &text,
-			const QString &data,
-			LinkDisplayStatus displayStatus);
-		EntityType type = EntityType::Invalid;
-		QString text, data;
-		LinkDisplayStatus displayStatus = LinkDisplayedFull;
 	};
 
 	class StartedEntity {
@@ -307,6 +292,7 @@ private:
 		not_null<String*> string,
 		TextWithEntities &&source,
 		const TextParseOptions &options,
+		const std::any &context,
 		ReadyToken);
 
 	void trimSourceRange();
@@ -336,14 +322,11 @@ private:
 	void computeLinkText(
 		const QString &linkData,
 		QString *outLinkText,
-		LinkDisplayStatus *outDisplayStatus);
-
-	static ClickHandlerPtr CreateHandlerForLink(
-		const TextLinkData &link,
-		const TextParseOptions &options);
+		EntityLinkShown *outShown);
 
 	const not_null<String*> _t;
 	const TextWithEntities _source;
+	const std::any &_context;
 	const QChar * const _start = nullptr;
 	const QChar *_end = nullptr; // mutable, because we trim by decrementing.
 	const QChar *_ptr = nullptr;
@@ -355,7 +338,7 @@ private:
 	const QFixed _stopAfterWidth; // summary width of all added words
 	const bool _checkTilde = false; // do we need a special text block for tilde symbol
 
-	std::vector<TextLinkData> _links;
+	std::vector<EntityLinkData> _links;
 	base::flat_map<
 		const QChar*,
 		std::vector<StartedEntity>> _startedEntities;
@@ -378,17 +361,6 @@ private:
 	bool _lastSkipped = false; // did we skip current char
 
 };
-
-Parser::TextLinkData::TextLinkData(
-	EntityType type,
-	const QString &text,
-	const QString &data,
-	LinkDisplayStatus displayStatus)
-: type(type)
-, text(text)
-, data(data)
-, displayStatus(displayStatus) {
-}
 
 Parser::StartedEntity::StartedEntity(TextBlockFlags flags) : _value(flags) {
 	Expects(_value >= 0 && _value < int(kStringLinkIndexShift));
@@ -415,22 +387,26 @@ std::optional<uint16> Parser::StartedEntity::lnkIndex() const {
 Parser::Parser(
 	not_null<String*> string,
 	const QString &text,
-	const TextParseOptions &options)
+	const TextParseOptions &options,
+	const std::any &context)
 : Parser(
 	string,
 	PrepareRichFromPlain(text, options),
 	options,
+	context,
 	ReadyToken()) {
 }
 
 Parser::Parser(
 	not_null<String*> string,
 	const TextWithEntities &textWithEntities,
-	const TextParseOptions &options)
+	const TextParseOptions &options,
+	const std::any &context)
 : Parser(
 	string,
 	PrepareRichFromRich(textWithEntities, options),
 	options,
+	context,
 	ReadyToken()) {
 }
 
@@ -438,9 +414,11 @@ Parser::Parser(
 	not_null<String*> string,
 	TextWithEntities &&source,
 	const TextParseOptions &options,
+	const std::any &context,
 	ReadyToken)
 : _t(string)
 , _source(std::move(source))
+, _context(context)
 , _start(_source.text.constData())
 , _end(_start + _source.text.size())
 , _ptr(_start)
@@ -552,7 +530,7 @@ bool Parser::checkEntities() {
 	}
 
 	auto flags = TextBlockFlags();
-	auto link = TextLinkData();
+	auto link = EntityLinkData();
 	const auto entityType = _waitingEntity->type();
 	const auto entityLength = _waitingEntity->length();
 	const auto entityBegin = _start + _waitingEntity->offset();
@@ -584,7 +562,7 @@ bool Parser::checkEntities() {
 		link.type = entityType;
 		link.data = QString(entityBegin, entityLength);
 		if (link.type == EntityType::Url) {
-			computeLinkText(link.data, &link.text, &link.displayStatus);
+			computeLinkText(link.data, &link.text, &link.shown);
 		} else {
 			link.text = link.data;
 		}
@@ -745,7 +723,10 @@ bool Parser::readCommand() {
 	case TextCommandLinkText: {
 		createBlock();
 		int32 len = _ptr->unicode();
-		_links.emplace_back(EntityType::CustomUrl, QString(), QString(++_ptr, len), LinkDisplayedFull);
+		_links.push_back(EntityLinkData{
+			.data = QString(++_ptr, len),
+			.type = EntityType::CustomUrl
+		});
 		_lnkIndex = kStringLinkIndexShift + _links.size();
 	} break;
 
@@ -942,9 +923,9 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 
 		_t->_links.resize(index);
-		const auto handler = CreateHandlerForLink(
+		const auto handler = Integration::Instance().createLinkHandler(
 			_links[realIndex - 1],
-			options);
+			_context);
 		if (handler) {
 			_t->setLink(index, handler);
 		}
@@ -954,7 +935,10 @@ void Parser::finalize(const TextParseOptions &options) {
 	_t->_text.squeeze();
 }
 
-void Parser::computeLinkText(const QString &linkData, QString *outLinkText, LinkDisplayStatus *outDisplayStatus) {
+void Parser::computeLinkText(
+		const QString &linkData,
+		QString *outLinkText,
+		EntityLinkShown *outShown) {
 	auto url = QUrl(linkData);
 	auto good = QUrl(url.isValid()
 		? url.toEncoded()
@@ -963,28 +947,9 @@ void Parser::computeLinkText(const QString &linkData, QString *outLinkText, Link
 		? good.toDisplayString()
 		: linkData;
 	*outLinkText = _t->_st->font->elided(readable, st::linkCropLimit);
-	*outDisplayStatus = (*outLinkText == readable) ? LinkDisplayedFull : LinkDisplayedElided;
-}
-
-ClickHandlerPtr Parser::CreateHandlerForLink(
-		const TextLinkData &link,
-		const TextParseOptions &options) {
-	const auto result = Integration::Instance().createLinkHandler(
-		link.type,
-		link.text,
-		link.data,
-		options);
-	if (result) {
-		return result;
-	}
-	switch (link.type) {
-	case EntityType::Email:
-	case EntityType::Url:
-		return std::make_shared<UrlClickHandler>(
-			link.data,
-			link.displayStatus == LinkDisplayedFull);
-	}
-	return nullptr;
+	*outShown = (*outLinkText == readable)
+		? EntityLinkShown::Full
+		: EntityLinkShown::Partial;
 }
 
 namespace {
@@ -2707,7 +2672,7 @@ void String::setText(const style::TextStyle &st, const QString &text, const Text
 	_st = &st;
 	clear();
 	{
-		Parser parser(this, text, options);
+		Parser parser(this, text, options, {});
 	}
 	recountNaturalSize(true, options.dir);
 }
@@ -2842,7 +2807,7 @@ int String::countMaxMonospaceWidth() const {
 	return result.ceil().toInt();
 }
 
-void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options) {
+void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options, const std::any &context) {
 	_st = &st;
 	clear();
 	{
@@ -2870,9 +2835,9 @@ void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &t
 //			}
 //		}
 //		newText.append("},\n\n").append(text);
-//		Parser parser(this, { newText, EntitiesInText() }, options);
+//		Parser parser(this, { newText, EntitiesInText() }, options, context);
 
-		Parser parser(this, textWithEntities, options);
+		Parser parser(this, textWithEntities, options, context);
 	}
 	recountNaturalSize(true, options.dir);
 }

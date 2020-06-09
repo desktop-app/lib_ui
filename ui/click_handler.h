@@ -29,7 +29,7 @@ protected:
 
 };
 
-enum class EntityType;
+enum class EntityType : uchar;
 class ClickHandler {
 public:
 	virtual ~ClickHandler() {

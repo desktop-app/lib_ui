@@ -13,6 +13,7 @@
 #include "base/flags.h"
 
 #include <private/qfixed_p.h>
+#include <any>
 
 static const QChar TextCommand(0x0010);
 enum TextCommands {
@@ -126,7 +127,7 @@ public:
 	void countLineWidths(int width, QVector<int> *lineWidths, bool breakEverywhere = false) const;
 	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = _defaultOptions);
 	void setRichText(const style::TextStyle &st, const QString &text, TextParseOptions options = _defaultOptions);
-	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = _defaultOptions);
+	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = _defaultOptions, const std::any &context = {});
 
 	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
 	bool hasLinks() const;

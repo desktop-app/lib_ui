@@ -12,7 +12,7 @@
 #include <QtCore/QVector>
 #include <QtGui/QClipboard>
 
-enum class EntityType {
+enum class EntityType : uchar {
 	Invalid = 0,
 
 	Url,
@@ -31,6 +31,18 @@ enum class EntityType {
 	StrikeOut,
 	Code, // inline
 	Pre,  // block
+};
+
+enum class EntityLinkShown : uchar {
+	Full,
+	Partial,
+};
+
+struct EntityLinkData {
+	QString text;
+	QString data;
+	EntityType type = EntityType::Invalid;
+	EntityLinkShown shown = EntityLinkShown::Full;
 };
 
 class EntityInText;

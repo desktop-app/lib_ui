@@ -158,8 +158,10 @@ void ActivateClickHandler(
 		not_null<QWidget*> guard,
 		ClickHandlerPtr handler,
 		ClickContext context) {
-	crl::on_main(guard, [=] {
-		handler->onClick(context);
+	crl::on_main(guard, [=, weak = std::weak_ptr<ClickHandler>(handler)] {
+		if (const auto strong = weak.lock()) {
+			strong->onClick(context);
+		}
 	});
 }
 

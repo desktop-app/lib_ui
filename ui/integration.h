@@ -8,6 +8,8 @@
 
 #include "base/basic_types.h"
 
+#include <any>
+
 // Methods that must be implemented outside lib_ui.
 
 class QString;
@@ -16,7 +18,7 @@ class QVariant;
 
 struct TextParseOptions;
 class ClickHandler;
-enum class EntityType;
+struct EntityLinkData;
 
 namespace Ui {
 namespace Emoji {
@@ -43,10 +45,8 @@ public:
 	virtual void startFontsEnd();
 
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(
-		EntityType type,
-		const QString &text,
-		const QString &data,
-		const TextParseOptions &options);
+		const EntityLinkData &data,
+		const std::any &context);
 	[[nodiscard]] virtual bool handleUrlClick(
 		const QString &url,
 		const QVariant &context);

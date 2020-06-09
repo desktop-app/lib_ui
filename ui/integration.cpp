@@ -43,14 +43,19 @@ void Integration::startFontsEnd() {
 }
 
 std::shared_ptr<ClickHandler> Integration::createLinkHandler(
-		EntityType type,
-		const QString &text,
-		const QString &data,
-		const TextParseOptions &options) {
-	switch (type) {
+		const EntityLinkData &data,
+		const std::any &context) {
+	switch (data.type) {
 	case EntityType::CustomUrl:
-		return !data.isEmpty()
-			? std::make_shared<UrlClickHandler>(data, false)
+		return !data.data.isEmpty()
+			? std::make_shared<UrlClickHandler>(data.data, false)
+			: nullptr;
+	case EntityType::Email:
+	case EntityType::Url:
+		return !data.data.isEmpty()
+			? std::make_shared<UrlClickHandler>(
+				data.data,
+				data.shown == EntityLinkShown::Full)
 			: nullptr;
 	}
 	return nullptr;
