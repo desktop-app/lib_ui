@@ -25,9 +25,9 @@ void style_InitFontsResource() {
 	Q_INIT_RESOURCE(win);
 #elif defined Q_OS_MAC // Q_OS_WIN
 	Q_INIT_RESOURCE(mac);
-#elif defined Q_OS_LINUX && !defined DESKTOP_APP_USE_PACKAGED // Q_OS_WIN || Q_OS_MAC
+#elif defined Q_OS_UNIX && !defined DESKTOP_APP_USE_PACKAGED // Q_OS_WIN || Q_OS_MAC
 	Q_INIT_RESOURCE(linux);
-#endif // Q_OS_WIN || Q_OS_MAC || (Q_OS_LINUX && !DESKTOP_APP_USE_PACKAGED)
+#endif // Q_OS_WIN || Q_OS_MAC || (Q_OS_UNIX && !DESKTOP_APP_USE_PACKAGED)
 }
 
 namespace style {
