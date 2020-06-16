@@ -238,11 +238,6 @@ enum {
 	TextParseHashtags = 0x010,
 	TextParseBotCommands = 0x020,
 	TextParseMarkdown = 0x040,
-
-	TextTwitterMentions = 0x100,
-	TextTwitterHashtags = 0x200,
-	TextInstagramMentions = 0x400,
-	TextInstagramHashtags = 0x800,
 };
 
 struct TextWithTags {
