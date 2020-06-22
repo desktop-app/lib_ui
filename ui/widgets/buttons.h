@@ -58,11 +58,11 @@ public:
 
 	void clearState() override;
 
+	void paintRipple(QPainter &p, int x, int y, const QColor *colorOverride = nullptr);
+
 	~RippleButton();
 
 protected:
-	void paintRipple(QPainter &p, int x, int y, const QColor *colorOverride = nullptr);
-
 	void onStateChanged(State was, StateChangeSource source) override;
 
 	virtual QImage prepareRippleMask() const;
