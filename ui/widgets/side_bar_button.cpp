@@ -145,7 +145,6 @@ const style::icon &SideBarButton::computeIcon() const {
 
 void SideBarButton::validateIconCache() {
 	Expects(_st.iconPosition.x() < 0);
-	Expects(_st.iconPosition.y() >= 0);
 
 	if (!(_active ? _iconCacheActive : _iconCache).isNull()) {
 		return;
@@ -173,7 +172,10 @@ void SideBarButton::validateIconCache() {
 				- st::defaultScrollArea.width
 				- (width() / 2)
 				+ (icon.width() / 2)));
-		const auto y = _st.badgePosition.y() - _st.iconPosition.y();
+		const auto top = (_st.iconPosition.y() >= 0)
+			? _st.iconPosition.y()
+			: (height() - icon.height()) / 2;
+		const auto y = _st.badgePosition.y() - top;
 		const auto r = _st.badgeHeight / 2.;
 		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
 	}

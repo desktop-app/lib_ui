@@ -473,7 +473,7 @@ void LayerStackWidget::closeLayer(not_null<LayerWidget*> layer) {
 		return;
 	}
 
-	if (layer == _specialLayer) {
+	if (layer == _specialLayer || layer == _mainMenu) {
 		hideAll(anim::type::normal);
 	} else if (layer == currentLayer()) {
 		if (_layers.size() == 1) {
