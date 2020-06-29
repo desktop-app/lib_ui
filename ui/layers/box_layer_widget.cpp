@@ -151,9 +151,13 @@ void BoxLayerWidget::parentResized() {
 void BoxLayerWidget::setTitle(rpl::producer<TextWithEntities> title) {
 	const auto wasTitle = hasTitle();
 	if (title) {
-		_title.create(this, std::move(title), st::boxTitle);
+		_title.create(this, rpl::duplicate(title), st::boxTitle);
 		_title->show();
-		updateTitlePosition();
+		std::move(
+			title
+		) | rpl::start_with_next([=] {
+			updateTitlePosition();
+		}, _title->lifetime());
 	} else {
 		_title.destroy();
 	}
