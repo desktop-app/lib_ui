@@ -117,6 +117,10 @@ public:
 	void setHideByBackgroundClick(bool hide);
 	void removeBodyCache();
 
+	// If you need to divide animated hideAll().
+	void hideAllAnimatedPrepare();
+	void hideAllAnimatedRun();
+
 	bool showSectionInternal(
 		not_null<::Window::SectionMemento*> memento,
 		const ::Window::SectionShow &params);
@@ -158,9 +162,15 @@ private:
 		HideAll,
 	};
 	template <typename SetupNew, typename ClearOld>
+	bool prepareAnimation(
+		SetupNew &&setupNewWidgets,
+		ClearOld &&clearOldWidgets,
+		Action action,
+		anim::type animated);
+	template <typename SetupNew, typename ClearOld>
 	void startAnimation(
-		SetupNew setupNewWidgets,
-		ClearOld clearOldWidgets,
+		SetupNew &&setupNewWidgets,
+		ClearOld &&clearOldWidgets,
 		Action action,
 		anim::type animated);
 

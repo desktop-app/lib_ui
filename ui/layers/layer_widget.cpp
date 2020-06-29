@@ -34,6 +34,8 @@ public:
 		QPixmap &&specialLayerCache,
 		QPixmap &&layerCache);
 	void removeBodyCache();
+	[[nodiscard]] bool hasBodyCache() const;
+	void refreshBodyCache(QPixmap &&bodyCache);
 	void startAnimation(Action action);
 	void skipAnimation(Action action);
 	void finishAnimating();
@@ -102,10 +104,20 @@ void LayerStackWidget::BackgroundWidget::setCacheImages(
 }
 
 void LayerStackWidget::BackgroundWidget::removeBodyCache() {
-	if (!_bodyCache.isNull()) {
+	if (hasBodyCache()) {
 		_bodyCache = {};
 		setAttribute(Qt::WA_OpaquePaintEvent, false);
 	}
+}
+
+bool LayerStackWidget::BackgroundWidget::hasBodyCache() const {
+	return !_bodyCache.isNull();
+}
+
+void LayerStackWidget::BackgroundWidget::refreshBodyCache(
+		QPixmap &&bodyCache) {
+	_bodyCache = std::move(bodyCache);
+	setAttribute(Qt::WA_OpaquePaintEvent, !_bodyCache.isNull());
 }
 
 void LayerStackWidget::BackgroundWidget::startAnimation(Action action) {
@@ -410,6 +422,25 @@ void LayerStackWidget::hideAll(anim::type animated) {
 	}, Action::HideAll, animated);
 }
 
+void LayerStackWidget::hideAllAnimatedPrepare() {
+	prepareAnimation([] {}, [&] {
+		clearLayers();
+		clearSpecialLayer();
+		_mainMenu.destroy();
+	}, Action::HideAll, anim::type::normal);
+}
+
+void LayerStackWidget::hideAllAnimatedRun() {
+	if (_background->hasBodyCache()) {
+		removeBodyCache();
+		hideChildren();
+		auto bodyCache = Ui::GrabWidget(parentWidget());
+		showChildren();
+		_background->refreshBodyCache(std::move(bodyCache));
+	}
+	_background->startAnimation(Action::HideAll);
+}
+
 void LayerStackWidget::hideTopLayer(anim::type animated) {
 	if (_specialLayer || _mainMenu) {
 		hideLayers(animated);
@@ -548,9 +579,9 @@ bool LayerStackWidget::contentOverlapped(const QRect &globalRect) {
 }
 
 template <typename SetupNew, typename ClearOld>
-void LayerStackWidget::startAnimation(
-		SetupNew setupNewWidgets,
-		ClearOld clearOldWidgets,
+bool LayerStackWidget::prepareAnimation(
+		SetupNew &&setupNewWidgets,
+		ClearOld &&clearOldWidgets,
 		Action action,
 		anim::type animated) {
 	if (animated == anim::type::instant) {
@@ -565,8 +596,25 @@ void LayerStackWidget::startAnimation(
 		clearOldWidgets();
 		if (weak) {
 			prepareForAnimation();
-			_background->startAnimation(action);
+			return true;
 		}
+	}
+	return false;
+}
+
+template <typename SetupNew, typename ClearOld>
+void LayerStackWidget::startAnimation(
+		SetupNew &&setupNewWidgets,
+		ClearOld &&clearOldWidgets,
+		Action action,
+		anim::type animated) {
+	const auto alive = prepareAnimation(
+		std::forward<SetupNew>(setupNewWidgets),
+		std::forward<ClearOld>(clearOldWidgets),
+		action,
+		animated);
+	if (alive) {
+		_background->startAnimation(action);
 	}
 }
 
