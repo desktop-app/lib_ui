@@ -294,6 +294,10 @@ QImage LoadFromFile(int id, int size, int index) {
 		|| false) {
 		return QImage();
 	}
+
+	// This should remove a non necessary detach on Retina screens later.
+	result.setDevicePixelRatio(style::DevicePixelRatio());
+
 	crl::async([=, signature = std::move(signature)] {
 		// This should not happen (invalid signature),
 		// so we delay this check and fix only the next launch.
