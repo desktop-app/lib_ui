@@ -9,6 +9,7 @@
 #include "ui/inactive_press.h"
 #include "ui/platform/win/ui_window_title_win.h"
 #include "base/platform/base_platform_info.h"
+#include "base/platform/win/base_windows_safe_library.h"
 #include "styles/palette.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
@@ -30,6 +31,23 @@ bool IsCompositionEnabled() {
 	auto result = BOOL(FALSE);
 	const auto success = (DwmIsCompositionEnabled(&result) == S_OK);
 	return success && result;
+}
+
+HRESULT WinApiSetWindowTheme(
+		HWND hWnd,
+		LPCWSTR pszSubAppName,
+		LPCWSTR pszSubIdList) {
+	static const auto method = [&] {
+		using f_SetWindowTheme = HRESULT(FAR STDAPICALLTYPE*)(
+			HWND hWnd,
+			LPCWSTR pszSubAppName,
+			LPCWSTR pszSubIdList);
+		auto result = f_SetWindowTheme();
+		const auto loaded = base::Platform::SafeLoadLibrary(u"uxtheme.dll"_q);
+		base::Platform::LoadMethod(loaded, "SetWindowTheme", result);
+		return result;
+	}();
+	return method ? method(hWnd, pszSubAppName, pszSubIdList) : HRESULT();
 }
 
 } // namespace
@@ -137,7 +155,7 @@ void WindowHelper::init() {
 	updateMargins();
 
 	if (!::Platform::IsWindows8OrGreater()) {
-		SetWindowTheme(_handle, L" ", L" ");
+		WinApiSetWindowTheme(_handle, L" ", L" ");
 		QApplication::setStyle(QStyleFactory::create("Windows"));
 	}
 
