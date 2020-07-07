@@ -43,7 +43,6 @@ base::flat_map<HWND, not_null<WindowShadow*>> ShadowByHandle;
 WindowShadow::WindowShadow(not_null<RpWidget*> window, QColor color)
 : _window(window)
 , _handle(GetWindowHandle(window)) {
-	window->hide();
 	init(color);
 }
 
@@ -173,12 +172,11 @@ void WindowShadow::init(QColor color) {
 	_widthMax = std::max(avail.width(), 1);
 	_heightMax = std::max(avail.height(), 1);
 
-	const auto instance = (HINSTANCE)GetModuleHandle(nullptr);
-	for (auto i = 0; i != 4; ++i) {
-		const auto className = "WindowShadow" + QString::number(i);
-		const auto wcharClassName = className.toStdWString();
+	static const auto instance = (HINSTANCE)GetModuleHandle(nullptr);
+	static const auto className = u"WindowShadow"_q;
+	static const auto wcharClassName = className.toStdWString();
+	static const auto registered = [] {
 		auto wc = WNDCLASSEX();
-
 		wc.cbSize = sizeof(wc);
 		wc.style = 0;
 		wc.lpfnWndProc = WindowCallback;
@@ -191,10 +189,12 @@ void WindowShadow::init(QColor color) {
 		wc.lpszMenuName = NULL;
 		wc.lpszClassName = wcharClassName.c_str();
 		wc.hIconSm = 0;
-		if (!RegisterClassEx(&wc)) {
-			return;
-		}
-
+		return RegisterClassEx(&wc) ? true : false;
+	}();
+	if (!registered) {
+		return;
+	}
+	for (auto i = 0; i != 4; ++i) {
 		_handles[i] = CreateWindowEx(
 			WS_EX_LAYERED | WS_EX_TOOLWINDOW,
 			wcharClassName.c_str(),
