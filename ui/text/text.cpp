@@ -3173,7 +3173,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 			flagsChangeCallback(flags, blockFlags);
 			flags = blockFlags;
 		}
-		if (i == e || blockFrom >= selection.to) {
+		if (i == e || (lnkIndex ? lnkFrom : blockFrom) >= selection.to) {
 			break;
 		}
 
