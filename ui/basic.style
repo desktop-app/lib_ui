@@ -233,8 +233,8 @@ emojiReplaceHeight: 56px;
 emojiReplaceInnerHeight: 42px;
 emojiReplacePadding: 14px;
 
-dragFont: font(28px semibold);
-dragSubfont: font(20px semibold);
+dragFont: font(27px semibold);
+dragSubfont: font(19px semibold);
 dragColor: windowSubTextFg;
 dragDropColor: windowActiveTextFg;
 
