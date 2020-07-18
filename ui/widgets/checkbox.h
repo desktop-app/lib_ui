@@ -148,7 +148,24 @@ public:
 		const style::Toggle &toggleSt);
 	Checkbox(
 		QWidget *parent,
+		rpl::producer<QString> &&text,
+		bool checked = false,
+		const style::Checkbox &st = st::defaultCheckbox,
+		const style::Check &checkSt = st::defaultCheck);
+	Checkbox(
+		QWidget *parent,
+		rpl::producer<QString> &&text,
+		bool checked,
+		const style::Checkbox &st,
+		const style::Toggle &toggleSt);
+	Checkbox(
+		QWidget *parent,
 		const QString &text,
+		const style::Checkbox &st,
+		std::unique_ptr<AbstractCheckView> check);
+	Checkbox(
+		QWidget *parent,
+		rpl::producer<QString> &&text,
 		const style::Checkbox &st,
 		std::unique_ptr<AbstractCheckView> check);
 

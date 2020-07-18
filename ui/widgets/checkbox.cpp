@@ -394,7 +394,37 @@ Checkbox::Checkbox(
 	const style::Toggle &toggleSt)
 : Checkbox(
 	parent,
-	text,
+	rpl::single(text),
+	st,
+	std::make_unique<ToggleView>(
+		toggleSt,
+		checked)) {
+}
+
+Checkbox::Checkbox(
+	QWidget *parent,
+	rpl::producer<QString> &&text,
+	bool checked,
+	const style::Checkbox &st,
+	const style::Check &checkSt)
+: Checkbox(
+	parent,
+	std::move(text),
+	st,
+	std::make_unique<CheckView>(
+		checkSt,
+		checked)) {
+}
+
+Checkbox::Checkbox(
+	QWidget *parent,
+	rpl::producer<QString> &&text,
+	bool checked,
+	const style::Checkbox &st,
+	const style::Toggle &toggleSt)
+: Checkbox(
+	parent,
+	std::move(text),
 	st,
 	std::make_unique<ToggleView>(
 		toggleSt,
@@ -406,17 +436,34 @@ Checkbox::Checkbox(
 	const QString &text,
 	const style::Checkbox &st,
 	std::unique_ptr<AbstractCheckView> check)
+: Checkbox(
+	parent,
+	rpl::single(text),
+	st,
+	std::move(check)) {
+}
+
+Checkbox::Checkbox(
+	QWidget *parent,
+	rpl::producer<QString> &&text,
+	const style::Checkbox &st,
+	std::unique_ptr<AbstractCheckView> check)
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _check(std::move(check))
 , _text(
 		_st.style,
-		text,
+		QString(),
 		_checkboxOptions,
 		countTextMinWidth()) {
 	_check->setUpdateCallback([=] { update(); });
 	resizeToText();
 	setCursor(style::cur_pointer);
+	std::move(
+		text
+	) | rpl::start_with_next([=](QString &&value) {
+		setText(std::move(value));
+	}, lifetime());
 }
 
 int Checkbox::countTextMinWidth() const {
