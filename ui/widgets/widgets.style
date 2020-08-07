@@ -382,6 +382,7 @@ CallButton {
 	angle: double;
 	outerRadius: pixels;
 	outerBg: color;
+	label: FlatLabel;
 }
 
 Menu {
