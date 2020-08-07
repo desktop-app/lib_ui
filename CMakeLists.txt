@@ -4,7 +4,7 @@
 # For license and copyright information please follow this link:
 # https://github.com/desktop-app/legal/blob/master/LEGAL
 
-add_library(lib_ui OBJECT)
+add_library(lib_ui STATIC)
 add_library(desktop-app::lib_ui ALIAS lib_ui)
 init_target(lib_ui)
 
