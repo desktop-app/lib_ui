@@ -6,7 +6,7 @@
 //
 #include "ui/platform/ui_platform_window.h"
 
-#include "ui/rp_widget.h"
+#include "ui/widgets/window.h"
 
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
@@ -41,34 +41,74 @@ void BasicWindowHelper::setGeometry(QRect rect) {
 	_window->setGeometry(rect);
 }
 
-void BasicWindowHelper::setBodyTitleArea(Fn<bool(QPoint)> testMethod) {
+void BasicWindowHelper::showFullScreen() {
+	_window->showFullScreen();
+}
+
+void BasicWindowHelper::showNormal() {
+	_window->showNormal();
+}
+
+void BasicWindowHelper::setBodyTitleArea(
+		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	Expects(!_bodyTitleAreaTestMethod);
 
 	if (!testMethod) {
 		return;
 	}
 	_bodyTitleAreaTestMethod = std::move(testMethod);
-	if (customBodyTitleAreaHandling()) {
-		return;
-	}
 	body()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
+		const auto hitTest = [&] {
+			return bodyTitleAreaHit(
+				static_cast<QMouseEvent*>(e.get())->pos());
+		};
 		if (e->type() == QEvent::MouseButtonDblClick) {
-			if (bodyTitleAreaHit(static_cast<QMouseEvent*>(e.get())->pos())) {
+			_mousePressed = false;
+			const auto hit = hitTest();
+			if (hit & WindowTitleHitTestFlag::Maximize) {
 				const auto state = _window->windowState();
 				if (state & Qt::WindowMaximized) {
 					_window->setWindowState(state & ~Qt::WindowMaximized);
 				} else {
 					_window->setWindowState(state | Qt::WindowMaximized);
 				}
+			} else if (hit & WindowTitleHitTestFlag::FullScreen) {
+				if (_window->isFullScreen()) {
+					showNormal();
+				} else {
+					showFullScreen();
+				}
 			}
+		} else if (e->type() == QEvent::MouseButtonRelease) {
+			_mousePressed = false;
+		} else if (e->type() == QEvent::MouseButtonPress
+			&& (static_cast<QMouseEvent*>(e.get())->button()
+				== Qt::LeftButton)) {
+			_mousePressed = true;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) || defined DESKTOP_APP_QT_PATCHED
+#ifndef Q_OS_MAC // On macOS startSystemMove() doesn't work from here.
 		} else if (e->type() == QEvent::MouseMove) {
 			const auto mouseEvent = static_cast<QMouseEvent*>(e.get());
-			if (bodyTitleAreaHit(mouseEvent->pos())
-				&& (mouseEvent->buttons() & Qt::LeftButton)) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) || defined DESKTOP_APP_QT_PATCHED
+			if (_mousePressed
+#ifndef Q_OS_WIN // We handle fullscreen startSystemMove() only on Windows.
+				&& !_window->isFullScreen()
+#endif // !Q_OS_WIN
+				&& (hitTest() & WindowTitleHitTestFlag::Move)) {
+
+#ifdef Q_OS_WIN
+				if (_window->isFullScreen()) {
+					// On Windows we just jump out of fullscreen
+					// like we do automatically for dragging a window
+					// by title bar in a maximized state.
+					showNormal();
+				}
+#endif // Q_OS_WIN
+				_mousePressed = false;
 				_window->windowHandle()->startSystemMove();
-#endif // Qt >= 5.15 || DESKTOP_APP_QT_PATCHED
 			}
+#endif // !Q_OS_MAC
+#endif // Qt >= 5.15 || DESKTOP_APP_QT_PATCHED
 		}
 	}, body()->lifetime());
 }

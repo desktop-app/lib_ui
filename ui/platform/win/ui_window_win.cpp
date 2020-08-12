@@ -135,6 +135,22 @@ void WindowHelper::setGeometry(QRect rect) {
 	window()->setGeometry(rect.marginsAdded({ 0, _title->height(), 0, 0 }));
 }
 
+void WindowHelper::showFullScreen() {
+	if (!_isFullScreen) {
+		_isFullScreen = true;
+		updateMargins();
+	}
+	window()->showFullScreen();
+}
+
+void WindowHelper::showNormal() {
+	window()->showNormal();
+	if (_isFullScreen) {
+		_isFullScreen = false;
+		updateMargins();
+	}
+}
+
 void WindowHelper::init() {
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
@@ -313,9 +329,7 @@ bool WindowHelper::handleNativeEvent(
 		if (!window()->rect().contains(mapped)) {
 			*result = HTTRANSPARENT;
 		} else if (!_title->geometry().contains(mapped)) {
-			*result = bodyTitleAreaHit(mapped - QPoint(0, _title->height()))
-				? HTCAPTION
-				: HTCLIENT;
+			*result = HTCLIENT;
 		} else switch (_title->hitTest(_title->pos() + mapped)) {
 		case HitTestResult::Client:
 		case HitTestResult::SysButton:   *result = HTCLIENT; break;
@@ -444,6 +458,9 @@ void WindowHelper::updateMargins() {
 		_marginsDelta = QMargins();
 	}
 
+	if (_isFullScreen) {
+		margins = QMargins();
+	}
 	if (const auto native = QGuiApplication::platformNativeInterface()) {
 		native->setWindowProperty(
 			window()->windowHandle()->handle(),

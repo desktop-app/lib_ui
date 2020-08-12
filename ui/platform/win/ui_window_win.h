@@ -27,14 +27,12 @@ public:
 	void setMinimumSize(QSize size) override;
 	void setFixedSize(QSize size) override;
 	void setGeometry(QRect rect) override;
+	void showFullScreen() override;
+	void showNormal() override;
 
 private:
 	class NativeFilter;
 	friend class NativeFilter;
-
-	bool customBodyTitleAreaHandling() override {
-		return true;
-	}
 
 	void init();
 	void updateMargins();
@@ -56,6 +54,7 @@ private:
 	bool _updatingMargins = false;
 	QMargins _marginsDelta;
 	HMENU _menu = nullptr;
+	bool _isFullScreen = false;
 
 };
 

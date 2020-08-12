@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/rp_widget.h"
+#include "base/flags.h"
 
 namespace style {
 struct WindowTitle;
@@ -16,6 +17,17 @@ namespace Ui {
 namespace Platform {
 class BasicWindowHelper;
 } // namespace Platform
+
+enum class WindowTitleHitTestFlag {
+	None       = 0x00,
+	Move       = 0x01,
+	Maximize   = 0x02,
+	FullScreen = 0x04,
+};
+inline constexpr bool is_flag_type(WindowTitleHitTestFlag) {
+	return true;
+}
+using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 
 class Window : public RpWidget {
 public:
@@ -30,7 +42,9 @@ public:
 	void setMinimumSize(QSize size);
 	void setFixedSize(QSize size);
 	void setGeometry(QRect rect);
-	void setBodyTitleArea(Fn<bool(QPoint)> testMethod);
+	void showFullScreen();
+	void showNormal();
+	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
 private:
 	const std::unique_ptr<Platform::BasicWindowHelper> _helper;

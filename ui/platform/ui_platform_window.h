@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "base/flags.h"
+
 namespace style {
 struct WindowTitle;
 } // namespace style
@@ -13,12 +15,15 @@ struct WindowTitle;
 namespace Ui {
 
 class RpWidget;
+enum class WindowTitleHitTestFlag;
+using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 
 namespace Platform {
 
 class BasicWindowHelper {
 public:
 	explicit BasicWindowHelper(not_null<RpWidget*> window);
+	virtual ~BasicWindowHelper() = default;
 
 	[[nodiscard]] virtual not_null<RpWidget*> body();
 	virtual void setTitle(const QString &title);
@@ -26,24 +31,26 @@ public:
 	virtual void setMinimumSize(QSize size);
 	virtual void setFixedSize(QSize size);
 	virtual void setGeometry(QRect rect);
-	virtual ~BasicWindowHelper() = default;
+	virtual void showFullScreen();
+	virtual void showNormal();
 
-	void setBodyTitleArea(Fn<bool(QPoint)> testMethod);
+	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
 protected:
 	[[nodiscard]] not_null<RpWidget*> window() const {
 		return _window;
 	}
-	[[nodiscard]] bool bodyTitleAreaHit(QPoint point) const {
-		return _bodyTitleAreaTestMethod && _bodyTitleAreaTestMethod(point);
-	}
-	[[nodiscard]] virtual bool customBodyTitleAreaHandling() {
-		return false;
+	[[nodiscard]] WindowTitleHitTestFlags bodyTitleAreaHit(
+			QPoint point) const {
+		return _bodyTitleAreaTestMethod
+			? _bodyTitleAreaTestMethod(point)
+			: WindowTitleHitTestFlag();
 	}
 
 private:
 	const not_null<RpWidget*> _window;
-	Fn<bool(QPoint)> _bodyTitleAreaTestMethod;
+	Fn<WindowTitleHitTestFlags(QPoint)> _bodyTitleAreaTestMethod;
+	bool _mousePressed = false;
 
 };
 

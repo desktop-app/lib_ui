@@ -48,7 +48,16 @@ void Window::setGeometry(QRect rect) {
 	_helper->setGeometry(rect);
 }
 
-void Window::setBodyTitleArea(Fn<bool(QPoint)> testMethod) {
+void Window::showFullScreen() {
+	_helper->showFullScreen();
+}
+
+void Window::showNormal() {
+	_helper->showNormal();
+}
+
+void Window::setBodyTitleArea(
+		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	_helper->setBodyTitleArea(std::move(testMethod));
 }
 
