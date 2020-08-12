@@ -29,6 +29,7 @@ public:
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] QString text() const;
+	[[nodiscard]] bool shouldBeHidden() const;
 
 protected:
 	void paintEvent(QPaintEvent *e) override;

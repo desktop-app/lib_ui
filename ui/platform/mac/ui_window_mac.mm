@@ -197,6 +197,9 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 		_private->customTitleHeight())
 	: nullptr)
 , _body(Ui::CreateChild<RpWidget>(window.get())) {
+	if (_title->shouldBeHidden()) {
+		toggleCustomTitle(false);
+	}
 	init();
 }
 
@@ -218,10 +221,16 @@ void WindowHelper::setTitle(const QString &title) {
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 	if (_title) {
 		_title->setStyle(st);
+		if (_title->shouldBeHidden()) {
+			toggleCustomTitle(false);
+		}
 	}
 }
 
 void WindowHelper::toggleCustomTitle(bool visible) {
+	if (_title->shouldBeHidden()) {
+		visible = false;
+	}
 	if (!_title || _title->isHidden() != visible) {
 		return;
 	}

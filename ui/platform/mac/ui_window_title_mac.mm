@@ -38,6 +38,10 @@ void TitleWidget::setStyle(const style::WindowTitle &st) {
 	update();
 }
 
+bool TitleWidget::shouldBeHidden() const {
+	return !_st->height;
+}
+
 QString TitleWidget::text() const {
 	return _text;
 }
