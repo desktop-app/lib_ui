@@ -84,6 +84,7 @@ PRIVATE
     ui/platform/win/ui_window_win.h
     ui/platform/win/ui_utility_win.cpp
     ui/platform/win/ui_utility_win.h
+    ui/platform/ui_platform_window.cpp
     ui/platform/ui_platform_window.h
     ui/platform/ui_platform_utility.h
     ui/style/style_core.cpp

@@ -132,13 +132,13 @@ Fn<void()> WindowHelper::Private::enforceStyleCallback() {
 }
 
 void WindowHelper::Private::initOpenGL() {
-	auto forceOpenGL = std::make_unique<QOpenGLWidget>(_owner->_window);
+	auto forceOpenGL = std::make_unique<QOpenGLWidget>(_owner->window());
 }
 
 void WindowHelper::Private::resolveWeakPointers() {
-	_owner->_window->createWinId();
+	_owner->window()->createWinId();
 
-	_nativeView = reinterpret_cast<NSView*>(_owner->_window->winId());
+	_nativeView = reinterpret_cast<NSView*>(_owner->window()->winId());
 	_nativeWindow = _nativeView ? [_nativeView window] : nullptr;
 
 	Ensures(_nativeWindow != nullptr);
@@ -189,14 +189,14 @@ void WindowHelper::Private::init() {
 }
 
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
-: _window(window)
+: BasicWindowHelper(window)
 , _private(std::make_unique<Private>(this))
 , _title(_private->customTitleHeight()
 	? Ui::CreateChild<TitleWidget>(
-		_window.get(),
+		window.get(),
 		_private->customTitleHeight())
 	: nullptr)
-, _body(Ui::CreateChild<RpWidget>(_window.get())) {
+, _body(Ui::CreateChild<RpWidget>(window.get())) {
 	init();
 }
 
@@ -211,7 +211,7 @@ void WindowHelper::setTitle(const QString &title) {
 	if (_title) {
 		_title->setText(title);
 	}
-	_window->setWindowTitle(
+	window()->setWindowTitle(
 		(!_title || _title->isHidden()) ? title : QString());
 }
 
@@ -226,29 +226,29 @@ void WindowHelper::toggleCustomTitle(bool visible) {
 		return;
 	}
 	_title->setVisible(visible);
-	_window->setWindowTitle(visible ? QString() : _title->text());
+	window()->setWindowTitle(visible ? QString() : _title->text());
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
-	_window->setMinimumSize(
+	window()->setMinimumSize(
 		size.width(),
 		(_title ? _title->height() : 0) + size.height());
 }
 
 void WindowHelper::setFixedSize(QSize size) {
-	_window->setFixedSize(
+	window()->setFixedSize(
 		size.width(),
 		(_title ? _title->height() : 0) + size.height());
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	_window->setGeometry(
+	window()->setGeometry(
 		rect.marginsAdded({ 0, (_title ? _title->height() : 0), 0, 0 }));
 }
 
 void WindowHelper::init() {
 	rpl::combine(
-		_window->sizeValue(),
+		window()->sizeValue(),
 		_title->heightValue(),
 		_title->shownValue()
 	) | rpl::start_with_next([=](QSize size, int titleHeight, bool shown) {
@@ -263,7 +263,7 @@ void WindowHelper::init() {
 	}, _body->lifetime());
 }
 
-std::unique_ptr<BasicWindowHelper> CreateWindowHelper(
+std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 		not_null<RpWidget*> window) {
 	return std::make_unique<WindowHelper>(window);
 }

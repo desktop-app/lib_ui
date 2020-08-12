@@ -30,6 +30,7 @@ public:
 	void setMinimumSize(QSize size);
 	void setFixedSize(QSize size);
 	void setGeometry(QRect rect);
+	void setBodyTitleArea(Fn<bool(QPoint)> testMethod);
 
 private:
 	const std::unique_ptr<Platform::BasicWindowHelper> _helper;

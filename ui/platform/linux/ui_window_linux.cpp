@@ -9,7 +9,7 @@
 namespace Ui {
 namespace Platform {
 
-std::unique_ptr<BasicWindowHelper> CreateWindowHelper(
+std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 		not_null<RpWidget*> window) {
 	return nullptr;
 }

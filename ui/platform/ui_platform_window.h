@@ -18,18 +18,45 @@ namespace Platform {
 
 class BasicWindowHelper {
 public:
-	[[nodiscard]] virtual not_null<RpWidget*> body() = 0;
-	virtual void setTitle(const QString &title) = 0;
-	virtual void setTitleStyle(const style::WindowTitle &st) = 0;
-	virtual void setMinimumSize(QSize size) = 0;
-	virtual void setFixedSize(QSize size) = 0;
-	virtual void setGeometry(QRect rect) = 0;
+	explicit BasicWindowHelper(not_null<RpWidget*> window);
+
+	[[nodiscard]] virtual not_null<RpWidget*> body();
+	virtual void setTitle(const QString &title);
+	virtual void setTitleStyle(const style::WindowTitle &st);
+	virtual void setMinimumSize(QSize size);
+	virtual void setFixedSize(QSize size);
+	virtual void setGeometry(QRect rect);
 	virtual ~BasicWindowHelper() = default;
+
+	void setBodyTitleArea(Fn<bool(QPoint)> testMethod);
+
+protected:
+	[[nodiscard]] not_null<RpWidget*> window() const {
+		return _window;
+	}
+	[[nodiscard]] bool bodyTitleAreaHit(QPoint point) const {
+		return _bodyTitleAreaTestMethod && _bodyTitleAreaTestMethod(point);
+	}
+	[[nodiscard]] virtual bool customBodyTitleAreaHandling() {
+		return false;
+	}
+
+private:
+	const not_null<RpWidget*> _window;
+	Fn<bool(QPoint)> _bodyTitleAreaTestMethod;
 
 };
 
-[[nodiscard]] std::unique_ptr<BasicWindowHelper> CreateWindowHelper(
+[[nodiscard]] std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 	not_null<RpWidget*> window);
+
+[[nodiscard]] inline std::unique_ptr<BasicWindowHelper> CreateWindowHelper(
+		not_null<RpWidget*> window) {
+	if (auto special = CreateSpecialWindowHelper(window)) {
+		return special;
+	}
+	return std::make_unique<BasicWindowHelper>(window);
+}
 
 } // namespace Platform
 } // namespace Ui

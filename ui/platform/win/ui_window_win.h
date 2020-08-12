@@ -32,6 +32,10 @@ private:
 	class NativeFilter;
 	friend class NativeFilter;
 
+	bool customBodyTitleAreaHandling() override {
+		return true;
+	}
+
 	void init();
 	void updateMargins();
 	void updateSystemMenu();
@@ -45,7 +49,6 @@ private:
 
 	static not_null<NativeFilter*> GetNativeFilter();
 
-	const not_null<RpWidget*> _window;
 	const HWND _handle = nullptr;
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;

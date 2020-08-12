@@ -32,7 +32,6 @@ private:
 	void init();
 	void toggleCustomTitle(bool visible);
 
-	const not_null<RpWidget*> _window;
 	const std::unique_ptr<Private> _private;
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;

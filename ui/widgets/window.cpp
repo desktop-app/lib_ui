@@ -13,55 +13,43 @@ namespace Ui {
 Window::Window(QWidget *parent)
 : RpWidget(parent)
 , _helper(Platform::CreateWindowHelper(this)) {
+	Expects(_helper != nullptr);
+
 	hide();
 }
 
 Window::~Window() = default;
 
 not_null<RpWidget*> Window::body() {
-	return _helper ? _helper->body() : this;
+	return _helper->body();
 }
 
 not_null<const RpWidget*> Window::body() const {
-	return _helper ? _helper->body().get() : this;
+	return _helper->body().get();
 }
 
 void Window::setTitle(const QString &title) {
-	if (_helper) {
-		_helper->setTitle(title);
-	} else {
-		setWindowTitle(title);
-	}
+	_helper->setTitle(title);
 }
 
 void Window::setTitleStyle(const style::WindowTitle &st) {
-	if (_helper) {
-		_helper->setTitleStyle(st);
-	}
+	_helper->setTitleStyle(st);
 }
 
 void Window::setMinimumSize(QSize size) {
-	if (_helper) {
-		_helper->setMinimumSize(size);
-	} else {
-		RpWidget::setMinimumSize(size);
-	}
+	_helper->setMinimumSize(size);
 }
 
 void Window::setFixedSize(QSize size) {
-	if (_helper) {
-		_helper->setFixedSize(size);
-	} else {
-		RpWidget::setFixedSize(size);
-	}
+	_helper->setFixedSize(size);
 }
 
 void Window::setGeometry(QRect rect) {
-	if (_helper) {
-		_helper->setGeometry(rect);
-	} else {
-		RpWidget::setGeometry(rect);
-	}
+	_helper->setGeometry(rect);
+}
+
+void Window::setBodyTitleArea(Fn<bool(QPoint)> testMethod) {
+	_helper->setBodyTitleArea(std::move(testMethod));
 }
 
 } // namespace Ui

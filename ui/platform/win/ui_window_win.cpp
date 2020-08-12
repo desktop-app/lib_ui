@@ -93,11 +93,11 @@ bool WindowHelper::NativeFilter::nativeEventFilter(
 }
 
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
-: _window(window)
-, _handle(GetWindowHandle(_window))
-, _title(Ui::CreateChild<TitleWidget>(_window.get()))
-, _body(Ui::CreateChild<RpWidget>(_window.get()))
-, _shadow(_window, st::windowShadowFg->c) {
+: BasicWindowHelper(window)
+, _handle(GetWindowHandle(window))
+, _title(Ui::CreateChild<TitleWidget>(window.get()))
+, _body(Ui::CreateChild<RpWidget>(window.get()))
+, _shadow(window, st::windowShadowFg->c) {
 	Expects(_handle != nullptr);
 
 	GetNativeFilter()->registerWindow(_handle, this);
@@ -114,7 +114,7 @@ not_null<RpWidget*> WindowHelper::body() {
 
 void WindowHelper::setTitle(const QString &title) {
 	_title->setText(title);
-	_window->setWindowTitle(title);
+	window()->setWindowTitle(title);
 }
 
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
@@ -122,27 +122,27 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
-	_window->setMinimumSize(size.width(), _title->height() + size.height());
+	window()->setMinimumSize(size.width(), _title->height() + size.height());
 }
 
 void WindowHelper::setFixedSize(QSize size) {
-	_window->setFixedSize(size.width(), _title->height() + size.height());
+	window()->setFixedSize(size.width(), _title->height() + size.height());
 	_title->setResizeEnabled(false);
 	_shadow.setResizeEnabled(false);
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	_window->setGeometry(rect.marginsAdded({ 0, _title->height(), 0, 0 }));
+	window()->setGeometry(rect.marginsAdded({ 0, _title->height(), 0, 0 }));
 }
 
 void WindowHelper::init() {
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
 		_shadow.setColor(st::windowShadowFg->c);
-	}, _window->lifetime());
+	}, window()->lifetime());
 
 	rpl::combine(
-		_window->sizeValue(),
+		window()->sizeValue(),
 		_title->heightValue()
 	) | rpl::start_with_next([=](QSize size, int titleHeight) {
 		_body->setGeometry(
@@ -165,14 +165,14 @@ void WindowHelper::init() {
 	const auto handleStateChanged = [=](Qt::WindowState state) {
 		updateSystemMenu(state);
 		if (fixedSize() && (state & Qt::WindowMaximized)) {
-			crl::on_main(_window.get(), [=] {
-				_window->setWindowState(
-					_window->windowState() & ~Qt::WindowMaximized);
+			crl::on_main(window().get(), [=] {
+				window()->setWindowState(
+					window()->windowState() & ~Qt::WindowMaximized);
 			});
 		}
 	};
 	Ui::Connect(
-		_window->windowHandle(),
+		window()->windowHandle(),
 		&QWindow::windowStateChanged,
 		handleStateChanged);
 }
@@ -186,14 +186,14 @@ bool WindowHelper::handleNativeEvent(
 
 	case WM_ACTIVATE: {
 		if (LOWORD(wParam) == WA_CLICKACTIVE) {
-			Ui::MarkInactivePress(_window, true);
+			Ui::MarkInactivePress(window(), true);
 		}
 		if (LOWORD(wParam) != WA_INACTIVE) {
 			_shadow.update(WindowShadow::Change::Activate);
 		} else {
 			_shadow.update(WindowShadow::Change::Deactivate);
 		}
-		_window->update();
+		window()->update();
 	} return false;
 
 	case WM_NCPAINT: {
@@ -267,14 +267,14 @@ bool WindowHelper::handleNativeEvent(
 			|| wParam == SIZE_RESTORED
 			|| wParam == SIZE_MINIMIZED) {
 			if (wParam != SIZE_RESTORED
-				|| _window->windowState() != Qt::WindowNoState) {
+				|| window()->windowState() != Qt::WindowNoState) {
 				Qt::WindowState state = Qt::WindowNoState;
 				if (wParam == SIZE_MAXIMIZED) {
 					state = Qt::WindowMaximized;
 				} else if (wParam == SIZE_MINIMIZED) {
 					state = Qt::WindowMinimized;
 				}
-				emit _window->windowHandle()->windowStateChanged(state);
+				emit window()->windowHandle()->windowStateChanged(state);
 			}
 			updateMargins();
 			const auto changes = (wParam == SIZE_MINIMIZED
@@ -310,10 +310,12 @@ bool WindowHelper::handleNativeEvent(
 		const auto mapped = QPoint(
 			p.x - r.left + _marginsDelta.left(),
 			p.y - r.top + _marginsDelta.top());
-		if (!_window->rect().contains(mapped)) {
+		if (!window()->rect().contains(mapped)) {
 			*result = HTTRANSPARENT;
 		} else if (!_title->geometry().contains(mapped)) {
-			*result = HTCLIENT;
+			*result = bodyTitleAreaHit(mapped - QPoint(0, _title->height()))
+				? HTCAPTION
+				: HTCLIENT;
 		} else switch (_title->hitTest(_title->pos() + mapped)) {
 		case HitTestResult::Client:
 		case HitTestResult::SysButton:   *result = HTCLIENT; break;
@@ -338,7 +340,7 @@ bool WindowHelper::handleNativeEvent(
 	case WM_SYSCOMMAND: {
 		if (wParam == SC_MOUSEMENU && !fixedSize()) {
 			POINTS p = MAKEPOINTS(lParam);
-			updateSystemMenu(_window->windowHandle()->windowState());
+			updateSystemMenu(window()->windowHandle()->windowState());
 			TrackPopupMenu(
 				_menu,
 				TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON,
@@ -357,19 +359,19 @@ bool WindowHelper::handleNativeEvent(
 		const auto command = LOWORD(wParam);
 		switch (command) {
 		case SC_CLOSE:
-			_window->close();
+			window()->close();
 			return true;
 		case SC_MINIMIZE:
-			_window->setWindowState(
-				_window->windowState() | Qt::WindowMinimized);
+			window()->setWindowState(
+				window()->windowState() | Qt::WindowMinimized);
 			return true;
 		case SC_MAXIMIZE:
 			if (!fixedSize()) {
-				_window->setWindowState(Qt::WindowMaximized);
+				window()->setWindowState(Qt::WindowMaximized);
 			}
 			return true;
 		case SC_RESTORE:
-			_window->setWindowState(Qt::WindowNoState);
+			window()->setWindowState(Qt::WindowNoState);
 			return true;
 		}
 	} return true;
@@ -379,7 +381,7 @@ bool WindowHelper::handleNativeEvent(
 }
 
 bool WindowHelper::fixedSize() const {
-	return _window->minimumSize() == _window->maximumSize();
+	return window()->minimumSize() == window()->maximumSize();
 }
 
 void WindowHelper::updateMargins() {
@@ -444,14 +446,14 @@ void WindowHelper::updateMargins() {
 
 	if (const auto native = QGuiApplication::platformNativeInterface()) {
 		native->setWindowProperty(
-			_window->windowHandle()->handle(),
+			window()->windowHandle()->handle(),
 			"WindowsCustomMargins",
 			QVariant::fromValue<QMargins>(margins));
 	}
 }
 
 void WindowHelper::updateSystemMenu() {
-	updateSystemMenu(_window->windowHandle()->windowState());
+	updateSystemMenu(window()->windowHandle()->windowState());
 }
 
 void WindowHelper::updateSystemMenu(Qt::WindowState state) {
@@ -518,7 +520,7 @@ HWND GetWindowHandle(not_null<RpWidget*> widget) {
 		window));
 }
 
-std::unique_ptr<BasicWindowHelper> CreateWindowHelper(
+std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 		not_null<RpWidget*> window) {
 	return std::make_unique<WindowHelper>(window);
 }
