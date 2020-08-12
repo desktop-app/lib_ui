@@ -536,7 +536,8 @@ mediaviewTransparentFg: #cccccc; // another transparent filling part
 notificationBg: windowBg; // custom notification window background
 
 // calls
-callBg: #26282cf2; // phone call popup background
+callBg: #26282cf2; // old phone call popup background
+callBgOpaque: #1b1f23 | callBg; // phone call popup background
 callNameFg: #ffffff; // phone call popup name text
 callFingerprintBg: #00000066; // phone call popup emoji fingerprint background
 callStatusFg: #aaabac; // phone call popup status text
