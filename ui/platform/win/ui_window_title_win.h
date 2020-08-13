@@ -42,6 +42,7 @@ class TitleControls final {
 public:
 	TitleControls(
 		not_null<RpWidget*> parent,
+		const style::WindowTitle &st,
 		Fn<void(bool maximized)> maximize = nullptr);
 
 	void setStyle(const style::WindowTitle &st);

@@ -21,8 +21,9 @@ namespace Platform {
 
 TitleControls::TitleControls(
 	not_null<RpWidget*> parent,
+	const style::WindowTitle &st,
 	Fn<void(bool maximized)> maximize)
-: _st(&st::defaultWindowTitle)
+: _st(&st)
 , _minimize(parent, _st->minimize)
 , _maximizeRestore(parent, _st->maximize)
 , _close(parent, _st->close)
@@ -184,7 +185,7 @@ void TitleControls::updateButtonsState() {
 
 TitleWidget::TitleWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
-, _controls(this)
+, _controls(this, st::defaultWindowTitle)
 , _shadow(this, st::titleShadow) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
