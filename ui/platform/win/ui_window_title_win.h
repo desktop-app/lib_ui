@@ -38,6 +38,40 @@ enum class HitTestResult {
 	TopLeft,
 };
 
+class TitleControls final {
+public:
+	TitleControls(
+		not_null<RpWidget*> parent,
+		Fn<void(bool maximized)> maximize = nullptr);
+
+	void setStyle(const style::WindowTitle &st);
+	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
+	[[nodiscard]] QRect geometry() const;
+	void setResizeEnabled(bool enabled);
+	void raise();
+
+private:
+	[[nodiscard]] not_null<RpWidget*> parent() const;
+	[[nodiscard]] not_null<QWidget*> window() const;
+
+	void init(Fn<void(bool maximized)> maximize);
+	void updateControlsVisibility();
+	void updateButtonsState();
+	void updateControlsPosition();
+	void handleWindowStateChanged(Qt::WindowState state = Qt::WindowNoState);
+
+	not_null<const style::WindowTitle*> _st;
+
+	object_ptr<Ui::IconButton> _minimize;
+	object_ptr<Ui::IconButton> _maximizeRestore;
+	object_ptr<Ui::IconButton> _close;
+
+	bool _maximizedState = false;
+	bool _activeState = false;
+	bool _resizeEnabled = true;
+
+};
+
 class TitleWidget : public RpWidget {
 public:
 	explicit TitleWidget(not_null<RpWidget*> parent);
@@ -52,24 +86,8 @@ protected:
 	void resizeEvent(QResizeEvent *e) override;
 
 private:
-	not_null<RpWidget*> window() const;
-
-	void init();
-	void handleWindowStateChanged(Qt::WindowState state = Qt::WindowNoState);
-	void updateControlsVisibility();
-	void updateButtonsState();
-	void updateControlsPosition();
-
-	not_null<const style::WindowTitle*> _st;
-
-	object_ptr<Ui::IconButton> _minimize;
-	object_ptr<Ui::IconButton> _maximizeRestore;
-	object_ptr<Ui::IconButton> _close;
+	TitleControls _controls;
 	object_ptr<Ui::PlainShadow> _shadow;
-
-	bool _maximizedState = false;
-	bool _activeState = false;
-	bool _resizeEnabled = true;
 
 };
 
