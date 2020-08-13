@@ -29,6 +29,8 @@ private:
 	class Private;
 	friend class Private;
 
+	void setupBodyTitleAreaEvents() override;
+
 	void init();
 	void toggleCustomTitle(bool visible);
 

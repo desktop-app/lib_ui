@@ -57,6 +57,12 @@ void BasicWindowHelper::setBodyTitleArea(
 		return;
 	}
 	_bodyTitleAreaTestMethod = std::move(testMethod);
+	setupBodyTitleAreaEvents();
+}
+
+void BasicWindowHelper::setupBodyTitleAreaEvents() {
+	// This is not done on macOS, because startSystemMove
+	// doesn't work from event handler there.
 	body()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
 		const auto hitTest = [&] {
 			return bodyTitleAreaHit(
@@ -87,7 +93,6 @@ void BasicWindowHelper::setBodyTitleArea(
 			_mousePressed = true;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) || defined DESKTOP_APP_QT_PATCHED
-#ifndef Q_OS_MAC // On macOS startSystemMove() doesn't work from here.
 		} else if (e->type() == QEvent::MouseMove) {
 			const auto mouseEvent = static_cast<QMouseEvent*>(e.get());
 			if (_mousePressed
@@ -107,7 +112,6 @@ void BasicWindowHelper::setBodyTitleArea(
 				_mousePressed = false;
 				_window->windowHandle()->startSystemMove();
 			}
-#endif // !Q_OS_MAC
 #endif // Qt >= 5.15 || DESKTOP_APP_QT_PATCHED
 		}
 	}, body()->lifetime());

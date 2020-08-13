@@ -48,6 +48,8 @@ protected:
 	}
 
 private:
+	virtual void setupBodyTitleAreaEvents();
+
 	const not_null<RpWidget*> _window;
 	Fn<WindowTitleHitTestFlags(QPoint)> _bodyTitleAreaTestMethod;
 	bool _mousePressed = false;

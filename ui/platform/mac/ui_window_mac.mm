@@ -7,10 +7,13 @@
 #include "ui/platform/mac/ui_window_mac.h"
 
 #include "ui/platform/mac/ui_window_title_mac.h"
+#include "ui/widgets/window.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/palette.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QAbstractNativeEventFilter>
+#include <QtGui/QWindow>
 #include <QtWidgets/QOpenGLWidget>
 #include <Cocoa/Cocoa.h>
 
@@ -78,6 +81,30 @@ private:
 
 };
 
+class EventFilter : public QObject, public QAbstractNativeEventFilter {
+public:
+	EventFilter(not_null<QObject*> parent, Fn<bool(void*)> checkPerformDrag)
+	: QObject(parent)
+	, _checkPerformDrag(std::move(checkPerformDrag)) {
+		Expects(_checkPerformDrag != nullptr);
+	}
+
+	bool nativeEventFilter(
+			const QByteArray &eventType,
+			void *message,
+			long *result) {
+		NSEvent *e = static_cast<NSEvent*>(message);
+		return (e && [e type] == NSEventTypeLeftMouseDown)
+			? _checkPerformDrag([e window])
+			: false;
+		return false;
+	}
+
+private:
+	Fn<bool(void*)> _checkPerformDrag;
+
+};
+
 } // namespace
 
 class WindowHelper::Private final {
@@ -85,6 +112,9 @@ public:
 	explicit Private(not_null<WindowHelper*> owner);
 
 	[[nodiscard]] int customTitleHeight() const;
+	[[nodiscard]] QRect controlsRect() const;
+	[[nodiscard]] bool checkNativeMove(void *nswindow) const;
+	void activateBeforeNativeMove();
 
 private:
 	void init();
@@ -115,6 +145,51 @@ WindowHelper::Private::Private(not_null<WindowHelper*> owner)
 
 int WindowHelper::Private::customTitleHeight() const {
 	return _customTitleHeight;
+}
+
+QRect WindowHelper::Private::controlsRect() const {
+	const auto button = [&](NSWindowButton type) {
+		auto view = [_nativeWindow standardWindowButton:type];
+		if (!view) {
+			return QRect();
+		}
+		auto result = [view frame];
+		for (auto parent = [view superview]; parent != nil; parent = [parent superview]) {
+			const auto origin = [parent frame].origin;
+			result.origin.x += origin.x;
+			result.origin.y += origin.y;
+		}
+		return QRect(result.origin.x, result.origin.y, result.size.width, result.size.height);
+	};
+	auto result = QRect();
+	const auto buttons = {
+		NSWindowCloseButton,
+		NSWindowMiniaturizeButton,
+		NSWindowZoomButton,
+	};
+	for (const auto type : buttons) {
+		result = result.united(button(type));
+	}
+	return QRect(
+		result.x(),
+		[_nativeWindow frame].size.height - result.y() - result.height(),
+		result.width(),
+		result.height());
+}
+
+bool WindowHelper::Private::checkNativeMove(void *nswindow) const {
+	if (_nativeWindow != nswindow
+		|| ([_nativeWindow styleMask] & NSFullScreenWindowMask) == NSFullScreenWindowMask) {
+		return false;
+	}
+	const auto real = QPointF::fromCGPoint([NSEvent mouseLocation]);
+	const auto frame = QRectF::fromCGRect([_nativeWindow frame]);
+	const auto border = QMarginsF{ 3., 3., 3., 3. };
+	return frame.marginsRemoved(border).contains(real);
+}
+
+void WindowHelper::Private::activateBeforeNativeMove() {
+	[_nativeWindow makeKeyAndOrderFront:_nativeWindow];
 }
 
 Fn<void(bool)> WindowHelper::Private::toggleCustomTitleCallback() {
@@ -253,6 +328,21 @@ void WindowHelper::setFixedSize(QSize size) {
 void WindowHelper::setGeometry(QRect rect) {
 	window()->setGeometry(
 		rect.marginsAdded({ 0, (_title ? _title->height() : 0), 0, 0 }));
+}
+
+void WindowHelper::setupBodyTitleAreaEvents() {
+	const auto controls = _private->controlsRect();
+	qApp->installNativeEventFilter(new EventFilter(window(), [=](void *nswindow) {
+		const auto point = body()->mapFromGlobal(QCursor::pos());
+		if (_private->checkNativeMove(nswindow)
+			&& !controls.contains(point)
+			&& (bodyTitleAreaHit(point) & WindowTitleHitTestFlag::Move)) {
+			_private->activateBeforeNativeMove();
+			window()->windowHandle()->startSystemMove();
+			return true;
+		}
+		return false;
+	}));
 }
 
 void WindowHelper::init() {
