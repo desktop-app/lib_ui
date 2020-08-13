@@ -458,9 +458,9 @@ void prepareRound(
 	}
 	auto cornerWidth = cornerMasks[0].width();
 	auto cornerHeight = cornerMasks[0].height();
-	auto imageWidth = image.width();
-	auto imageHeight = image.height();
-	if (imageWidth < 2 * cornerWidth || imageHeight < 2 * cornerHeight) {
+	auto targetWidth = target.width();
+	auto targetHeight = target.height();
+	if (targetWidth < 2 * cornerWidth || targetHeight < 2 * cornerHeight) {
 		return;
 	}
 
@@ -475,9 +475,9 @@ void prepareRound(
 	Assert(image.depth() == static_cast<int>((imageIntsPerPixel * sizeof(uint32)) << 3));
 	Assert(image.bytesPerLine() == (imageIntsPerLine << 2));
 	auto intsTopLeft = ints + target.x() + target.y() * imageIntsPerLine;
-	auto intsTopRight = ints + target.x() + target.width() - cornerWidth + target.y() * imageIntsPerLine;
-	auto intsBottomLeft = ints + target.x() + (target.y() + target.height() - cornerHeight) * imageIntsPerLine;
-	auto intsBottomRight = ints + target.x() + target.width() - cornerWidth + (target.y() + target.height() - cornerHeight) * imageIntsPerLine;
+	auto intsTopRight = ints + target.x() + targetWidth - cornerWidth + target.y() * imageIntsPerLine;
+	auto intsBottomLeft = ints + target.x() + (target.y() + targetHeight - cornerHeight) * imageIntsPerLine;
+	auto intsBottomRight = ints + target.x() + targetWidth - cornerWidth + (target.y() + targetHeight - cornerHeight) * imageIntsPerLine;
 	auto maskCorner = [&](uint32 *imageInts, const QImage &mask) {
 		auto maskWidth = mask.width();
 		auto maskHeight = mask.height();
