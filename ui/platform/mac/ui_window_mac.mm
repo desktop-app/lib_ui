@@ -110,11 +110,13 @@ private:
 class WindowHelper::Private final {
 public:
 	explicit Private(not_null<WindowHelper*> owner);
+	~Private();
 
 	[[nodiscard]] int customTitleHeight() const;
 	[[nodiscard]] QRect controlsRect() const;
 	[[nodiscard]] bool checkNativeMove(void *nswindow) const;
 	void activateBeforeNativeMove();
+	void close();
 
 private:
 	void init();
@@ -141,6 +143,10 @@ WindowHelper::Private::Private(not_null<WindowHelper*> owner)
 : _owner(owner)
 , _observer([[WindowObserver alloc] initWithToggle:toggleCustomTitleCallback() enforce:enforceStyleCallback()]) {
 	init();
+}
+
+WindowHelper::Private::~Private() {
+	[_observer release];
 }
 
 int WindowHelper::Private::customTitleHeight() const {
@@ -192,18 +198,22 @@ void WindowHelper::Private::activateBeforeNativeMove() {
 	[_nativeWindow makeKeyAndOrderFront:_nativeWindow];
 }
 
+void WindowHelper::Private::close() {
+	[_nativeWindow close];
+}
+
 Fn<void(bool)> WindowHelper::Private::toggleCustomTitleCallback() {
-	return [=](bool visible) {
+	return crl::guard(_owner->window(), [=](bool visible) {
 		_owner->toggleCustomTitle(visible);
-	};
+	});
 }
 
 Fn<void()> WindowHelper::Private::enforceStyleCallback() {
-	return [=] {
+	return crl::guard(_owner->window(), [=] {
 		if (_nativeWindow && _customTitleHeight > 0) {
 			[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSFullSizeContentViewWindowMask];
 		}
-	};
+	});
 }
 
 void WindowHelper::Private::initOpenGL() {
@@ -343,6 +353,10 @@ void WindowHelper::setupBodyTitleAreaEvents() {
 		}
 		return false;
 	}));
+}
+
+void WindowHelper::close() {
+	_private->close();
 }
 
 void WindowHelper::init() {

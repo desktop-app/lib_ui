@@ -44,6 +44,7 @@ public:
 	void setGeometry(QRect rect);
 	void showFullScreen();
 	void showNormal();
+	void close();
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
 private:

@@ -33,6 +33,7 @@ public:
 	virtual void setGeometry(QRect rect);
 	virtual void showFullScreen();
 	virtual void showNormal();
+	virtual void close();
 
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 

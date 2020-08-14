@@ -24,6 +24,7 @@ public:
 	void setMinimumSize(QSize size) override;
 	void setFixedSize(QSize size) override;
 	void setGeometry(QRect rect) override;
+	void close() override;
 
 private:
 	class Private;

@@ -49,6 +49,10 @@ void BasicWindowHelper::showNormal() {
 	_window->showNormal();
 }
 
+void BasicWindowHelper::close() {
+	_window->close();
+}
+
 void BasicWindowHelper::setBodyTitleArea(
 		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	Expects(!_bodyTitleAreaTestMethod);

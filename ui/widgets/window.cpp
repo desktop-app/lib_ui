@@ -56,6 +56,10 @@ void Window::showNormal() {
 	_helper->showNormal();
 }
 
+void Window::close() {
+	_helper->close();
+}
+
 void Window::setBodyTitleArea(
 		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	_helper->setBodyTitleArea(std::move(testMethod));
