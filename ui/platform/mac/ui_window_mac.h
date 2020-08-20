@@ -39,6 +39,14 @@ private:
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;
 
+#ifdef OS_OSX
+	struct WindowDrag {
+		QPoint windowStartPosition;
+		QPoint dragStartPosition;
+	};
+	std::optional<WindowDrag> _drag;
+#endif // OS_OSX
+
 };
 
 } // namespace Platform

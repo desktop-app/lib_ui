@@ -14,6 +14,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QAbstractNativeEventFilter>
 #include <QtGui/QWindow>
+#include <QtGui/QtEvents>
 #include <QtWidgets/QOpenGLWidget>
 #include <Cocoa/Cocoa.h>
 
@@ -188,8 +189,10 @@ bool WindowHelper::Private::checkNativeMove(void *nswindow) const {
 		|| ([_nativeWindow styleMask] & NSFullScreenWindowMask) == NSFullScreenWindowMask) {
 		return false;
 	}
-	const auto real = QPointF::fromCGPoint([NSEvent mouseLocation]);
-	const auto frame = QRectF::fromCGRect([_nativeWindow frame]);
+	const auto cgReal = [NSEvent mouseLocation];
+	const auto real = QPointF(cgReal.x, cgReal.y);
+	const auto cgFrame = [_nativeWindow frame];
+	const auto frame = QRectF(cgFrame.origin.x, cgFrame.origin.y, cgFrame.size.width, cgFrame.size.height);
 	const auto border = QMarginsF{ 3., 3., 3., 3. };
 	return frame.marginsRemoved(border).contains(real);
 }
@@ -341,6 +344,7 @@ void WindowHelper::setGeometry(QRect rect) {
 }
 
 void WindowHelper::setupBodyTitleAreaEvents() {
+#ifndef OS_OSX
 	const auto controls = _private->controlsRect();
 	qApp->installNativeEventFilter(new EventFilter(window(), [=](void *nswindow) {
 		const auto point = body()->mapFromGlobal(QCursor::pos());
@@ -353,6 +357,28 @@ void WindowHelper::setupBodyTitleAreaEvents() {
 		}
 		return false;
 	}));
+#else // OS_OSX
+	// OS X 10.10 doesn't have performWindowDragWithEvent yet.
+	body()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
+		const auto hitTest = [&] {
+			return bodyTitleAreaHit(
+				static_cast<QMouseEvent*>(e.get())->pos());
+		};
+		if (e->type() == QEvent::MouseButtonRelease
+			&& (static_cast<QMouseEvent*>(e.get())->button()
+				== Qt::LeftButton)) {
+			_drag = std::nullopt;
+		} else if (e->type() == QEvent::MouseButtonPress
+			&& hitTest()
+			&& (static_cast<QMouseEvent*>(e.get())->button()
+				== Qt::LeftButton)) {
+			_drag = { window()->pos(), static_cast<QMouseEvent*>(e.get())->globalPos() };
+		} else if (e->type() == QEvent::MouseMove && _drag && !window()->isFullScreen()) {
+			const auto delta = static_cast<QMouseEvent*>(e.get())->globalPos() - _drag->dragStartPosition;
+			window()->move(_drag->windowStartPosition + delta);
+		}
+	}, body()->lifetime());
+#endif // OS_OSX
 }
 
 void WindowHelper::close() {
