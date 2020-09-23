@@ -3408,7 +3408,7 @@ bool IsNewline(QChar ch) {
 }
 
 bool IsSpace(QChar ch, bool rich) {
-	return ch.isSpace()
+	return ( ch.isSpace() && ch != QChar(160) )
 		|| (ch < 32 && !(rich && ch == TextCommand))
 		|| (ch == QChar::ParagraphSeparator)
 		|| (ch == QChar::LineSeparator)
