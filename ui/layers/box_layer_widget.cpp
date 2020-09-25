@@ -225,7 +225,11 @@ void BoxLayerWidget::updateTitlePosition() {
 	_titleLeft = st::boxTitlePosition.x();
 	_titleTop = st::boxTitlePosition.y();
 	if (_title) {
-		_title->resizeToWidth(qMin(_title->naturalWidth(), width() - _titleLeft * 2));
+		const auto topButtonSkip = _topButton ? (_topButton->width() / 2) : 0;
+		_title->resizeToWidth(
+			std::min(
+				_title->naturalWidth(),
+				width() - _titleLeft * 2 - topButtonSkip));
 		_title->moveToLeft(_titleLeft, _titleTop);
 	}
 }
@@ -274,6 +278,7 @@ QPointer<IconButton> BoxLayerWidget::addTopButton(const style::IconButton &st, F
 	result->setClickedCallback(std::move(clickCallback));
 	result->show();
 	updateButtonsPositions();
+	updateTitlePosition();
 	return result;
 }
 
