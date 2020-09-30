@@ -42,6 +42,10 @@ void Integration::startFontsBegin() {
 void Integration::startFontsEnd() {
 }
 
+QString Integration::timeFormat() {
+	return u"hh:mm"_q;
+}
+
 std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 		const EntityLinkData &data,
 		const std::any &context) {

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/basic_types.h"
+#include "base/algorithm.h"
 
 #include <QtCore/QList>
 #include <QtCore/QVector>

@@ -44,6 +44,8 @@ public:
 	virtual void startFontsBegin();
 	virtual void startFontsEnd();
 
+	[[nodiscard]] virtual QString timeFormat();
+
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(
 		const EntityLinkData &data,
 		const std::any &context);
