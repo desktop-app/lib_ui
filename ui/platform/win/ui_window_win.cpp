@@ -10,6 +10,7 @@
 #include "ui/platform/win/ui_window_title_win.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/win/base_windows_safe_library.h"
+#include "base/integration.h"
 #include "styles/palette.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
@@ -53,7 +54,7 @@ bool IsTaskbarAutoHidden(PUINT pEdge = nullptr) {
 			*pEdge = pos.uEdge;
 		}
 	} else {
-		Unexpected("Failed to get taskbar pos");
+		base::Integration::Instance().logMessage("Failed to get taskbar pos");
 		if (pEdge) {
 			*pEdge = ABE_BOTTOM;
 		}
