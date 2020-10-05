@@ -16,6 +16,7 @@ namespace Platform {
 
 BasicWindowHelper::BasicWindowHelper(not_null<RpWidget*> window)
 : _window(window) {
+	_window->setWindowFlag(Qt::Window);
 }
 
 not_null<RpWidget*> BasicWindowHelper::body() {
