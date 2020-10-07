@@ -16,7 +16,11 @@ namespace Platform {
 
 BasicWindowHelper::BasicWindowHelper(not_null<RpWidget*> window)
 : _window(window) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 9, 0))
 	_window->setWindowFlag(Qt::Window);
+#else // Qt >= 5.9
+	_window->setWindowFlags(_window->windowFlags() | Qt::Window);
+#endif // Qt >= 5.9
 }
 
 not_null<RpWidget*> BasicWindowHelper::body() {
