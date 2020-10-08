@@ -41,13 +41,16 @@ QString UrlClickHandler::copyToClipboardContextItemText() const {
 		: Ui::Integration::Instance().phraseContextCopyLink();
 }
 
-QString UrlClickHandler::url() const {
-	if (isEmail()) {
-		return _originalUrl;
+QString UrlClickHandler::EncodeForOpening(const QString &originalUrl) {
+	if (IsEmail(originalUrl)) {
+		return originalUrl;
 	}
 
-	QUrl u(_originalUrl), good(u.isValid() ? u.toEncoded() : QString());
-	QString result(good.isValid() ? QString::fromUtf8(good.toEncoded()) : _originalUrl);
+	const auto u = QUrl(originalUrl);
+	const auto good = QUrl(u.isValid() ? u.toEncoded() : QString());
+	const auto result = good.isValid()
+		? QString::fromUtf8(good.toEncoded())
+		: originalUrl;
 
 	if (!result.isEmpty()
 		&& !QRegularExpression(

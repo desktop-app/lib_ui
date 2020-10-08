@@ -3270,7 +3270,9 @@ TextForMimeData String::toText(
 			return;
 		}
 		const auto skipLink = (entity.type == EntityType::CustomUrl)
-			&& (entity.data.startsWith(qstr("internal:")));
+			&& (entity.data.startsWith(qstr("internal:"))
+				|| (entity.data
+					== UrlClickHandler::EncodeForOpening(full.toString())));
 		if (composeExpanded) {
 			result.expanded.append(full);
 			if (entity.type == EntityType::CustomUrl && !skipLink) {
