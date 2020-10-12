@@ -24,23 +24,11 @@ class object_ptr;
 namespace Ui {
 namespace details {
 
-struct ForwardTag {
-};
-
-struct InPlaceTag {
-};
-
 template <typename Value>
 class AttachmentOwner : public QObject {
 public:
-	template <typename OtherValue>
-	AttachmentOwner(QObject *parent, const ForwardTag&, OtherValue &&value)
-	: QObject(parent)
-	, _value(std::forward<OtherValue>(value)) {
-	}
-
 	template <typename ...Args>
-	AttachmentOwner(QObject *parent, const InPlaceTag&, Args &&...args)
+	AttachmentOwner(QObject *parent, Args &&...args)
 	: QObject(parent)
 	, _value(std::forward<Args>(args)...) {
 	}
@@ -55,6 +43,15 @@ private:
 };
 
 } // namespace details
+
+template <typename Value>
+inline not_null<details::AttachmentOwner<std::decay_t<Value>>*> WrapAsQObject(
+		not_null<QObject*> parent,
+		Value &&value) {
+	return CreateChild<details::AttachmentOwner<std::decay_t<Value>>>(
+		parent.get(),
+		std::forward<Value>(value));
+}
 
 template <typename Widget, typename ...Args>
 inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
@@ -74,7 +71,6 @@ inline Value *CreateChild(
 	} else {
 		return CreateChild<details::AttachmentOwner<Value>>(
 			parent,
-			details::InPlaceTag{},
 			std::forward<Args>(args)...)->value();
 	}
 }
@@ -92,10 +88,7 @@ template <typename Value>
 inline not_null<std::decay_t<Value>*> AttachAsChild(
 		not_null<QObject*> parent,
 		Value &&value) {
-	return CreateChild<details::AttachmentOwner<std::decay_t<Value>>>(
-		parent.get(),
-		details::ForwardTag{},
-		std::forward<Value>(value))->value();
+	return WrapAsQObject(parent, std::forward<Value>(value))->value();
 }
 
 [[nodiscard]] bool AppInFocus();
