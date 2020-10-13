@@ -27,10 +27,16 @@ namespace Images {
 
 [[nodiscard]] QPixmap PixmapFast(QImage &&image);
 [[nodiscard]] QImage BlurLargeImage(QImage image, int radius);
+
 [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 	ImageRoundRadius radius);
 [[nodiscard]] std::array<QImage, 4> PrepareCorners(
 	ImageRoundRadius radius,
+	const style::color &color);
+
+[[nodiscard]] std::array<QImage, 4> CornersMask(int radius);
+[[nodiscard]] std::array<QImage, 4> PrepareCorners(
+	int radius,
 	const style::color &color);
 
 QImage prepareBlur(QImage image);

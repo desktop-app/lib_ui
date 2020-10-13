@@ -74,6 +74,17 @@ RoundRect::RoundRect(
 	}, _lifetime);
 }
 
+RoundRect::RoundRect(
+	int radius,
+	const style::color &color)
+: _color(color)
+, _corners(Images::PrepareCorners(radius, color)) {
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		_corners = Images::PrepareCorners(radius, _color);
+	}, _lifetime);
+}
+
 const style::color &RoundRect::color() const {
 	return _color;
 }

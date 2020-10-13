@@ -24,6 +24,7 @@ void DrawRoundedRect(
 class RoundRect final {
 public:
 	RoundRect(ImageRoundRadius radius, const style::color &color);
+	RoundRect(int radius, const style::color &color);
 
 	[[nodiscard]] const style::color &color() const;
 	void paint(
