@@ -44,15 +44,6 @@ private:
 
 } // namespace details
 
-template <typename Value>
-inline not_null<details::AttachmentOwner<std::decay_t<Value>>*> WrapAsQObject(
-		not_null<QObject*> parent,
-		Value &&value) {
-	return CreateChild<details::AttachmentOwner<std::decay_t<Value>>>(
-		parent.get(),
-		std::forward<Value>(value));
-}
-
 template <typename Widget, typename ...Args>
 inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
 	return base::make_unique_q<Widget>(
@@ -73,6 +64,15 @@ inline Value *CreateChild(
 			parent,
 			std::forward<Args>(args)...)->value();
 	}
+}
+
+template <typename Value>
+inline not_null<details::AttachmentOwner<std::decay_t<Value>>*> WrapAsQObject(
+		not_null<QObject*> parent,
+		Value &&value) {
+	return CreateChild<details::AttachmentOwner<std::decay_t<Value>>>(
+		parent.get(),
+		std::forward<Value>(value));
 }
 
 inline void DestroyChild(QWidget *child) {
