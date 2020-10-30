@@ -535,6 +535,20 @@ bool Parser::checkEntities() {
 	const auto entityLength = _waitingEntity->length();
 	const auto entityBegin = _start + _waitingEntity->offset();
 	const auto entityEnd = entityBegin + entityLength;
+	const auto pushSimpleUrl = [&](EntityType type) {
+		link.type = type;
+		link.data = QString(entityBegin, entityLength);
+		if (type == EntityType::Url) {
+			computeLinkText(link.data, &link.text, &link.shown);
+		} else {
+			link.text = link.data;
+		}
+	};
+	const auto pushComplexUrl = [&] {
+		link.type = entityType;
+		link.data = _waitingEntity->data();
+		link.text = QString(entityBegin, entityLength);
+	};
 	if (entityType == EntityType::Bold) {
 		flags = TextBlockFBold;
 	} else if (entityType == EntityType::Semibold) {
@@ -559,18 +573,17 @@ bool Parser::checkEntities() {
 		|| entityType == EntityType::Hashtag
 		|| entityType == EntityType::Cashtag
 		|| entityType == EntityType::BotCommand) {
-		link.type = entityType;
-		link.data = QString(entityBegin, entityLength);
-		if (link.type == EntityType::Url) {
-			computeLinkText(link.data, &link.text, &link.shown);
+		pushSimpleUrl(entityType);
+	} else if (entityType == EntityType::CustomUrl) {
+		const auto url = _waitingEntity->data();
+		const auto text = QString(entityBegin, entityLength);
+		if (url == text) {
+			pushSimpleUrl(EntityType::Url);
 		} else {
-			link.text = link.data;
+			pushComplexUrl();
 		}
-	} else if (entityType == EntityType::CustomUrl
-		|| entityType == EntityType::MentionName) {
-		link.type = entityType;
-		link.data = _waitingEntity->data();
-		link.text = QString(_start + _waitingEntity->offset(), _waitingEntity->length());
+	} else if (entityType == EntityType::MentionName) {
+		pushComplexUrl();
 	}
 
 	if (link.type != EntityType::Invalid) {
@@ -3269,18 +3282,20 @@ TextForMimeData String::toText(
 		if (!composeExpanded && !composeEntities) {
 			return;
 		}
-		const auto skipLink = (entity.type == EntityType::CustomUrl)
-			&& (entity.data.startsWith(qstr("internal:"))
-				|| (entity.data
-					== UrlClickHandler::EncodeForOpening(full.toString())));
+		const auto customTextLink = (entity.type == EntityType::CustomUrl);
+		const auto internalLink = customTextLink
+			&& entity.data.startsWith(qstr("internal:"));
 		if (composeExpanded) {
 			result.expanded.append(full);
-			if (entity.type == EntityType::CustomUrl && !skipLink) {
+			const auto sameAsTextLink = customTextLink
+				&& (entity.data
+					== UrlClickHandler::EncodeForOpening(full.toString()));
+			if (customTextLink && !internalLink && !sameAsTextLink) {
 				const auto &url = entity.data;
 				result.expanded.append(qstr(" (")).append(url).append(')');
 			}
 		}
-		if (composeEntities && !skipLink) {
+		if (composeEntities && !internalLink) {
 			insertEntity({
 				entity.type,
 				linkStart,
