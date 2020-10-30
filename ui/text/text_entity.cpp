@@ -1587,7 +1587,8 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 
 	int32 len = result.text.size(), commandOffset = rich ? 0 : len;
 	bool inLink = false, commandIsLink = false;
-	const QChar *start = result.text.constData(), *end = start + result.text.size();
+	const auto start = result.text.constData();
+	const auto end = start + result.text.size();
 	for (int32 offset = 0, matchOffset = offset, mentionSkip = 0; offset < len;) {
 		if (commandOffset <= offset) {
 			for (commandOffset = offset; commandOffset < len; ++commandOffset) {
@@ -1642,6 +1643,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 			}
 			if (!(start + mentionStart + 1)->isLetter() || !(start + mentionEnd - 1)->isLetterOrNumber()) {
 				mentionSkip = mentionEnd;
+				if (mentionSkip < len
+					&& (start + mentionSkip)->isLowSurrogate()) {
+					++mentionSkip;
+				}
 				mMention = RegExpMention().match(result.text, qMax(mentionSkip, matchOffset));
 				if (mMention.hasMatch()) {
 					mentionStart = mMention.capturedStart();
