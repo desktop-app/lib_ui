@@ -10,7 +10,4 @@
     <file>DAVazirMediumAsBold.ttf</file>
     <file>DAVazirMedium.ttf</file>
   </qresource>
-  <qresource prefix="/fc">
-    <file>fc-custom.conf</file>
-  </qresource>
 </RCC>
