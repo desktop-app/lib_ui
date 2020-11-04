@@ -270,7 +270,7 @@ QString MonospaceFont() {
 		// Prefer system monospace font.
 		const auto metrics = QFontMetrics(QFont(system));
 		const auto useSystem = manual.isEmpty()
-			|| (metrics.charWidth("i", 0) == metrics.charWidth("W", 0));
+			|| (metrics.horizontalAdvance(QChar('i')) == metrics.horizontalAdvance(QChar('W')));
 #endif // Q_OS_WIN || Q_OS_MAC
 		return useSystem ? system : manual;
 	}();

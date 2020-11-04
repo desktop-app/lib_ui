@@ -19,7 +19,7 @@ NumbersAnimation::NumbersAnimation(
 : _font(font)
 , _animationCallback(std::move(animationCallback)) {
 	for (auto ch = '0'; ch != '9'; ++ch) {
-		accumulate_max(_digitWidth, _font->m.width(ch));
+		accumulate_max(_digitWidth, _font->m.horizontalAdvance(ch));
 	}
 }
 
@@ -67,7 +67,7 @@ void NumbersAnimation::realSetText(QString text, int value) {
 		digit.from = digit.to;
 		digit.fromWidth = digit.toWidth;
 		digit.to = (newSize + i < size) ? QChar(0) : text[newSize + i - size];
-		digit.toWidth = digit.to.unicode() ? _font->m.width(digit.to) : 0;
+		digit.toWidth = digit.to.unicode() ? _font->m.horizontalAdvance(digit.to) : 0;
 		if (digit.from != digit.to) {
 			animating = true;
 		}

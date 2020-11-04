@@ -69,13 +69,13 @@ enum FontFlags {
 class FontData {
 public:
 	int width(const QString &str) const {
-		return m.width(str);
+		return m.horizontalAdvance(str);
 	}
 	int width(const QString &str, int32 from, int32 to) const {
 		return width(str.mid(from, to));
 	}
 	int width(QChar ch) const {
-		return m.width(ch);
+		return m.horizontalAdvance(ch);
 	}
 	QString elided(
 			const QString &str,

@@ -68,10 +68,10 @@ void ReInitOnTopPanel(not_null<QWidget*> panel) {
 	[platformPanel setCollectionBehavior:newBehavior];
 }
 
-void StartTranslucentPaint(QPainter &p, gsl::span<const QRect> rects) {
+void StartTranslucentPaint(QPainter &p, const QRegion &region) {
 	p.setCompositionMode(QPainter::CompositionMode_Source);
-	for (const auto &r : rects) {
-		p.fillRect(r, Qt::transparent);
+	for (const auto rect : region) {
+		p.fillRect(rect, Qt::transparent);
 	}
 	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 }

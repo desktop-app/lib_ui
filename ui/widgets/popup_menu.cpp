@@ -12,11 +12,12 @@
 #include "ui/ui_utility.h"
 #include "ui/delayed_activation.h"
 #include "base/platform/base_platform_info.h"
+#include "base/qt_adapters.h"
 
 #include <QtGui/QtEvents>
 #include <QtGui/QPainter>
+#include <QtGui/QScreen>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QDesktopWidget>
 
 namespace Ui {
 
@@ -448,7 +449,9 @@ void PopupMenu::popup(const QPoint &p) {
 }
 
 void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source) {
-	if (!parent && ::Platform::IsMac() && !Platform::IsApplicationActive()) {
+	const auto screen = base::QScreenNearestTo(p);
+	if (!screen
+		|| (!parent && ::Platform::IsMac() && !Platform::IsApplicationActive())) {
 		_hiding = false;
 		_a_opacity.stop();
 		_a_show.stop();
@@ -476,7 +479,7 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 		&& (*_forcedOrigin == Origin::BottomLeft
 			|| *_forcedOrigin == Origin::BottomRight);
 	auto w = p - QPoint(0, _padding.top());
-	auto r = QApplication::desktop()->screenGeometry(p);
+	auto r = screen->availableGeometry();
 	_useTransparency = Platform::TranslucentWindowsSupported(p);
 	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
 	handleCompositingUpdate();

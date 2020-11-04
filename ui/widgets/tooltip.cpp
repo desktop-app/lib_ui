@@ -9,10 +9,11 @@
 #include "ui/ui_utility.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "base/invoke_queued.h"
+#include "base/qt_adapters.h"
 #include "styles/style_widgets.h"
 
+#include <QtGui/QScreen>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QDesktopWidget>
 
 namespace Ui {
 
@@ -72,6 +73,12 @@ Tooltip::~Tooltip() {
 }
 
 void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *st) {
+	const auto screen = base::QScreenNearestTo(m);
+	if (!screen) {
+		Hide();
+		return;
+	}
+
 	if (!_isEventFilter) {
 		_isEventFilter = true;
 		QCoreApplication::instance()->installEventFilter(this);
@@ -108,7 +115,7 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	}
 
 	// adjust tooltip position
-	QRect r(QApplication::desktop()->screenGeometry(m));
+	const auto r = screen->availableGeometry();
 	if (r.x() + r.width() - _st->skip < p.x() + s.width() && p.x() + s.width() > m.x()) {
 		p.setX(qMax(r.x() + r.width() - int32(_st->skip) - s.width(), m.x() - s.width()));
 	}

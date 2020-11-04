@@ -245,7 +245,7 @@ void BoxContent::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	if (testAttribute(Qt::WA_OpaquePaintEvent)) {
-		for (auto rect : e->region().rects()) {
+		for (const auto rect : e->region()) {
 			p.fillRect(rect, st::boxBg);
 		}
 	}

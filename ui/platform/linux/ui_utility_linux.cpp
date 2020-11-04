@@ -6,13 +6,14 @@
 //
 #include "ui/platform/linux/ui_utility_linux.h"
 
-#include "base/flat_set.h"
 #include "ui/ui_log.h"
 #include "base/platform/base_platform_info.h"
+#include "base/qt_adapters.h"
+#include "base/flat_set.h"
 
 #include <QtCore/QPoint>
+#include <QtGui/QScreen>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QDesktopWidget>
 #include <qpa/qplatformnativeinterface.h>
 
 namespace Ui {
@@ -28,19 +29,18 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 	}
 	if (const auto native = QGuiApplication::platformNativeInterface()) {
 		if (const auto desktop = QApplication::desktop()) {
-			const auto index = desktop->screenNumber(globalPosition);
-			const auto screens = QGuiApplication::screens();
-			if (const auto screen = (index >= 0 && index < screens.size()) ? screens[index] : QGuiApplication::primaryScreen()) {
+			if (const auto screen = base::QScreenNearestTo(globalPosition)) {
 				if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
 					return true;
 				}
+				const auto index = QGuiApplication::screens().indexOf(screen);
 				static auto WarnedAbout = base::flat_set<int>();
 				if (!WarnedAbout.contains(index)) {
 					WarnedAbout.emplace(index);
 					UI_LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
 				}
 			} else {
-				UI_LOG(("WARNING: Could not get screen for index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
+				UI_LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
 			}
 		}
 	}
