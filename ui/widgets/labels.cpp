@@ -454,13 +454,12 @@ Text::StateResult FlatLabel::dragActionFinish(const QPoint &p, Qt::MouseButton b
 		}
 	}
 
-#if defined Q_OS_UNIX && !defined Q_OS_MAC
-	if (!_selection.empty()) {
+	if (QGuiApplication::clipboard()->supportsSelection()
+		&& !_selection.empty()) {
 		TextUtilities::SetClipboardText(
 			_text.toTextForMimeData(_selection),
 			QClipboard::Selection);
 	}
-#endif // Q_OS_UNIX && !Q_OS_MAC
 
 	return state;
 }
