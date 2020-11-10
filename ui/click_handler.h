@@ -105,16 +105,20 @@ protected:
 
 class LambdaClickHandler : public ClickHandler {
 public:
-	LambdaClickHandler(Fn<void()> handler) : _handler(std::move(handler)) {
+	LambdaClickHandler(Fn<void()> handler)
+	: _handler([handler = std::move(handler)](ClickContext) { handler(); }) {
+	}
+	LambdaClickHandler(Fn<void(ClickContext)> handler)
+	: _handler(std::move(handler)) {
 	}
 	void onClick(ClickContext context) const override final {
 		if (context.button == Qt::LeftButton && _handler) {
-			_handler();
+			_handler(context);
 		}
 	}
 
 private:
-	Fn<void()> _handler;
+	Fn<void(ClickContext)> _handler;
 
 };
 
