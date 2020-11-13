@@ -1950,6 +1950,20 @@ void Trim(TextWithEntities &result) {
 	}
 }
 
+int SerializeTagsSize(const TextWithTags::Tags &tags) {
+	auto result = qint32(0);
+	if (tags.isEmpty()) {
+		return result;
+	}
+	result += sizeof(qint32);
+	for (const auto &tag : tags) {
+		result += 2 * sizeof(qint32) // offset, length
+			+ sizeof(quint32) // id.size
+			+ tag.id.size() * sizeof(ushort);
+	}
+	return result;
+}
+
 QByteArray SerializeTags(const TextWithTags::Tags &tags) {
 	if (tags.isEmpty()) {
 		return QByteArray();
