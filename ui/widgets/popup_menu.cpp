@@ -38,7 +38,7 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 
 	for (auto action : actions()) {
 		if (auto submenu = action->menu()) {
-			auto it = _submenus.insert(action, new PopupMenu(this, submenu, st));
+			auto it = _submenus.insert(action, new PopupMenu(parentWidget(), submenu, st));
 			it.value()->deleteOnHide(false);
 		}
 	}
