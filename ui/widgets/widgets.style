@@ -1115,6 +1115,8 @@ PeerListItem {
 	photoPosition: point;
 	namePosition: point;
 	nameStyle: TextStyle;
+	nameFg: color;
+	nameFgChecked: color;
 	statusPosition: point;
 	photoSize: pixels;
 	maximalWidth: pixels;
@@ -1153,6 +1155,8 @@ defaultPeerListItem: PeerListItem {
 		linkFont: semiboldFont;
 		linkFontOver: semiboldFont;
 	}
+	nameFg: contactsNameFg;
+	nameFgChecked: windowActiveTextFg;
 	statusPosition: point(68px, 31px);
 	photoSize: 46px;
 	button: defaultPeerListButton;
