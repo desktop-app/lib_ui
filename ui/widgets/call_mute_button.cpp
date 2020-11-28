@@ -71,8 +71,14 @@ rpl::producer<Qt::MouseButton> CallMuteButton::clicks() const {
 }
 
 QSize CallMuteButton::innerSize() const {
+	return innerGeometry().size();
+}
+
+QRect CallMuteButton::innerGeometry() const {
 	const auto skip = st::callMuteButtonActive.outerRadius;
-	return QSize(
+	return QRect(
+		_content.x(),
+		_content.y(),
 		_content.width() - 2 * skip,
 		_content.width() - 2 * skip);
 }

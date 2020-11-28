@@ -33,6 +33,7 @@ public:
 	[[nodiscard]] rpl::producer<Qt::MouseButton> clicks() const;
 
 	[[nodiscard]] QSize innerSize() const;
+	[[nodiscard]] QRect innerGeometry() const;
 	void moveInner(QPoint position);
 
 	void setVisible(bool visible);
