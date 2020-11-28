@@ -123,6 +123,10 @@ PRIVATE
     ui/widgets/box_content_divider.h
     ui/widgets/buttons.cpp
     ui/widgets/buttons.h
+    ui/widgets/call_button.cpp
+    ui/widgets/call_button.h
+    ui/widgets/call_mute_button.cpp
+    ui/widgets/call_mute_button.h
     ui/widgets/checkbox.cpp
     ui/widgets/checkbox.h
     ui/widgets/dropdown_menu.cpp

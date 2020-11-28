@@ -379,6 +379,8 @@ MultiSelect {
 CallButton {
 	button: IconButton;
 	bg: color;
+	bgSize: pixels;
+	bgPosition: point;
 	angle: double;
 	outerRadius: pixels;
 	outerBg: color;
@@ -1297,6 +1299,45 @@ defaultToast: Toast {
 	durationFadeIn: 200;
 	durationFadeOut: 1000;
 	durationSlide: 160;
+}
+
+callMuteButtonActiveInner: IconButton {
+	width: 136px;
+	height: 151px;
+
+	iconPosition: point(-1px, 50px);
+	icon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
+}
+callMuteButtonLabel: FlatLabel(defaultFlatLabel) {
+	textFg: callNameFg;
+	style: TextStyle(defaultTextStyle) {
+		font: font(13px);
+		linkFont: font(13px);
+		linkFontOver: font(13px underline);
+	}
+}
+callMuteButtonActive: CallButton {
+	button: callMuteButtonActiveInner;
+	bg: groupCallLive1;
+	bgSize: 100px;
+	bgPosition: point(18px, 18px);
+	outerRadius: 18px;
+	outerBg: callAnswerBgOuter;
+	label: callMuteButtonLabel;
+}
+callMuteButtonMuted: CallButton(callMuteButtonActive) {
+	button: IconButton(callMuteButtonActiveInner) {
+		icon: icon {{ "calls/voice_muted_large", groupCallIconFg }};
+	}
+	bg: groupCallMuted1;
+	label: callMuteButtonLabel;
+}
+callMuteButtonConnecting: CallButton(callMuteButtonMuted) {
+	button: IconButton(callMuteButtonActiveInner) {
+		icon: icon {{ "calls/voice_muted_large", groupCallIconFg }};
+	}
+	bg: callIconBg;
+	label: callMuteButtonLabel;
 }
 
 // Windows specific title
