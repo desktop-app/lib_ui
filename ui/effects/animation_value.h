@@ -404,4 +404,50 @@ private:
 
 };
 
+class continuous_value {
+public:
+	continuous_value() = default;
+	continuous_value(float64 duration) : _duration(duration) {
+	}
+	void start(float64 to, float64 duration) {
+		_to = to;
+		_delta = (_to - _cur) / duration;
+	}
+	void start(float64 to) {
+		start(to, _duration);
+	}
+	void reset() {
+		_to = _cur = _delta = 0.;
+	}
+
+	float64 current() const {
+		return _cur;
+	}
+	float64 to() const {
+		return _to;
+	}
+	float64 delta() const {
+		return _delta;
+	}
+	void update(crl::time dt, Fn<void(float64 &)> &&callback = nullptr) {
+		if (_to != _cur) {
+			_cur += _delta * dt;
+			if ((_to != _cur) && ((_delta > 0) == (_cur > _to))) {
+				_cur = _to;
+			}
+			if (callback) {
+				callback(_cur);
+			}
+		}
+	}
+
+private:
+	float64 _duration = 0.;
+	float64 _to = 0.;
+
+	float64 _cur = 0.;
+	float64 _delta = 0.;
+
+};
+
 } // namespace anim
