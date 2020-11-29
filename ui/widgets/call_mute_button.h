@@ -59,14 +59,13 @@ private:
 	void init();
 	void contentPaint();
 
-	CallMuteButtonState _state;
+	rpl::variable<CallMuteButtonState> _state;
 	float _level = 0.;
 	float64 _crossLineProgress = 0.;
-	QPoint _muteIconPosition;
+	QRect _muteIconPosition;
 
 	const base::unique_qptr<BlobsWidget> _blobs;
 	CallButton _content;
-	CallButton _connecting;
 
 	const std::unordered_map<CallMuteButtonType, std::vector<QColor>> _colors;
 

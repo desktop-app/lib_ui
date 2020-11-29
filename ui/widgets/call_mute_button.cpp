@@ -179,36 +179,72 @@ CallMuteButton::CallMuteButton(
 : _state(initial)
 , _blobs(base::make_unique_q<BlobsWidget>(parent))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
-, _connecting(parent, st::callMuteButtonConnecting)
 , _colors(Colors())
 , _crossLineMuteAnimation(st::callMuteCrossLine) {
 	init();
 }
 
 void CallMuteButton::init() {
-	if (_state.type == CallMuteButtonType::Connecting
-		|| _state.type == CallMuteButtonType::ForceMuted) {
-		_connecting.setText(rpl::single(_state.text));
-		_connecting.show();
-		_content.hide();
-	} else {
-		_content.setText(rpl::single(_state.text));
-		_content.setProgress((_state.type == CallMuteButtonType::Muted) ? 1. : 0.);
-		_connecting.hide();
-		_content.show();
-	}
-	_connecting.setAttribute(Qt::WA_TransparentForMouseEvents);
+	// Label text.
+	auto text = _state.value(
+	) | rpl::map([](const CallMuteButtonState &state) {
+		return state.text;
+	});
+	_content.setText(std::move(text));
 
+	// State type.
+	const auto previousType =
+		lifetime().make_state<CallMuteButtonType>(_state.current().type);
+
+	_state.value(
+	) | rpl::map([](const CallMuteButtonState &state) {
+		return state.type;
+	}) | rpl::start_with_next([=](CallMuteButtonType type) {
+		const auto previous = *previousType;
+		*previousType = type;
+
+		const auto crossFrom = IsMuted(previous) ? 0. : 1.;
+		const auto crossTo = IsMuted(type) ? 0. : 1.;
+
+		const auto gradient = anim::linear_gradient(
+			_colors.at(previous),
+			_colors.at(type),
+			QPoint(0, _blobs->height()),
+			QPoint(_blobs->width(), 0));
+
+		const auto from = 0.;
+		const auto to = 1.;
+
+		auto callback = [=](float64 value) {
+			_blobs->setBrush(QBrush(gradient.gradient(value)));
+
+			const auto crossProgress =
+				InterpolateF(crossFrom, crossTo, value);
+			if (crossProgress != _crossLineProgress) {
+				_crossLineProgress = crossProgress;
+				_content.update(_muteIconPosition);
+			}
+		};
+
+		_switchAnimation.stop();
+		const auto duration = kSwitchStateDuration;
+		_switchAnimation.start(std::move(callback), from, to, duration);
+	}, lifetime());
+
+	// Icon rect.
 	_content.sizeValue(
 	) | rpl::start_with_next([=](QSize size) {
 		const auto &icon = st::callMuteButtonActive.button.icon;
 		const auto &pos = st::callMuteButtonActive.button.iconPosition;
 
-		_muteIconPosition = QPoint(
+		_muteIconPosition = QRect(
 			(pos.x() < 0) ? ((size.width() - icon.width()) / 2) : pos.x(),
-			(pos.y() < 0) ? ((size.height() - icon.height()) / 2) : pos.y());
+			(pos.y() < 0) ? ((size.height() - icon.height()) / 2) : pos.y(),
+			icon.width(),
+			icon.height());
 	}, lifetime());
 
+	// Paint.
 	auto filterCallback = [=](not_null<QEvent*> e) {
 		if (e->type() != QEvent::Paint) {
 			return base::EventFilterResult::Continue;
@@ -228,75 +264,16 @@ void CallMuteButton::contentPaint() {
 	Painter p(&_content);
 
 	const auto progress = 1. - _crossLineProgress;
-	_crossLineMuteAnimation.paint(p, _muteIconPosition, progress);
+	_crossLineMuteAnimation.paint(p, _muteIconPosition.topLeft(), progress);
 }
 
 void CallMuteButton::setState(const CallMuteButtonState &state) {
-
-	if (_state.type != state.type) {
-		const auto crossFrom = IsMuted(_state.type) ? 0. : 1.;
-		const auto crossTo = IsMuted(state.type) ? 0. : 1.;
-
-		const auto gradient = anim::linear_gradient(
-			_colors.at(_state.type),
-			_colors.at(state.type),
-			QPoint(0, _blobs->height()),
-			QPoint(_blobs->width(), 0));
-
-		const auto from = 0.;
-		const auto to = 1.;
-
-		auto callback = [=](float64 value) {
-			_blobs->setBrush(QBrush(gradient.gradient(value)));
-
-			const auto crossProgress =
-				InterpolateF(crossFrom, crossTo, value);
-			if (crossProgress != _crossLineProgress) {
-				_crossLineProgress = crossProgress;
-				_content.update();
-			}
-		};
-
-		_switchAnimation.stop();
-		const auto duration = kSwitchStateDuration;
-		_switchAnimation.start(std::move(callback), from, to, duration);
-	}
-
-	if (state.type == CallMuteButtonType::Connecting
-		|| state.type == CallMuteButtonType::ForceMuted) {
-		if (_state.text != state.text) {
-			_connecting.setText(rpl::single(state.text));
-		}
-		if (!_connecting.isHidden() || !_content.isHidden()) {
-			_connecting.show();
-		}
-		_content.setOuterValue(0.);
-		_content.hide();
-	} else {
-		if (_state.text != state.text) {
-			_content.setText(rpl::single(state.text));
-		}
-
-		_content.setProgress((state.type == CallMuteButtonType::Muted) ? 1. : 0.);
-		if (!_connecting.isHidden() || !_content.isHidden()) {
-			_content.show();
-		}
-		_connecting.hide();
-		if (state.type == CallMuteButtonType::Active) {
-			_content.setOuterValue(_level);
-		} else {
-			_content.setOuterValue(0.);
-		}
-	}
 	_state = state;
 }
 
 void CallMuteButton::setLevel(float level) {
 	_level = level;
 	_blobs->setLevel(level);
-	if (_state.type == CallMuteButtonType::Active) {
-		_content.setOuterValue(level);
-	}
 }
 
 rpl::producer<Qt::MouseButton> CallMuteButton::clicks() const {
@@ -319,7 +296,6 @@ QRect CallMuteButton::innerGeometry() const {
 void CallMuteButton::moveInner(QPoint position) {
 	const auto skip = st::callMuteButtonActive.outerRadius;
 	_content.move(position - QPoint(skip, skip));
-	_connecting.move(_content.pos());
 
 	{
 		const auto offset = QPoint(
@@ -330,26 +306,17 @@ void CallMuteButton::moveInner(QPoint position) {
 }
 
 void CallMuteButton::setVisible(bool visible) {
-	if (!visible) {
-		_content.hide();
-		_connecting.hide();
-	} else if (_state.type == CallMuteButtonType::Connecting
-		|| _state.type == CallMuteButtonType::ForceMuted) {
-		_connecting.show();
-	} else {
-		_content.show();
-	}
+	_content.setVisible(visible);
+	_blobs->setVisible(visible);
 }
 
 void CallMuteButton::raise() {
 	_blobs->raise();
 	_content.raise();
-	_connecting.raise();
 }
 
 void CallMuteButton::lower() {
 	_content.lower();
-	_connecting.lower();
 	_blobs->lower();
 }
 
