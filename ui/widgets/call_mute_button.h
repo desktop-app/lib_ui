@@ -11,6 +11,8 @@
 #include "ui/effects/cross_line.h"
 #include "ui/widgets/call_button.h"
 
+#include <unordered_map>
+
 namespace Ui {
 
 class BlobsWidget;
@@ -65,6 +67,8 @@ private:
 	const base::unique_qptr<BlobsWidget> _blobs;
 	CallButton _content;
 	CallButton _connecting;
+
+	const std::unordered_map<CallMuteButtonType, std::vector<QColor>> _colors;
 
 	CrossLineAnimation _crossLineMuteAnimation;
 	Animations::Simple _switchAnimation;

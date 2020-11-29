@@ -63,6 +63,35 @@ constexpr auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
 	}};
 }
 
+auto Colors() {
+	return std::unordered_map<CallMuteButtonType, std::vector<QColor>>{
+		{
+			CallMuteButtonType::ForceMuted,
+			{ st::callIconBg->c, st::callIconBg->c }
+		},
+		{
+			CallMuteButtonType::Active,
+			{ st::groupCallLive1->c, st::groupCallLive2->c }
+		},
+		{
+			CallMuteButtonType::Connecting,
+			{ st::callIconBg->c, st::callIconBg->c }
+		},
+		{
+			CallMuteButtonType::Muted,
+			{ st::groupCallMuted1->c, st::groupCallMuted2->c }
+		},
+	};
+}
+
+inline float64 InterpolateF(int a, int b, float64 b_ratio) {
+	return a + float64(b - a) * b_ratio;
+}
+
+bool IsMuted(CallMuteButtonType type) {
+	return (type != CallMuteButtonType::Active);
+}
+
 } // namespace
 
 class BlobsWidget final : public RpWidget {
@@ -70,15 +99,15 @@ public:
 	BlobsWidget(not_null<RpWidget*> parent);
 
 	void setLevel(float level);
-	void requestPaintProgress(float64 progress);
+	void setBrush(QBrush brush);
 
 private:
 	void init();
 
 	Paint::Blobs _blobs;
 
+	QBrush _brush;
 	int _center = 0;
-	float64 _progress = 0;
 
 	Animations::Basic _animation;
 
@@ -86,7 +115,8 @@ private:
 
 BlobsWidget::BlobsWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
-, _blobs(MuteBlobs() | ranges::to_vector, kLevelDuration, kMaxLevel) {
+, _blobs(MuteBlobs() | ranges::to_vector, kLevelDuration, kMaxLevel)
+, _brush(Qt::transparent) {
 	init();
 }
 
@@ -113,7 +143,7 @@ void BlobsWidget::init() {
 
 		PainterHighQualityEnabler hq(p);
 		p.translate(_center, _center);
-		_blobs.paint(p, QBrush(gradient.gradient(_progress)));
+		_blobs.paint(p, _brush);
 	}, lifetime());
 
 	_animation.init([=](crl::time now) {
@@ -131,16 +161,16 @@ void BlobsWidget::init() {
 	}, lifetime());
 }
 
-void BlobsWidget::setLevel(float level) {
-	_blobs.setLevel(level);
-}
-
-void BlobsWidget::requestPaintProgress(float64 progress) {
-	if (progress == _progress) {
+void BlobsWidget::setBrush(QBrush brush) {
+	if (_brush == brush) {
 		return;
 	}
-	_progress = progress;
+	_brush = brush;
 	update();
+}
+
+void BlobsWidget::setLevel(float level) {
+	_blobs.setLevel(level);
 }
 
 CallMuteButton::CallMuteButton(
@@ -150,6 +180,7 @@ CallMuteButton::CallMuteButton(
 , _blobs(base::make_unique_q<BlobsWidget>(parent))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
 , _connecting(parent, st::callMuteButtonConnecting)
+, _colors(Colors())
 , _crossLineMuteAnimation(st::callMuteCrossLine) {
 	init();
 }
@@ -201,6 +232,36 @@ void CallMuteButton::contentPaint() {
 }
 
 void CallMuteButton::setState(const CallMuteButtonState &state) {
+
+	if (_state.type != state.type) {
+		const auto crossFrom = IsMuted(_state.type) ? 0. : 1.;
+		const auto crossTo = IsMuted(state.type) ? 0. : 1.;
+
+		const auto gradient = anim::linear_gradient(
+			_colors.at(_state.type),
+			_colors.at(state.type),
+			QPoint(0, _blobs->height()),
+			QPoint(_blobs->width(), 0));
+
+		const auto from = 0.;
+		const auto to = 1.;
+
+		auto callback = [=](float64 value) {
+			_blobs->setBrush(QBrush(gradient.gradient(value)));
+
+			const auto crossProgress =
+				InterpolateF(crossFrom, crossTo, value);
+			if (crossProgress != _crossLineProgress) {
+				_crossLineProgress = crossProgress;
+				_content.update();
+			}
+		};
+
+		_switchAnimation.stop();
+		const auto duration = kSwitchStateDuration;
+		_switchAnimation.start(std::move(callback), from, to, duration);
+	}
+
 	if (state.type == CallMuteButtonType::Connecting
 		|| state.type == CallMuteButtonType::ForceMuted) {
 		if (_state.text != state.text) {
@@ -216,28 +277,12 @@ void CallMuteButton::setState(const CallMuteButtonState &state) {
 			_content.setText(rpl::single(state.text));
 		}
 
-		const auto isWasActive = (_state.type == CallMuteButtonType::Active);
-		const auto isActive = (state.type == CallMuteButtonType::Active);
-		{
-			const auto from = _switchAnimation.value(isWasActive ? 1. : 0.);
-			const auto to = isActive ? 1. : 0.;
-			_switchAnimation.start(
-				[=](auto value) {
-					_blobs->requestPaintProgress(value);
-					_crossLineProgress = value;
-					_content.update();
-				},
-				from,
-				to,
-				kSwitchStateDuration);
-		}
-
 		_content.setProgress((state.type == CallMuteButtonType::Muted) ? 1. : 0.);
 		if (!_connecting.isHidden() || !_content.isHidden()) {
 			_content.show();
 		}
 		_connecting.hide();
-		if (isActive) {
+		if (state.type == CallMuteButtonType::Active) {
 			_content.setOuterValue(_level);
 		} else {
 			_content.setOuterValue(0.);
