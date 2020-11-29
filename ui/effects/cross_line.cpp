@@ -23,6 +23,13 @@ CrossLineAnimation::CrossLineAnimation(
 
 void CrossLineAnimation::paint(
 		Painter &p,
+		QPoint position,
+		float64 progress) {
+	paint(p, position.x(), position.y(), progress);
+}
+
+void CrossLineAnimation::paint(
+		Painter &p,
 		int left,
 		int top,
 		float64 progress) {

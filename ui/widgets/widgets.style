@@ -1405,12 +1405,13 @@ defaultToast: Toast {
 	durationSlide: 160;
 }
 
+callMuteButtonActiveIcon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
 callMuteButtonActiveInner: IconButton {
 	width: 136px;
 	height: 151px;
 
 	iconPosition: point(-1px, 50px);
-	icon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
+	icon: callMuteButtonActiveIcon;
 }
 callMuteButtonLabel: FlatLabel(defaultFlatLabel) {
 	textFg: callNameFg;
@@ -1442,6 +1443,14 @@ callMuteButtonConnecting: CallButton(callMuteButtonMuted) {
 	}
 	bg: callIconBg;
 	label: callMuteButtonLabel;
+}
+
+callMuteCrossLine: CrossLineAnimation {
+	fg: groupCallIconFg;
+	icon: callMuteButtonActiveIcon;
+	startPosition: point(7px, 2px);
+	endPosition: point(34px, 30px);
+	stroke: 4px;
 }
 
 // Windows specific title

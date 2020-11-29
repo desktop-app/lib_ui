@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/call_mute_button.h"
 
+#include "base/event_filter.h"
 #include "ui/paint/blobs.h"
 #include "ui/painter.h"
 
@@ -148,7 +149,12 @@ CallMuteButton::CallMuteButton(
 : _state(initial)
 , _blobs(base::make_unique_q<BlobsWidget>(parent))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
-, _connecting(parent, st::callMuteButtonConnecting) {
+, _connecting(parent, st::callMuteButtonConnecting)
+, _crossLineMuteAnimation(st::callMuteCrossLine) {
+	init();
+}
+
+void CallMuteButton::init() {
 	if (_state.type == CallMuteButtonType::Connecting
 		|| _state.type == CallMuteButtonType::ForceMuted) {
 		_connecting.setText(rpl::single(_state.text));
@@ -161,6 +167,37 @@ CallMuteButton::CallMuteButton(
 		_content.show();
 	}
 	_connecting.setAttribute(Qt::WA_TransparentForMouseEvents);
+
+	_content.sizeValue(
+	) | rpl::start_with_next([=](QSize size) {
+		const auto &icon = st::callMuteButtonActive.button.icon;
+		const auto &pos = st::callMuteButtonActive.button.iconPosition;
+
+		_muteIconPosition = QPoint(
+			(pos.x() < 0) ? ((size.width() - icon.width()) / 2) : pos.x(),
+			(pos.y() < 0) ? ((size.height() - icon.height()) / 2) : pos.y());
+	}, lifetime());
+
+	auto filterCallback = [=](not_null<QEvent*> e) {
+		if (e->type() != QEvent::Paint) {
+			return base::EventFilterResult::Continue;
+		}
+		contentPaint();
+		return base::EventFilterResult::Cancel;
+	};
+
+	auto filter = base::install_event_filter(
+		&_content,
+		std::move(filterCallback));
+
+	lifetime().make_state<base::unique_qptr<QObject>>(std::move(filter));
+}
+
+void CallMuteButton::contentPaint() {
+	Painter p(&_content);
+
+	const auto progress = 1. - _crossLineProgress;
+	_crossLineMuteAnimation.paint(p, _muteIconPosition, progress);
 }
 
 void CallMuteButton::setState(const CallMuteButtonState &state) {
@@ -185,7 +222,11 @@ void CallMuteButton::setState(const CallMuteButtonState &state) {
 			const auto from = _switchAnimation.value(isWasActive ? 1. : 0.);
 			const auto to = isActive ? 1. : 0.;
 			_switchAnimation.start(
-				[=](auto value) { _blobs->requestPaintProgress(value); },
+				[=](auto value) {
+					_blobs->requestPaintProgress(value);
+					_crossLineProgress = value;
+					_content.update();
+				},
 				from,
 				to,
 				kSwitchStateDuration);

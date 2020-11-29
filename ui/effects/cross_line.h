@@ -18,6 +18,7 @@ public:
 		const style::CrossLineAnimation &st,
 		float angle = 315);
 
+	void paint(Painter &p, QPoint position, float64 progress);
 	void paint(Painter &p, int left, int top, float64 progress);
 
 private:

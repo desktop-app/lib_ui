@@ -8,6 +8,7 @@
 
 #include "base/unique_qptr.h"
 #include "ui/effects/animations.h"
+#include "ui/effects/cross_line.h"
 #include "ui/widgets/call_button.h"
 
 namespace Ui {
@@ -53,13 +54,19 @@ public:
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:
+	void init();
+	void contentPaint();
+
 	CallMuteButtonState _state;
 	float _level = 0.;
+	float64 _crossLineProgress = 0.;
+	QPoint _muteIconPosition;
 
 	const base::unique_qptr<BlobsWidget> _blobs;
 	CallButton _content;
 	CallButton _connecting;
 
+	CrossLineAnimation _crossLineMuteAnimation;
 	Animations::Simple _switchAnimation;
 
 };
