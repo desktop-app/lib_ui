@@ -10,6 +10,10 @@
 
 #include <QtCore/QMargins>
 
+namespace style {
+struct Box;
+} // namespace style
+
 namespace Ui {
 
 class BoxContent;
@@ -18,6 +22,10 @@ class RpWidget;
 class LayerManager final {
 public:
 	explicit LayerManager(not_null<RpWidget*> widget);
+
+	void setStyleOverrides(
+		const style::Box *boxSt,
+		const style::Box *layerSt);
 
 	void setHideByBackgroundClick(bool hide);
 	void showBox(
@@ -34,6 +42,9 @@ private:
 
 	const not_null<RpWidget*> _widget;
 	base::unique_qptr<LayerStackWidget> _layer;
+
+	const style::Box *_boxSt = nullptr;
+	const style::Box *_layerSt = nullptr;
 	bool _hideByBackgroundClick = false;
 
 };

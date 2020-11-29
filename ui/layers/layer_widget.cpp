@@ -458,6 +458,13 @@ bool LayerStackWidget::layerShown() const {
 	return _specialLayer || currentLayer() || _mainMenu;
 }
 
+void LayerStackWidget::setStyleOverrides(
+		const style::Box *boxSt,
+		const style::Box *layerSt) {
+	_boxSt = boxSt;
+	_layerSt = layerSt;
+}
+
 void LayerStackWidget::setCacheImages() {
 	auto bodyCache = QPixmap(), mainMenuCache = QPixmap();
 	auto specialLayerCache = QPixmap();

@@ -555,6 +555,7 @@ callHangupRipple: #c04646; // phone call popup hangup button ripple effect
 callMuteRipple: #ffffff12; // phone call popup mute mic and camera ripple effect
 
 groupCallBg: #131417; // group call popup background
+groupCallActiveFg: #4db8ff; // group call active controls text
 groupCallMembersBg: #1a1c1f; // group call members list background
 groupCallMembersFg: #ffffff; // group call member name text
 groupCallMembersRipple: #22252a; // group call member row ripple effect
@@ -569,6 +570,8 @@ groupCallLive1: #0dcc39; // group call live button color1
 groupCallLive2: #0bb6bd; // group call live button color2
 groupCallMuted1: #0992ef; // group call muted button color1
 groupCallMuted2: #16ccfb; // group call muted button color2
+groupCallBoxButtonBgOver: #1d2a39; // group call button in box with mouse over
+groupCallBoxButtonBgRipple: #223143; // group call button in box ripple effect
 
 callBarBg: dialogsBgActive; // active phone call bar background
 callBarMuteRipple: dialogsRippleBgActive; // active phone call bar mute and hangup button ripple effect

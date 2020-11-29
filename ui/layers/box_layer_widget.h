@@ -45,6 +45,7 @@ public:
 
 	void setLayerType(bool layerType) override;
 	void setStyle(const style::Box &st) override;
+	const style::Box &style() override;
 	void setTitle(rpl::producer<TextWithEntities> title) override;
 	void setAdditionalTitle(rpl::producer<QString> additional) override;
 	void showBox(

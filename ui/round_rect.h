@@ -27,6 +27,7 @@ public:
 	RoundRect(int radius, const style::color &color);
 
 	[[nodiscard]] const style::color &color() const;
+	void setColor(const style::color &color);
 	void paint(
 		QPainter &p,
 		const QRect &rect,
@@ -39,6 +40,7 @@ public:
 private:
 	style::color _color;
 	std::array<QImage, 4> _corners;
+	Fn<void()> _refresh;
 
 	rpl::lifetime _lifetime;
 

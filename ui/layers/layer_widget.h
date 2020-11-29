@@ -16,6 +16,10 @@ class SectionMemento;
 struct SectionShow;
 } // namespace Window
 
+namespace style {
+struct Box;
+} // namespace style
+
 namespace Ui {
 
 class BoxContent;
@@ -92,6 +96,16 @@ public:
 
 	void finishAnimating();
 	rpl::producer<> hideFinishEvents() const;
+
+	void setStyleOverrides(
+		const style::Box *boxSt,
+		const style::Box *layerSt);
+	[[nodiscard]] const style::Box *boxStyleOverrideLayer() const {
+		return _layerSt;
+	}
+	[[nodiscard]] const style::Box *boxStyleOverride() const {
+		return _boxSt;
+	}
 
 	void showBox(
 		object_ptr<BoxContent> box,
@@ -201,6 +215,9 @@ private:
 
 	class BackgroundWidget;
 	object_ptr<BackgroundWidget> _background;
+
+	const style::Box *_boxSt = nullptr;
+	const style::Box *_layerSt = nullptr;
 	bool _hideByBackgroundClick = true;
 
 	rpl::event_stream<> _hideFinishStream;

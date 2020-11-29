@@ -11,6 +11,16 @@ namespace Ui {
 LayerManager::LayerManager(not_null<RpWidget*> widget) : _widget(widget) {
 }
 
+void LayerManager::setStyleOverrides(
+		const style::Box *boxSt,
+		const style::Box *layerSt) {
+	_boxSt = boxSt;
+	_layerSt = layerSt;
+	if (_layer) {
+		_layer->setStyleOverrides(_boxSt, _layerSt);
+	}
+}
+
 void LayerManager::setHideByBackgroundClick(bool hide) {
 	_hideByBackgroundClick = hide;
 	if (_layer) {
@@ -55,6 +65,7 @@ void LayerManager::ensureLayerCreated() {
 	}
 	_layer.emplace(_widget);
 	_layer->setHideByBackgroundClick(_hideByBackgroundClick);
+	_layer->setStyleOverrides(_boxSt, _layerSt);
 
 	_layer->hideFinishEvents(
 	) | rpl::filter([=] {

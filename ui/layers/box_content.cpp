@@ -29,7 +29,7 @@ QPointer<RoundButton> BoxContent::addButton(
 	return addButton(
 		std::move(text),
 		std::move(clickCallback),
-		st::defaultBoxButton);
+		getDelegate()->style().button);
 }
 
 QPointer<RoundButton> BoxContent::addLeftButton(
@@ -38,7 +38,7 @@ QPointer<RoundButton> BoxContent::addLeftButton(
 	return getDelegate()->addLeftButton(
 		std::move(text),
 		std::move(clickCallback),
-		st::defaultBoxButton);
+		getDelegate()->style().button);
 }
 
 void BoxContent::setInner(object_ptr<TWidget> inner) {
@@ -245,8 +245,9 @@ void BoxContent::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	if (testAttribute(Qt::WA_OpaquePaintEvent)) {
+		const auto &color = getDelegate()->style().bg;
 		for (const auto rect : e->region()) {
-			p.fillRect(rect, st::boxBg);
+			p.fillRect(rect, color);
 		}
 	}
 }

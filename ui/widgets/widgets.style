@@ -495,6 +495,7 @@ SettingsButton {
 	textBgOver: color;
 
 	font: font;
+	rightLabel: FlatLabel;
 
 	height: pixels;
 	padding: margins;
@@ -780,6 +781,7 @@ defaultToggle: Toggle {
 }
 defaultCheckbox: Checkbox {
 	textFg: windowFg;
+	textFgActive: windowFg;
 
 	width: -44px;
 	margin: margins(8px, 8px, 8px, 8px);
@@ -821,11 +823,75 @@ defaultMultiSelectItem: MultiSelectItem {
 	minScale: 0.3;
 }
 
-widgetSlideDuration: 200;
-widgetFadeDuration: 200;
+defaultMultiSelectSearchField: InputField(defaultInputField) {
+	textBg: transparent;
+	textMargins: margins(2px, 7px, 2px, 0px);
+
+	placeholderFg: placeholderFg;
+	placeholderFgActive: placeholderFgActive;
+	placeholderFgError: placeholderFgActive;
+	placeholderMargins: margins(2px, 0px, 2px, 0px);
+	placeholderScale: 0.;
+	placeholderFont: normalFont;
+
+	border: 0px;
+	borderActive: 0px;
+
+	heightMin: 32px;
+
+	font: normalFont;
+}
 
 fieldSearchIcon: icon {{ "box_search", menuIconFg, point(9px, 8px) }};
 boxFieldSearchIcon: icon {{ "box_search", menuIconFg, point(10px, 9px) }};
+
+defaultMultiSelectSearchCancel: CrossButton {
+	width: 44px;
+	height: 44px;
+
+	cross: CrossAnimation {
+		size: 36px;
+		skip: 12px;
+		stroke: 2px;
+		minScale: 0.3;
+	}
+	crossFg: boxTitleCloseFg;
+	crossFgOver: boxTitleCloseFgOver;
+	crossPosition: point(4px, 4px);
+
+	duration: 150;
+	loadingPeriod: 1000;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: windowBgOver;
+	}
+}
+defaultMultiSelect: MultiSelect {
+	bg: boxSearchBg;
+	padding: margins(8px, 6px, 8px, 6px);
+	maxHeight: 104px;
+	scroll: ScrollArea(defaultSolidScroll) {
+		deltat: 3px;
+		deltab: 3px;
+		round: 1px;
+		width: 8px;
+		deltax: 3px;
+		hiding: 1000;
+	}
+
+	item: defaultMultiSelectItem;
+	itemSkip: 8px;
+
+	field: defaultMultiSelectSearchField;
+	fieldMinWidth: 42px;
+	fieldIcon: boxFieldSearchIcon;
+	fieldIconSkip: 36px;
+
+	fieldCancel: defaultMultiSelectSearchCancel;
+	fieldCancelSkip: 40px;
+}
+
+widgetSlideDuration: 200;
+widgetFadeDuration: 200;
 
 SettingsSlider {
 	height: pixels;
@@ -1125,6 +1191,7 @@ PeerListItem {
 
 	button: OutlineButton;
 	checkbox: RoundImageCheckbox;
+	disabledCheckFg: color;
 	statusFg: color;
 	statusFgOver: color;
 	statusFgActive: color;
@@ -1132,6 +1199,8 @@ PeerListItem {
 
 PeerList {
 	padding: margins;
+	bg: color;
+	about: FlatLabel;
 	item: PeerListItem;
 }
 
@@ -1163,13 +1232,31 @@ defaultPeerListItem: PeerListItem {
 	photoSize: 46px;
 	button: defaultPeerListButton;
 	checkbox: defaultPeerListCheckbox;
+	disabledCheckFg: menuIconFg;
 	statusFg: windowSubTextFg;
 	statusFgOver: windowSubTextFgOver;
 	statusFgActive: windowActiveTextFg;
 }
 
+boxTextStyle: TextStyle(defaultTextStyle) {
+	font: font(boxFontSize);
+	linkFont: font(boxFontSize);
+	linkFontOver: font(boxFontSize underline);
+}
+
+defaultPeerListAbout: FlatLabel(defaultFlatLabel) {
+	minWidth: 240px;
+	textFg: membersAboutLimitFg;
+	align: align(top);
+	style: TextStyle(boxTextStyle) {
+		lineHeight: 22px;
+	}
+}
+
 defaultPeerList: PeerList {
 	padding: margins(0px, 0px, 0px, 0px);
+	bg: contactsBg;
+	about: defaultPeerListAbout;
 	item: defaultPeerListItem;
 }
 
@@ -1256,6 +1343,11 @@ defaultSettingsToggle: Toggle(defaultToggle) {
 defaultSettingsToggleOver: Toggle(defaultSettingsToggle) {
 	untoggledFg: menuIconFgOver;
 }
+defaultSettingsRightLabel: FlatLabel(defaultFlatLabel) {
+	textFg: windowActiveTextFg;
+	style: boxTextStyle;
+	maxHeight: 20px;
+}
 defaultSettingsButton: SettingsButton {
 	textFg: windowBoldFg;
 	textFgOver: windowBoldFgOver;
@@ -1263,6 +1355,7 @@ defaultSettingsButton: SettingsButton {
 	textBgOver: windowBgOver;
 
 	font: boxTextFont;
+	rightLabel: defaultSettingsRightLabel;
 
 	height: 20px;
 	padding: margins(22px, 10px, 22px, 8px);

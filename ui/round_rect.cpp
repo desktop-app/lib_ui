@@ -67,22 +67,25 @@ RoundRect::RoundRect(
 	ImageRoundRadius radius,
 	const style::color &color)
 : _color(color)
-, _corners(Images::PrepareCorners(radius, color)) {
+, _refresh([=] { _corners = Images::PrepareCorners(radius, _color); }) {
+	_refresh();
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
-		_corners = Images::PrepareCorners(radius, _color);
-	}, _lifetime);
+	) | rpl::start_with_next(_refresh, _lifetime);
 }
 
 RoundRect::RoundRect(
 	int radius,
 	const style::color &color)
 : _color(color)
-, _corners(Images::PrepareCorners(radius, color)) {
+, _refresh([=] { _corners = Images::PrepareCorners(radius, _color); }) {
+	_refresh();
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
-		_corners = Images::PrepareCorners(radius, _color);
-	}, _lifetime);
+	) | rpl::start_with_next(_refresh, _lifetime);
+}
+
+void RoundRect::setColor(const style::color &color) {
+	_color = color;
+	_refresh();
 }
 
 const style::color &RoundRect::color() const {

@@ -24,6 +24,11 @@ ServiceCheck {
 Box {
 	buttonPadding: margins;
 	buttonHeight: pixels;
+	button: RoundButton;
+	margin: margins;
+	title: FlatLabel;
+	bg: color;
+	titleAdditionalFg: color;
 }
 
 boxDuration: 200;
@@ -34,12 +39,6 @@ defaultBoxButton: RoundButton(defaultLightButton) {
 	width: -24px;
 	height: 36px;
 	font: boxButtonFont;
-}
-
-boxTextStyle: TextStyle(defaultTextStyle) {
-	font: font(boxFontSize);
-	linkFont: font(boxFontSize);
-	linkFontOver: font(boxFontSize underline);
 }
 
 boxLabelStyle: TextStyle(boxTextStyle) {
@@ -118,7 +117,6 @@ boxOptionListPadding: margins(0px, 0px, 0px, 0px);
 boxOptionListSkip: 20px;
 boxOptionInputSkip: 6px;
 
-boxVerticalMargin: 10px;
 boxWidth: 320px;
 boxWideWidth: 364px;
 boxPadding: margins(22px, 30px, 22px, 8px);
@@ -129,6 +127,11 @@ boxMediumSkip: 20px;
 defaultBox: Box {
 	buttonPadding: margins(8px, 12px, 13px, 12px);
 	buttonHeight: 36px;
+	button: defaultBoxButton;
+	margin: margins(0px, 10px, 0px, 10px);
+	bg: boxBg;
+	title: boxTitle;
+	titleAdditionalFg: boxTitleAdditionalFg;
 }
 layerBox: Box(defaultBox) {
 	buttonPadding: margins(8px, 8px, 8px, 8px);

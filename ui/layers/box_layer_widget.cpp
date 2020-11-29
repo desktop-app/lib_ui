@@ -42,7 +42,7 @@ BoxLayerWidget::BoxLayerWidget(
 : LayerWidget(layer)
 , _layer(layer)
 , _content(std::move(content))
-, _roundRect(ImageRoundRadius::Small, st::boxBg) {
+, _roundRect(ImageRoundRadius::Small, st().bg) {
 	_content->setParent(this);
 	_content->setDelegate(this);
 
@@ -74,12 +74,21 @@ const style::Box &BoxLayerWidget::st() const {
 	return _st
 		? *_st
 		: _layerType
-		? st::layerBox
-		: st::defaultBox;
+		? (_layer->boxStyleOverrideLayer()
+			? *_layer->boxStyleOverrideLayer()
+			: st::layerBox)
+		: (_layer->boxStyleOverride()
+			? *_layer->boxStyleOverride()
+			: st::defaultBox);
 }
 
 void BoxLayerWidget::setStyle(const style::Box &st) {
 	_st = &st;
+	_roundRect.setColor(st.bg);
+}
+
+const style::Box &BoxLayerWidget::style() {
+	return st();
 }
 
 int BoxLayerWidget::buttonsHeight() const {
@@ -118,7 +127,7 @@ void BoxLayerWidget::paintEvent(QPaintEvent *e) {
 	auto other = e->region().intersected(QRect(0, st::boxRadius, width(), height() - 2 * st::boxRadius));
 	if (!other.isEmpty()) {
 		for (const auto rect : other) {
-			p.fillRect(rect, st::boxBg);
+			p.fillRect(rect, st().bg);
 		}
 	}
 	if (!_additionalTitle.current().isEmpty()
@@ -137,21 +146,29 @@ void BoxLayerWidget::paintEvent(QPaintEvent *e) {
 
 void BoxLayerWidget::paintAdditionalTitle(Painter &p) {
 	p.setFont(st::boxTitleAdditionalFont);
-	p.setPen(st::boxTitleAdditionalFg);
-	p.drawTextLeft(_titleLeft + (_title ? _title->width() : 0) + st::boxTitleAdditionalSkip, _titleTop + st::boxTitleFont->ascent - st::boxTitleAdditionalFont->ascent, width(), _additionalTitle.current());
+	p.setPen(st().titleAdditionalFg);
+	p.drawTextLeft(
+		_titleLeft + (_title ? _title->width() : 0) + st::boxTitleAdditionalSkip,
+		_titleTop + st::boxTitleFont->ascent - st::boxTitleAdditionalFont->ascent,
+		width(),
+		_additionalTitle.current());
 }
 
 void BoxLayerWidget::parentResized() {
 	auto newHeight = countRealHeight();
 	auto parentSize = parentWidget()->size();
-	setGeometry((parentSize.width() - width()) / 2, (parentSize.height() - newHeight) / 2, width(), newHeight);
+	setGeometry(
+		(parentSize.width() - width()) / 2,
+		(parentSize.height() - newHeight) / 2,
+		width(),
+		newHeight);
 	update();
 }
 
 void BoxLayerWidget::setTitle(rpl::producer<TextWithEntities> title) {
 	const auto wasTitle = hasTitle();
 	if (title) {
-		_title.create(this, rpl::duplicate(title), st::boxTitle);
+		_title.create(this, rpl::duplicate(title), st().title);
 		_title->show();
 		std::move(
 			title
@@ -323,9 +340,10 @@ void BoxLayerWidget::setDimensions(int newWidth, int maxHeight, bool forceCenter
 			resize(newWidth, countRealHeight());
 			auto newGeometry = geometry();
 			auto parentHeight = parentWidget()->height();
-			if (newGeometry.top() + newGeometry.height() + st::boxVerticalMargin > parentHeight
+			const auto bottomMargin = st().margin.bottom();
+			if (newGeometry.top() + newGeometry.height() + bottomMargin > parentHeight
 				|| forceCenterPosition) {
-				const auto top1 = parentHeight - int(st::boxVerticalMargin) - newGeometry.height();
+				const auto top1 = parentHeight - bottomMargin - newGeometry.height();
 				const auto top2 = (parentHeight - newGeometry.height()) / 2;
 				const auto newTop = forceCenterPosition
 					? std::min(top1, top2)
@@ -343,7 +361,10 @@ void BoxLayerWidget::setDimensions(int newWidth, int maxHeight, bool forceCenter
 }
 
 int BoxLayerWidget::countRealHeight() const {
-	return qMin(_fullHeight, parentWidget()->height() - 2 * st::boxVerticalMargin);
+	const auto &margin = st().margin;
+	return std::min(
+		_fullHeight,
+		parentWidget()->height() - margin.top() - margin.bottom());
 }
 
 int BoxLayerWidget::countFullHeight() const {
