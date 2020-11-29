@@ -66,6 +66,8 @@ PRIVATE
     ui/layers/layer_manager.h
     ui/layers/layer_widget.cpp
     ui/layers/layer_widget.h
+    ui/paint/blob.cpp
+    ui/paint/blob.h
     ui/platform/linux/ui_window_linux.cpp
     ui/platform/linux/ui_window_linux.h
     ui/platform/linux/ui_utility_linux.cpp
