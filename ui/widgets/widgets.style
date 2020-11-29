@@ -400,6 +400,14 @@ CrossButton {
 	ripple: RippleAnimation;
 }
 
+CrossLineAnimation {
+	fg: color;
+	icon: icon;
+	startPosition: point;
+	endPosition: point;
+	stroke: pixels;
+}
+
 MultiSelectItem {
 	padding: margins;
 	maxWidth: pixels;
