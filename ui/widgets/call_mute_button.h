@@ -6,9 +6,13 @@
 //
 #pragma once
 
+#include "base/unique_qptr.h"
+#include "ui/effects/animations.h"
 #include "ui/widgets/call_button.h"
 
 namespace Ui {
+
+class BlobsWidget;
 
 enum class CallMuteButtonType {
 	Connecting,
@@ -25,7 +29,7 @@ struct CallMuteButtonState {
 class CallMuteButton final {
 public:
 	explicit CallMuteButton(
-		not_null<QWidget*> parent,
+		not_null<RpWidget*> parent,
 		CallMuteButtonState initial = CallMuteButtonState());
 
 	void setState(const CallMuteButtonState &state);
@@ -52,8 +56,11 @@ private:
 	CallMuteButtonState _state;
 	float _level = 0.;
 
+	const base::unique_qptr<BlobsWidget> _blobs;
 	CallButton _content;
 	CallButton _connecting;
+
+	Animations::Simple _switchAnimation;
 
 };
 
