@@ -571,8 +571,11 @@ groupCallLive1: #0dcc39; // group call live button color1
 groupCallLive2: #0bb6bd; // group call live button color2
 groupCallMuted1: #0992ef; // group call muted button color1
 groupCallMuted2: #16ccfb; // group call muted button color2
-groupCallBoxButtonBgOver: #1d2a39; // group call button in box with mouse over
-groupCallBoxButtonBgRipple: #223143; // group call button in box ripple effect
+groupCallMenuBg: #292d33; // group call popup menu background
+groupCallMenuBgOver: #343940; // group call popup menu with mouse over
+groupCallMenuBgRipple: #3a4047; // group call popup menu ripple effect
+groupCallLeaveBg: #f75c5c7f; // group call leave button background
+groupCallLeaveBgRipple: #f75c5c9e; // group call leave button ripple effect
 
 callBarBg: dialogsBgActive; // active phone call bar background
 callBarMuteRipple: dialogsRippleBgActive; // active phone call bar mute and hangup button ripple effect
