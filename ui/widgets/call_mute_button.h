@@ -16,6 +16,7 @@
 namespace Ui {
 
 class BlobsWidget;
+class InfiniteRadialAnimation;
 
 enum class CallMuteButtonType {
 	Connecting,
@@ -34,6 +35,7 @@ public:
 	explicit CallMuteButton(
 		not_null<RpWidget*> parent,
 		CallMuteButtonState initial = CallMuteButtonState());
+	~CallMuteButton();
 
 	void setState(const CallMuteButtonState &state);
 	void setLevel(float level);
@@ -62,11 +64,13 @@ private:
 	rpl::variable<CallMuteButtonState> _state;
 	float _level = 0.;
 	float64 _crossLineProgress = 0.;
+	rpl::variable<float64> _radialShowProgress = 0.;
 	QRect _muteIconPosition;
 
 	const base::unique_qptr<BlobsWidget> _blobs;
 	CallButton _content;
 
+	std::unique_ptr<InfiniteRadialAnimation> _radial;
 	const std::unordered_map<CallMuteButtonType, std::vector<QColor>> _colors;
 
 	CrossLineAnimation _crossLineMuteAnimation;

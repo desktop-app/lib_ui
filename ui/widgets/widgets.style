@@ -1453,6 +1453,12 @@ callMuteCrossLine: CrossLineAnimation {
 	stroke: 4px;
 }
 
+callConnectingRadial: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
+	color: lightButtonFg;
+	thickness: 4px;
+	size: size(100px, 100px);
+}
+
 // Windows specific title
 
 windowTitleButton: IconButton {

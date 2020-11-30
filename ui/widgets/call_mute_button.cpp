@@ -7,6 +7,7 @@
 #include "ui/widgets/call_mute_button.h"
 
 #include "base/event_filter.h"
+#include "ui/effects/radial_animation.h"
 #include "ui/paint/blobs.h"
 #include "ui/painter.h"
 
@@ -90,6 +91,10 @@ inline float64 InterpolateF(int a, int b, float64 b_ratio) {
 
 bool IsMuted(CallMuteButtonType type) {
 	return (type != CallMuteButtonType::Active);
+}
+
+bool IsConnecting(CallMuteButtonType type) {
+	return (type == CallMuteButtonType::Connecting);
 }
 
 } // namespace
@@ -179,6 +184,7 @@ CallMuteButton::CallMuteButton(
 : _state(initial)
 , _blobs(base::make_unique_q<BlobsWidget>(parent))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
+, _radial(nullptr)
 , _colors(Colors())
 , _crossLineMuteAnimation(st::callMuteCrossLine) {
 	init();
@@ -191,6 +197,21 @@ void CallMuteButton::init() {
 		return state.text;
 	});
 	_content.setText(std::move(text));
+
+	_radialShowProgress.value(
+	) | rpl::start_with_next([=](float64 value) {
+		if (((value == 0.) || anim::Disabled()) && _radial) {
+			_radial->stop();
+			_radial = nullptr;
+			return;
+		}
+		if ((value > 0.) && !anim::Disabled() && !_radial) {
+			_radial = std::make_unique<InfiniteRadialAnimation>(
+				[=] { _content.update(); },
+				st::callConnectingRadial);
+			_radial->start();
+		}
+	}, lifetime());
 
 	// State type.
 	const auto previousType =
@@ -206,6 +227,9 @@ void CallMuteButton::init() {
 		const auto crossFrom = IsMuted(previous) ? 0. : 1.;
 		const auto crossTo = IsMuted(type) ? 0. : 1.;
 
+		const auto radialShowFrom = IsConnecting(previous) ? 1. : 0.;
+		const auto radialShowTo = IsConnecting(type) ? 1. : 0.;
+
 		const auto gradient = anim::linear_gradient(
 			_colors.at(previous),
 			_colors.at(type),
@@ -218,11 +242,19 @@ void CallMuteButton::init() {
 		auto callback = [=](float64 value) {
 			_blobs->setBrush(QBrush(gradient.gradient(value)));
 
-			const auto crossProgress =
-				InterpolateF(crossFrom, crossTo, value);
+			const auto crossProgress = (crossFrom == crossTo)
+				? crossTo
+				: InterpolateF(crossFrom, crossTo, value);
 			if (crossProgress != _crossLineProgress) {
 				_crossLineProgress = crossProgress;
 				_content.update(_muteIconPosition);
+			}
+
+			const auto radialShowProgress = (radialShowFrom == radialShowTo)
+				? radialShowTo
+				: InterpolateF(radialShowFrom, radialShowTo, value);
+			if (radialShowProgress != _radialShowProgress.current()) {
+				_radialShowProgress = radialShowProgress;
 			}
 		};
 
@@ -265,6 +297,14 @@ void CallMuteButton::contentPaint() {
 
 	const auto progress = 1. - _crossLineProgress;
 	_crossLineMuteAnimation.paint(p, _muteIconPosition.topLeft(), progress);
+
+	if (_radial) {
+		p.setOpacity(_radialShowProgress.current());
+		_radial->draw(
+			p,
+			st::callMuteButtonActive.bgPosition,
+			_content.width());
+	}
 }
 
 void CallMuteButton::setState(const CallMuteButtonState &state) {
@@ -321,7 +361,9 @@ void CallMuteButton::lower() {
 }
 
 rpl::lifetime &CallMuteButton::lifetime() {
-	return _content.lifetime();
+	return _blobs->lifetime();
 }
+
+CallMuteButton::~CallMuteButton() = default;
 
 } // namespace Ui
