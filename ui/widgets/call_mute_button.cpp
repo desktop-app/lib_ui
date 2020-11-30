@@ -36,6 +36,10 @@ constexpr auto kMainRadiusFactor = 50. / 57.;
 constexpr auto kMainMinRadius = 57. * kMainRadiusFactor;
 constexpr auto kMainMaxRadius = 63. * kMainRadiusFactor;
 
+constexpr auto kGlowPaddingFactor = 1.2;
+constexpr auto kGlowMinScale = 0.6;
+constexpr auto kGlowAlpha = 150;
+
 constexpr auto kSwitchStateDuration = 120;
 
 constexpr auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
@@ -107,16 +111,21 @@ public:
 	BlobsWidget(not_null<RpWidget*> parent);
 
 	void setLevel(float level);
-	void setBrush(QBrush brush);
+	void setBlobBrush(QBrush brush);
+	void setGlowBrush(QBrush brush);
 	void setMainRadius(rpl::producer<float> &&radius);
+
+	[[nodiscard]] QRect innerRect() const;
 
 private:
 	void init();
 
 	Paint::Blobs _blobs;
 
-	QBrush _brush;
+	QBrush _blobBrush;
+	QBrush _glowBrush;
 	int _center = 0;
+	QRect _inner;
 
 	Animations::Basic _animation;
 
@@ -125,15 +134,18 @@ private:
 BlobsWidget::BlobsWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
 , _blobs(MuteBlobs() | ranges::to_vector, kLevelDuration, kMaxLevel)
-, _brush(Qt::transparent) {
+, _blobBrush(Qt::transparent)
+, _glowBrush(Qt::transparent) {
 	init();
 }
 
 void BlobsWidget::init() {
 	setAttribute(Qt::WA_TransparentForMouseEvents);
 
-	const auto maxBlobDiameter = _blobs.maxRadius() * 2;
-	resize(maxBlobDiameter, maxBlobDiameter);
+	{
+		const auto s = _blobs.maxRadius() * 2 * kGlowPaddingFactor;
+		resize(s, s);
+	}
 
 	const auto gradient = anim::linear_gradient(
 		{ st::groupCallMuted1->c, st::groupCallMuted2->c },
@@ -144,19 +156,34 @@ void BlobsWidget::init() {
 	sizeValue(
 	) | rpl::start_with_next([=](QSize size) {
 		_center = size.width() / 2;
+
+		const auto w = _blobs.maxRadius() * 2;
+		const auto margins = style::margins(w, w, w, w);
+		_inner = QRect(QPoint(), size).marginsRemoved(margins);
 	}, lifetime());
 
 	paintRequest(
 	) | rpl::start_with_next([=] {
 		Painter p(this);
-
 		PainterHighQualityEnabler hq(p);
+
+		// Glow.
+		const auto s = kGlowMinScale
+			+ (1. - kGlowMinScale) * _blobs.currentLevel();
 		p.translate(_center, _center);
-		_blobs.paint(p, _brush);
+		p.scale(s, s);
+		p.translate(-_center, -_center);
+		p.fillRect(rect(), _glowBrush);
+		p.resetTransform();
+
+		// Blobs.
+		p.translate(_center, _center);
+		_blobs.paint(p, _blobBrush);
 	}, lifetime());
 
 	_animation.init([=](crl::time now) {
 		const auto dt = now - _animation.started();
+		_blobs.updateLevel(dt);
 		update();
 		return true;
 	});
@@ -170,12 +197,22 @@ void BlobsWidget::init() {
 	}, lifetime());
 }
 
-void BlobsWidget::setBrush(QBrush brush) {
-	if (_brush == brush) {
+QRect BlobsWidget::innerRect() const {
+	return _inner;
+}
+
+void BlobsWidget::setBlobBrush(QBrush brush) {
+	if (_blobBrush == brush) {
 		return;
 	}
-	_brush = brush;
-	update();
+	_blobBrush = brush;
+}
+
+void BlobsWidget::setGlowBrush(QBrush brush) {
+	if (_glowBrush == brush) {
+		return;
+	}
+	_glowBrush = brush;
 }
 
 void BlobsWidget::setLevel(float level) {
@@ -225,6 +262,15 @@ void CallMuteButton::init() {
 	const auto previousType =
 		lifetime().make_state<CallMuteButtonType>(_state.current().type);
 
+	const auto glowColor = [=](CallMuteButtonType type) {
+		if (IsConnecting(type) || (type == CallMuteButtonType::ForceMuted)) {
+			return st::groupCallBg->c;
+		}
+		auto c = _colors.at(type)[0];
+		c.setAlpha(kGlowAlpha);
+		return c;
+	};
+
 	_state.value(
 	) | rpl::map([](const CallMuteButtonState &state) {
 		return state.type;
@@ -238,17 +284,26 @@ void CallMuteButton::init() {
 		const auto radialShowFrom = IsConnecting(previous) ? 1. : 0.;
 		const auto radialShowTo = IsConnecting(type) ? 1. : 0.;
 
+		const auto blobsInner = _blobs->innerRect();
 		const auto gradient = anim::linear_gradient(
 			_colors.at(previous),
 			_colors.at(type),
-			QPoint(0, _blobs->height()),
-			QPoint(_blobs->width(), 0));
+			QPoint(blobsInner.x(), blobsInner.y() + blobsInner.height()),
+			QPoint(blobsInner.x() + blobsInner.width(), blobsInner.y()));
+
+		const auto glow = anim::radial_gradient(
+			{ glowColor(previous), Qt::transparent },
+			{ glowColor(type), Qt::transparent },
+			blobsInner.center(),
+			_blobs->width() / 2);
 
 		const auto from = 0.;
 		const auto to = 1.;
 
 		auto callback = [=](float64 value) {
-			_blobs->setBrush(QBrush(gradient.gradient(value)));
+			_blobs->setBlobBrush(QBrush(gradient.gradient(value)));
+			_blobs->setGlowBrush(QBrush(glow.gradient(value)));
+			_blobs->update();
 
 			const auto crossProgress = (crossFrom == crossTo)
 				? crossTo

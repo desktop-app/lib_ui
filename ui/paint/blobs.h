@@ -32,9 +32,11 @@ public:
 	void setRadiusAt(rpl::producer<float> &&radius, int index, bool isMax);
 	void setLevel(float value);
 	void paint(Painter &p, const QBrush &brush);
+	void updateLevel(crl::time dt);
 
 	[[nodiscard]] float maxRadius() const;
 	[[nodiscard]] int size() const;
+	[[nodiscard]] float64 currentLevel() const;
 
 private:
 	void init();
@@ -44,7 +46,6 @@ private:
 	std::vector<BlobData> _blobDatas;
 	std::vector<BlobBezier> _blobs;
 
-	crl::time _lastUpdateTime = 0;
 	anim::continuous_value _levelValue;
 
 	rpl::lifetime _lifetime;

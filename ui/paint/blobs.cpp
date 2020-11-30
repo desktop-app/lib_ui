@@ -67,9 +67,6 @@ void Blobs::setLevel(float value) {
 }
 
 void Blobs::paint(Painter &p, const QBrush &brush) {
-	const auto dt = crl::now() - _lastUpdateTime;
-	_levelValue.update((dt > 20) ? 17 : dt);
-
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
 		_blobs[i].update(_levelValue.current(), _blobDatas[i].speedScale);
@@ -79,7 +76,14 @@ void Blobs::paint(Painter &p, const QBrush &brush) {
 		}
 		_blobs[i].paint(p, brush);
 	}
-	_lastUpdateTime = crl::now();
+}
+
+void Blobs::updateLevel(crl::time dt) {
+	_levelValue.update((dt > 20) ? 17 : dt);
+}
+
+float64 Blobs::currentLevel() const {
+	return _levelValue.current();
 }
 
 } // namespace Ui::Paint
