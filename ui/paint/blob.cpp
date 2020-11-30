@@ -127,10 +127,12 @@ void BlobBezier::update(float level, float speedScale) {
 	}
 }
 
-void BlobBezier::setRadius(float min, float max) {
-	_minRadius = std::min(min, max);
-	_maxRadius = std::max(min, max);
-	generateBlob();
+void BlobBezier::setMinRadius(float value) {
+	_minRadius = value;
+}
+
+void BlobBezier::setMaxRadius(float value) {
+	_maxRadius = value;
 }
 
 } // namespace Ui::Paint

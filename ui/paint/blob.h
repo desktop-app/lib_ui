@@ -19,6 +19,8 @@ public:
 	void generateBlob();
 
 	void setRadius(float min, float max);
+	void setMinRadius(float value);
+	void setMaxRadius(float value);
 
 private:
 	void generateBlob(

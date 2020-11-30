@@ -29,10 +29,12 @@ public:
 		float levelDuration,
 		float maxLevel);
 
+	void setRadiusAt(rpl::producer<float> &&radius, int index, bool isMax);
 	void setLevel(float value);
 	void paint(Painter &p, const QBrush &brush);
 
 	[[nodiscard]] float maxRadius() const;
+	[[nodiscard]] int size() const;
 
 private:
 	void init();
@@ -44,6 +46,8 @@ private:
 
 	crl::time _lastUpdateTime = 0;
 	anim::continuous_value _levelValue;
+
+	rpl::lifetime _lifetime;
 
 };
 
