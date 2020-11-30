@@ -126,6 +126,8 @@ public:
 
 	void scrollToWidget(not_null<QWidget*> widget);
 
+	virtual void showFinished() {
+	}
 	void clearButtons() {
 		getDelegate()->clearButtons();
 	}

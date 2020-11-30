@@ -53,6 +53,10 @@ public:
 		LayerOptions options,
 		anim::type animated) override;
 
+	void showFinished() override {
+		_content->showFinished();
+	}
+
 	void clearButtons() override;
 	QPointer<RoundButton> addButton(
 		rpl::producer<QString> text,

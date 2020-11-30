@@ -38,6 +38,9 @@ public:
 	void setFocusCallback(Fn<void()> callback) {
 		_focus = callback;
 	}
+	void setShowFinishedCallback(Fn<void()> callback) {
+		_showFinished = callback;
+	}
 
 	int rowsCount() const {
 		return _content->count();
@@ -76,6 +79,11 @@ public:
 			BoxContent::setInnerFocus();
 		}
 	}
+	void showFinished() override {
+		if (_showFinished) {
+			_showFinished();
+		}
+	}
 
 	[[nodiscard]] not_null<Ui::VerticalLayout*> verticalLayout();
 
@@ -111,6 +119,7 @@ private:
 
 	FnMut<void(not_null<GenericBox*>)> _init;
 	Fn<void()> _focus;
+	Fn<void()> _showFinished;
 	object_ptr<Ui::VerticalLayout> _content;
 	int _width = 0;
 
