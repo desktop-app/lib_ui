@@ -321,7 +321,9 @@ void CallMuteButton::init() {
 			blobsInner.center(),
 			_blobs->width() / 2);
 
-		const auto from = 0.;
+		const auto from = _switchAnimation.animating()
+			? (1. - _switchAnimation.value(0.))
+			: 0.;
 		const auto to = 1.;
 
 		auto callback = [=](float64 value) {
@@ -348,7 +350,7 @@ void CallMuteButton::init() {
 		};
 
 		_switchAnimation.stop();
-		const auto duration = kSwitchStateDuration;
+		const auto duration = (1. - from) * kSwitchStateDuration;
 		_switchAnimation.start(std::move(callback), from, to, duration);
 	}, lifetime());
 
