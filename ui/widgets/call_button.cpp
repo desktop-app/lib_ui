@@ -126,7 +126,12 @@ void CallButton::paintEvent(QPaintEvent *e) {
 		p.drawEllipse(outerRect);
 	}
 
-	if (paintFrom) {
+	if (_bgOverride) {
+		const auto &s = _stFrom->bgSize;
+		p.setPen(Qt::NoPen);
+		p.setBrush(*_bgOverride);
+		p.drawEllipse(QRect(_stFrom->bgPosition, QSize(s, s)));
+	} else if (paintFrom) {
 		p.drawPixmap(bgPosition, _bgFrom);
 	} else if (paintTo) {
 		p.drawPixmap(bgPosition, _bgTo);
@@ -137,7 +142,9 @@ void CallButton::paintEvent(QPaintEvent *e) {
 
 	auto rippleColorInterpolated = QColor();
 	auto rippleColorOverride = &rippleColorInterpolated;
-	if (paintFrom) {
+	if (_rippleOverride) {
+		rippleColorOverride = &(*_rippleOverride);
+	} else if (paintFrom) {
 		rippleColorOverride = nullptr;
 	} else if (paintTo) {
 		rippleColorOverride = &_stTo->button.ripple.color->c;
@@ -200,6 +207,16 @@ void CallButton::onStateChanged(State was, StateChangeSource source) {
 	if (over != wasOver) {
 		update();
 	}
+}
+
+void CallButton::setColorOverrides(rpl::producer<CallButtonColors> &&colors) {
+	std::move(
+		colors
+	) | rpl::start_with_next([=](const CallButtonColors &c) {
+		_bgOverride = c.bg;
+		_rippleOverride = c.ripple;
+		update();
+	}, lifetime());
 }
 
 QPoint CallButton::prepareRippleStartPosition() const {

@@ -14,6 +14,11 @@ namespace Ui {
 
 class FlatLabel;
 
+struct CallButtonColors {
+	std::optional<QColor> bg;
+	std::optional<QColor> ripple;
+};
+
 class CallButton final : public RippleButton {
 public:
 	CallButton(
@@ -24,6 +29,7 @@ public:
 	void setProgress(float64 progress);
 	void setOuterValue(float64 value);
 	void setText(rpl::producer<QString> text);
+	void setColorOverrides(rpl::producer<CallButtonColors> &&colors);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -42,6 +48,9 @@ private:
 	float64 _progress = 0.;
 
 	object_ptr<FlatLabel> _label = { nullptr };
+
+	std::optional<QColor> _bgOverride;
+	std::optional<QColor> _rippleOverride;
 
 	QImage _bgMask, _bg;
 	QPixmap _bgFrom, _bgTo;
