@@ -10,6 +10,7 @@
 #include "ui/painter.h"
 
 #include <QtGui/QPainterPath>
+#include <QtCore/QtMath>
 
 namespace Ui::Paint {
 
@@ -31,12 +32,12 @@ BlobBezier::BlobBezier(int n, float minScale, float minSpeed, float maxSpeed)
 , _minSpeed(minSpeed ? minSpeed : kMinSpeed)
 , _maxSpeed(maxSpeed ? maxSpeed : kMaxSpeed)
 , _pen(Qt::NoBrush, 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin) {
-	_radius.reserve(n);
-	_angle.reserve(n);
-	_radiusNext.reserve(n);
-	_angleNext.reserve(n);
-	_progress.reserve(n);
-	_speed.reserve(n);
+	_radius.resize(n);
+	_angle.resize(n);
+	_radiusNext.resize(n);
+	_angleNext.resize(n);
+	_progress.resize(n);
+	_speed.resize(n);
 }
 
 void BlobBezier::paint(Painter &p, const QBrush &brush) {
