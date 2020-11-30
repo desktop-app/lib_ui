@@ -182,6 +182,74 @@ ScrollArea {
 	hiding: int;
 }
 
+Shadow {
+	left: icon;
+	topLeft: icon;
+	top: icon;
+	topRight: icon;
+	right: icon;
+	bottomRight: icon;
+	bottom: icon;
+	bottomLeft: icon;
+	extend: margins;
+	fallback: color;
+}
+
+PanelAnimation {
+	startWidth: double;
+	widthDuration: double;
+	startHeight: double;
+	heightDuration: double;
+	startOpacity: double;
+	opacityDuration: double;
+	startFadeTop: double;
+	fadeHeight: double;
+	fadeOpacity: double;
+	fadeBg: color;
+	shadow: Shadow;
+}
+
+Menu {
+	skip: pixels;
+
+	itemBg: color;
+	itemBgOver: color;
+	itemFg: color;
+	itemFgOver: color;
+	itemFgDisabled: color;
+	itemFgShortcut: color;
+	itemFgShortcutOver: color;
+	itemFgShortcutDisabled: color;
+	itemPadding: margins;
+	itemIconPosition: point;
+	itemStyle: TextStyle;
+	itemToggle: Toggle;
+	itemToggleOver: Toggle;
+	itemToggleShift: pixels;
+
+	separatorPadding: margins;
+	separatorWidth: pixels;
+	separatorFg: color;
+
+	arrow: icon;
+
+	widthMin: pixels;
+	widthMax: pixels;
+
+	ripple: RippleAnimation;
+}
+
+PopupMenu {
+	shadow: Shadow;
+	scrollPadding: margins;
+	animation: PanelAnimation;
+
+	menu: Menu;
+
+	duration: int;
+	showDuration: int;
+}
+
 FlatInput {
 	textColor: color;
 	bgColor: color;
@@ -231,6 +299,7 @@ InputField {
 	borderActive: pixels;
 
 	font: font;
+	menu: PopupMenu;
 
 	width: pixels;
 	heightMin: pixels;
@@ -263,19 +332,6 @@ IconButton {
 	rippleAreaPosition: point;
 	rippleAreaSize: pixels;
 	ripple: RippleAnimation;
-}
-
-Shadow {
-	left: icon;
-	topLeft: icon;
-	top: icon;
-	topRight: icon;
-	right: icon;
-	bottomRight: icon;
-	bottom: icon;
-	bottomLeft: icon;
-	extend: margins;
-	fallback: color;
 }
 
 MediaSlider {
@@ -385,61 +441,6 @@ CallButton {
 	outerRadius: pixels;
 	outerBg: color;
 	label: FlatLabel;
-}
-
-Menu {
-	skip: pixels;
-
-	itemBg: color;
-	itemBgOver: color;
-	itemFg: color;
-	itemFgOver: color;
-	itemFgDisabled: color;
-	itemFgShortcut: color;
-	itemFgShortcutOver: color;
-	itemFgShortcutDisabled: color;
-	itemPadding: margins;
-	itemIconPosition: point;
-	itemStyle: TextStyle;
-	itemToggle: Toggle;
-	itemToggleOver: Toggle;
-	itemToggleShift: pixels;
-
-	separatorPadding: margins;
-	separatorWidth: pixels;
-	separatorFg: color;
-
-	arrow: icon;
-
-	widthMin: pixels;
-	widthMax: pixels;
-
-	ripple: RippleAnimation;
-}
-
-PanelAnimation {
-	startWidth: double;
-	widthDuration: double;
-	startHeight: double;
-	heightDuration: double;
-	startOpacity: double;
-	opacityDuration: double;
-	startFadeTop: double;
-	fadeHeight: double;
-	fadeOpacity: double;
-	fadeBg: color;
-	shadow: Shadow;
-}
-
-PopupMenu {
-	shadow: Shadow;
-	scrollPadding: margins;
-	animation: PanelAnimation;
-
-	menu: Menu;
-
-	duration: int;
-	showDuration: int;
 }
 
 InnerDropdown {
@@ -712,35 +713,6 @@ defaultFlatInput: FlatInput {
 	phDuration: 100;
 }
 
-defaultInputField: InputField {
-	textBg: windowBg;
-	textFg: windowFg;
-	textMargins: margins(0px, 26px, 0px, 4px);
-	textAlign: align(topleft);
-
-	placeholderFg: windowSubTextFg;
-	placeholderFgActive: windowActiveTextFg;
-	placeholderFgError: attentionButtonFg;
-	placeholderMargins: margins(0px, 0px, 0px, 0px);
-	placeholderAlign: align(topleft);
-	placeholderScale: 0.9;
-	placeholderShift: -20px;
-	placeholderFont: font(semibold 14px);
-	duration: 150;
-
-	borderFg: inputBorderFg;
-	borderFgActive: activeLineFg;
-	borderFgError: activeLineFgError;
-
-	border: 1px;
-	borderActive: 2px;
-
-	font: boxTextFont;
-
-	heightMin: 52px;
-	heightMax: 148px;
-}
-
 defaultCheckboxIcon: icon {{ "default_checkbox_check", overviewCheckFgActive, point(4px, 7px) }};
 
 defaultCheck: Check {
@@ -797,6 +769,114 @@ defaultCheckbox: Checkbox {
 	ripple: defaultRippleAnimation;
 
 	disabledOpacity: 0.5;
+}
+
+defaultRoundShadow: Shadow {
+	left: icon {{ "round_shadow_left", windowShadowFg }};
+	topLeft: icon {{ "round_shadow_top_left", windowShadowFg }};
+	top: icon {{ "round_shadow_top", windowShadowFg }};
+	topRight: icon {{ "round_shadow_top_left-flip_horizontal", windowShadowFg }};
+	right: icon {{ "round_shadow_left-flip_horizontal", windowShadowFg }};
+	bottomRight: icon {{ "round_shadow_bottom_left-flip_horizontal", windowShadowFg }};
+	bottom: icon {{ "round_shadow_bottom", windowShadowFg }};
+	bottomLeft: icon {{ "round_shadow_bottom_left", windowShadowFg }};
+	extend: margins(3px, 2px, 3px, 4px);
+	fallback: windowShadowFgFallback;
+}
+defaultEmptyShadow: Shadow {
+	fallback: windowBg;
+}
+
+defaultPanelAnimation: PanelAnimation {
+	startWidth: 0.5;
+	widthDuration: 0.6;
+	startHeight: 0.3;
+	heightDuration: 0.9;
+	startOpacity: 0.2;
+	opacityDuration: 0.3;
+	startFadeTop: 0.;
+	fadeHeight: 0.2;
+	fadeOpacity: 1.0;
+	fadeBg: menuBg;
+	shadow: defaultRoundShadow;
+}
+
+defaultMenuArrow: icon {{ "dropdown_submenu_arrow", menuSubmenuArrowFg }};
+defaultMenuToggle: Toggle(defaultToggle) {
+	untoggledFg: menuIconFg;
+}
+defaultMenuToggleOver: Toggle(defaultToggle) {
+	untoggledFg: menuIconFgOver;
+}
+defaultMenu: Menu {
+	skip: 0px;
+
+	itemBg: windowBg;
+	itemBgOver: windowBgOver;
+	itemFg: windowFg;
+	itemFgOver: windowFgOver;
+	itemFgDisabled: menuFgDisabled;
+	itemFgShortcut: windowSubTextFg;
+	itemFgShortcutOver: windowSubTextFgOver;
+	itemFgShortcutDisabled: menuFgDisabled;
+	itemIconPosition: point(0px, 0px);
+	itemPadding: margins(17px, 8px, 17px, 7px);
+	itemStyle: defaultTextStyle;
+	itemToggle: defaultMenuToggle;
+	itemToggleOver: defaultMenuToggleOver;
+	itemToggleShift: 0px;
+
+	separatorPadding: margins(0px, 5px, 0px, 5px);
+	separatorWidth: 1px;
+	separatorFg: menuSeparatorFg;
+
+	arrow: defaultMenuArrow;
+
+	widthMin: 180px;
+	widthMax: 300px;
+
+	ripple: defaultRippleAnimation;
+}
+defaultPopupMenu: PopupMenu {
+	shadow: defaultRoundShadow;
+	animation: defaultPanelAnimation;
+
+	scrollPadding: margins(0px, 8px, 0px, 8px);
+
+	menu: defaultMenu;
+
+	duration: 150;
+	showDuration: 200;
+}
+
+defaultInputField: InputField {
+	textBg: windowBg;
+	textFg: windowFg;
+	textMargins: margins(0px, 26px, 0px, 4px);
+	textAlign: align(topleft);
+
+	placeholderFg: windowSubTextFg;
+	placeholderFgActive: windowActiveTextFg;
+	placeholderFgError: attentionButtonFg;
+	placeholderMargins: margins(0px, 0px, 0px, 0px);
+	placeholderAlign: align(topleft);
+	placeholderScale: 0.9;
+	placeholderShift: -20px;
+	placeholderFont: font(semibold 14px);
+	duration: 150;
+
+	borderFg: inputBorderFg;
+	borderFgActive: activeLineFg;
+	borderFgError: activeLineFgError;
+
+	border: 1px;
+	borderActive: 2px;
+
+	font: boxTextFont;
+	menu: defaultPopupMenu;
+
+	heightMin: 52px;
+	heightMax: 148px;
 }
 
 defaultIconButton: IconButton {
@@ -940,36 +1020,6 @@ defaultTabsSlider: SettingsSlider(defaultSettingsSlider) {
 	ripple: defaultRippleAnimation;
 }
 
-defaultRoundShadow: Shadow {
-	left: icon {{ "round_shadow_left", windowShadowFg }};
-	topLeft: icon {{ "round_shadow_top_left", windowShadowFg }};
-	top: icon {{ "round_shadow_top", windowShadowFg }};
-	topRight: icon {{ "round_shadow_top_left-flip_horizontal", windowShadowFg }};
-	right: icon {{ "round_shadow_left-flip_horizontal", windowShadowFg }};
-	bottomRight: icon {{ "round_shadow_bottom_left-flip_horizontal", windowShadowFg }};
-	bottom: icon {{ "round_shadow_bottom", windowShadowFg }};
-	bottomLeft: icon {{ "round_shadow_bottom_left", windowShadowFg }};
-	extend: margins(3px, 2px, 3px, 4px);
-	fallback: windowShadowFgFallback;
-}
-defaultEmptyShadow: Shadow {
-	fallback: windowBg;
-}
-
-defaultPanelAnimation: PanelAnimation {
-	startWidth: 0.5;
-	widthDuration: 0.6;
-	startHeight: 0.3;
-	heightDuration: 0.9;
-	startOpacity: 0.2;
-	opacityDuration: 0.3;
-	startFadeTop: 0.;
-	fadeHeight: 0.2;
-	fadeOpacity: 1.0;
-	fadeBg: menuBg;
-	shadow: defaultRoundShadow;
-}
-
 defaultContinuousSlider: MediaSlider {
 	width: 3px;
 	activeFg: mediaPlayerActiveFg;
@@ -1012,53 +1062,6 @@ defaultPeerListCheckbox: RoundImageCheckbox {
 	check: defaultPeerListCheck;
 }
 
-defaultMenuArrow: icon {{ "dropdown_submenu_arrow", menuSubmenuArrowFg }};
-defaultMenuToggle: Toggle(defaultToggle) {
-	untoggledFg: menuIconFg;
-}
-defaultMenuToggleOver: Toggle(defaultToggle) {
-	untoggledFg: menuIconFgOver;
-}
-defaultMenu: Menu {
-	skip: 0px;
-
-	itemBg: windowBg;
-	itemBgOver: windowBgOver;
-	itemFg: windowFg;
-	itemFgOver: windowFgOver;
-	itemFgDisabled: menuFgDisabled;
-	itemFgShortcut: windowSubTextFg;
-	itemFgShortcutOver: windowSubTextFgOver;
-	itemFgShortcutDisabled: menuFgDisabled;
-	itemIconPosition: point(0px, 0px);
-	itemPadding: margins(17px, 8px, 17px, 7px);
-	itemStyle: defaultTextStyle;
-	itemToggle: defaultMenuToggle;
-	itemToggleOver: defaultMenuToggleOver;
-	itemToggleShift: 0px;
-
-	separatorPadding: margins(0px, 5px, 0px, 5px);
-	separatorWidth: 1px;
-	separatorFg: menuSeparatorFg;
-
-	arrow: defaultMenuArrow;
-
-	widthMin: 180px;
-	widthMax: 300px;
-
-	ripple: defaultRippleAnimation;
-}
-defaultPopupMenu: PopupMenu {
-	shadow: defaultRoundShadow;
-	animation: defaultPanelAnimation;
-
-	scrollPadding: margins(0px, 8px, 0px, 8px);
-
-	menu: defaultMenu;
-
-	duration: 150;
-	showDuration: 200;
-}
 defaultInnerDropdown: InnerDropdown {
 	padding: margins(10px, 10px, 10px, 10px);
 	shadow: defaultRoundShadow;

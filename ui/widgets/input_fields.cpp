@@ -3341,7 +3341,7 @@ bool InputField::revertFormatReplace() {
 void InputField::contextMenuEventInner(QContextMenuEvent *e, QMenu *m) {
 	if (const auto menu = m ? m : _inner->createStandardContextMenu()) {
 		addMarkdownActions(menu, e);
-		_contextMenu = base::make_unique_q<PopupMenu>(this, menu);
+		_contextMenu = base::make_unique_q<PopupMenu>(this, menu, _st.menu);
 		_contextMenu->popup(e->globalPos());
 	}
 }
