@@ -130,6 +130,8 @@ void CallButton::paintEvent(QPaintEvent *e) {
 		const auto &s = _stFrom->bgSize;
 		p.setPen(Qt::NoPen);
 		p.setBrush(*_bgOverride);
+
+		PainterHighQualityEnabler hq(p);
 		p.drawEllipse(QRect(_stFrom->bgPosition, QSize(s, s)));
 	} else if (paintFrom) {
 		p.drawPixmap(bgPosition, _bgFrom);
