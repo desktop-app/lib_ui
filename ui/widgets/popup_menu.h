@@ -37,6 +37,9 @@ public:
 	void setDestroyedCallback(Fn<void()> callback) {
 		_destroyedCallback = std::move(callback);
 	}
+	void discardParentReActivate() {
+		_reactivateParent = false;
+	}
 
 	~PopupMenu();
 
@@ -122,6 +125,7 @@ private:
 	bool _deleteOnHide = true;
 	bool _triggering = false;
 	bool _deleteLater = false;
+	bool _reactivateParent = true;
 
 	Fn<void()> _destroyedCallback;
 
