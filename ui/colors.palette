@@ -557,8 +557,9 @@ callMuteRipple: #ffffff12; // phone call popup mute mic and camera ripple effect
 groupCallBg: #131417; // group call popup background
 groupCallActiveFg: #4db8ff; // group call active controls text
 groupCallMembersBg: #1a1c1f; // group call members list background
+groupCallMembersBgOver: #22252a; // group call members list row with mouse over
+groupCallMembersBgRipple: #272b30; // group call member row ripple effect
 groupCallMembersFg: #ffffff; // group call member name text
-groupCallMembersRipple: #22252a; // group call member row ripple effect
 groupCallMemberActiveIcon: #3fe069; // group call active member icon
 groupCallMemberActiveStatus: #67e66d; // group call active member status text
 groupCallMemberInactiveIcon: #61666b; // group call inactive member icon
