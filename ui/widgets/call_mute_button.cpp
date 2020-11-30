@@ -28,13 +28,10 @@ constexpr auto kScaleSmall = 0.704 - 0.1;
 constexpr auto kScaleBigMin = 0.878;
 constexpr auto kScaleSmallMin = 0.926;
 
-constexpr auto kScaleBigMax = kScaleBigMin + kScaleBig;
-constexpr auto kScaleSmallMax = kScaleSmallMin + kScaleSmall;
+constexpr auto kScaleBigMax = (float)(kScaleBigMin + kScaleBig);
+constexpr auto kScaleSmallMax = (float)(kScaleSmallMin + kScaleSmall);
 
-constexpr auto kMainRadiusFactor = 50. / 57.;
-
-constexpr auto kMainMinRadius = 57. * kMainRadiusFactor;
-constexpr auto kMainMaxRadius = 63. * kMainRadiusFactor;
+constexpr auto kMainRadiusFactor = (float)(50. / 57.);
 
 constexpr auto kGlowPaddingFactor = 1.2;
 constexpr auto kGlowMinScale = 0.6;
@@ -42,29 +39,39 @@ constexpr auto kGlowAlpha = 150;
 
 constexpr auto kSwitchStateDuration = 120;
 
-constexpr auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
+auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
 	return {{
 		{
 			.segmentsCount = 6,
 			.minScale = 1.,
-			.minRadius = kMainMinRadius,
-			.maxRadius = kMainMaxRadius,
+			.minRadius = st::callMuteMainBlobMinRadius
+				* kMainRadiusFactor,
+			.maxRadius = st::callMuteMainBlobMaxRadius
+				* kMainRadiusFactor,
 			.speedScale = .4,
 			.alpha = 1.,
 		},
 		{
 			.segmentsCount = 9,
 			.minScale = kScaleSmallMin / kScaleSmallMax,
-			.minRadius = 62 * kScaleSmallMax * kMainRadiusFactor,
-			.maxRadius = 72 * kScaleSmallMax * kMainRadiusFactor,
+			.minRadius = st::callMuteMinorBlobMinRadius
+				* kScaleSmallMax
+				* kMainRadiusFactor,
+			.maxRadius = st::callMuteMinorBlobMaxRadius
+				* kScaleSmallMax
+				* kMainRadiusFactor,
 			.speedScale = 1.,
 			.alpha = (76. / 255.),
 		},
 		{
 			.segmentsCount = 12,
 			.minScale = kScaleBigMin / kScaleBigMax,
-			.minRadius = 65 * kScaleBigMax * kMainRadiusFactor,
-			.maxRadius = 75 * kScaleBigMax * kMainRadiusFactor,
+			.minRadius = st::callMuteMajorBlobMinRadius
+				* kScaleBigMax
+				* kMainRadiusFactor,
+			.maxRadius = st::callMuteMajorBlobMaxRadius
+				* kScaleBigMax
+				* kMainRadiusFactor,
 			.speedScale = 1.,
 			.alpha = (76. / 255.),
 		},
@@ -171,7 +178,9 @@ void BlobsWidget::init() {
 			p.translate(_center, _center);
 			p.setPen(Qt::NoPen);
 			p.setBrush(_blobBrush);
-			p.drawEllipse(QPointF(), kMainMinRadius, kMainMinRadius);
+			const auto radius = st::callMuteMainBlobMinRadius
+				* kMainRadiusFactor;
+			p.drawEllipse(QPointF(), radius, radius);
 			return;
 		}
 
@@ -351,9 +360,9 @@ void CallMuteButton::init() {
 	{
 		auto radius = _state.value(
 		) | rpl::map([](const CallMuteButtonState &state) -> float {
-			return IsConnecting(state.type)
-				? kMainMinRadius
-				: kMainMaxRadius;
+			return (IsConnecting(state.type)
+				? st::callMuteMainBlobMinRadius
+				: st::callMuteMainBlobMaxRadius) * kMainRadiusFactor;
 		}) | rpl::distinct_until_changed();
 		_blobs->setMainRadius(std::move(radius));
 	}

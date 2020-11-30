@@ -1405,6 +1405,13 @@ defaultToast: Toast {
 	durationSlide: 160;
 }
 
+callMuteMainBlobMinRadius: 57px;
+callMuteMainBlobMaxRadius: 63px;
+callMuteMinorBlobMinRadius: 62px;
+callMuteMinorBlobMaxRadius: 72px;
+callMuteMajorBlobMinRadius: 65px;
+callMuteMajorBlobMaxRadius: 75px;
+
 callMuteButtonActiveIcon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
 callMuteButtonActiveInner: IconButton {
 	width: 136px;
