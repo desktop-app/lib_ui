@@ -37,6 +37,9 @@ constexpr auto kGlowPaddingFactor = 1.2;
 constexpr auto kGlowMinScale = 0.6;
 constexpr auto kGlowAlpha = 150;
 
+constexpr auto kOverrideColorBgAlpha = 76;
+constexpr auto kOverrideColorRippleAlpha = 50;
+
 constexpr auto kSwitchStateDuration = 120;
 
 auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
@@ -109,6 +112,10 @@ bool IsMuted(CallMuteButtonType type) {
 
 bool IsConnecting(CallMuteButtonType type) {
 	return (type == CallMuteButtonType::Connecting);
+}
+
+bool IsInactive(CallMuteButtonType type) {
+	return IsConnecting(type) || (type == CallMuteButtonType::ForceMuted);
 }
 
 } // namespace
@@ -280,7 +287,7 @@ void CallMuteButton::init() {
 		lifetime().make_state<CallMuteButtonType>(_state.current().type);
 
 	const auto glowColor = [=](CallMuteButtonType type) {
-		if (IsConnecting(type) || (type == CallMuteButtonType::ForceMuted)) {
+		if (IsInactive(type)) {
 			return st::groupCallBg->c;
 		}
 		auto c = _colors.at(type)[0];
@@ -336,6 +343,8 @@ void CallMuteButton::init() {
 			if (radialShowProgress != _radialShowProgress.current()) {
 				_radialShowProgress = radialShowProgress;
 			}
+
+			overridesColors(previous, type, value);
 		};
 
 		_switchAnimation.stop();
@@ -449,6 +458,37 @@ void CallMuteButton::raise() {
 void CallMuteButton::lower() {
 	_content.lower();
 	_blobs->lower();
+}
+
+void CallMuteButton::overridesColors(
+		CallMuteButtonType fromType,
+		CallMuteButtonType toType,
+		float64 progress) {
+	const auto toInactive = IsInactive(toType);
+	const auto fromInactive = IsInactive(fromType);
+	if (toInactive && (progress == 1)) {
+		_colorOverrides.fire({ std::nullopt, std::nullopt });
+		return;
+	}
+	auto from = _colors.at(fromType)[0];
+	auto to = _colors.at(toType)[0];
+	auto fromRipple = from;
+	auto toRipple = to;
+	if (!toInactive) {
+		toRipple.setAlpha(kOverrideColorRippleAlpha);
+		to.setAlpha(kOverrideColorBgAlpha);
+	}
+	if (!fromInactive) {
+		fromRipple.setAlpha(kOverrideColorRippleAlpha);
+		from.setAlpha(kOverrideColorBgAlpha);
+	}
+	const auto resultBg = anim::color(from, to, progress);
+	const auto resultRipple = anim::color(fromRipple, toRipple, progress);
+	_colorOverrides.fire({ resultBg, resultRipple });
+}
+
+rpl::producer<CallButtonColors> CallMuteButton::colorOverrides() const {
+	return _colorOverrides.events();
 }
 
 rpl::lifetime &CallMuteButton::lifetime() {

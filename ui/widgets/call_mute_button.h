@@ -55,11 +55,17 @@ public:
 	void raise();
 	void lower();
 
+	[[nodiscard]] rpl::producer<CallButtonColors> colorOverrides() const;
+
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:
 	void init();
 	void contentPaint();
+	void overridesColors(
+		CallMuteButtonType fromType,
+		CallMuteButtonType toType,
+		float64 progress);
 
 	rpl::variable<CallMuteButtonState> _state;
 	float _level = 0.;
@@ -75,6 +81,8 @@ private:
 
 	CrossLineAnimation _crossLineMuteAnimation;
 	Animations::Simple _switchAnimation;
+
+	rpl::event_stream<CallButtonColors> _colorOverrides;
 
 };
 
