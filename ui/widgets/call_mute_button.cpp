@@ -167,6 +167,14 @@ void BlobsWidget::init() {
 		Painter p(this);
 		PainterHighQualityEnabler hq(p);
 
+		if (anim::Disabled()) {
+			p.translate(_center, _center);
+			p.setPen(Qt::NoPen);
+			p.setBrush(_blobBrush);
+			p.drawEllipse(QPointF(), kMainMinRadius, kMainMinRadius);
+			return;
+		}
+
 		// Glow.
 		const auto s = kGlowMinScale
 			+ (1. - kGlowMinScale) * _blobs.currentLevel();
