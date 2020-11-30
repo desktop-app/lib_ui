@@ -33,6 +33,9 @@ constexpr auto kScaleSmallMax = kScaleSmallMin + kScaleSmall;
 
 constexpr auto kMainRadiusFactor = 50. / 57.;
 
+constexpr auto kMainMinRadius = 57. * kMainRadiusFactor;
+constexpr auto kMainMaxRadius = 63. * kMainRadiusFactor;
+
 constexpr auto kSwitchStateDuration = 120;
 
 constexpr auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
@@ -40,8 +43,8 @@ constexpr auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
 		{
 			.segmentsCount = 6,
 			.minScale = 1.,
-			.minRadius = 57. * kMainRadiusFactor,
-			.maxRadius = 63. * kMainRadiusFactor,
+			.minRadius = kMainMinRadius,
+			.maxRadius = kMainMaxRadius,
 			.speedScale = .4,
 			.alpha = 1.,
 		},
@@ -105,6 +108,7 @@ public:
 
 	void setLevel(float level);
 	void setBrush(QBrush brush);
+	void setMainRadius(rpl::producer<float> &&radius);
 
 private:
 	void init();
@@ -176,6 +180,10 @@ void BlobsWidget::setBrush(QBrush brush) {
 
 void BlobsWidget::setLevel(float level) {
 	_blobs.setLevel(level);
+}
+
+void BlobsWidget::setMainRadius(rpl::producer<float> &&radius) {
+	_blobs.setRadiusAt(std::move(radius), 0, true);
 }
 
 CallMuteButton::CallMuteButton(
@@ -275,6 +283,17 @@ void CallMuteButton::init() {
 			icon.width(),
 			icon.height());
 	}, lifetime());
+
+	// Main blob radius.
+	{
+		auto radius = _state.value(
+		) | rpl::map([](const CallMuteButtonState &state) -> float {
+			return IsConnecting(state.type)
+				? kMainMinRadius
+				: kMainMaxRadius;
+		}) | rpl::distinct_until_changed();
+		_blobs->setMainRadius(std::move(radius));
+	}
 
 	// Paint.
 	auto filterCallback = [=](not_null<QEvent*> e) {
