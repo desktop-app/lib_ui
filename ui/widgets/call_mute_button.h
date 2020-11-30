@@ -67,6 +67,8 @@ private:
 		CallMuteButtonType toType,
 		float64 progress);
 
+	void setEnableMouse(bool value);
+
 	rpl::variable<CallMuteButtonState> _state;
 	float _level = 0.;
 	float64 _crossLineProgress = 0.;

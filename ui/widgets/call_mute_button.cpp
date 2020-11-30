@@ -285,6 +285,7 @@ void CallMuteButton::init() {
 	// State type.
 	const auto previousType =
 		lifetime().make_state<CallMuteButtonType>(_state.current().type);
+	setEnableMouse(false);
 
 	const auto glowColor = [=](CallMuteButtonType type) {
 		if (IsInactive(type)) {
@@ -301,6 +302,10 @@ void CallMuteButton::init() {
 	}) | rpl::start_with_next([=](CallMuteButtonType type) {
 		const auto previous = *previousType;
 		*previousType = type;
+
+		if (IsInactive(type) && !IsInactive(previous)) {
+			setEnableMouse(false);
+		}
 
 		const auto crossFrom = IsMuted(previous) ? 0. : 1.;
 		const auto crossTo = IsMuted(type) ? 0. : 1.;
@@ -347,6 +352,12 @@ void CallMuteButton::init() {
 			}
 
 			overridesColors(previous, type, value);
+
+			if (value == to) {
+				if (!IsInactive(type) && IsInactive(previous)) {
+					setEnableMouse(true);
+				}
+			}
 		};
 
 		_switchAnimation.stop();
@@ -460,6 +471,10 @@ void CallMuteButton::raise() {
 void CallMuteButton::lower() {
 	_content.lower();
 	_blobs->lower();
+}
+
+void CallMuteButton::setEnableMouse(bool value) {
+	_content.setAttribute(Qt::WA_TransparentForMouseEvents, !value);
 }
 
 void CallMuteButton::overridesColors(
