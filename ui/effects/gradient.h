@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/flat_map.h"
 #include "ui/effects/animation_value.h"
 
 #include <QtGui/QLinearGradient>
@@ -62,6 +63,77 @@ private:
 
 };
 
+template <typename T>
+class linear_gradients {
+public:
+	linear_gradients(
+		base::flat_map<T, std::vector<QColor>> colors,
+		QPointF point1,
+		QPointF point2)
+	: _colors(colors)
+	, _point1(point1)
+	, _point2(point2) {
+		Expects(_colors.size() > 0);
+
+		cache_gradients();
+	}
+
+	QLinearGradient gradient(T state1, T state2, float64 b_ratio) const {
+		if (b_ratio == 0.) {
+			return _gradients.find(state1)->second;
+		} else if (b_ratio == 1.) {
+			return _gradients.find(state2)->second;
+		}
+
+		auto gradient = QLinearGradient(_point1, _point2);
+		const auto size = _colors.front().second.size();
+		const auto colors1 = _colors.find(state1);
+		const auto colors2 = _colors.find(state2);
+
+		Assert(colors1 != end(_colors));
+		Assert(colors2 != end(_colors));
+
+		for (auto i = 0; i < size; i++) {
+			auto c = color(colors1->second[i], colors2->second[i], b_ratio);
+			gradient.setColorAt(i / (size - 1), std::move(c));
+		}
+		return gradient;
+	}
+
+	void set_points(QPointF point1, QPointF point2) {
+		if (_point1 == point1 && _point2 == point2) {
+			return;
+		}
+		_point1 = point1;
+		_point2 = point2;
+		cache_gradients();
+	}
+
+private:
+	void cache_gradients() {
+		_gradients = base::flat_map<T, QLinearGradient>();
+		for (const auto &[key, value] : _colors) {
+			_gradients.emplace(key, gradient(value));
+		}
+	}
+
+	QLinearGradient gradient(const std::vector<QColor> &colors) const {
+		auto gradient = QLinearGradient(_point1, _point2);
+		const auto size = colors.size();
+		for (auto i = 0; i < size; i++) {
+			gradient.setColorAt(i / (size - 1), colors[i]);
+		}
+		return gradient;
+	}
+
+	base::flat_map<T, std::vector<QColor>> _colors;
+	QPointF _point1;
+	QPointF _point2;
+
+	base::flat_map<T, QLinearGradient> _gradients;
+
+};
+
 class radial_gradient {
 public:
 	radial_gradient(
@@ -108,6 +180,77 @@ private:
 
 	QRadialGradient _gradient_from;
 	QRadialGradient _gradient_to;
+
+};
+
+template <typename T>
+class radial_gradients {
+public:
+	radial_gradients(
+		base::flat_map<T, std::vector<QColor>> colors,
+		QPointF center,
+		float radius)
+	: _colors(colors)
+	, _center(center)
+	, _radius(radius) {
+		Expects(_colors.size() > 0);
+
+		cache_gradients();
+	}
+
+	QRadialGradient gradient(T state1, T state2, float64 b_ratio) const {
+		if (b_ratio == 0.) {
+			return _gradients.find(state1)->second;
+		} else if (b_ratio == 1.) {
+			return _gradients.find(state2)->second;
+		}
+
+		auto gradient = QRadialGradient(_center, _radius);
+		const auto size = _colors.front().second.size();
+		const auto colors1 = _colors.find(state1);
+		const auto colors2 = _colors.find(state2);
+
+		Assert(colors1 != end(_colors));
+		Assert(colors2 != end(_colors));
+
+		for (auto i = 0; i < size; i++) {
+			auto c = color(colors1->second[i], colors2->second[i], b_ratio);
+			gradient.setColorAt(i / (size - 1), std::move(c));
+		}
+		return gradient;
+	}
+
+	void set_points(QPointF center, float radius) {
+		if (_center == center && _radius == radius) {
+			return;
+		}
+		_center = center;
+		_radius = radius;
+		cache_gradients();
+	}
+
+private:
+	void cache_gradients() {
+		_gradients = base::flat_map<T, QRadialGradient>();
+		for (const auto &[key, value] : _colors) {
+			_gradients.emplace(key, gradient(value));
+		}
+	}
+
+	QRadialGradient gradient(const std::vector<QColor> &colors) const {
+		auto gradient = QRadialGradient(_center, _radius);
+		const auto size = colors.size();
+		for (auto i = 0; i < size; i++) {
+			gradient.setColorAt(i / (size - 1), colors[i]);
+		}
+		return gradient;
+	}
+
+	base::flat_map<T, std::vector<QColor>> _colors;
+	QPointF _center;
+	float _radius;
+
+	base::flat_map<T, QRadialGradient> _gradients;
 
 };
 
