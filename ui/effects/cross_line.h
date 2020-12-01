@@ -16,6 +16,7 @@ class CrossLineAnimation {
 public:
 	CrossLineAnimation(
 		const style::CrossLineAnimation &st,
+		bool reversed = false,
 		float angle = 315);
 
 	void paint(Painter &p, QPoint position, float64 progress);
@@ -25,6 +26,7 @@ private:
 	QImage image(float64 progress) const;
 
 	const style::CrossLineAnimation &_st;
+	const bool _reversed;
 	const QPen _transparentPen;
 	const QPen _strokePen;
 	QLineF _line;

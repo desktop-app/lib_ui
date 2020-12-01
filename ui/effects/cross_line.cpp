@@ -12,8 +12,10 @@ namespace Ui {
 
 CrossLineAnimation::CrossLineAnimation(
 	const style::CrossLineAnimation &st,
+	bool reversed,
 	float angle)
 : _st(st)
+, _reversed(reversed)
 , _transparentPen(Qt::transparent, st.stroke, Qt::SolidLine, Qt::RoundCap)
 , _strokePen(st.fg, st.stroke, Qt::SolidLine, Qt::RoundCap)
 , _line(st.startPosition, st.endPosition)
@@ -59,11 +61,11 @@ QImage CrossLineAnimation::image(float64 progress) const {
 	_st.icon.paint(q, 0, 0, _st.icon.width());
 
 	q.setPen(_strokePen);
-	q.drawLine(bottomLine);
+	q.drawLine(_reversed ? topLine : bottomLine);
 
 	q.setCompositionMode(QPainter::CompositionMode_Source);
 	q.setPen(_transparentPen);
-	q.drawLine(topLine);
+	q.drawLine(_reversed ? bottomLine : topLine);
 
 	return frame;
 }
