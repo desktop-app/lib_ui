@@ -15,7 +15,7 @@ Blobs::Blobs(
 	float levelDuration,
 	float maxLevel)
 : _maxLevel(maxLevel)
-, _blobDatas(blobDatas)
+, _blobDatas(std::move(blobDatas))
 , _levelValue(levelDuration) {
 	init();
 }
@@ -75,6 +75,9 @@ void Blobs::paint(Painter &p, const QBrush &brush) {
 			p.setOpacity(opacity * alpha);
 		}
 		_blobs[i].paint(p, brush);
+		if (alpha != 1.) {
+			p.setOpacity(opacity);
+		}
 	}
 }
 

@@ -31,13 +31,9 @@ BlobBezier::BlobBezier(int n, float minScale, float minSpeed, float maxSpeed)
 , _minScale(minScale)
 , _minSpeed(minSpeed ? minSpeed : kMinSpeed)
 , _maxSpeed(maxSpeed ? maxSpeed : kMaxSpeed)
-, _pen(Qt::NoBrush, 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin) {
-	_radius.resize(n);
-	_angle.resize(n);
-	_radiusNext.resize(n);
-	_angleNext.resize(n);
-	_progress.resize(n);
-	_speed.resize(n);
+, _pen(Qt::NoBrush, 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin)
+, _segmentAngle(360. / n)
+, _segments(n) {
 }
 
 void BlobBezier::paint(Painter &p, const QBrush &brush) {
@@ -51,17 +47,22 @@ void BlobBezier::paint(Painter &p, const QBrush &brush) {
 	}
 
 	for (auto i = 0; i < _segmentsCount; i++) {
-		const auto progress = _progress[i];
+		const auto &segment = _segments[i];
+
 		const auto nextIndex = i + 1 < _segmentsCount ? (i + 1) : 0;
-		const auto progressNext = _progress[nextIndex];
-		const auto r1 = _radius[i] * (1. - progress)
-			+ _radiusNext[i] * progress;
-		const auto r2 = _radius[nextIndex] * (1. - progressNext)
-			+ _radiusNext[nextIndex] * progressNext;
-		const auto angle1 = _angle[i] * (1. - progress)
-			+ _angleNext[i] * progress;
-		const auto angle2 = _angle[nextIndex] * (1. - progressNext)
-			+ _angleNext[nextIndex] * progressNext;
+		const auto nextSegment = _segments[nextIndex];
+
+		const auto progress = segment.progress;
+		const auto progressNext = nextSegment.progress;
+
+		const auto r1 = segment.radius * (1. - progress)
+			+ segment.radiusNext * progress;
+		const auto r2 = nextSegment.radius * (1. - progressNext)
+			+ nextSegment.radiusNext * progressNext;
+		const auto angle1 = segment.angle * (1. - progress)
+			+ segment.angleNext * progress;
+		const auto angle2 = nextSegment.angle * (1. - progressNext)
+			+ nextSegment.angleNext * progressNext;
 
 		const auto l = _segmentLength * (std::min(r1, r2)
 			+ (std::max(r1, r2) - std::min(r1, r2)) / 2.);
@@ -95,35 +96,33 @@ void BlobBezier::paint(Painter &p, const QBrush &brush) {
 
 void BlobBezier::generateBlob() {
 	for (auto i = 0; i < _segmentsCount; i++) {
-		generateBlob(_radius, _angle, i);
-		generateBlob(_radiusNext, _angleNext, i);
-		_progress[i] = 0;
+		auto &segment = _segments[i];
+		generateBlob(segment.radius, segment.angle, i);
+		generateBlob(segment.radiusNext, segment.angleNext, i);
+		segment.progress = 0.;
 	}
 }
 
-void BlobBezier::generateBlob(
-		std::vector<float> &radius,
-		std::vector<float> &angle,
-		int i) {
-	const auto angleSegment = 360. / _segmentsCount;
-	const auto angleDiff = angleSegment * 0.05;
+void BlobBezier::generateBlob(float &radius, float &angle, int i) {
+	const auto angleDiff = _segmentAngle * 0.05;
 	const auto radDiff = _maxRadius - _minRadius;
 
-	radius[i] = _minRadius + std::abs(RandomAdditional()) * radDiff;
-	angle[i] = angleSegment * i + RandomAdditional() * angleDiff;
-	_speed[i] = 0.017 + 0.003 * std::abs(RandomAdditional());
+	radius = _minRadius + std::abs(RandomAdditional()) * radDiff;
+	angle = _segmentAngle * i + RandomAdditional() * angleDiff;
+	_segments[i].speed = 0.017 + 0.003 * std::abs(RandomAdditional());
 }
 
 void BlobBezier::update(float level, float speedScale) {
 	_scale = level;
 	for (auto i = 0; i < _segmentsCount; i++) {
-		_progress[i] += (_speed[i] * _minSpeed)
-			+ level * _speed[i] * _maxSpeed * speedScale;
-		if (_progress[i] >= 1) {
-			_progress[i] = 0.;
-			_radius[i] = _radiusNext[i];
-			_angle[i] = _angleNext[i];
-			generateBlob(_radiusNext, _angleNext, i);
+		auto &segment = _segments[i];
+		segment.progress += (segment.speed * _minSpeed)
+			+ level * segment.speed * _maxSpeed * speedScale;
+		if (segment.progress >= 1) {
+			segment.progress = 0.;
+			segment.radius = segment.radiusNext;
+			segment.angle = segment.angleNext;
+			generateBlob(segment.radiusNext, segment.angleNext, i);
 		}
 	}
 }

@@ -18,15 +18,20 @@ public:
 	void update(float level, float speedScale);
 	void generateBlob();
 
-	void setRadius(float min, float max);
 	void setMinRadius(float value);
 	void setMaxRadius(float value);
 
 private:
-	void generateBlob(
-		std::vector<float> &radius,
-		std::vector<float> &angle,
-		int i);
+	struct Segment {
+		float radius = 0.;
+		float angle = 0.;
+		float radiusNext = 0.;
+		float angleNext = 0.;
+		float progress = 0.;
+		float speed = 0.;
+	};
+
+	void generateBlob(float &radius, float &angle, int i);
 
 	const int _segmentsCount;
 	const float64 _segmentLength;
@@ -34,13 +39,9 @@ private:
 	const float _minSpeed;
 	const float _maxSpeed;
 	const QPen _pen;
+	const float _segmentAngle;
 
-	std::vector<float> _radius;
-	std::vector<float> _angle;
-	std::vector<float> _radiusNext;
-	std::vector<float> _angleNext;
-	std::vector<float> _progress;
-	std::vector<float> _speed;
+	std::vector<Segment> _segments;
 
 	float64 _scale = 0;
 	float _minRadius = 0.;
