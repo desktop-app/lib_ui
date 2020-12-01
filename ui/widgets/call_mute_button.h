@@ -79,7 +79,7 @@ private:
 	CallButton _content;
 
 	std::unique_ptr<InfiniteRadialAnimation> _radial;
-	const std::unordered_map<CallMuteButtonType, std::vector<QColor>> _colors;
+	const base::flat_map<CallMuteButtonType, std::vector<QColor>> _colors;
 
 	CrossLineAnimation _crossLineMuteAnimation;
 	Animations::Simple _switchAnimation;

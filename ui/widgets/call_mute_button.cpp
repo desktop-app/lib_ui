@@ -7,6 +7,8 @@
 #include "ui/widgets/call_mute_button.h"
 
 #include "base/event_filter.h"
+#include "base/flat_map.h"
+#include "ui/effects/gradient.h"
 #include "ui/effects/radial_animation.h"
 #include "ui/paint/blobs.h"
 #include "ui/painter.h"
@@ -82,22 +84,23 @@ auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
 }
 
 auto Colors() {
-	return std::unordered_map<CallMuteButtonType, std::vector<QColor>>{
+	using Vector = std::vector<QColor>;
+	return base::flat_map<CallMuteButtonType, Vector>{
 		{
 			CallMuteButtonType::ForceMuted,
-			{ st::callIconBg->c, st::callIconBg->c }
+			Vector{ st::callIconBg->c, st::callIconBg->c }
 		},
 		{
 			CallMuteButtonType::Active,
-			{ st::groupCallLive1->c, st::groupCallLive2->c }
+			Vector{ st::groupCallLive1->c, st::groupCallLive2->c }
 		},
 		{
 			CallMuteButtonType::Connecting,
-			{ st::callIconBg->c, st::callIconBg->c }
+			Vector{ st::callIconBg->c, st::callIconBg->c }
 		},
 		{
 			CallMuteButtonType::Muted,
-			{ st::groupCallMuted1->c, st::groupCallMuted2->c }
+			Vector{ st::groupCallMuted1->c, st::groupCallMuted2->c }
 		},
 	};
 }
@@ -160,12 +163,6 @@ void BlobsWidget::init() {
 		const auto s = _blobs.maxRadius() * 2 * kGlowPaddingFactor;
 		resize(s, s);
 	}
-
-	const auto gradient = anim::linear_gradient(
-		{ st::groupCallMuted1->c, st::groupCallMuted2->c },
-		{ st::groupCallLive1->c, st::groupCallLive2->c },
-		QPoint(0, height()),
-		QPoint(width(), 0));
 
 	sizeValue(
 	) | rpl::start_with_next([=](QSize size) {
@@ -287,14 +284,28 @@ void CallMuteButton::init() {
 		lifetime().make_state<CallMuteButtonType>(_state.current().type);
 	setEnableMouse(false);
 
-	const auto glowColor = [=](CallMuteButtonType type) {
-		if (IsInactive(type)) {
-			return st::groupCallBg->c;
+	const auto blobsInner = _blobs->innerRect();
+	auto linearGradients = anim::linear_gradients<CallMuteButtonType>(
+		_colors,
+		QPointF(blobsInner.x(), blobsInner.y() + blobsInner.height()),
+		QPointF(blobsInner.x() + blobsInner.width(), blobsInner.y()));
+
+	auto glowColors = [&] {
+		auto copy = _colors;
+		for (auto &[type, colors] : copy) {
+			if (IsInactive(type)) {
+				colors[0] = st::groupCallBg->c;
+			} else {
+				colors[0].setAlpha(kGlowAlpha);
+			}
+			colors[1] = QColor(Qt::transparent);
 		}
-		auto c = _colors.at(type)[0];
-		c.setAlpha(kGlowAlpha);
-		return c;
-	};
+		return copy;
+	}();
+	auto glows = anim::radial_gradients<CallMuteButtonType>(
+		std::move(glowColors),
+		blobsInner.center(),
+		_blobs->width() / 2);
 
 	_state.value(
 	) | rpl::map([](const CallMuteButtonState &state) {
@@ -313,27 +324,16 @@ void CallMuteButton::init() {
 		const auto radialShowFrom = IsConnecting(previous) ? 1. : 0.;
 		const auto radialShowTo = IsConnecting(type) ? 1. : 0.;
 
-		const auto blobsInner = _blobs->innerRect();
-		const auto gradient = anim::linear_gradient(
-			_colors.at(previous),
-			_colors.at(type),
-			QPoint(blobsInner.x(), blobsInner.y() + blobsInner.height()),
-			QPoint(blobsInner.x() + blobsInner.width(), blobsInner.y()));
-
-		const auto glow = anim::radial_gradient(
-			{ glowColor(previous), Qt::transparent },
-			{ glowColor(type), Qt::transparent },
-			blobsInner.center(),
-			_blobs->width() / 2);
-
 		const auto from = _switchAnimation.animating()
 			? (1. - _switchAnimation.value(0.))
 			: 0.;
 		const auto to = 1.;
 
 		auto callback = [=](float64 value) {
-			_blobs->setBlobBrush(QBrush(gradient.gradient(value)));
-			_blobs->setGlowBrush(QBrush(glow.gradient(value)));
+			_blobs->setBlobBrush(QBrush(
+				linearGradients.gradient(previous, type, value)));
+			_blobs->setGlowBrush(QBrush(
+				glows.gradient(previous, type, value)));
 			_blobs->update();
 
 			const auto crossProgress = (crossFrom == crossTo)
@@ -487,8 +487,8 @@ void CallMuteButton::overridesColors(
 		_colorOverrides.fire({ std::nullopt, std::nullopt });
 		return;
 	}
-	auto from = _colors.at(fromType)[0];
-	auto to = _colors.at(toType)[0];
+	auto from = _colors.find(fromType)->second[0];
+	auto to = _colors.find(toType)->second[0];
 	auto fromRipple = from;
 	auto toRipple = to;
 	if (!toInactive) {
