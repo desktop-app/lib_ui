@@ -144,6 +144,8 @@ private:
 	int _center = 0;
 	QRect _inner;
 
+	crl::time _blobsLastTime = 0;
+
 	Animations::Basic _animation;
 
 };
@@ -152,7 +154,8 @@ BlobsWidget::BlobsWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
 , _blobs(MuteBlobs() | ranges::to_vector, kLevelDuration, kMaxLevel)
 , _blobBrush(Qt::transparent)
-, _glowBrush(Qt::transparent) {
+, _glowBrush(Qt::transparent)
+, _blobsLastTime(crl::now()) {
 	init();
 }
 
@@ -203,8 +206,9 @@ void BlobsWidget::init() {
 	}, lifetime());
 
 	_animation.init([=](crl::time now) {
-		const auto dt = now - _animation.started();
-		_blobs.updateLevel(dt);
+		_blobs.updateLevel(now - _blobsLastTime);
+		_blobsLastTime = now;
+
 		update();
 		return true;
 	});
