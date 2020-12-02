@@ -19,18 +19,30 @@ public:
 		bool reversed = false,
 		float angle = 315);
 
-	void paint(Painter &p, QPoint position, float64 progress);
-	void paint(Painter &p, int left, int top, float64 progress);
+	void paint(
+		Painter &p,
+		QPoint position,
+		float64 progress,
+		std::optional<QColor> colorOverride = std::nullopt);
+	void paint(
+		Painter &p,
+		int left,
+		int top,
+		float64 progress,
+		std::optional<QColor> colorOverride = std::nullopt);
+
+	void invalidate();
 
 private:
-	QImage image(float64 progress) const;
+	void fillFrame(float64 progress, std::optional<QColor> colorOverride);
 
 	const style::CrossLineAnimation &_st;
 	const bool _reversed;
 	const QPen _transparentPen;
 	const QPen _strokePen;
 	QLineF _line;
-	const QImage _completeCross;
+	QImage _frame;
+	QImage _completeCross;
 
 };
 

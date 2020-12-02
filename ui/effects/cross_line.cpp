@@ -18,56 +18,82 @@ CrossLineAnimation::CrossLineAnimation(
 , _reversed(reversed)
 , _transparentPen(Qt::transparent, st.stroke, Qt::SolidLine, Qt::RoundCap)
 , _strokePen(st.fg, st.stroke, Qt::SolidLine, Qt::RoundCap)
-, _line(st.startPosition, st.endPosition)
-, _completeCross(image(1.)) {
+, _line(st.startPosition, st.endPosition) {
 	_line.setAngle(angle);
 }
 
 void CrossLineAnimation::paint(
 		Painter &p,
 		QPoint position,
-		float64 progress) {
-	paint(p, position.x(), position.y(), progress);
+		float64 progress,
+		std::optional<QColor> colorOverride) {
+	paint(p, position.x(), position.y(), progress, colorOverride);
 }
 
 void CrossLineAnimation::paint(
 		Painter &p,
 		int left,
 		int top,
-		float64 progress) {
+		float64 progress,
+		std::optional<QColor> colorOverride) {
 	if (progress == 0.) {
-		_st.icon.paint(p, left, top, _st.icon.width());
+		if (colorOverride) {
+			_st.icon.paint(p, left, top, _st.icon.width(), *colorOverride);
+		} else {
+			_st.icon.paint(p, left, top, _st.icon.width());
+		}
 	} else if (progress == 1.) {
+		if (_completeCross.isNull()) {
+			fillFrame(progress, colorOverride);
+			_completeCross = _frame;
+		}
 		p.drawImage(left, top, _completeCross);
 	} else {
-		p.drawImage(left, top, image(progress));
+		fillFrame(progress, colorOverride);
+		p.drawImage(left, top, _frame);
 	}
 }
 
-QImage CrossLineAnimation::image(float64 progress) const {
+void CrossLineAnimation::fillFrame(
+		float64 progress,
+		std::optional<QColor> colorOverride) {
 	const auto ratio = style::DevicePixelRatio();
-	auto frame = QImage(
-		QSize(_st.icon.width() * ratio, _st.icon.height() * ratio),
-		QImage::Format_ARGB32_Premultiplied);
-	frame.setDevicePixelRatio(ratio);
-	frame.fill(Qt::transparent);
+	if (_frame.isNull()) {
+		_frame = QImage(
+			_st.icon.size() * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		_frame.setDevicePixelRatio(ratio);
+	}
+	_frame.fill(Qt::transparent);
 
 	auto topLine = _line;
 	topLine.setLength(topLine.length() * progress);
 	auto bottomLine = topLine.translated(0, _strokePen.widthF() + 1);
 
-	Painter q(&frame);
+	Painter q(&_frame);
 	PainterHighQualityEnabler hq(q);
-	_st.icon.paint(q, 0, 0, _st.icon.width());
+	if (colorOverride) {
+		_st.icon.paint(q, 0, 0, _st.icon.width(), *colorOverride);
+	} else {
+		_st.icon.paint(q, 0, 0, _st.icon.width());
+	}
 
-	q.setPen(_strokePen);
+	if (colorOverride) {
+		auto pen = _strokePen;
+		pen.setColor(*colorOverride);
+		q.setPen(pen);
+	} else {
+		q.setPen(_strokePen);
+	}
 	q.drawLine(_reversed ? topLine : bottomLine);
 
 	q.setCompositionMode(QPainter::CompositionMode_Source);
 	q.setPen(_transparentPen);
 	q.drawLine(_reversed ? bottomLine : topLine);
+}
 
-	return frame;
+void CrossLineAnimation::invalidate() {
+	_completeCross = QImage();
 }
 
 } // namespace Ui

@@ -258,6 +258,11 @@ CallMuteButton::CallMuteButton(
 , _colors(Colors())
 , _crossLineMuteAnimation(st::callMuteCrossLine) {
 	init();
+
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		_crossLineMuteAnimation.invalidate();
+	}, lifetime());
 }
 
 void CallMuteButton::init() {
