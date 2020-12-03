@@ -198,6 +198,9 @@ PRIVATE
     ui/ui_log.h
     ui/ui_utility.cpp
     ui/ui_utility.h
+
+    ui/ui_pch.h
+
     emoji_suggestions/emoji_suggestions.cpp
     emoji_suggestions/emoji_suggestions.h
     emoji_suggestions/emoji_suggestions_helper.h
