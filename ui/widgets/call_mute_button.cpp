@@ -148,6 +148,7 @@ private:
 	QRect _inner;
 
 	crl::time _blobsLastTime = 0;
+	crl::time _blobsHideLastTime = 0;
 
 	Animations::Basic _animation;
 
@@ -174,6 +175,18 @@ BlobsWidget::BlobsWidget(
 		}) | rpl::distinct_until_changed();
 		_blobs.setRadiusesAt(std::move(radiusesChange), i);
 	}
+
+	std::move(
+		hideBlobs
+	) | rpl::start_with_next([=](bool hide) {
+		if (hide) {
+			setLevel(0.);
+		}
+		_blobsHideLastTime = hide ? crl::now() : 0;
+		if (!hide && !_animation.animating()) {
+			_animation.start();
+		}
+	}, lifetime());
 }
 
 void BlobsWidget::init() {
@@ -223,6 +236,11 @@ void BlobsWidget::init() {
 	}, lifetime());
 
 	_animation.init([=](crl::time now) {
+		if (const auto &last = _blobsHideLastTime; (last > 0)
+			&& (now - last >= Paint::Blobs::kHideBlobsDuration)) {
+			_animation.stop();
+			return false;
+		}
 		_blobs.updateLevel(now - _blobsLastTime);
 		_blobsLastTime = now;
 
@@ -258,19 +276,25 @@ void BlobsWidget::setGlowBrush(QBrush brush) {
 }
 
 void BlobsWidget::setLevel(float level) {
+	if (_blobsHideLastTime) {
+		 return;
+	}
 	_blobs.setLevel(level);
 }
 
 CallMuteButton::CallMuteButton(
 	not_null<RpWidget*> parent,
+	rpl::producer<bool> &&hideBlobs,
 	CallMuteButtonState initial)
 : _state(initial)
 , _blobs(base::make_unique_q<BlobsWidget>(
 	parent,
-	_state.value(
-	) | rpl::map([](const CallMuteButtonState &state) {
-		return IsConnecting(state.type);
-	})))
+	rpl::merge(
+		std::move(hideBlobs),
+		_state.value(
+		) | rpl::map([](const CallMuteButtonState &state) {
+			return IsConnecting(state.type);
+		}))))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
 , _radial(nullptr)
 , _colors(Colors())

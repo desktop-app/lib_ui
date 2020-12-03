@@ -42,6 +42,8 @@ public:
 	[[nodiscard]] int size() const;
 	[[nodiscard]] float64 currentLevel() const;
 
+	static constexpr auto kHideBlobsDuration = 2000;
+
 private:
 	void init();
 

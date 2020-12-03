@@ -34,6 +34,7 @@ class CallMuteButton final {
 public:
 	explicit CallMuteButton(
 		not_null<RpWidget*> parent,
+		rpl::producer<bool> &&hideBlobs,
 		CallMuteButtonState initial = CallMuteButtonState());
 	~CallMuteButton();
 
