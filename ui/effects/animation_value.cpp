@@ -13,7 +13,7 @@
 namespace anim {
 namespace {
 
-bool AnimationsDisabled = false;
+rpl::variable<bool> AnimationsDisabled = false;
 
 } // namespace
 
@@ -64,8 +64,12 @@ transition easeOutQuint = [](const float64 &delta, const float64 &dt) {
 	return delta * (t2 * t2 * t + 1);
 };
 
+rpl::producer<bool> Disables() {
+	return AnimationsDisabled.value();
+};
+
 bool Disabled() {
-	return AnimationsDisabled;
+	return AnimationsDisabled.current();
 }
 
 void SetDisabled(bool disabled) {

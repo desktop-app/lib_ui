@@ -344,6 +344,7 @@ QPainterPath path(QPointF (&from)[N]) {
 	return result;
 }
 
+rpl::producer<bool> Disables();
 bool Disabled();
 void SetDisabled(bool disabled);
 
