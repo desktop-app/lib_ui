@@ -211,16 +211,6 @@ void BlobsWidget::init() {
 		Painter p(this);
 		PainterHighQualityEnabler hq(p);
 
-		if (anim::Disabled()) {
-			p.translate(_center, _center);
-			p.setPen(Qt::NoPen);
-			p.setBrush(_blobBrush);
-			const auto radius = st::callMuteMainBlobMinRadius
-				* kMainRadiusFactor;
-			p.drawEllipse(QPointF(), radius, radius);
-			return;
-		}
-
 		// Glow.
 		const auto s = kGlowMinScale
 			+ (1. - kGlowMinScale) * _blobs.currentLevel();
@@ -289,12 +279,17 @@ CallMuteButton::CallMuteButton(
 : _state(initial)
 , _blobs(base::make_unique_q<BlobsWidget>(
 	parent,
-	rpl::merge(
-		std::move(hideBlobs),
-		_state.value(
-		) | rpl::map([](const CallMuteButtonState &state) {
-			return IsConnecting(state.type);
-		}))))
+	rpl::combine(
+		anim::Disables(),
+		rpl::merge(
+			std::move(hideBlobs),
+			_state.value(
+			) | rpl::map([](const CallMuteButtonState &state) {
+				return IsConnecting(state.type);
+			}))
+	) | rpl::map([](bool animDisabled, bool hide) {
+		return !(!animDisabled && !hide);
+	})))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
 , _radial(nullptr)
 , _colors(Colors())
