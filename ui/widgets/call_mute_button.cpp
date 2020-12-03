@@ -20,6 +20,8 @@ namespace Ui {
 
 namespace {
 
+using Radiuses = Paint::BlobBezier::Radiuses;
+
 constexpr auto kMaxLevel = 1.;
 
 constexpr auto kLevelDuration = 100. + 500. * 0.33;
@@ -125,12 +127,13 @@ bool IsInactive(CallMuteButtonType type) {
 
 class BlobsWidget final : public RpWidget {
 public:
-	BlobsWidget(not_null<RpWidget*> parent);
+	BlobsWidget(
+		not_null<RpWidget*> parent,
+		rpl::producer<bool> &&hideBlobs);
 
 	void setLevel(float level);
 	void setBlobBrush(QBrush brush);
 	void setGlowBrush(QBrush brush);
-	void setMainRadius(rpl::producer<float> &&radius);
 
 	[[nodiscard]] QRect innerRect() const;
 
@@ -150,13 +153,27 @@ private:
 
 };
 
-BlobsWidget::BlobsWidget(not_null<RpWidget*> parent)
+BlobsWidget::BlobsWidget(
+	not_null<RpWidget*> parent,
+	rpl::producer<bool> &&hideBlobs)
 : RpWidget(parent)
 , _blobs(MuteBlobs() | ranges::to_vector, kLevelDuration, kMaxLevel)
 , _blobBrush(Qt::transparent)
 , _glowBrush(Qt::transparent)
 , _blobsLastTime(crl::now()) {
 	init();
+
+	for (auto i = 0; i < _blobs.size(); i++) {
+		const auto radiuses = _blobs.radiusesAt(i);
+		auto radiusesChange = rpl::duplicate(
+			hideBlobs
+		) | rpl::map([=](bool hide) -> Radiuses {
+			return hide
+				? Radiuses{ radiuses.min, radiuses.min }
+				: radiuses;
+		}) | rpl::distinct_until_changed();
+		_blobs.setRadiusesAt(std::move(radiusesChange), i);
+	}
 }
 
 void BlobsWidget::init() {
@@ -244,15 +261,16 @@ void BlobsWidget::setLevel(float level) {
 	_blobs.setLevel(level);
 }
 
-void BlobsWidget::setMainRadius(rpl::producer<float> &&radius) {
-	_blobs.setRadiusAt(std::move(radius), 0, true);
-}
-
 CallMuteButton::CallMuteButton(
 	not_null<RpWidget*> parent,
 	CallMuteButtonState initial)
 : _state(initial)
-, _blobs(base::make_unique_q<BlobsWidget>(parent))
+, _blobs(base::make_unique_q<BlobsWidget>(
+	parent,
+	_state.value(
+	) | rpl::map([](const CallMuteButtonState &state) {
+		return IsConnecting(state.type);
+	})))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
 , _radial(nullptr)
 , _colors(Colors())
@@ -386,17 +404,6 @@ void CallMuteButton::init() {
 			icon.width(),
 			icon.height());
 	}, lifetime());
-
-	// Main blob radius.
-	{
-		auto radius = _state.value(
-		) | rpl::map([](const CallMuteButtonState &state) -> float {
-			return (IsConnecting(state.type)
-				? st::callMuteMainBlobMinRadius
-				: st::callMuteMainBlobMaxRadius) * kMainRadiusFactor;
-		}) | rpl::distinct_until_changed();
-		_blobs->setMainRadius(std::move(radius));
-	}
 
 	// Paint.
 	auto filterCallback = [=](not_null<QEvent*> e) {

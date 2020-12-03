@@ -29,7 +29,11 @@ public:
 		float levelDuration,
 		float maxLevel);
 
-	void setRadiusAt(rpl::producer<float> &&radius, int index, bool isMax);
+	void setRadiusesAt(
+		rpl::producer<BlobBezier::Radiuses> &&radiuses,
+		int index);
+	BlobBezier::Radiuses radiusesAt(int index);
+
 	void setLevel(float value);
 	void paint(Painter &p, const QBrush &brush);
 	void updateLevel(crl::time dt);

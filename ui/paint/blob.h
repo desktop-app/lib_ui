@@ -12,6 +12,15 @@ namespace Ui::Paint {
 
 class BlobBezier final {
 public:
+	struct Radiuses {
+		float min = 0.;
+		float max = 0.;
+
+		inline bool operator==(const Radiuses &other) const {
+			return (min == other.min) && (max == other.max);
+		}
+	};
+
 	BlobBezier(int n, float minScale, float minSpeed = 0, float maxSpeed = 0);
 
 	void paint(Painter &p, const QBrush &brush);
@@ -20,6 +29,9 @@ public:
 
 	void setMinRadius(float value);
 	void setMaxRadius(float value);
+
+	void setRadiuses(Radiuses values);
+	Radiuses radiuses() const;
 
 private:
 	struct Segment {
@@ -44,8 +56,7 @@ private:
 	std::vector<Segment> _segments;
 
 	float64 _scale = 0;
-	float _minRadius = 0.;
-	float _maxRadius = 0.;
+	Radiuses _radiuses;
 
 };
 

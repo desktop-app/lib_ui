@@ -23,8 +23,7 @@ Blobs::Blobs(
 void Blobs::init() {
 	for (const auto &data : _blobDatas) {
 		auto blob = Paint::BlobBezier(data.segmentsCount, data.minScale);
-		blob.setMinRadius(data.minRadius);
-		blob.setMaxRadius(data.maxRadius);
+		blob.setRadiuses({ data.minRadius, data.maxRadius });
 		blob.generateBlob();
 		_blobs.push_back(std::move(blob));
 	}
@@ -45,20 +44,20 @@ int Blobs::size() const {
 	return _blobs.size();
 }
 
-void Blobs::setRadiusAt(
-		rpl::producer<float> &&radius,
-		int index,
-		bool isMax) {
+void Blobs::setRadiusesAt(
+		rpl::producer<BlobBezier::Radiuses> &&radiuses,
+		int index) {
 	Expects(index >= 0 && index < size());
 	std::move(
-		radius
-	) | rpl::start_with_next([=](float r) {
-		if (isMax) {
-			_blobs[index].setMaxRadius(r);
-		} else {
-			_blobs[index].setMinRadius(r);
-		}
+		radiuses
+	) | rpl::start_with_next([=](BlobBezier::Radiuses r) {
+		_blobs[index].setRadiuses(std::move(r));
 	}, _lifetime);
+}
+
+BlobBezier::Radiuses Blobs::radiusesAt(int index) {
+	Expects(index >= 0 && index < size());
+	return _blobs[index].radiuses();
 }
 
 void Blobs::setLevel(float value) {

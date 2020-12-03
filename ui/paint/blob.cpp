@@ -105,9 +105,9 @@ void BlobBezier::generateBlob() {
 
 void BlobBezier::generateBlob(float &radius, float &angle, int i) {
 	const auto angleDiff = _segmentAngle * 0.05;
-	const auto radDiff = _maxRadius - _minRadius;
+	const auto radDiff = _radiuses.max - _radiuses.min;
 
-	radius = _minRadius + std::abs(RandomAdditional()) * radDiff;
+	radius = _radiuses.min + std::abs(RandomAdditional()) * radDiff;
 	angle = _segmentAngle * i + RandomAdditional() * angleDiff;
 	_segments[i].speed = 0.017 + 0.003 * std::abs(RandomAdditional());
 }
@@ -127,12 +127,12 @@ void BlobBezier::update(float level, float speedScale) {
 	}
 }
 
-void BlobBezier::setMinRadius(float value) {
-	_minRadius = value;
+void BlobBezier::setRadiuses(Radiuses values) {
+	_radiuses = values;
 }
 
-void BlobBezier::setMaxRadius(float value) {
-	_maxRadius = value;
+BlobBezier::Radiuses BlobBezier::radiuses() const {
+	return _radiuses;
 }
 
 } // namespace Ui::Paint
