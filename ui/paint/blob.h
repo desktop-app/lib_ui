@@ -19,6 +19,9 @@ public:
 		inline bool operator==(const Radiuses &other) const {
 			return (min == other.min) && (max == other.max);
 		}
+		inline bool operator!=(const Radiuses &other) const {
+			return !(min == other.min) && (max == other.max);
+		}
 	};
 
 	BlobBezier(int n, float minScale, float minSpeed = 0, float maxSpeed = 0);
