@@ -168,11 +168,12 @@ BlobsWidget::BlobsWidget(
 		const auto radiuses = _blobs.radiusesAt(i);
 		auto radiusesChange = rpl::duplicate(
 			hideBlobs
+		) | rpl::distinct_until_changed(
 		) | rpl::map([=](bool hide) -> Radiuses {
 			return hide
 				? Radiuses{ radiuses.min, radiuses.min }
 				: radiuses;
-		}) | rpl::distinct_until_changed();
+		});
 		_blobs.setRadiusesAt(std::move(radiusesChange), i);
 	}
 
@@ -280,15 +281,14 @@ CallMuteButton::CallMuteButton(
 , _blobs(base::make_unique_q<BlobsWidget>(
 	parent,
 	rpl::combine(
-		anim::Disables(),
-		rpl::merge(
-			std::move(hideBlobs),
-			_state.value(
-			) | rpl::map([](const CallMuteButtonState &state) {
-				return IsConnecting(state.type);
-			}))
-	) | rpl::map([](bool animDisabled, bool hide) {
-		return !(!animDisabled && !hide);
+		rpl::single(anim::Disabled()) | rpl::then(anim::Disables()),
+		std::move(hideBlobs),
+		_state.value(
+		) | rpl::map([](const CallMuteButtonState &state) {
+			return IsConnecting(state.type);
+		})
+	) | rpl::map([](bool animDisabled, bool hide, bool isConnecting) {
+		return isConnecting || !(!animDisabled && !hide);
 	})))
 , _content(parent, st::callMuteButtonActive, &st::callMuteButtonMuted)
 , _radial(nullptr)
