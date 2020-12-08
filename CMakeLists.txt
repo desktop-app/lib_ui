@@ -71,8 +71,12 @@ PRIVATE
     ui/layers/layer_widget.h
     ui/paint/blob.cpp
     ui/paint/blob.h
+    ui/paint/blob_linear.cpp
+    ui/paint/blob_linear.h
     ui/paint/blobs.cpp
     ui/paint/blobs.h
+    ui/paint/blobs_linear.cpp
+    ui/paint/blobs_linear.h
     ui/platform/linux/ui_window_linux.cpp
     ui/platform/linux/ui_window_linux.h
     ui/platform/linux/ui_utility_linux.cpp

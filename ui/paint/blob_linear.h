@@ -10,7 +10,7 @@ class Painter;
 
 namespace Ui::Paint {
 
-class BlobBezier final {
+class LinearBlobBezier final {
 public:
 	struct Radiuses {
 		float min = 0.;
@@ -24,9 +24,18 @@ public:
 		}
 	};
 
-	BlobBezier(int n, float minScale, float minSpeed = 0, float maxSpeed = 0);
+	LinearBlobBezier(
+		int n,
+		float minScale,
+		float minSpeed = 0,
+		float maxSpeed = 0);
 
-	void paint(Painter &p, const QBrush &brush);
+	void paint(
+		Painter &p,
+		const QBrush &brush,
+		const QRect &rect,
+		float pinnedTop,
+		float progressToPinned);
 	void update(float level, float speedScale);
 	void generateBlob();
 
@@ -36,22 +45,17 @@ public:
 private:
 	struct Segment {
 		float radius = 0.;
-		float angle = 0.;
 		float radiusNext = 0.;
-		float angleNext = 0.;
 		float progress = 0.;
 		float speed = 0.;
 	};
 
-	void generateBlob(float &radius, float &angle, int i);
+	void generateBlob(float &radius, int i);
 
 	const int _segmentsCount;
-	const float64 _segmentLength;
-	const float _minScale;
 	const float _minSpeed;
 	const float _maxSpeed;
 	const QPen _pen;
-	const float _segmentAngle;
 
 	std::vector<Segment> _segments;
 
