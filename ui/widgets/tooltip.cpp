@@ -142,7 +142,7 @@ void Tooltip::paintEvent(QPaintEvent *e) {
 		p.setPen(_st->textBorder);
 		p.setBrush(_st->textBg);
 		PainterHighQualityEnabler hq(p);
-		p.drawRoundedRect(QRectF(0.5, 0.5, width() - 1., height() - 1.), st::buttonRadius, st::buttonRadius);
+		p.drawRoundedRect(QRectF(0.5, 0.5, width() - 1., height() - 1.), st::roundRadiusSmall, st::roundRadiusSmall);
 	} else {
 		p.fillRect(rect(), _st->textBg);
 

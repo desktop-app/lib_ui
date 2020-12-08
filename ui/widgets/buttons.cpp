@@ -236,8 +236,8 @@ RoundButton::RoundButton(
 : RippleButton(parent, st.ripple)
 , _textFull(std::move(text))
 , _st(st)
-, _roundRect(ImageRoundRadius::Small, _st.textBg)
-, _roundRectOver(ImageRoundRadius::Small, _st.textBgOver) {
+, _roundRect(st::buttonRadius, _st.textBg)
+, _roundRectOver(st::buttonRadius, _st.textBgOver) {
 	_textFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
 		resizeToText(text);

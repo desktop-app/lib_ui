@@ -626,6 +626,8 @@ defaultRippleAnimation: RippleAnimation {
 emptyRippleAnimation: RippleAnimation {
 }
 
+buttonRadius: 4px;
+
 defaultActiveButton: RoundButton {
 	textFg: activeButtonFg;
 	textFgOver: activeButtonFgOver;

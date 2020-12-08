@@ -262,7 +262,7 @@ void CheckView::paint(Painter &p, int left, int top, int outerWidth) {
 
 	{
 		PainterHighQualityEnabler hq(p);
-		p.drawRoundedRect(style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(_st->thickness / 2., _st->thickness / 2., _st->thickness / 2., _st->thickness / 2.)), outerWidth), st::buttonRadius - (_st->thickness / 2.), st::buttonRadius - (_st->thickness / 2.));
+		p.drawRoundedRect(style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(_st->thickness / 2., _st->thickness / 2., _st->thickness / 2., _st->thickness / 2.)), outerWidth), st::roundRadiusSmall - (_st->thickness / 2.), st::roundRadiusSmall - (_st->thickness / 2.));
 	}
 
 	if (toggled > 0) {

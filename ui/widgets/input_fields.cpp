@@ -1045,7 +1045,7 @@ void FlatInput::paintEvent(QPaintEvent *e) {
 	p.setBrush(anim::brush(_st.bgColor, _st.bgActive, placeholderFocused));
 	{
 		PainterHighQualityEnabler hq(p);
-		p.drawRoundedRect(QRectF(0, 0, width(), height()).marginsRemoved(QMarginsF(_st.borderWidth / 2., _st.borderWidth / 2., _st.borderWidth / 2., _st.borderWidth / 2.)), st::buttonRadius - (_st.borderWidth / 2.), st::buttonRadius - (_st.borderWidth / 2.));
+		p.drawRoundedRect(QRectF(0, 0, width(), height()).marginsRemoved(QMarginsF(_st.borderWidth / 2., _st.borderWidth / 2., _st.borderWidth / 2., _st.borderWidth / 2.)), st::roundRadiusSmall - (_st.borderWidth / 2.), st::roundRadiusSmall - (_st.borderWidth / 2.));
 	}
 
 	if (!_st.icon.empty()) {

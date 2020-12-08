@@ -73,7 +73,6 @@ roundRadiusLarge: 6px;
 roundRadiusSmall: 3px;
 
 dateRadius: roundRadiusLarge;
-buttonRadius: roundRadiusSmall;
 
 setLittleSkip: 9px;
 
