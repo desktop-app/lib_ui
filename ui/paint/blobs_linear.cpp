@@ -76,6 +76,7 @@ void LinearBlobs::paint(
 		const QRect &rect,
 		float pinnedTop,
 		float progressToPinned) {
+	PainterHighQualityEnabler hq(p);
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
 		auto r = rect;
