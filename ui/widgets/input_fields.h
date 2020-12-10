@@ -241,7 +241,7 @@ public:
 
 	struct ExtendedContextMenu {
 		QMenu *menu = nullptr;
-		QContextMenuEvent event;
+		std::shared_ptr<QContextMenuEvent> event;
 	};
 
 	void setAdditionalMargin(int margin);

@@ -14,7 +14,7 @@
 #include "base/platform/base_platform_info.h"
 
 #include <private/qfontengine_p.h>
-#include <private/qharfbuzz_p.h>
+//#include <private/qharfbuzz_p.h>
 
 namespace Ui {
 namespace Text {
@@ -79,7 +79,6 @@ TextWithEntities PrepareRichFromRich(
 			int32 i = 0, l = preparsed.size();
 			result.entities.clear();
 			result.entities.reserve(l);
-			const QChar s = result.text.size();
 			for (; i < l; ++i) {
 				auto type = preparsed.at(i).type();
 				if (((type == EntityType::Mention || type == EntityType::MentionName) && !parseMentions) ||
@@ -128,7 +127,8 @@ bool IsParagraphSeparator(QChar ch) {
 	return false;
 }
 
-bool IsBad(QChar ch) {
+bool IsBad(QChar character) {
+	const auto ch = character.unicode();
 	return (ch == 0)
 		|| (ch >= 8232 && ch < 8237)
 		|| (ch >= 65024 && ch < 65040 && ch != 65039)
@@ -483,7 +483,7 @@ void Parser::createNewlineBlock() {
 
 bool Parser::checkCommand() {
 	bool result = false;
-	for (QChar c = ((_ptr < _end) ? *_ptr : 0); c == TextCommand; c = ((_ptr < _end) ? *_ptr : 0)) {
+	for (QChar c = ((_ptr < _end) ? *_ptr : QChar()); c == TextCommand; c = ((_ptr < _end) ? *_ptr : QChar())) {
 		if (!readCommand()) {
 			break;
 		}
@@ -753,7 +753,7 @@ bool Parser::readCommand() {
 }
 
 void Parser::parseCurrentChar() {
-	_ch = ((_ptr < _end) ? *_ptr : 0);
+	_ch = ((_ptr < _end) ? *_ptr : QChar());
 	_emojiLookback = 0;
 	const auto isNewLine = _multiline && IsNewline(_ch);
 	const auto isSpace = IsSpace(_ch);
@@ -762,7 +762,7 @@ void Parser::parseCurrentChar() {
 	const auto skip = [&] {
 		if (IsBad(_ch) || _ch.isLowSurrogate()) {
 			return true;
-		} else if (_ch == 0xFE0F && Platform::IsMac()) {
+		} else if (_ch == QChar(0xFE0F) && Platform::IsMac()) {
 			// Some sequences like 0x0E53 0xFE0F crash OS X harfbuzz text processing :(
 			return true;
 		} else if (isDiac) {
@@ -806,7 +806,7 @@ void Parser::parseCurrentChar() {
 
 	_lastSkipped = skip;
 	if (skip) {
-		_ch = 0;
+		_ch = QChar();
 	} else {
 		if (isTilde) { // tilde fix in OpenSans
 			if (!(_flags & TextBlockFTilde)) {
@@ -2066,10 +2066,14 @@ private:
 		auto analysis = _parAnalysis.data() + (_localFrom - _parStart);
 
 		{
-			QVarLengthArray<uchar> scripts(length);
-			QUnicodeTools::initScripts(string, length, scripts.data());
-			for (int i = 0; i < length; ++i)
-				analysis[i].script = scripts.at(i);
+			QUnicodeTools::ScriptItemArray scriptItems;
+			QUnicodeTools::initScripts(_e->layoutData->string, &scriptItems);
+			for (int i = 0; i < scriptItems.length(); ++i) {
+				const auto &item = scriptItems.at(i);
+				int end = i < scriptItems.length() - 1 ? scriptItems.at(i + 1).position : length;
+				for (int j = item.position; j < end; ++j)
+					analysis[j].script = item.script;
+			}
 		}
 
 		blockIndex = _lineStartBlock;
@@ -2090,7 +2094,6 @@ private:
 			} else {
 				analysis->flags = QScriptAnalysis::None;
 			}
-			analysis->script = hbscript_to_script(script_to_hbscript(analysis->script)); // retain the old behavior
 			++start;
 			++analysis;
 		}
@@ -3165,7 +3168,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 				auto rangeFrom = qMax(selection.from, lnkFrom);
 				auto rangeTo = qMin(selection.to, blockFrom);
 				if (rangeTo > rangeFrom) { // handle click handler
-					QStringRef r = _text.midRef(rangeFrom, rangeTo - rangeFrom);
+					const auto r = QStringView(_text).mid(rangeFrom, rangeTo - rangeFrom);
 					if (lnkFrom != rangeFrom || blockFrom != rangeTo) {
 						appendPartCallback(r);
 					} else {
@@ -3196,7 +3199,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 			auto rangeFrom = qMax(selection.from, blockFrom);
 			auto rangeTo = qMin(selection.to, uint16(blockFrom + countBlockLength(i, e)));
 			if (rangeTo > rangeFrom) {
-				appendPartCallback(_text.midRef(rangeFrom, rangeTo - rangeFrom));
+				appendPartCallback(QStringView(_text).mid(rangeFrom, rangeTo - rangeFrom));
 			}
 		}
 	}
@@ -3270,13 +3273,13 @@ TextForMimeData String::toText(
 		linkStart = result.rich.text.size();
 	};
 	const auto clickHandlerFinishCallback = [&](
-			const QStringRef &part,
+			QStringView part,
 			const ClickHandlerPtr &handler) {
 		const auto entity = handler->getTextEntity();
 		const auto plainUrl = (entity.type == EntityType::Url)
 			|| (entity.type == EntityType::Email);
 		const auto full = plainUrl
-			? entity.data.midRef(0, entity.data.size())
+			? QStringView(entity.data).mid(0, entity.data.size())
 			: part;
 		result.rich.text.append(full);
 		if (!composeExpanded && !composeEntities) {
@@ -3303,7 +3306,7 @@ TextForMimeData String::toText(
 				plainUrl ? QString() : entity.data });
 		}
 	};
-	const auto appendPartCallback = [&](const QStringRef &part) {
+	const auto appendPartCallback = [&](QStringView part) {
 		result.rich.text += part;
 		if (composeExpanded) {
 			result.expanded += part;
@@ -3421,12 +3424,12 @@ bool IsLinkEnd(QChar ch) {
 
 bool IsNewline(QChar ch) {
 	return (ch == QChar::LineFeed)
-		|| (ch == 156);
+		|| (ch == QChar(156));
 }
 
 bool IsSpace(QChar ch, bool rich) {
 	return ch.isSpace()
-		|| (ch < 32 && !(rich && ch == TextCommand))
+		|| (ch < QChar(32) && !(rich && ch == TextCommand))
 		|| (ch == QChar::ParagraphSeparator)
 		|| (ch == QChar::LineSeparator)
 		|| (ch == QChar::ObjectReplacementCharacter)
@@ -3437,11 +3440,12 @@ bool IsSpace(QChar ch, bool rich) {
 
 bool IsDiac(QChar ch) { // diac and variation selectors
 	return (ch.category() == QChar::Mark_NonSpacing)
-		|| (ch == 1652)
-		|| (ch >= 64606 && ch <= 64611);
+		|| (ch == QChar(1652))
+		|| (ch >= QChar(64606) && ch <= QChar(64611));
 }
 
-bool IsReplacedBySpace(QChar ch) {
+bool IsReplacedBySpace(QChar character) {
+	const auto ch = character.unicode();
 	// \xe2\x80[\xa8 - \xac\xad] // 8232 - 8237
 	// QString from1 = QString::fromUtf8("\xe2\x80\xa8"), to1 = QString::fromUtf8("\xe2\x80\xad");
 	// \xcc[\xb3\xbf\x8a] // 819, 831, 778

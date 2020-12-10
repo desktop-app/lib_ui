@@ -54,7 +54,7 @@ public:
 	void clicked(Qt::KeyboardModifiers modifiers, Qt::MouseButton button);
 
 protected:
-	void enterEventHook(QEvent *e) override;
+	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;

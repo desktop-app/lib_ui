@@ -49,25 +49,25 @@ TextWithEntities RichLangValue(const QString &text) {
 	while (offset < text.size()) {
 		const auto m = kStart.match(text, offset);
 		if (!m.hasMatch()) {
-			result.text.append(text.midRef(offset));
+			result.text.append(QStringView(text).mid(offset));
 			break;
 		}
 		const auto position = m.capturedStart();
 		const auto from = m.capturedEnd();
-		const auto tag = m.capturedRef();
+		const auto tag = m.capturedView();
 		const auto till = text.indexOf(tag, from + 1);
 		if (till <= from) {
 			offset = from;
 			continue;
 		}
 		if (position > offset) {
-			result.text.append(text.midRef(offset, position - offset));
+			result.text.append(QStringView(text).mid(offset, position - offset));
 		}
 		const auto type = (tag == qstr("__"))
 			? EntityType::Italic
 			: EntityType::Bold;
 		result.entities.push_back({ type, result.text.size(), till - from });
-		result.text.append(text.midRef(from, till - from));
+		result.text.append(QStringView(text).mid(from, till - from));
 		offset = till + tag.size();
 	}
 	return result;

@@ -640,7 +640,8 @@ void RemoveDocumentTags(
 		not_null<QTextDocument*> document,
 		int from,
 		int end) {
-	auto cursor = QTextCursor(document->docHandle(), from);
+	auto cursor = QTextCursor(document);
+	cursor.setPosition(from);
 	cursor.setPosition(end, QTextCursor::KeepAnchor);
 
 	auto format = QTextCharFormat();
@@ -720,7 +721,7 @@ int ProcessInsertedTags(
 					applyNoTagFrom,
 					tagFrom);
 			}
-			QTextCursor c(document->docHandle(), 0);
+			QTextCursor c(document);
 			c.setPosition(tagFrom);
 			c.setPosition(tagTo, QTextCursor::KeepAnchor);
 
@@ -970,7 +971,7 @@ bool FlatInput::eventHook(QEvent *e) {
 		|| e->type() == QEvent::TouchEnd
 		|| e->type() == QEvent::TouchCancel) {
 		const auto ev = static_cast<QTouchEvent*>(e);
-		if (ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (ev->device()->type() == QInputDevice::DeviceType::TouchScreen) {
 			touchEvent(ev);
 		}
 	}
@@ -1344,7 +1345,7 @@ bool InputField::viewportEventInner(QEvent *e) {
 		|| e->type() == QEvent::TouchEnd
 		|| e->type() == QEvent::TouchCancel) {
 		const auto ev = static_cast<QTouchEvent*>(e);
-		if (ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (ev->device()->type() == QInputDevice::DeviceType::TouchScreen) {
 			handleTouchEvent(ev);
 		}
 	}
@@ -1402,12 +1403,12 @@ void InputField::onTouchTimer() {
 }
 
 void InputField::setExtendedContextMenu(
-	rpl::producer<ExtendedContextMenu> value) {
+		rpl::producer<ExtendedContextMenu> value) {
 	std::move(
 		value
-	) | rpl::start_with_next([=](auto pair) {
+	) | rpl::start_with_next([=](ExtendedContextMenu pair) {
 		auto &[menu, e] = pair;
-		contextMenuEventInner(&e, std::move(menu));
+		contextMenuEventInner(e.get(), std::move(menu));
 	}, lifetime());
 }
 
@@ -1456,14 +1457,14 @@ void InputField::setMaxLength(int length) {
 		if (_maxLength > 0) {
 			const auto document = _inner->document();
 			_correcting = true;
-			QTextCursor(document->docHandle(), 0).joinPreviousEditBlock();
+			QTextCursor(document).joinPreviousEditBlock();
 			const auto guard = gsl::finally([&] {
 				_correcting = false;
-				QTextCursor(document->docHandle(), 0).endEditBlock();
+				QTextCursor(document).endEditBlock();
 				handleContentsChanged();
 			});
 
-			auto cursor = QTextCursor(document->docHandle(), 0);
+			auto cursor = QTextCursor(document);
 			cursor.movePosition(QTextCursor::End);
 			chopByMaxLength(0, cursor.position());
 		}
@@ -2135,9 +2136,8 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 		if (action.type != ActionType::Invalid) {
 			PrepareFormattingOptimization(document);
 
-			auto cursor = QTextCursor(
-				document->docHandle(),
-				action.intervalStart);
+			auto cursor = QTextCursor(document);
+			cursor.setPosition(action.intervalStart);
 			cursor.setPosition(action.intervalEnd, QTextCursor::KeepAnchor);
 			if (action.type == ActionType::InsertEmoji) {
 				InsertEmojiAtCursor(cursor, action.emoji);
@@ -2205,7 +2205,7 @@ void InputField::onDocumentContentsChange(
 
 	// Qt bug workaround https://bugreports.qt.io/browse/QTBUG-49062
 	if (!position) {
-		auto cursor = QTextCursor(document->docHandle(), 0);
+		auto cursor = QTextCursor(document);
 		cursor.movePosition(QTextCursor::End);
 		if (position + charsAdded > cursor.position()) {
 			const auto delta = position + charsAdded - cursor.position();
@@ -2227,10 +2227,10 @@ void InputField::onDocumentContentsChange(
 	const auto removeLength = charsRemoved;
 
 	_correcting = true;
-	QTextCursor(document->docHandle(), 0).joinPreviousEditBlock();
+	QTextCursor(document).joinPreviousEditBlock();
 	const auto guard = gsl::finally([&] {
 		_correcting = false;
-		QTextCursor(document->docHandle(), 0).endEditBlock();
+		QTextCursor(document).endEditBlock();
 		handleContentsChanged();
 		const auto added = charsAdded - _emojiSurrogateAmount;
 		_documentContentsChanges.fire({position, charsRemoved, added});
@@ -2263,7 +2263,7 @@ void InputField::chopByMaxLength(int insertPosition, int insertLength) {
 		return;
 	}
 
-	auto cursor = QTextCursor(document()->docHandle(), 0);
+	auto cursor = QTextCursor(document());
 	cursor.movePosition(QTextCursor::End);
 	const auto fullSize = cursor.position();
 	const auto toRemove = fullSize - _maxLength;
@@ -2458,7 +2458,7 @@ void InputField::setTextWithTags(
 	_realInsertPosition = 0;
 	_realCharsAdded = textWithTags.text.size();
 	const auto document = _inner->document();
-	auto cursor = QTextCursor(document->docHandle(), 0);
+	auto cursor = QTextCursor(document);
 	if (historyAction == HistoryAction::Clear) {
 		document->setUndoRedoEnabled(false);
 		cursor.beginEditBlock();
@@ -2515,7 +2515,7 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 	auto from = 0;
 	const auto addOriginalTextUpTill = [&](int offset) {
 		if (offset > from) {
-			result.text.append(originalText.midRef(from, offset - from));
+			result.text.append(QStringView(originalText).mid(from, offset - from));
 		}
 	};
 	auto link = links.begin();
@@ -2571,7 +2571,7 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 				int(result.text.size()),
 				entityLength,
 				tag.tag });
-			result.text.append(originalText.midRef(
+			result.text.append(QStringView(originalText).mid(
 				entityStart,
 				entityLength));
 		}
@@ -3066,7 +3066,7 @@ bool InputField::commitMarkdownReplacement(
 		const QString &tag,
 		const QString &edge) {
 	const auto end = [&] {
-		auto cursor = QTextCursor(document()->docHandle(), 0);
+		auto cursor = QTextCursor(document());
 		cursor.movePosition(QTextCursor::End);
 		return cursor.position();
 	}();
@@ -3080,7 +3080,7 @@ bool InputField::commitMarkdownReplacement(
 	const auto extended = getTextWithTagsPart(
 		from - extendLeft,
 		till + extendRight).text;
-	const auto outer = extended.midRef(
+	const auto outer = QStringView(extended).mid(
 		extendLeft,
 		extended.size() - extendLeft - extendRight);
 	if ((outer.size() <= 2 * edge.size())
@@ -3662,7 +3662,7 @@ bool MaskedInputField::eventHook(QEvent *e) {
 		|| type == QEvent::TouchEnd
 		|| type == QEvent::TouchCancel) {
 		auto event = static_cast<QTouchEvent*>(e);
-		if (event->device()->type() == QTouchDevice::TouchScreen) {
+		if (event->device()->type() == QInputDevice::DeviceType::TouchScreen) {
 			touchEvent(event);
 		}
 	}

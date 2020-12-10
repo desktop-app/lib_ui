@@ -16,6 +16,7 @@
 
 #include <QtWidgets/QWidget>
 #include <QtCore/QPointer>
+#include <QtGui/QtEvents>
 
 class TWidget;
 
@@ -104,13 +105,13 @@ public:
 	}
 
 protected:
-	void enterEvent(QEvent *e) final override {
+	void enterEvent(QEnterEvent *e) final override {
 		if (auto parent = tparent()) {
 			parent->leaveToChildEvent(e, this);
 		}
 		return enterEventHook(e);
 	}
-	virtual void enterEventHook(QEvent *e) {
+	virtual void enterEventHook(QEnterEvent *e) {
 		return Base::enterEvent(e);
 	}
 

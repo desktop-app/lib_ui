@@ -13,6 +13,7 @@
 #include <QtWidgets/QApplication>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
+#include <QtGui/QtEvents>
 
 namespace Ui {
 
@@ -206,7 +207,7 @@ void ScrollBar::hideTimeout(crl::time dt) {
 	}
 }
 
-void ScrollBar::enterEventHook(QEvent *e) {
+void ScrollBar::enterEventHook(QEnterEvent *e) {
 	_hideTimer.stop();
 	setMouseTracking(true);
 	setOver(true);
@@ -452,7 +453,7 @@ bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
 	bool res = QScrollArea::eventFilter(obj, e);
 	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
 		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (_touchEnabled && ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (_touchEnabled && ev->device()->type() == QInputDevice::DeviceType::TouchScreen) {
 			if (obj == widget()) {
 				touchEvent(ev);
 				return true;
@@ -465,7 +466,7 @@ bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
 bool ScrollArea::viewportEvent(QEvent *e) {
 	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
 		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (_touchEnabled && ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (_touchEnabled && ev->device()->type() == QInputDevice::DeviceType::TouchScreen) {
 			touchEvent(ev);
 			return true;
 		}
@@ -619,7 +620,7 @@ void ScrollArea::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
-void ScrollArea::enterEventHook(QEvent *e) {
+void ScrollArea::enterEventHook(QEnterEvent *e) {
 	if (_disabled) return;
 	if (_st.hiding) {
 		_horizontalBar->hideTimeout(_st.hiding);

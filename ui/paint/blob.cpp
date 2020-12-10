@@ -38,7 +38,7 @@ BlobBezier::BlobBezier(int n, float minScale, float minSpeed, float maxSpeed)
 
 void BlobBezier::paint(Painter &p, const QBrush &brush) {
 	auto path = QPainterPath();
-	auto m = QMatrix();
+	auto m = QTransform();
 
 	p.save();
 	const auto scale = _minScale + _scale * (1. - _minScale);

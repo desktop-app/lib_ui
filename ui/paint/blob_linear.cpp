@@ -44,7 +44,7 @@ void LinearBlobBezier::paint(
 		float pinnedTop,
 		float progressToPinned) {
 	auto path = QPainterPath();
-	auto m = QMatrix();
+	auto m = QTransform();
 
 	const auto left = rect.x();
 	const auto top = rect.y();

@@ -135,7 +135,7 @@ void InnerDropdown::paintEvent(QPaintEvent *e) {
 	}
 }
 
-void InnerDropdown::enterEventHook(QEvent *e) {
+void InnerDropdown::enterEventHook(QEnterEvent *e) {
 	if (_autoHiding) {
 		showAnimated(_origin);
 	}

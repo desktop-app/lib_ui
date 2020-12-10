@@ -33,8 +33,8 @@ public:
 
 private:
 	struct Digit {
-		QChar from = 0;
-		QChar to = 0;
+		QChar from;
+		QChar to;
 		int fromWidth = 0;
 		int toWidth = 0;
 	};

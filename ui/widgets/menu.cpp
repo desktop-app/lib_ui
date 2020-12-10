@@ -404,7 +404,7 @@ void Menu::clearMouseSelection() {
 	}
 }
 
-void Menu::enterEventHook(QEvent *e) {
+void Menu::enterEventHook(QEnterEvent *e) {
 	QPoint mouse = QCursor::pos();
 	if (!rect().marginsRemoved(QMargins(0, _st.skip, 0, _st.skip)).contains(mapFromGlobal(mouse))) {
 		clearMouseSelection();

@@ -1158,13 +1158,13 @@ const QRegularExpression &RegExpWordSplit() {
 	for (const auto &entity : urls) {
 		const auto till = entity.offset() + entity.length();
 		if (till > offset) {
-			result.append(original.midRef(offset, till - offset));
+			result.append(QStringView(original).mid(offset, till - offset));
 		}
 		result.append(qstr(" (")).append(entity.data()).append(')');
 		offset = till;
 	}
 	if (original.size() > offset) {
-		result.append(original.midRef(offset));
+		result.append(QStringView(original).mid(offset));
 	}
 	return result;
 }
@@ -1528,10 +1528,10 @@ bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
 
 bool textcmdStartsLink(const QChar *start, int32 len, int32 commandOffset) {
 	if (commandOffset + 2 < len) {
-		if (*(start + commandOffset + 1) == TextCommandLinkIndex) {
-			return (*(start + commandOffset + 2) != 0);
+		if ((start + commandOffset + 1)->unicode() == TextCommandLinkIndex) {
+			return ((start + commandOffset + 2)->unicode() != 0);
 		}
-		return (*(start + commandOffset + 1) != TextCommandLinkText);
+		return ((start + commandOffset + 1)->unicode() != TextCommandLinkText);
 	}
 	return false;
 }
@@ -1622,10 +1622,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 		auto mentionIgnore = false;
 
 		if (mHashtag.hasMatch()) {
-			if (!mHashtag.capturedRef(1).isEmpty()) {
+			if (!mHashtag.capturedView(1).isEmpty()) {
 				++hashtagStart;
 			}
-			if (!mHashtag.capturedRef(2).isEmpty()) {
+			if (!mHashtag.capturedView(2).isEmpty()) {
 				--hashtagEnd;
 			}
 			if (RegExpHashtagExclude().match(
@@ -1636,10 +1636,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 			}
 		}
 		while (mMention.hasMatch()) {
-			if (!mMention.capturedRef(1).isEmpty()) {
+			if (!mMention.capturedView(1).isEmpty()) {
 				++mentionStart;
 			}
-			if (!mMention.capturedRef(2).isEmpty()) {
+			if (!mMention.capturedView(2).isEmpty()) {
 				--mentionEnd;
 			}
 			if (!(start + mentionStart + 1)->isLetter() || !(start + mentionEnd - 1)->isLetterOrNumber()) {
@@ -1660,10 +1660,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 			}
 		}
 		if (mBotCommand.hasMatch()) {
-			if (!mBotCommand.capturedRef(1).isEmpty()) {
+			if (!mBotCommand.capturedView(1).isEmpty()) {
 				++botCommandStart;
 			}
-			if (!mBotCommand.capturedRef(3).isEmpty()) {
+			if (!mBotCommand.capturedView(3).isEmpty()) {
 				--botCommandEnd;
 			}
 		}
@@ -2041,7 +2041,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				EntityInText(type, tag.offset, tag.length, data));
 		};
 		if (IsMentionLink(tag.id)) {
-			if (auto match = qthelp::regex_match("^(\\d+\\.\\d+)(/|$)", tag.id.midRef(kMentionTagStart.size()))) {
+			if (auto match = qthelp::regex_match("^(\\d+\\.\\d+)(/|$)", QStringView(tag.id).mid(kMentionTagStart.size()))) {
 				push(EntityType::MentionName, match->captured(1));
 			}
 		} else if (tag.id == Ui::InputField::kTagBold) {
