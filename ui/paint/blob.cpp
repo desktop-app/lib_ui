@@ -19,24 +19,69 @@ namespace {
 constexpr auto kMaxSpeed = 8.2;
 constexpr auto kMinSpeed = 0.8;
 
+constexpr auto kMinSegmentSpeed = 0.017;
+constexpr auto kSegmentSpeedDiff = 0.003;
+
 float64 RandomAdditional() {
 	return (openssl::RandomValue<int>() % 100 / 100.);
 }
 
 } // namespace
 
-BlobBezier::BlobBezier(int n, float minScale, float minSpeed, float maxSpeed)
+Blob::Blob(int n, float minSpeed, float maxSpeed)
 : _segmentsCount(n)
-, _segmentLength((4.0 / 3.0) * std::tan(M_PI / (2 * n)))
-, _minScale(minScale)
 , _minSpeed(minSpeed ? minSpeed : kMinSpeed)
 , _maxSpeed(maxSpeed ? maxSpeed : kMaxSpeed)
-, _pen(Qt::NoBrush, 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin)
+, _pen(Qt::NoBrush, 0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin) {
+}
+
+void Blob::generateBlob() {
+	for (auto i = 0; i < _segmentsCount; i++) {
+		generateSingleValues(i);
+		// Fill nexts.
+		generateTwoValues(i);
+		// Fill currents.
+		generateTwoValues(i);
+	}
+}
+
+void Blob::generateSingleValues(int i) {
+	auto &segment = segmentAt(i);
+	segment.progress = 0.;
+	segment.speed = kMinSegmentSpeed
+		+ kSegmentSpeedDiff * std::abs(RandomAdditional());
+}
+
+void Blob::update(float level, float speedScale) {
+	for (auto i = 0; i < _segmentsCount; i++) {
+		auto &segment = segmentAt(i);
+		segment.progress += (segment.speed * _minSpeed)
+			+ level * segment.speed * _maxSpeed * speedScale;
+		if (segment.progress >= 1) {
+			generateSingleValues(i);
+			generateTwoValues(i);
+		}
+	}
+}
+
+void Blob::setRadiuses(Radiuses values) {
+	_radiuses = values;
+}
+
+Blob::Radiuses Blob::radiuses() const {
+	return _radiuses;
+}
+
+RadialBlob::RadialBlob(int n, float minScale, float minSpeed, float maxSpeed)
+: Blob(n, minSpeed, maxSpeed)
+, _segmentLength((4.0 / 3.0) * std::tan(M_PI / (2 * n)))
+, _minScale(minScale)
 , _segmentAngle(360. / n)
+, _angleDiff(_segmentAngle * 0.05)
 , _segments(n) {
 }
 
-void BlobBezier::paint(Painter &p, const QBrush &brush) {
+void RadialBlob::paint(Painter &p, const QBrush &brush) {
 	auto path = QPainterPath();
 	auto m = QMatrix();
 
@@ -55,14 +100,14 @@ void BlobBezier::paint(Painter &p, const QBrush &brush) {
 		const auto progress = segment.progress;
 		const auto progressNext = nextSegment.progress;
 
-		const auto r1 = segment.radius * (1. - progress)
-			+ segment.radiusNext * progress;
-		const auto r2 = nextSegment.radius * (1. - progressNext)
-			+ nextSegment.radiusNext * progressNext;
-		const auto angle1 = segment.angle * (1. - progress)
-			+ segment.angleNext * progress;
-		const auto angle2 = nextSegment.angle * (1. - progressNext)
-			+ nextSegment.angleNext * progressNext;
+		const auto r1 = segment.radius.current * (1. - progress)
+			+ segment.radius.next * progress;
+		const auto r2 = nextSegment.radius.current * (1. - progressNext)
+			+ nextSegment.radius.next * progressNext;
+		const auto angle1 = segment.angle.current * (1. - progress)
+			+ segment.angle.next * progress;
+		const auto angle2 = nextSegment.angle.current * (1. - progressNext)
+			+ nextSegment.angle.next * progressNext;
 
 		const auto l = _segmentLength * (std::min(r1, r2)
 			+ (std::max(r1, r2) - std::min(r1, r2)) / 2.);
@@ -94,45 +139,98 @@ void BlobBezier::paint(Painter &p, const QBrush &brush) {
 	p.restore();
 }
 
-void BlobBezier::generateBlob() {
-	for (auto i = 0; i < _segmentsCount; i++) {
-		auto &segment = _segments[i];
-		generateBlob(segment.radius, segment.angle, i);
-		generateBlob(segment.radiusNext, segment.angleNext, i);
-		segment.progress = 0.;
-	}
-}
+void RadialBlob::generateTwoValues(int i) {
+	auto &radius = _segments[i].radius;
+	auto &angle = _segments[i].angle;
 
-void BlobBezier::generateBlob(float &radius, float &angle, int i) {
-	const auto angleDiff = _segmentAngle * 0.05;
 	const auto radDiff = _radiuses.max - _radiuses.min;
 
-	radius = _radiuses.min + std::abs(RandomAdditional()) * radDiff;
-	angle = _segmentAngle * i + RandomAdditional() * angleDiff;
-	_segments[i].speed = 0.017 + 0.003 * std::abs(RandomAdditional());
+	angle.setNext(_segmentAngle * i + RandomAdditional() * _angleDiff);
+	radius.setNext(_radiuses.min + std::abs(RandomAdditional()) * radDiff);
 }
 
-void BlobBezier::update(float level, float speedScale) {
+void RadialBlob::update(float level, float speedScale) {
 	_scale = level;
+	Blob::update(level, speedScale);
+}
+
+Blob::Segment &RadialBlob::segmentAt(int i) {
+	return _segments[i];
+};
+
+LinearBlob::LinearBlob(
+	int n,
+	Direction direction,
+	float minSpeed,
+	float maxSpeed)
+: Blob(n + 1)
+, _topDown(direction == Direction::TopDown ? 1 : -1)
+, _segments(_segmentsCount) {
+}
+
+void LinearBlob::paint(Painter &p, const QBrush &brush, int width) {
+	auto path = QPainterPath();
+
+	const auto left = 0;
+	const auto right = width;
+
+	path.moveTo(right, 0);
+	path.lineTo(left, 0);
+
+	const auto n = float(_segmentsCount - 1);
+
+	p.save();
+
 	for (auto i = 0; i < _segmentsCount; i++) {
-		auto &segment = _segments[i];
-		segment.progress += (segment.speed * _minSpeed)
-			+ level * segment.speed * _maxSpeed * speedScale;
-		if (segment.progress >= 1) {
-			segment.progress = 0.;
-			segment.radius = segment.radiusNext;
-			segment.angle = segment.angleNext;
-			generateBlob(segment.radiusNext, segment.angleNext, i);
+		const auto &segment = _segments[i];
+
+		if (!i) {
+			const auto &progress = segment.progress;
+			const auto r1 = segment.radius.current * (1. - progress)
+				+ segment.radius.next * progress;
+			const auto y = r1 * _topDown;
+			path.lineTo(left, y);
+		} else {
+			const auto &prevSegment = _segments[i - 1];
+			const auto &progress = prevSegment.progress;
+			const auto r1 = prevSegment.radius.current * (1. - progress)
+				+ prevSegment.radius.next * progress;
+
+			const auto &progressNext = segment.progress;
+			const auto r2 = segment.radius.current * (1. - progressNext)
+				+ segment.radius.next * progressNext;
+
+			const auto x1 = (right - left) / n * (i - 1);
+			const auto x2 = (right - left) / n * i;
+			const auto cx = x1 + (x2 - x1) / 2;
+
+			const auto y1 = r1 * _topDown;
+			const auto y2 = r2 * _topDown;
+			path.cubicTo(
+				QPointF(cx, y1),
+				QPointF(cx, y2),
+				QPointF(x2, y2)
+			);
 		}
 	}
+	path.lineTo(right, 0);
+
+	p.setBrush(Qt::NoBrush);
+	p.setPen(_pen);
+	p.fillPath(path, brush);
+	p.drawPath(path);
+
+	p.restore();
 }
 
-void BlobBezier::setRadiuses(Radiuses values) {
-	_radiuses = values;
+void LinearBlob::generateTwoValues(int i) {
+	auto &radius = _segments[i].radius;
+	const auto radDiff = _radiuses.max - _radiuses.min;
+	radius.setNext(_radiuses.min + std::abs(RandomAdditional()) * radDiff);
 }
 
-BlobBezier::Radiuses BlobBezier::radiuses() const {
-	return _radiuses;
-}
+Blob::Segment &LinearBlob::segmentAt(int i) {
+	return _segments[i];
+};
 
 } // namespace Ui::Paint

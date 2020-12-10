@@ -22,7 +22,7 @@ Blobs::Blobs(
 
 void Blobs::init() {
 	for (const auto &data : _blobDatas) {
-		auto blob = Paint::BlobBezier(data.segmentsCount, data.minScale);
+		auto blob = Paint::RadialBlob(data.segmentsCount, data.minScale);
 		blob.setRadiuses({ data.minRadius, data.maxRadius });
 		blob.generateBlob();
 		_blobs.push_back(std::move(blob));
@@ -45,17 +45,17 @@ int Blobs::size() const {
 }
 
 void Blobs::setRadiusesAt(
-		rpl::producer<BlobBezier::Radiuses> &&radiuses,
+		rpl::producer<Blob::Radiuses> &&radiuses,
 		int index) {
 	Expects(index >= 0 && index < size());
 	std::move(
 		radiuses
-	) | rpl::start_with_next([=](BlobBezier::Radiuses r) {
+	) | rpl::start_with_next([=](Blob::Radiuses r) {
 		_blobs[index].setRadiuses(std::move(r));
 	}, _lifetime);
 }
 
-BlobBezier::Radiuses Blobs::radiusesAt(int index) {
+Blob::Radiuses Blobs::radiusesAt(int index) {
 	Expects(index >= 0 && index < size());
 	return _blobs[index].radiuses();
 }

@@ -30,9 +30,9 @@ public:
 		float maxLevel);
 
 	void setRadiusesAt(
-		rpl::producer<BlobBezier::Radiuses> &&radiuses,
+		rpl::producer<Blob::Radiuses> &&radiuses,
 		int index);
-	BlobBezier::Radiuses radiusesAt(int index);
+	Blob::Radiuses radiusesAt(int index);
 
 	void setLevel(float value);
 	void paint(Painter &p, const QBrush &brush);
@@ -50,7 +50,7 @@ private:
 	const float _maxLevel;
 
 	std::vector<BlobData> _blobDatas;
-	std::vector<BlobBezier> _blobs;
+	std::vector<RadialBlob> _blobs;
 
 	anim::continuous_value _levelValue;
 

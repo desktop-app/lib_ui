@@ -20,7 +20,7 @@ namespace Ui {
 
 namespace {
 
-using Radiuses = Paint::BlobBezier::Radiuses;
+using Radiuses = Paint::Blob::Radiuses;
 
 constexpr auto kMaxLevel = 1.;
 

@@ -7,7 +7,7 @@
 #pragma once
 
 #include "ui/effects/animation_value.h"
-#include "ui/paint/blob_linear.h"
+#include "ui/paint/blob.h"
 
 class Painter;
 
@@ -22,19 +22,18 @@ public:
 		float idleRadius = 0;
 		float speedScale = 0;
 		float alpha = 0;
-		int topOffset = 0;
 	};
 
 	LinearBlobs(
 		std::vector<BlobData> blobDatas,
 		float levelDuration,
 		float maxLevel,
-		LinearBlobBezier::Direction direction);
+		LinearBlob::Direction direction);
 
 	void setRadiusesAt(
-		rpl::producer<LinearBlobBezier::Radiuses> &&radiuses,
+		rpl::producer<Blob::Radiuses> &&radiuses,
 		int index);
-	LinearBlobBezier::Radiuses radiusesAt(int index);
+	Blob::Radiuses radiusesAt(int index);
 
 	void setLevel(float value);
 	void paint(Painter &p, const QBrush &brush, int width);
@@ -50,10 +49,10 @@ private:
 	void init();
 
 	const float _maxLevel;
-	const LinearBlobBezier::Direction _direction;
+	const LinearBlob::Direction _direction;
 
 	std::vector<BlobData> _blobDatas;
-	std::vector<LinearBlobBezier> _blobs;
+	std::vector<LinearBlob> _blobs;
 
 	anim::continuous_value _levelValue;
 

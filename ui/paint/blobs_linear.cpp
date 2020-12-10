@@ -14,7 +14,7 @@ LinearBlobs::LinearBlobs(
 	std::vector<BlobData> blobDatas,
 	float levelDuration,
 	float maxLevel,
-	LinearBlobBezier::Direction direction)
+	LinearBlob::Direction direction)
 : _maxLevel(maxLevel)
 , _direction(direction)
 , _blobDatas(std::move(blobDatas))
@@ -24,7 +24,7 @@ LinearBlobs::LinearBlobs(
 
 void LinearBlobs::init() {
 	for (const auto &data : _blobDatas) {
-		auto blob = Paint::LinearBlobBezier(
+		auto blob = Paint::LinearBlob(
 			data.segmentsCount,
 			_direction);
 		blob.setRadiuses({ data.minRadius, data.idleRadius });
@@ -49,17 +49,17 @@ int LinearBlobs::size() const {
 }
 
 void LinearBlobs::setRadiusesAt(
-		rpl::producer<LinearBlobBezier::Radiuses> &&radiuses,
+		rpl::producer<Blob::Radiuses> &&radiuses,
 		int index) {
 	Expects(index >= 0 && index < size());
 	std::move(
 		radiuses
-	) | rpl::start_with_next([=](LinearBlobBezier::Radiuses r) {
+	) | rpl::start_with_next([=](Blob::Radiuses r) {
 		_blobs[index].setRadiuses(std::move(r));
 	}, _lifetime);
 }
 
-LinearBlobBezier::Radiuses LinearBlobs::radiusesAt(int index) {
+Blob::Radiuses LinearBlobs::radiusesAt(int index) {
 	Expects(index >= 0 && index < size());
 	return _blobs[index].radiuses();
 }
