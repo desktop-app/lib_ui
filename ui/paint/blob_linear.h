@@ -12,6 +12,11 @@ namespace Ui::Paint {
 
 class LinearBlobBezier final {
 public:
+	enum class Direction {
+		TopDown,
+		BottomUp,
+	};
+
 	struct Radiuses {
 		float min = 0.;
 		float max = 0.;
@@ -26,16 +31,11 @@ public:
 
 	LinearBlobBezier(
 		int n,
-		float minScale,
+		Direction direction = Direction::TopDown,
 		float minSpeed = 0,
 		float maxSpeed = 0);
 
-	void paint(
-		Painter &p,
-		const QBrush &brush,
-		const QRect &rect,
-		float pinnedTop,
-		float progressToPinned);
+	void paint(Painter &p, const QBrush &brush, int width);
 	void update(float level, float speedScale);
 	void generateBlob();
 
@@ -56,10 +56,10 @@ private:
 	const float _minSpeed;
 	const float _maxSpeed;
 	const QPen _pen;
+	const int _topDown;
 
 	std::vector<Segment> _segments;
 
-	float64 _scale = 0;
 	Radiuses _radiuses;
 
 };

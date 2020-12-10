@@ -17,9 +17,9 @@ class LinearBlobs final {
 public:
 	struct BlobData {
 		int segmentsCount = 0;
-		float minScale = 0;
 		float minRadius = 0;
 		float maxRadius = 0;
+		float idleRadius = 0;
 		float speedScale = 0;
 		float alpha = 0;
 		int topOffset = 0;
@@ -28,8 +28,8 @@ public:
 	LinearBlobs(
 		std::vector<BlobData> blobDatas,
 		float levelDuration,
-		float levelDuration2,
-		float maxLevel);
+		float maxLevel,
+		LinearBlobBezier::Direction direction);
 
 	void setRadiusesAt(
 		rpl::producer<LinearBlobBezier::Radiuses> &&radiuses,
@@ -37,12 +37,7 @@ public:
 	LinearBlobBezier::Radiuses radiusesAt(int index);
 
 	void setLevel(float value);
-	void paint(
-		Painter &p,
-		const QBrush &brush,
-		const QRect &rect,
-		float pinnedTop,
-		float progressToPinned);
+	void paint(Painter &p, const QBrush &brush, int width);
 	void updateLevel(crl::time dt);
 
 	[[nodiscard]] float maxRadius() const;
@@ -55,12 +50,12 @@ private:
 	void init();
 
 	const float _maxLevel;
+	const LinearBlobBezier::Direction _direction;
 
 	std::vector<BlobData> _blobDatas;
 	std::vector<LinearBlobBezier> _blobs;
 
 	anim::continuous_value _levelValue;
-	anim::continuous_value _levelValue2;
 
 	rpl::lifetime _lifetime;
 
