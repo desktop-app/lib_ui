@@ -109,10 +109,6 @@ auto Colors() {
 	};
 }
 
-inline float64 InterpolateF(int a, int b, float64 b_ratio) {
-	return a + float64(b - a) * b_ratio;
-}
-
 bool IsMuted(CallMuteButtonType type) {
 	return (type != CallMuteButtonType::Active);
 }
@@ -402,7 +398,7 @@ void CallMuteButton::init() {
 
 			const auto crossProgress = (crossFrom == crossTo)
 				? crossTo
-				: InterpolateF(crossFrom, crossTo, value);
+				: anim::interpolateF(crossFrom, crossTo, value);
 			if (crossProgress != _crossLineProgress) {
 				_crossLineProgress = crossProgress;
 				_content->update(_muteIconPosition);
@@ -410,7 +406,7 @@ void CallMuteButton::init() {
 
 			const auto radialShowProgress = (radialShowFrom == radialShowTo)
 				? radialShowTo
-				: InterpolateF(radialShowFrom, radialShowTo, value);
+				: anim::interpolateF(radialShowFrom, radialShowTo, value);
 			if (radialShowProgress != _radialShowProgress.current()) {
 				_radialShowProgress = radialShowProgress;
 			}
