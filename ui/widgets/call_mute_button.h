@@ -9,14 +9,17 @@
 #include "base/unique_qptr.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/cross_line.h"
-#include "ui/widgets/call_button.h"
-
-#include <unordered_map>
 
 namespace Ui {
 
 class BlobsWidget;
+
+class AbstractButton;
+class FlatLabel;
 class InfiniteRadialAnimation;
+class RpWidget;
+
+struct CallButtonColors;
 
 enum class CallMuteButtonType {
 	Connecting,
@@ -62,7 +65,6 @@ public:
 
 private:
 	void init();
-	void contentPaint();
 	void overridesColors(
 		CallMuteButtonType fromType,
 		CallMuteButtonType toType,
@@ -76,8 +78,11 @@ private:
 	rpl::variable<float64> _radialShowProgress = 0.;
 	QRect _muteIconPosition;
 
+	const style::CallButton &_st;
+
 	const base::unique_qptr<BlobsWidget> _blobs;
-	CallButton _content;
+	const base::unique_qptr<AbstractButton> _content;
+	const base::unique_qptr<FlatLabel> _label;
 
 	std::unique_ptr<InfiniteRadialAnimation> _radial;
 	const base::flat_map<CallMuteButtonType, std::vector<QColor>> _colors;
