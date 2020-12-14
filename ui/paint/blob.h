@@ -18,6 +18,7 @@ public:
 	};
 
 	Blob(int n, float minSpeed = 0, float maxSpeed = 0);
+	virtual ~Blob() = default;
 
 	void update(float level, float speedScale);
 	void generateBlob();

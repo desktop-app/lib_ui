@@ -16,7 +16,7 @@ namespace anim {
 
 namespace details {
 
-template <typename T>
+template <typename T, typename Derived>
 class gradients {
 public:
 	gradients(base::flat_map<T, std::vector<QColor>> colors)
@@ -31,7 +31,7 @@ public:
 			return _gradients.find(state2)->second;
 		}
 
-		auto gradient = empty_gradient();
+		auto gradient = static_cast<const Derived*>(this)->empty_gradient();
 		const auto size = _colors.front().second.size();
 		const auto colors1 = _colors.find(state1);
 		const auto colors2 = _colors.find(state2);
@@ -47,8 +47,6 @@ public:
 	}
 
 protected:
-	virtual QGradient empty_gradient() const = 0;
-
 	void cache_gradients() {
 		_gradients = base::flat_map<T, QGradient>();
 		for (const auto &[key, value] : _colors) {
@@ -56,8 +54,9 @@ protected:
 		}
 	}
 
+private:
 	QGradient gradient(const std::vector<QColor> &colors) const {
-		auto gradient = empty_gradient();
+		auto gradient = static_cast<const Derived*>(this)->empty_gradient();
 		const auto size = colors.size();
 		for (auto i = 0; i < size; i++) {
 			gradient.setColorAt(i / (size - 1), colors[i]);
@@ -73,13 +72,16 @@ protected:
 } // namespace details
 
 template <typename T>
-class linear_gradients final : public details::gradients<T> {
+class linear_gradients final
+	: public details::gradients<T, linear_gradients<T>> {
+	using parent = details::gradients<T, linear_gradients<T>>;
+
 public:
 	linear_gradients(
 		base::flat_map<T, std::vector<QColor>> colors,
 		QPointF point1,
 		QPointF point2)
-	: details::gradients<T>(std::move(colors)) {
+	: parent(std::move(colors)) {
 		set_points(point1, point2);
 	}
 
@@ -89,26 +91,32 @@ public:
 		}
 		_point1 = point1;
 		_point2 = point2;
-		details::gradients<T>::cache_gradients();
+		parent::cache_gradients();
 	}
 
 private:
-	QGradient empty_gradient() const override {
+	friend class details::gradients<T, linear_gradients<T>>;
+
+	QGradient empty_gradient() const {
 		return QLinearGradient(_point1, _point2);
 	}
 
 	QPointF _point1;
 	QPointF _point2;
+
 };
 
 template <typename T>
-class radial_gradients final : public details::gradients<T> {
+class radial_gradients final
+	: public details::gradients<T, radial_gradients<T>> {
+	using parent = details::gradients<T, radial_gradients<T>>;
+
 public:
 	radial_gradients(
 		base::flat_map<T, std::vector<QColor>> colors,
 		QPointF center,
 		float radius)
-	: details::gradients<T>(std::move(colors)) {
+	: parent(std::move(colors)) {
 		set_points(center, radius);
 	}
 
@@ -118,16 +126,19 @@ public:
 		}
 		_center = center;
 		_radius = radius;
-		details::gradients<T>::cache_gradients();
+		parent::cache_gradients();
 	}
 
 private:
-	QGradient empty_gradient() const override {
+	friend class details::gradients<T, radial_gradients<T>>;
+
+	QGradient empty_gradient() const {
 		return QRadialGradient(_center, _radius);
 	}
 
 	QPointF _center;
 	float _radius = 0.;
+
 };
 
 } // namespace anim
