@@ -571,6 +571,8 @@ groupCallLive1: #0dcc39; // group call live button color1
 groupCallLive2: #0bb6bd; // group call live button color2
 groupCallMuted1: #0992ef; // group call muted button color1
 groupCallMuted2: #16ccfb; // group call muted button color2
+groupCallForceMuted1: #d4527c; // group call force muted button color1
+groupCallForceMuted2: #5d8efa; // group call force muted button color2
 groupCallMenuBg: #292d33; // group call popup menu background
 groupCallMenuBgOver: #343940; // group call popup menu with mouse over
 groupCallMenuBgRipple: #3a4047; // group call popup menu ripple effect

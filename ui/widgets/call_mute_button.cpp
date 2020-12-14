@@ -92,7 +92,7 @@ auto Colors() {
 	return base::flat_map<CallMuteButtonType, Vector>{
 		{
 			CallMuteButtonType::ForceMuted,
-			Vector{ st::callIconBg->c, st::callIconBg->c }
+			Vector{ st::groupCallForceMuted1->c, st::groupCallForceMuted2->c }
 		},
 		{
 			CallMuteButtonType::Active,
@@ -284,14 +284,14 @@ CallMuteButton::CallMuteButton(
 		std::move(hideBlobs),
 		_state.value(
 		) | rpl::map([](const CallMuteButtonState &state) {
-			return IsConnecting(state.type);
+			return IsInactive(state.type);
 		})
-	) | rpl::map([](bool animDisabled, bool hide, bool isConnecting) {
-		return isConnecting || !(!animDisabled && !hide);
+	) | rpl::map([](bool animDisabled, bool hide, bool isBadState) {
+		return isBadState || !(!animDisabled && !hide);
 	})))
 , _content(base::make_unique_q<AbstractButton>(parent))
 , _label(base::make_unique_q<FlatLabel>(
-	_content,
+	parent,
 	_state.value(
 	) | rpl::map([](const CallMuteButtonState &state) {
 		return state.text;
@@ -314,12 +314,12 @@ void CallMuteButton::init() {
 	// Label text.
 	_label->show();
 	rpl::combine(
-		_content->sizeValue(),
-		_label->sizeValue()
-	) | rpl::start_with_next([=](QSize my, QSize label) {
+		_content->geometryValue(),
+		_label->geometryValue()
+	) | rpl::start_with_next([=](QRect my, QRect label) {
 		_label->moveToLeft(
-			(my.width() - label.width()) / 2,
-			my.height() - label.height(),
+			my.x() + (my.width() - label.width()) / 2,
+			my.y() + my.height() - label.height(),
 			my.width());
 	}, _label->lifetime());
 	_label->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -519,6 +519,13 @@ void CallMuteButton::overridesColors(
 		CallMuteButtonType fromType,
 		CallMuteButtonType toType,
 		float64 progress) {
+	const auto forceMutedToConnecting = [](CallMuteButtonType &type) {
+		if (type == CallMuteButtonType::ForceMuted) {
+			type = CallMuteButtonType::Connecting;
+		}
+	};
+	forceMutedToConnecting(toType);
+	forceMutedToConnecting(fromType);
 	const auto toInactive = IsInactive(toType);
 	const auto fromInactive = IsInactive(fromType);
 	if (toInactive && (progress == 1)) {
