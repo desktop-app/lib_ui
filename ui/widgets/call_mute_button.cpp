@@ -133,7 +133,7 @@ public:
 	void setBlobBrush(QBrush brush);
 	void setGlowBrush(QBrush brush);
 
-	[[nodiscard]] QRect innerRect() const;
+	[[nodiscard]] QRectF innerRect() const;
 
 private:
 	void init();
@@ -143,7 +143,7 @@ private:
 	QBrush _blobBrush;
 	QBrush _glowBrush;
 	int _center = 0;
-	QRect _inner;
+	QRectF _inner;
 
 	crl::time _blobsLastTime = 0;
 	crl::time _blobsHideLastTime = 0;
@@ -200,9 +200,9 @@ void BlobsWidget::init() {
 	) | rpl::start_with_next([=](QSize size) {
 		_center = size.width() / 2;
 
-		const auto w = _blobs.maxRadius() * 2;
-		const auto margins = style::margins(w, w, w, w);
-		_inner = QRect(QPoint(), size).marginsRemoved(margins);
+		const auto w = (size.width() - _blobs.maxRadius() * 2) / 2.;
+		const auto margins = QMarginsF(w, w, w, w);
+		_inner = QRectF(QPoint(), size).marginsRemoved(margins);
 	}, lifetime());
 
 	paintRequest(
@@ -246,7 +246,7 @@ void BlobsWidget::init() {
 	}, lifetime());
 }
 
-QRect BlobsWidget::innerRect() const {
+QRectF BlobsWidget::innerRect() const {
 	return _inner;
 }
 
@@ -344,11 +344,16 @@ void CallMuteButton::init() {
 		lifetime().make_state<CallMuteButtonType>(_state.current().type);
 	setEnableMouse(false);
 
-	const auto blobsInner = _blobs->innerRect();
+	const auto blobsInner = [&] {
+		// The point of the circle at 45 degrees.
+		const auto mF = std::sqrt(_blobs->innerRect().width()) / 2.;
+		return _blobs->innerRect().marginsRemoved(QMarginsF(mF, mF, mF, mF));
+	}();
+
 	auto linearGradients = anim::linear_gradients<CallMuteButtonType>(
 		_colors,
-		QPointF(blobsInner.x(), blobsInner.y() + blobsInner.height()),
-		QPointF(blobsInner.x() + blobsInner.width(), blobsInner.y()));
+		QPointF(blobsInner.x() + blobsInner.width(), blobsInner.y()),
+		QPointF(blobsInner.x(), blobsInner.y() + blobsInner.height()));
 
 	auto glowColors = [&] {
 		auto copy = _colors;
