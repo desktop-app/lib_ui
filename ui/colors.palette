@@ -554,18 +554,18 @@ callHangupBg: #d75a5a; // phone call popup hangup button background
 callHangupRipple: #c04646; // phone call popup hangup button ripple effect
 callMuteRipple: #ffffff12; // phone call popup mute mic and camera ripple effect
 
-groupCallBg: #131417; // group call popup background
+groupCallBg: #1a2026; // group call popup background
 groupCallActiveFg: #4db8ff; // group call active controls text
-groupCallMembersBg: #1a1c1f; // group call members list background
-groupCallMembersBgOver: #22252a; // group call members list row with mouse over
-groupCallMembersBgRipple: #272b30; // group call member row ripple effect
+groupCallMembersBg: #2c333d; // group call members list background
+groupCallMembersBgOver: #323a45; // group call members list row with mouse over
+groupCallMembersBgRipple: #39424f; // group call member row ripple effect
 groupCallMembersFg: #ffffff; // group call member name text
-groupCallMemberActiveIcon: #3fe069; // group call active member icon
-groupCallMemberActiveStatus: #67e66d; // group call active member status text
-groupCallMemberInactiveIcon: #61666b; // group call inactive member icon
-groupCallMemberInactiveStatus: #4db8ff; // group call inactive member status text
+groupCallMemberActiveIcon: #8deb90; // group call active member icon
+groupCallMemberActiveStatus: #8deb90; // group call active member status text
+groupCallMemberInactiveIcon: #84888f; // group call inactive member icon
+groupCallMemberInactiveStatus: #61c0ff; // group call inactive member status text
 groupCallMemberMutedIcon: #ff4f4d; // group call muted by admin member icon
-groupCallMemberNotJoinedStatus: #61666b; // group call non joined member status text
+groupCallMemberNotJoinedStatus: #91979e; // group call non joined member status text
 groupCallIconFg: #ffffff; // group call mute / settings / leave icon
 groupCallLive1: #0dcc39; // group call live button color1
 groupCallLive2: #0bb6bd; // group call live button color2
