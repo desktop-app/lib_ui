@@ -71,14 +71,64 @@ public:
 		Assert(gradient1 != end(_gradients));
 		Assert(gradient2 != end(_gradients));
 
-		const auto stops1 = gradient1->second.stops();
-		const auto stops2 = gradient2->second.stops();
+		const auto stopsFrom = gradient1->second.stops();
+		const auto stopsTo = gradient2->second.stops();
 
-		const auto size = stops1.size();
+		if ((stopsFrom.size() == stopsTo.size())
+			&& ranges::equal(
+				stopsFrom,
+				stopsTo,
+				ranges::equal_to(),
+				&QGradientStop::first,
+				&QGradientStop::first)) {
 
-		for (auto i = 0; i < size; i++) {
-			auto c = color(stops1[i].second, stops2[i].second, b_ratio);
-			gradient.setColorAt(i / (size - 1), std::move(c));
+			const auto size = stopsFrom.size();
+			const auto &p = b_ratio;
+			for (auto i = 0; i < size; i++) {
+				auto c = color(stopsFrom[i].second, stopsTo[i].second, p);
+				gradient.setColorAt(stopsTo[i].first, std::move(c));
+			}
+			return gradient;
+		}
+
+		const auto invert = (stopsFrom.size() > stopsTo.size());
+		if (invert) {
+			b_ratio = 1. - b_ratio;
+		}
+
+		const auto &stops1 = invert ? stopsTo : stopsFrom;
+		const auto &stops2 = invert ? stopsFrom : stopsTo;
+
+		const auto size1 = stops1.size();
+		const auto size2 = stops2.size();
+
+		for (auto i = 0; i < size1; i++) {
+			const auto point1 = stops1[i].first;
+			const auto previousPoint1 = i ? stops1[i - 1].first : -1.;
+
+			for (auto n = 0; n < size2; n++) {
+				const auto point2 = stops2[n].first;
+
+				if ((point2 <= previousPoint1) || (point2 > point1)) {
+					continue;
+				}
+				const auto color2 = stops2[n].second;
+				QColor result;
+				if (point2 < point1) {
+					const auto pointRatio2 = (point2 - previousPoint1)
+						/ (point1 - previousPoint1);
+					const auto color1 = color(
+						stops1[i - 1].second,
+						stops1[i].second,
+						pointRatio2);
+
+					result = color(color1, color2, b_ratio);
+				} else {
+					// point2 == point1
+					result = color(stops1[i].second, color2, b_ratio);
+				}
+				gradient.setColorAt(point2, std::move(result));
+			}
 		}
 		return gradient;
 	}
