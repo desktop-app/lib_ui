@@ -8,7 +8,6 @@
 
 #include "base/flat_map.h"
 #include "ui/abstract_button.h"
-#include "ui/effects/gradient.h"
 #include "ui/effects/radial_animation.h"
 #include "ui/paint/blobs.h"
 #include "ui/painter.h"
@@ -80,22 +79,26 @@ auto MuteBlobs() {
 
 auto Colors() {
 	using Vector = std::vector<QColor>;
-	return base::flat_map<CallMuteButtonType, Vector>{
+	using Colors = anim::gradient_colors;
+	return base::flat_map<CallMuteButtonType, Colors>{
 		{
 			CallMuteButtonType::ForceMuted,
-			Vector{ st::groupCallForceMuted1->c, st::groupCallForceMuted2->c }
+			Colors(QGradientStops{
+				{ .0, st::groupCallForceMuted1->c },
+				{ .5, st::groupCallForceMuted2->c },
+				{ 1., st::groupCallForceMuted3->c } })
 		},
 		{
 			CallMuteButtonType::Active,
-			Vector{ st::groupCallLive1->c, st::groupCallLive2->c }
+			Colors(Vector{ st::groupCallLive1->c, st::groupCallLive2->c })
 		},
 		{
 			CallMuteButtonType::Connecting,
-			Vector{ st::callIconBg->c, st::callIconBg->c }
+			Colors(st::callIconBg->c)
 		},
 		{
 			CallMuteButtonType::Muted,
-			Vector{ st::groupCallMuted1->c, st::groupCallMuted2->c }
+			Colors(Vector{ st::groupCallMuted1->c, st::groupCallMuted2->c })
 		},
 	};
 }
@@ -343,7 +346,8 @@ void CallMuteButton::init() {
 
 	const auto blobsInner = [&] {
 		// The point of the circle at 45 degrees.
-		const auto mF = std::sqrt(_blobs->innerRect().width()) / 2.;
+		const auto w = _blobs->innerRect().width();
+		const auto mF = (1 - std::cos(M_PI / 4.)) * (w / 2.);
 		return _blobs->innerRect().marginsRemoved(QMarginsF(mF, mF, mF, mF));
 	}();
 
@@ -354,13 +358,15 @@ void CallMuteButton::init() {
 
 	auto glowColors = [&] {
 		auto copy = _colors;
-		for (auto &[type, colors] : copy) {
-			if (IsInactive(type)) {
-				colors[0] = st::groupCallBg->c;
-			} else {
-				colors[0].setAlpha(kGlowAlpha);
-			}
-			colors[1] = QColor(Qt::transparent);
+		for (auto &[type, stops] : copy) {
+			auto firstColor = IsInactive(type)
+				? st::groupCallBg->c
+				: stops.stops[0].second;
+			firstColor.setAlpha(kGlowAlpha);
+			stops.stops = QGradientStops{
+				{ 0., std::move(firstColor) },
+				{ 1., QColor(Qt::transparent) }
+			};
 		}
 		return copy;
 	}();
@@ -595,8 +601,8 @@ void CallMuteButton::overridesColors(
 		_colorOverrides.fire({ std::nullopt, std::nullopt });
 		return;
 	}
-	auto from = _colors.find(fromType)->second[0];
-	auto to = _colors.find(toType)->second[0];
+	auto from = _colors.find(fromType)->second.stops[0].second;
+	auto to = _colors.find(toType)->second.stops[0].second;
 	auto fromRipple = from;
 	auto toRipple = to;
 	if (!toInactive) {

@@ -9,6 +9,7 @@
 #include "base/unique_qptr.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/cross_line.h"
+#include "ui/effects/gradient.h"
 
 namespace Ui {
 
@@ -99,7 +100,7 @@ private:
 	int _labelShakeShift = 0;
 
 	std::unique_ptr<InfiniteRadialAnimation> _radial;
-	const base::flat_map<CallMuteButtonType, std::vector<QColor>> _colors;
+	const base::flat_map<CallMuteButtonType, anim::gradient_colors> _colors;
 
 	CrossLineAnimation _crossLineMuteAnimation;
 	Animations::Simple _switchAnimation;
