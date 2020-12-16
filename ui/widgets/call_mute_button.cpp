@@ -52,16 +52,6 @@ constexpr auto kShiftDuration = crl::time(300);
 auto MuteBlobs() {
 	return std::vector<Paint::Blobs::BlobData>{
 		{
-			.segmentsCount = 6,
-			.minScale = 1.,
-			.minRadius = st::callMuteMainBlobMinRadius
-				* kMainRadiusFactor,
-			.maxRadius = st::callMuteMainBlobMaxRadius
-				* kMainRadiusFactor,
-			.speedScale = .4,
-			.alpha = 1.,
-		},
-		{
 			.segmentsCount = 9,
 			.minScale = kScaleSmallMin / kScaleSmallMax,
 			.minRadius = st::callMuteMinorBlobMinRadius
@@ -141,10 +131,11 @@ private:
 
 	Paint::Blobs _blobs;
 
+	const float _circleRaidus;
 	QBrush _blobBrush;
 	QBrush _glowBrush;
 	int _center = 0;
-	QRectF _inner;
+	QRectF _circleRect;
 
 	crl::time _blobsLastTime = 0;
 	crl::time _blobsHideLastTime = 0;
@@ -158,6 +149,7 @@ BlobsWidget::BlobsWidget(
 	rpl::producer<bool> &&hideBlobs)
 : RpWidget(parent)
 , _blobs(MuteBlobs(), kLevelDuration, kMaxLevel)
+, _circleRaidus(st::callMuteMainBlobMinRadius * kMainRadiusFactor)
 , _blobBrush(Qt::transparent)
 , _glowBrush(Qt::transparent)
 , _blobsLastTime(crl::now()) {
@@ -201,9 +193,11 @@ void BlobsWidget::init() {
 	) | rpl::start_with_next([=](QSize size) {
 		_center = size.width() / 2;
 
-		const auto w = (size.width() - _blobs.maxRadius() * 2) / 2.;
-		const auto margins = QMarginsF(w, w, w, w);
-		_inner = QRectF(QPoint(), size).marginsRemoved(margins);
+		{
+			const auto &r = _circleRaidus;
+			const auto left = (size.width() - r * 2.) / 2.;
+			_circleRect = QRectF(left, left, r * 2, r * 2);
+		}
 	}, lifetime());
 
 	paintRequest(
@@ -223,6 +217,11 @@ void BlobsWidget::init() {
 		// Blobs.
 		p.translate(_center, _center);
 		_blobs.paint(p, _blobBrush);
+
+		// Main circle.
+		p.setPen(Qt::NoPen);
+		p.setBrush(_blobBrush);
+		p.drawEllipse(QPointF(), _circleRaidus, _circleRaidus);
 	}, lifetime());
 
 	_animation.init([=](crl::time now) {
@@ -248,7 +247,7 @@ void BlobsWidget::init() {
 }
 
 QRectF BlobsWidget::innerRect() const {
-	return _inner;
+	return _circleRect;
 }
 
 void BlobsWidget::setBlobBrush(QBrush brush) {
@@ -406,7 +405,7 @@ void CallMuteButton::init() {
 				: anim::interpolateF(crossFrom, crossTo, value);
 			if (crossProgress != _crossLineProgress) {
 				_crossLineProgress = crossProgress;
-				_content->update(_muteIconPosition);
+				_content->update(_muteIconRect);
 			}
 
 			const auto radialShowProgress = (radialShowFrom == radialShowTo)
@@ -434,7 +433,7 @@ void CallMuteButton::init() {
 		const auto &icon = _st.button.icon;
 		const auto &pos = _st.button.iconPosition;
 
-		_muteIconPosition = QRect(
+		_muteIconRect = QRect(
 			(pos.x() < 0) ? ((size.width() - icon.width()) / 2) : pos.x(),
 			(pos.y() < 0) ? ((size.height() - icon.height()) / 2) : pos.y(),
 			icon.width(),
@@ -448,7 +447,7 @@ void CallMuteButton::init() {
 
 		_crossLineMuteAnimation.paint(
 			p,
-			_muteIconPosition.topLeft(),
+			_muteIconRect.topLeft(),
 			1. - _crossLineProgress);
 
 		if (_radial) {

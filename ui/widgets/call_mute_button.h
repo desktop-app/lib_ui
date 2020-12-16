@@ -88,7 +88,7 @@ private:
 	float _level = 0.;
 	float64 _crossLineProgress = 0.;
 	rpl::variable<float64> _radialShowProgress = 0.;
-	QRect _muteIconPosition;
+	QRect _muteIconRect;
 	HandleMouseState _handleMouseState = HandleMouseState::Enabled;
 
 	const style::CallButton &_st;
