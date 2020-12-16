@@ -564,7 +564,7 @@ groupCallMemberActiveIcon: #8deb90; // group call active member icon
 groupCallMemberActiveStatus: #8deb90; // group call active member status text
 groupCallMemberInactiveIcon: #84888f; // group call inactive member icon
 groupCallMemberInactiveStatus: #61c0ff; // group call inactive member status text
-groupCallMemberMutedIcon: #ff4f4d; // group call muted by admin member icon
+groupCallMemberMutedIcon: #ed7372; // group call muted by admin member icon
 groupCallMemberNotJoinedStatus: #91979e; // group call non joined member status text
 groupCallIconFg: #ffffff; // group call mute / settings / leave icon
 groupCallLive1: #0dcc39; // group call live button color1

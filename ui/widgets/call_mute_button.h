@@ -49,6 +49,8 @@ public:
 	[[nodiscard]] QRect innerGeometry() const;
 	void moveInner(QPoint position);
 
+	void shake();
+
 	void setVisible(bool visible);
 	void show() {
 		setVisible(true);
@@ -64,31 +66,44 @@ public:
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:
+	enum class HandleMouseState {
+		Enabled,
+		Blocked,
+		Disabled,
+	};
 	void init();
 	void overridesColors(
 		CallMuteButtonType fromType,
 		CallMuteButtonType toType,
 		float64 progress);
 
-	void setEnableMouse(bool value);
+	void setHandleMouseState(HandleMouseState state);
+	void updateLabelGeometry(QRect my, QSize size);
+	void updateLabelGeometry();
+
+	[[nodiscard]] static HandleMouseState HandleMouseStateFromType(
+		CallMuteButtonType type);
 
 	rpl::variable<CallMuteButtonState> _state;
 	float _level = 0.;
 	float64 _crossLineProgress = 0.;
 	rpl::variable<float64> _radialShowProgress = 0.;
 	QRect _muteIconPosition;
+	HandleMouseState _handleMouseState = HandleMouseState::Enabled;
 
 	const style::CallButton &_st;
 
 	const base::unique_qptr<BlobsWidget> _blobs;
 	const base::unique_qptr<AbstractButton> _content;
 	const base::unique_qptr<FlatLabel> _label;
+	int _labelShakeShift = 0;
 
 	std::unique_ptr<InfiniteRadialAnimation> _radial;
 	const base::flat_map<CallMuteButtonType, std::vector<QColor>> _colors;
 
 	CrossLineAnimation _crossLineMuteAnimation;
 	Animations::Simple _switchAnimation;
+	Animations::Simple _shakeAnimation;
 
 	rpl::event_stream<CallButtonColors> _colorOverrides;
 

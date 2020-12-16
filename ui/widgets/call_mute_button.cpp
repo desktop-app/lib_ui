@@ -47,6 +47,7 @@ constexpr auto kOverrideColorBgAlpha = 76;
 constexpr auto kOverrideColorRippleAlpha = 50;
 
 constexpr auto kSwitchStateDuration = 120;
+constexpr auto kShiftDuration = crl::time(300);
 
 auto MuteBlobs() {
 	return std::vector<Paint::Blobs::BlobData>{
@@ -315,12 +316,9 @@ void CallMuteButton::init() {
 	_label->show();
 	rpl::combine(
 		_content->geometryValue(),
-		_label->geometryValue()
-	) | rpl::start_with_next([=](QRect my, QRect label) {
-		_label->moveToLeft(
-			my.x() + (my.width() - label.width()) / 2,
-			my.y() + my.height() - label.height(),
-			my.width());
+		_label->sizeValue()
+	) | rpl::start_with_next([=](QRect my, QSize size) {
+		updateLabelGeometry(my, size);
 	}, _label->lifetime());
 	_label->setAttribute(Qt::WA_TransparentForMouseEvents);
 
@@ -342,7 +340,7 @@ void CallMuteButton::init() {
 	// State type.
 	const auto previousType =
 		lifetime().make_state<CallMuteButtonType>(_state.current().type);
-	setEnableMouse(false);
+	setHandleMouseState(HandleMouseState::Disabled);
 
 	const auto blobsInner = [&] {
 		// The point of the circle at 45 degrees.
@@ -379,8 +377,10 @@ void CallMuteButton::init() {
 		const auto previous = *previousType;
 		*previousType = type;
 
-		if (IsInactive(type) && !IsInactive(previous)) {
-			setEnableMouse(false);
+		const auto mouseState = HandleMouseStateFromType(type);
+		setHandleMouseState(HandleMouseState::Disabled);
+		if (mouseState != HandleMouseState::Enabled) {
+			setHandleMouseState(mouseState);
 		}
 
 		const auto crossFrom = IsMuted(previous) ? 0. : 1.;
@@ -419,9 +419,7 @@ void CallMuteButton::init() {
 			overridesColors(previous, type, value);
 
 			if (value == to) {
-				if (!IsInactive(type) && IsInactive(previous)) {
-					setEnableMouse(true);
-				}
+				setHandleMouseState(mouseState);
 			}
 		};
 
@@ -461,6 +459,60 @@ void CallMuteButton::init() {
 				_content->width());
 		}
 	}, _content->lifetime());
+}
+
+void CallMuteButton::updateLabelGeometry() {
+	updateLabelGeometry(_content->geometry(), _label->size());
+}
+
+void CallMuteButton::updateLabelGeometry(QRect my, QSize size) {
+	_label->moveToLeft(
+		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
+		my.y() + my.height() - size.height(),
+		my.width());
+}
+
+void CallMuteButton::shake() {
+	if (_shakeAnimation.animating()) {
+		return;
+	}
+	const auto update = [=] {
+		const auto fullProgress = _shakeAnimation.value(1.) * 6;
+		const auto segment = std::clamp(int(std::floor(fullProgress)), 0, 5);
+		const auto part = fullProgress - segment;
+		const auto from = (segment == 0)
+			? 0.
+			: (segment == 1 || segment == 3 || segment == 5)
+			? 1.
+			: -1.;
+		const auto to = (segment == 0 || segment == 2 || segment == 4)
+			? 1.
+			: (segment == 1 || segment == 3)
+			? -1.
+			: 0.;
+		const auto shift = from * (1. - part) + to * part;
+		_labelShakeShift = int(std::round(shift * st::shakeShift));
+		updateLabelGeometry();
+	};
+	_shakeAnimation.start(
+		update,
+		0.,
+		1.,
+		kShiftDuration);
+}
+
+CallMuteButton::HandleMouseState CallMuteButton::HandleMouseStateFromType(
+		CallMuteButtonType type) {
+	switch (type) {
+	case CallMuteButtonType::Active:
+	case CallMuteButtonType::Muted:
+		return HandleMouseState::Enabled;
+	case CallMuteButtonType::Connecting:
+		return HandleMouseState::Disabled;
+	case CallMuteButtonType::ForceMuted:
+		return HandleMouseState::Blocked;
+	}
+	Unexpected("Type in HandleMouseStateFromType.");
 }
 
 void CallMuteButton::setState(const CallMuteButtonState &state) {
@@ -516,8 +568,15 @@ void CallMuteButton::lower() {
 	_blobs->lower();
 }
 
-void CallMuteButton::setEnableMouse(bool value) {
-	_content->setAttribute(Qt::WA_TransparentForMouseEvents, !value);
+void CallMuteButton::setHandleMouseState(HandleMouseState state) {
+	if (_handleMouseState == state) {
+		return;
+	}
+	_handleMouseState = state;
+	const auto handle = (_handleMouseState != HandleMouseState::Disabled);
+	const auto pointer = (_handleMouseState == HandleMouseState::Enabled);
+	_content->setAttribute(Qt::WA_TransparentForMouseEvents, !handle);
+	_content->setPointerCursor(pointer);
 }
 
 void CallMuteButton::overridesColors(

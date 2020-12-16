@@ -1468,6 +1468,8 @@ callConnectingRadial: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
 	size: size(100px, 100px);
 }
 
+shakeShift: 4px;
+
 // Windows specific title
 
 windowTitleButton: IconButton {
