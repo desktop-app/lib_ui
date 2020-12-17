@@ -65,7 +65,7 @@ void Blobs::setLevel(float value) {
 	_levelValue.start(to);
 }
 
-void Blobs::paint(Painter &p, const QBrush &brush) {
+void Blobs::paint(Painter &p, const QBrush &brush, float outerScale) {
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
 		_blobs[i].update(_levelValue.current(), _blobDatas[i].speedScale);
@@ -73,7 +73,7 @@ void Blobs::paint(Painter &p, const QBrush &brush) {
 		if (alpha != 1.) {
 			p.setOpacity(opacity * alpha);
 		}
-		_blobs[i].paint(p, brush);
+		_blobs[i].paint(p, brush, outerScale);
 		if (alpha != 1.) {
 			p.setOpacity(opacity);
 		}

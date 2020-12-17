@@ -58,7 +58,7 @@ class RadialBlob final : public Blob {
 public:
 	RadialBlob(int n, float minScale, float minSpeed = 0, float maxSpeed = 0);
 
-	void paint(Painter &p, const QBrush &brush);
+	void paint(Painter &p, const QBrush &brush, float outerScale = 1.);
 	void update(float level, float speedScale);
 
 private:
