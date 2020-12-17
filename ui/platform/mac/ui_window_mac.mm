@@ -207,7 +207,8 @@ void WindowHelper::Private::close() {
 
 Fn<void(bool)> WindowHelper::Private::toggleCustomTitleCallback() {
 	return crl::guard(_owner->window(), [=](bool visible) {
-		_owner->toggleCustomTitle(visible);
+		_owner->_titleVisible = visible;
+		_owner->updateCustomTitleVisibility(true);
 	});
 }
 
@@ -286,7 +287,7 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 	: nullptr)
 , _body(Ui::CreateChild<RpWidget>(window.get())) {
 	if (_title->shouldBeHidden()) {
-		toggleCustomTitle(false);
+		updateCustomTitleVisibility();
 	}
 	init();
 }
@@ -303,27 +304,25 @@ void WindowHelper::setTitle(const QString &title) {
 		_title->setText(title);
 	}
 	window()->setWindowTitle(
-		(!_title || _title->isHidden()) ? title : QString());
+		(!_title || !_titleVisible) ? title : QString());
 }
 
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 	if (_title) {
 		_title->setStyle(st);
 		if (_title->shouldBeHidden()) {
-			toggleCustomTitle(false);
+			updateCustomTitleVisibility();
 		}
 	}
 }
 
-void WindowHelper::toggleCustomTitle(bool visible) {
-	if (_title->shouldBeHidden()) {
-		visible = false;
-	}
-	if (!_title || _title->isHidden() != visible) {
+void WindowHelper::updateCustomTitleVisibility(bool force) {
+	auto visible = !_title->shouldBeHidden() && _titleVisible;
+	if (!_title || (!force && _title->isHidden() != visible)) {
 		return;
 	}
 	_title->setVisible(visible);
-	window()->setWindowTitle(visible ? QString() : _title->text());
+	window()->setWindowTitle(_titleVisible ? QString() : _title->text());
 }
 
 void WindowHelper::setMinimumSize(QSize size) {

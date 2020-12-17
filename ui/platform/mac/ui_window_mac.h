@@ -33,11 +33,12 @@ private:
 	void setupBodyTitleAreaEvents() override;
 
 	void init();
-	void toggleCustomTitle(bool visible);
+	void updateCustomTitleVisibility(bool force = false);
 
 	const std::unique_ptr<Private> _private;
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;
+	bool _titleVisible = true;
 
 #ifdef OS_OSX
 	struct WindowDrag {
