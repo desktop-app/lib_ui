@@ -8,7 +8,6 @@
 
 #include "base/flat_map.h"
 #include "ui/abstract_button.h"
-#include "ui/effects/radial_animation.h"
 #include "ui/paint/blobs.h"
 #include "ui/painter.h"
 #include "ui/widgets/call_button.h"
@@ -45,8 +44,26 @@ constexpr auto kGlowAlpha = 150;
 constexpr auto kOverrideColorBgAlpha = 76;
 constexpr auto kOverrideColorRippleAlpha = 50;
 
-constexpr auto kSwitchStateDuration = 120;
 constexpr auto kShiftDuration = crl::time(300);
+constexpr auto kSwitchStateDuration = crl::time(120);
+
+// Switch state from Connecting animation.
+constexpr auto kSwitchRadialDuration = crl::time(225);
+constexpr auto kSwitchCirclelDuration = crl::time(275);
+constexpr auto kBlobsScaleEnterDuration = crl::time(400);
+constexpr auto kSwitchStateFromConnectingDuration = kSwitchRadialDuration
+	+ kSwitchCirclelDuration
+	+ kBlobsScaleEnterDuration;
+
+constexpr auto kRadialEndPartAnimation = float(kSwitchRadialDuration)
+	/ kSwitchStateFromConnectingDuration;
+constexpr auto kBlobsWidgetPartAnimation = 1. - kRadialEndPartAnimation;
+constexpr auto kFillCirclePartAnimation = float(kSwitchCirclelDuration)
+	/ (kSwitchCirclelDuration + kBlobsScaleEnterDuration);
+constexpr auto kBlobPartAnimation = float(kBlobsScaleEnterDuration)
+	/ (kSwitchCirclelDuration + kBlobsScaleEnterDuration);
+
+constexpr auto kOverlapProgressRadialHide = 1.2;
 
 auto MuteBlobs() {
 	return std::vector<Paint::Blobs::BlobData>{
@@ -129,6 +146,9 @@ public:
 
 	[[nodiscard]] QRectF innerRect() const;
 
+	[[nodiscard]] float64 switchConnectingProgress() const;
+	void setSwitchConnectingProgress(float64 progress);
+
 private:
 	void init();
 
@@ -140,8 +160,15 @@ private:
 	int _center = 0;
 	QRectF _circleRect;
 
+	float64 _switchConnectingProgress = 0.;
+
 	crl::time _blobsLastTime = 0;
 	crl::time _blobsHideLastTime = 0;
+
+	float64 _blobsScaleEnter = 0.;
+	crl::time _blobsScaleLastTime = 0;
+
+	bool _hideBlobs = true;
 
 	Animations::Basic _animation;
 
@@ -155,25 +182,20 @@ BlobsWidget::BlobsWidget(
 , _circleRaidus(st::callMuteMainBlobMinRadius * kMainRadiusFactor)
 , _blobBrush(Qt::transparent)
 , _glowBrush(Qt::transparent)
-, _blobsLastTime(crl::now()) {
+, _blobsLastTime(crl::now())
+, _blobsScaleLastTime(crl::now()) {
 	init();
-
-	for (auto i = 0; i < _blobs.size(); i++) {
-		const auto radiuses = _blobs.radiusesAt(i);
-		auto radiusesChange = rpl::duplicate(
-			hideBlobs
-		) | rpl::distinct_until_changed(
-		) | rpl::map([=](bool hide) -> Radiuses {
-			return hide
-				? Radiuses{ radiuses.min, radiuses.min }
-				: radiuses;
-		});
-		_blobs.setRadiusesAt(std::move(radiusesChange), i);
-	}
 
 	std::move(
 		hideBlobs
 	) | rpl::start_with_next([=](bool hide) {
+		if (_hideBlobs != hide) {
+			const auto now = crl::now();
+			if ((now - _blobsScaleLastTime) >= kBlobsScaleEnterDuration) {
+				_blobsScaleLastTime = now;
+			}
+			_hideBlobs = hide;
+		}
 		if (hide) {
 			setLevel(0.);
 		}
@@ -199,7 +221,9 @@ void BlobsWidget::init() {
 		{
 			const auto &r = _circleRaidus;
 			const auto left = (size.width() - r * 2.) / 2.;
-			_circleRect = QRectF(left, left, r * 2, r * 2);
+			const auto add = st::callConnectingRadial.thickness / 2;
+			_circleRect = QRectF(left, left, r * 2, r * 2).marginsAdded(
+				style::margins(add, add, add, add));
 		}
 	}, lifetime());
 
@@ -219,22 +243,68 @@ void BlobsWidget::init() {
 
 		// Blobs.
 		p.translate(_center, _center);
-		_blobs.paint(p, _blobBrush);
+		const auto scale = (_switchConnectingProgress > 0.)
+			? anim::easeOutBack(
+				1.,
+				_blobsScaleEnter * (1. - std::clamp(
+					(_switchConnectingProgress / kBlobPartAnimation),
+					0.,
+					1.)))
+			: _blobsScaleEnter;
+		_blobs.paint(p, _blobBrush, scale);
 
 		// Main circle.
+		p.translate(-_center, -_center);
 		p.setPen(Qt::NoPen);
 		p.setBrush(_blobBrush);
-		p.drawEllipse(QPointF(), _circleRaidus, _circleRaidus);
+		p.drawEllipse(_circleRect);
+
+		if (_switchConnectingProgress > 0.) {
+			p.resetTransform();
+
+			const auto circleProgress = std::clamp(
+				(_switchConnectingProgress - kBlobPartAnimation),
+				0.,
+				1.)
+				/ kFillCirclePartAnimation;
+
+			const auto mF = (_circleRect.width() / 2) * (1. - circleProgress);
+			const auto cutOutRect = _circleRect.marginsRemoved(
+				QMarginsF(mF, mF, mF, mF));
+
+			p.setPen(Qt::NoPen);
+			p.setBrush(st::callConnectingRadial.color);
+			p.setOpacity(circleProgress);
+			p.drawEllipse(_circleRect);
+
+			p.setOpacity(1.);
+			p.setBrush(st::callIconBg);
+
+			p.save();
+			p.setCompositionMode(QPainter::CompositionMode_Source);
+			p.drawEllipse(cutOutRect);
+			p.restore();
+
+			p.drawEllipse(cutOutRect);
+		}
 	}, lifetime());
 
 	_animation.init([=](crl::time now) {
 		if (const auto &last = _blobsHideLastTime; (last > 0)
-			&& (now - last >= Paint::Blobs::kHideBlobsDuration)) {
+			&& (now - last >= kBlobsScaleEnterDuration)) {
 			_animation.stop();
 			return false;
 		}
 		_blobs.updateLevel(now - _blobsLastTime);
 		_blobsLastTime = now;
+
+		const auto dt = std::clamp(
+			(now - _blobsScaleLastTime) / float64(kBlobsScaleEnterDuration),
+			0.,
+			1.);
+		_blobsScaleEnter = _hideBlobs
+			? (1. - anim::linear(1., dt))
+			: anim::easeOutBack(1., dt);
 
 		update();
 		return true;
@@ -272,6 +342,14 @@ void BlobsWidget::setLevel(float level) {
 		 return;
 	}
 	_blobs.setLevel(level);
+}
+
+float64 BlobsWidget::switchConnectingProgress() const {
+	return _switchConnectingProgress;
+}
+
+void BlobsWidget::setSwitchConnectingProgress(float64 progress) {
+	_switchConnectingProgress = progress;
 }
 
 CallMuteButton::CallMuteButton(
@@ -337,6 +415,14 @@ void CallMuteButton::init() {
 				st::callConnectingRadial);
 			_radial->start();
 		}
+
+		if (value == 1.) {
+			_lastRadialState = std::nullopt;
+		} else {
+			if (_radial && !_lastRadialState.has_value()) {
+				_lastRadialState = _radial->computeState();
+			}
+		}
 	}, lifetime());
 
 	// State type.
@@ -388,20 +474,24 @@ void CallMuteButton::init() {
 			setHandleMouseState(mouseState);
 		}
 
+		const auto fromConnecting = IsConnecting(previous);
+		const auto toConnecting = IsConnecting(type);
+
 		const auto crossFrom = IsMuted(previous) ? 0. : 1.;
 		const auto crossTo = IsMuted(type) ? 0. : 1.;
 
-		const auto radialShowFrom = IsConnecting(previous) ? 1. : 0.;
-		const auto radialShowTo = IsConnecting(type) ? 1. : 0.;
+		const auto radialShowFrom = fromConnecting ? 1. : 0.;
+		const auto radialShowTo = toConnecting ? 1. : 0.;
 
-		const auto from = _switchAnimation.animating()
+		const auto from = (_switchAnimation.animating() && !fromConnecting)
 			? (1. - _switchAnimation.value(0.))
 			: 0.;
 		const auto to = 1.;
 
 		auto callback = [=](float64 value) {
+			const auto brushProgress = fromConnecting ? 1. : value;
 			_blobs->setBlobBrush(QBrush(
-				linearGradients.gradient(previous, type, value)));
+				linearGradients.gradient(previous, type, brushProgress)));
 			_blobs->setGlowBrush(QBrush(
 				glows.gradient(previous, type, value)));
 			_blobs->update();
@@ -419,6 +509,10 @@ void CallMuteButton::init() {
 				: anim::interpolateF(radialShowFrom, radialShowTo, value);
 			if (radialShowProgress != _radialShowProgress.current()) {
 				_radialShowProgress = radialShowProgress;
+				_blobs->setSwitchConnectingProgress(std::clamp(
+					radialShowProgress / kBlobsWidgetPartAnimation,
+					0.,
+					1.));
 			}
 
 			overridesColors(previous, type, value);
@@ -429,7 +523,9 @@ void CallMuteButton::init() {
 		};
 
 		_switchAnimation.stop();
-		const auto duration = (1. - from) * kSwitchStateDuration;
+		const auto duration = (1. - from) * ((fromConnecting || toConnecting)
+			? kSwitchStateFromConnectingDuration
+			: kSwitchStateDuration);
 		_switchAnimation.start(std::move(callback), from, to, duration);
 	}, lifetime());
 
@@ -456,8 +552,29 @@ void CallMuteButton::init() {
 			_muteIconRect.topLeft(),
 			1. - _crossLineProgress);
 
-		if (_radial) {
-			p.setOpacity(_radialShowProgress.current());
+		if (_lastRadialState.has_value() && _switchAnimation.animating()) {
+			const auto radialProgress = (1. - _radialShowProgress.current())
+				/ kRadialEndPartAnimation;
+
+			auto r = *_lastRadialState;
+			r.arcLength = anim::interpolate(
+				r.arcLength,
+				-RadialState::kFull,
+				std::clamp(radialProgress, 0., 1.));
+
+			const auto opacity = (radialProgress > kOverlapProgressRadialHide)
+				? 0.
+				: _blobs->switchConnectingProgress();
+			p.setOpacity(opacity);
+			InfiniteRadialAnimation::Draw(
+				p,
+				r,
+				_st.bgPosition,
+				st::callConnectingRadial.size,
+				_content->width(),
+				QPen(st::callConnectingRadial.color),
+				st::callConnectingRadial.thickness);
+		} else if (_radial) {
 			_radial->draw(
 				p,
 				_st.bgPosition,

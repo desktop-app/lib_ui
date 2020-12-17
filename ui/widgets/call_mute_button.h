@@ -10,6 +10,7 @@
 #include "ui/effects/animations.h"
 #include "ui/effects/cross_line.h"
 #include "ui/effects/gradient.h"
+#include "ui/effects/radial_animation.h"
 
 namespace Ui {
 
@@ -17,7 +18,6 @@ class BlobsWidget;
 
 class AbstractButton;
 class FlatLabel;
-class InfiniteRadialAnimation;
 class RpWidget;
 
 struct CallButtonColors;
@@ -91,6 +91,8 @@ private:
 	rpl::variable<float64> _radialShowProgress = 0.;
 	QRect _muteIconRect;
 	HandleMouseState _handleMouseState = HandleMouseState::Enabled;
+
+	std::optional<RadialState> _lastRadialState = std::nullopt;
 
 	const style::CallButton &_st;
 

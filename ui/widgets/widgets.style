@@ -1409,10 +1409,10 @@ defaultToast: Toast {
 
 callMuteMainBlobMinRadius: 57px;
 callMuteMainBlobMaxRadius: 63px;
-callMuteMinorBlobMinRadius: 62px;
-callMuteMinorBlobMaxRadius: 72px;
-callMuteMajorBlobMinRadius: 65px;
-callMuteMajorBlobMaxRadius: 75px;
+callMuteMinorBlobMinRadius: 64px;
+callMuteMinorBlobMaxRadius: 74px;
+callMuteMajorBlobMinRadius: 67px;
+callMuteMajorBlobMaxRadius: 77px;
 
 callMuteButtonActiveIcon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
 callMuteButtonActiveInner: IconButton {
