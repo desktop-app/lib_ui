@@ -31,6 +31,7 @@ enum class CallMuteButtonType {
 
 struct CallMuteButtonState {
 	QString text;
+	QString subtext;
 	CallMuteButtonType type = CallMuteButtonType::Connecting;
 };
 
@@ -80,7 +81,8 @@ private:
 
 	void setHandleMouseState(HandleMouseState state);
 	void updateLabelGeometry(QRect my, QSize size);
-	void updateLabelGeometry();
+	void updateSublabelGeometry(QRect my, QSize size);
+	void updateLabelsGeometry();
 
 	[[nodiscard]] static HandleMouseState HandleMouseStateFromType(
 		CallMuteButtonType type);
@@ -99,6 +101,7 @@ private:
 	const base::unique_qptr<BlobsWidget> _blobs;
 	const base::unique_qptr<AbstractButton> _content;
 	const base::unique_qptr<FlatLabel> _label;
+	const base::unique_qptr<FlatLabel> _sublabel;
 	int _labelShakeShift = 0;
 
 	std::unique_ptr<InfiniteRadialAnimation> _radial;

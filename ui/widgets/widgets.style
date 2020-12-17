@@ -1417,19 +1417,23 @@ callMuteMajorBlobMaxRadius: 77px;
 callMuteButtonActiveIcon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
 callMuteButtonActiveInner: IconButton {
 	width: 136px;
-	height: 151px;
+	height: 165px;
 
 	iconPosition: point(-1px, 50px);
 	icon: callMuteButtonActiveIcon;
 }
 callMuteButtonLabel: FlatLabel(defaultFlatLabel) {
-	textFg: callNameFg;
+	textFg: groupCallMembersFg;
 	style: TextStyle(defaultTextStyle) {
-		font: font(13px);
-		linkFont: font(13px);
-		linkFontOver: font(13px underline);
+		font: font(14px);
+		linkFont: font(14px);
+		linkFontOver: font(14px underline);
 	}
 }
+callMuteButtonSublabel: FlatLabel(defaultFlatLabel) {
+	textFg: groupCallMemberNotJoinedStatus;
+}
+callMuteButtonSublabelSkip: 19px;
 callMuteButtonActive: CallButton {
 	button: callMuteButtonActiveInner;
 	bg: groupCallLive1;

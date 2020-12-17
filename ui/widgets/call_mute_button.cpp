@@ -16,8 +16,9 @@
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
 
-namespace Ui {
+#include <QtCore/QtMath>
 
+namespace Ui {
 namespace {
 
 using Radiuses = Paint::Blob::Radiuses;
@@ -35,7 +36,7 @@ constexpr auto kScaleSmallMin = 0.926;
 constexpr auto kScaleBigMax = (float)(kScaleBigMin + kScaleBig);
 constexpr auto kScaleSmallMax = (float)(kScaleSmallMin + kScaleSmall);
 
-constexpr auto kMainRadiusFactor = (float)(50. / 57.);
+constexpr auto kMainRadiusFactor = (float)(48. / 57.);
 
 constexpr auto kGlowPaddingFactor = 1.2;
 constexpr auto kGlowMinScale = 0.6;
@@ -378,6 +379,13 @@ CallMuteButton::CallMuteButton(
 		return state.text;
 	}),
 	_st.label))
+, _sublabel(base::make_unique_q<FlatLabel>(
+	parent,
+	_state.value(
+	) | rpl::map([](const CallMuteButtonState &state) {
+		return state.subtext;
+	}),
+	st::callMuteButtonSublabel))
 , _radial(nullptr)
 , _colors(Colors())
 , _crossLineMuteAnimation(st::callMuteCrossLine) {
@@ -401,6 +409,15 @@ void CallMuteButton::init() {
 		updateLabelGeometry(my, size);
 	}, _label->lifetime());
 	_label->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+	_sublabel->show();
+	rpl::combine(
+		_content->geometryValue(),
+		_sublabel->sizeValue()
+	) | rpl::start_with_next([=](QRect my, QSize size) {
+		updateSublabelGeometry(my, size);
+	}, _sublabel->lifetime());
+	_sublabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 
 	_radialShowProgress.value(
 	) | rpl::start_with_next([=](float64 value) {
@@ -583,12 +600,20 @@ void CallMuteButton::init() {
 	}, _content->lifetime());
 }
 
-void CallMuteButton::updateLabelGeometry() {
+void CallMuteButton::updateLabelsGeometry() {
 	updateLabelGeometry(_content->geometry(), _label->size());
+	updateSublabelGeometry(_content->geometry(), _sublabel->size());
 }
 
 void CallMuteButton::updateLabelGeometry(QRect my, QSize size) {
 	_label->moveToLeft(
+		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
+		my.y() + my.height() - size.height() - st::callMuteButtonSublabelSkip,
+		my.width());
+}
+
+void CallMuteButton::updateSublabelGeometry(QRect my, QSize size) {
+	_sublabel->moveToLeft(
 		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
 		my.y() + my.height() - size.height(),
 		my.width());
@@ -614,7 +639,7 @@ void CallMuteButton::shake() {
 			: 0.;
 		const auto shift = from * (1. - part) + to * part;
 		_labelShakeShift = int(std::round(shift * st::shakeShift));
-		updateLabelGeometry();
+		updateLabelsGeometry();
 	};
 	_shakeAnimation.start(
 		update,
