@@ -411,9 +411,10 @@ void CallMuteButton::init() {
 	_label->show();
 	rpl::combine(
 		_content->geometryValue(),
+		_sublabel->widthValue(),
 		_label->sizeValue()
-	) | rpl::start_with_next([=](QRect my, QSize size) {
-		updateLabelGeometry(my, size);
+	) | rpl::start_with_next([=](QRect my, int subWidth, QSize size) {
+		updateLabelGeometry(my, subWidth, size);
 	}, _label->lifetime());
 	_label->setAttribute(Qt::WA_TransparentForMouseEvents);
 
@@ -625,14 +626,20 @@ void CallMuteButton::init() {
 }
 
 void CallMuteButton::updateLabelsGeometry() {
-	updateLabelGeometry(_content->geometry(), _label->size());
+	updateLabelGeometry(
+		_content->geometry(),
+		_sublabel->width(),
+		_label->size());
 	updateSublabelGeometry(_content->geometry(), _sublabel->size());
 }
 
-void CallMuteButton::updateLabelGeometry(QRect my, QSize size) {
+void CallMuteButton::updateLabelGeometry(QRect my, int subWidth, QSize size) {
+	const auto skip = subWidth
+		? st::callMuteButtonSublabelSkip
+		: (st::callMuteButtonSublabelSkip / 2);
 	_label->moveToLeft(
 		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
-		my.y() + my.height() - size.height() - st::callMuteButtonSublabelSkip,
+		my.y() + my.height() - size.height() - skip,
 		my.width());
 }
 

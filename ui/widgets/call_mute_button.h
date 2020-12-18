@@ -87,7 +87,7 @@ private:
 		float64 progress);
 
 	void setHandleMouseState(HandleMouseState state);
-	void updateLabelGeometry(QRect my, QSize size);
+	void updateLabelGeometry(QRect my, int subWidth, QSize size);
 	void updateSublabelGeometry(QRect my, QSize size);
 	void updateLabelsGeometry();
 
