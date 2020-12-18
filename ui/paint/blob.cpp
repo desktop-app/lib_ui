@@ -87,7 +87,10 @@ void RadialBlob::paint(Painter &p, const QBrush &brush, float outerScale) {
 
 	p.save();
 	const auto scale = (_minScale + (1. - _minScale) * _scale) * outerScale;
-	if (scale != 1.) {
+	if (scale == 0.) {
+		p.restore();
+		return;
+	} else if (scale != 1.) {
 		p.scale(scale, scale);
 	}
 
@@ -169,6 +172,10 @@ LinearBlob::LinearBlob(
 }
 
 void LinearBlob::paint(Painter &p, const QBrush &brush, int width) {
+	if (!width) {
+		return;
+	}
+
 	auto path = QPainterPath();
 
 	const auto left = 0;
