@@ -1433,6 +1433,7 @@ callMuteButtonLabel: FlatLabel(defaultFlatLabel) {
 callMuteButtonSublabel: FlatLabel(defaultFlatLabel) {
 	textFg: groupCallMemberNotJoinedStatus;
 }
+callMuteButtonLabelsSkip: 5px;
 callMuteButtonSublabelSkip: 19px;
 callMuteButtonActive: CallButton {
 	button: callMuteButtonActiveInner;
@@ -1457,6 +1458,7 @@ callMuteButtonConnecting: CallButton(callMuteButtonMuted) {
 	bg: callIconBg;
 	label: callMuteButtonLabel;
 }
+callMuteButtonLabelAdditional: 5px;
 
 callMuteCrossLine: CrossLineAnimation {
 	fg: groupCallIconFg;

@@ -47,6 +47,7 @@ constexpr auto kOverrideColorRippleAlpha = 50;
 
 constexpr auto kShiftDuration = crl::time(300);
 constexpr auto kSwitchStateDuration = crl::time(120);
+constexpr auto kSwitchLabelDuration = crl::time(180);
 
 // Switch state from Connecting animation.
 constexpr auto kSwitchRadialDuration = crl::time(350);
@@ -147,6 +148,110 @@ void ComputeRadialFinish(
 }
 
 } // namespace
+
+class AnimatedLabel final : public RpWidget {
+public:
+	AnimatedLabel(
+		QWidget *parent,
+		rpl::producer<QString> &&text,
+		crl::time duration,
+		int additionalHeight,
+		const style::FlatLabel &st = st::defaultFlatLabel);
+
+	int height() const;
+
+private:
+	int realHeight() const;
+
+	void setText(const QString &text);
+
+	const style::FlatLabel &_st;
+	const crl::time _duration;
+	const int _additionalHeight;
+	const TextParseOptions _options;
+
+	Text::String _text;
+	Text::String _previousText;
+
+	Animations::Simple _animation;
+
+};
+
+AnimatedLabel::AnimatedLabel(
+	QWidget *parent,
+	rpl::producer<QString> &&text,
+	crl::time duration,
+	int additionalHeight,
+	const style::FlatLabel &st)
+: RpWidget(parent)
+, _st(st)
+, _duration(duration)
+, _additionalHeight(additionalHeight)
+, _options({ 0, 0, 0, Qt::LayoutDirectionAuto }) {
+	std::move(
+		text
+	) | rpl::start_with_next([=](const QString &value) {
+		setText(value);
+	}, lifetime());
+
+	paintRequest(
+	) | rpl::start_with_next([=] {
+		Painter p(this);
+		const auto progress = _animation.value(1.);
+
+		p.setFont(_st.style.font);
+		p.setPen(_st.textFg);
+		p.setTextPalette(_st.palette);
+
+		const auto textHeight = height();
+		const auto diffHeight = realHeight() - textHeight;
+		const auto center = (diffHeight) / 2;
+
+		p.setOpacity(1. - progress);
+		if (p.opacity()) {
+			_previousText.draw(
+				p,
+				0,
+				anim::interpolate(center, diffHeight, progress),
+				width(),
+				style::al_center);
+		}
+
+		p.setOpacity(progress);
+		if (p.opacity()) {
+			_text.draw(
+				p,
+				0,
+				anim::interpolate(0, center, progress),
+				width(),
+				style::al_center);
+		}
+	}, lifetime());
+}
+
+int AnimatedLabel::height() const {
+	return _st.style.font->height;
+}
+
+int AnimatedLabel::realHeight() const {
+	return RpWidget::height();
+}
+
+void AnimatedLabel::setText(const QString &text) {
+	if (_text.toString() == text) {
+		return;
+	}
+	_previousText = _text;
+	_text.setText(_st.style, text, _options);
+
+	const auto width = std::max(
+		_st.style.font->width(_text.toString()),
+		_st.style.font->width(_previousText.toString()));
+	resize(width + _additionalHeight, height() + _additionalHeight * 2);
+
+	_animation.stop();
+	_animation.start([=] { update(); }, 0., 1., _duration);
+}
 
 class BlobsWidget final : public RpWidget {
 public:
@@ -379,19 +484,32 @@ CallMuteButton::CallMuteButton(
 		return isBadState || !(!animDisabled && !hide);
 	})))
 , _content(base::make_unique_q<AbstractButton>(parent))
-, _label(base::make_unique_q<FlatLabel>(
+, _centerLabel(base::make_unique_q<AnimatedLabel>(
 	parent,
 	_state.value(
 	) | rpl::map([](const CallMuteButtonState &state) {
-		return state.text;
+		return state.subtext.isEmpty() ? state.text : QString();
 	}),
+	kSwitchLabelDuration,
+	st::callMuteButtonLabelAdditional,
 	_st.label))
-, _sublabel(base::make_unique_q<FlatLabel>(
+, _label(base::make_unique_q<AnimatedLabel>(
+	parent,
+	_state.value(
+	) | rpl::map([](const CallMuteButtonState &state) {
+		return state.subtext.isEmpty() ? QString() : state.text;
+	}),
+	kSwitchLabelDuration,
+	st::callMuteButtonLabelAdditional,
+	_st.label))
+, _sublabel(base::make_unique_q<AnimatedLabel>(
 	parent,
 	_state.value(
 	) | rpl::map([](const CallMuteButtonState &state) {
 		return state.subtext;
 	}),
+	kSwitchLabelDuration,
+	st::callMuteButtonLabelAdditional,
 	st::callMuteButtonSublabel))
 , _radial(nullptr)
 , _colors(Colors())
@@ -411,10 +529,9 @@ void CallMuteButton::init() {
 	_label->show();
 	rpl::combine(
 		_content->geometryValue(),
-		_sublabel->widthValue(),
 		_label->sizeValue()
-	) | rpl::start_with_next([=](QRect my, int subWidth, QSize size) {
-		updateLabelGeometry(my, subWidth, size);
+	) | rpl::start_with_next([=](QRect my, QSize size) {
+		updateLabelGeometry(my, size);
 	}, _label->lifetime());
 	_label->setAttribute(Qt::WA_TransparentForMouseEvents);
 
@@ -426,6 +543,15 @@ void CallMuteButton::init() {
 		updateSublabelGeometry(my, size);
 	}, _sublabel->lifetime());
 	_sublabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+	_centerLabel->show();
+	rpl::combine(
+		_content->geometryValue(),
+		_centerLabel->sizeValue()
+	) | rpl::start_with_next([=](QRect my, QSize size) {
+		updateCenterLabelGeometry(my, size);
+	}, _centerLabel->lifetime());
+	_centerLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 
 	_radialInfo.rawShowProgress.value(
 	) | rpl::start_with_next([=](float64 value) {
@@ -626,27 +752,34 @@ void CallMuteButton::init() {
 }
 
 void CallMuteButton::updateLabelsGeometry() {
-	updateLabelGeometry(
-		_content->geometry(),
-		_sublabel->width(),
-		_label->size());
+	updateLabelGeometry(_content->geometry(), _label->size());
+	updateCenterLabelGeometry(_content->geometry(), _centerLabel->size());
 	updateSublabelGeometry(_content->geometry(), _sublabel->size());
 }
 
-void CallMuteButton::updateLabelGeometry(QRect my, int subWidth, QSize size) {
-	const auto skip = subWidth
-		? st::callMuteButtonSublabelSkip
-		: (st::callMuteButtonSublabelSkip / 2);
+void CallMuteButton::updateLabelGeometry(QRect my, QSize size) {
+	const auto skip = st::callMuteButtonSublabelSkip
+		+ st::callMuteButtonLabelsSkip;
 	_label->moveToLeft(
 		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
-		my.y() + my.height() - size.height() - skip,
+		my.y() + my.height() - _label->height() - skip,
+		my.width());
+}
+
+void CallMuteButton::updateCenterLabelGeometry(QRect my, QSize size) {
+	const auto skip = (st::callMuteButtonSublabelSkip / 2)
+		+ st::callMuteButtonLabelsSkip;
+	_centerLabel->moveToLeft(
+		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
+		my.y() + my.height() - _centerLabel->height() - skip,
 		my.width());
 }
 
 void CallMuteButton::updateSublabelGeometry(QRect my, QSize size) {
+	const auto skip = st::callMuteButtonLabelsSkip;
 	_sublabel->moveToLeft(
 		my.x() + (my.width() - size.width()) / 2 + _labelShakeShift,
-		my.y() + my.height() - size.height(),
+		my.y() + my.height() - _sublabel->height() - skip,
 		my.width());
 }
 

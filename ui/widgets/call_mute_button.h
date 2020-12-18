@@ -19,6 +19,7 @@ class BlobsWidget;
 class AbstractButton;
 class FlatLabel;
 class RpWidget;
+class AnimatedLabel;
 
 struct CallButtonColors;
 
@@ -87,7 +88,8 @@ private:
 		float64 progress);
 
 	void setHandleMouseState(HandleMouseState state);
-	void updateLabelGeometry(QRect my, int subWidth, QSize size);
+	void updateCenterLabelGeometry(QRect my, QSize size);
+	void updateLabelGeometry(QRect my, QSize size);
 	void updateSublabelGeometry(QRect my, QSize size);
 	void updateLabelsGeometry();
 
@@ -104,8 +106,9 @@ private:
 
 	const base::unique_qptr<BlobsWidget> _blobs;
 	const base::unique_qptr<AbstractButton> _content;
-	const base::unique_qptr<FlatLabel> _label;
-	const base::unique_qptr<FlatLabel> _sublabel;
+	const base::unique_qptr<AnimatedLabel> _centerLabel;
+	const base::unique_qptr<AnimatedLabel> _label;
+	const base::unique_qptr<AnimatedLabel> _sublabel;
 	int _labelShakeShift = 0;
 
 	RadialInfo _radialInfo;
