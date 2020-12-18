@@ -133,6 +133,10 @@ bool IsInactive(CallMuteButtonType type) {
 	return IsConnecting(type) || (type == CallMuteButtonType::ForceMuted);
 }
 
+auto Clamp(float64 value) {
+	return std::clamp(value, 0., 1.);
+}
+
 } // namespace
 
 class BlobsWidget final : public RpWidget {
@@ -247,10 +251,8 @@ void BlobsWidget::init() {
 		const auto scale = (_switchConnectingProgress > 0.)
 			? anim::easeOutBack(
 				1.,
-				_blobsScaleEnter * (1. - std::clamp(
-					(_switchConnectingProgress / kBlobPartAnimation),
-					0.,
-					1.)))
+				_blobsScaleEnter * (1. - Clamp(
+					_switchConnectingProgress / kBlobPartAnimation)))
 			: _blobsScaleEnter;
 		_blobs.paint(p, _blobBrush, scale);
 
@@ -263,11 +265,9 @@ void BlobsWidget::init() {
 		if (_switchConnectingProgress > 0.) {
 			p.resetTransform();
 
-			const auto circleProgress = std::clamp(
-				(_switchConnectingProgress - kBlobPartAnimation),
-				0.,
-				1.)
-				/ kFillCirclePartAnimation;
+			const auto circleProgress =
+				Clamp(_switchConnectingProgress - kBlobPartAnimation)
+					/ kFillCirclePartAnimation;
 
 			const auto mF = (_circleRect.width() / 2) * (1. - circleProgress);
 			const auto cutOutRect = _circleRect.marginsRemoved(
@@ -299,10 +299,8 @@ void BlobsWidget::init() {
 		_blobs.updateLevel(now - _blobsLastTime);
 		_blobsLastTime = now;
 
-		const auto dt = std::clamp(
-			(now - _blobsScaleLastTime) / float64(kBlobsScaleEnterDuration),
-			0.,
-			1.);
+		const auto dt = Clamp(
+			(now - _blobsScaleLastTime) / float64(kBlobsScaleEnterDuration));
 		_blobsScaleEnter = _hideBlobs
 			? (1. - anim::linear(1., dt))
 			: anim::easeOutBack(1., dt);
@@ -526,10 +524,8 @@ void CallMuteButton::init() {
 				: anim::interpolateF(radialShowFrom, radialShowTo, value);
 			if (radialShowProgress != _radialShowProgress.current()) {
 				_radialShowProgress = radialShowProgress;
-				_blobs->setSwitchConnectingProgress(std::clamp(
-					radialShowProgress / kBlobsWidgetPartAnimation,
-					0.,
-					1.));
+				_blobs->setSwitchConnectingProgress(Clamp(
+					radialShowProgress / kBlobsWidgetPartAnimation));
 			}
 
 			overridesColors(previous, type, value);
@@ -577,7 +573,7 @@ void CallMuteButton::init() {
 			r.arcLength = anim::interpolate(
 				r.arcLength,
 				-RadialState::kFull,
-				std::clamp(radialProgress, 0., 1.));
+				Clamp(radialProgress));
 
 			const auto opacity = (radialProgress > kOverlapProgressRadialHide)
 				? 0.
