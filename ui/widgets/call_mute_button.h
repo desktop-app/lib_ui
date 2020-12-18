@@ -73,6 +73,13 @@ private:
 		Blocked,
 		Disabled,
 	};
+	struct RadialInfo {
+		std::optional<RadialState> state = std::nullopt;
+		bool isDirectionToShow = false;
+		rpl::variable<float64> rawShowProgress = 0.;
+		float64 realShowProgress = 0.;
+		const style::InfiniteRadialAnimation &st = st::callConnectingRadial;
+	};
 	void init();
 	void overridesColors(
 		CallMuteButtonType fromType,
@@ -90,11 +97,8 @@ private:
 	rpl::variable<CallMuteButtonState> _state;
 	float _level = 0.;
 	float64 _crossLineProgress = 0.;
-	rpl::variable<float64> _radialShowProgress = 0.;
 	QRect _muteIconRect;
 	HandleMouseState _handleMouseState = HandleMouseState::Enabled;
-
-	std::optional<RadialState> _lastRadialState = std::nullopt;
 
 	const style::CallButton &_st;
 
@@ -104,6 +108,7 @@ private:
 	const base::unique_qptr<FlatLabel> _sublabel;
 	int _labelShakeShift = 0;
 
+	RadialInfo _radialInfo;
 	std::unique_ptr<InfiniteRadialAnimation> _radial;
 	const base::flat_map<CallMuteButtonType, anim::gradient_colors> _colors;
 

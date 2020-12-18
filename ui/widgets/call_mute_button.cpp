@@ -36,7 +36,7 @@ constexpr auto kScaleSmallMin = 0.926;
 constexpr auto kScaleBigMax = (float)(kScaleBigMin + kScaleBig);
 constexpr auto kScaleSmallMax = (float)(kScaleSmallMin + kScaleSmall);
 
-constexpr auto kMainRadiusFactor = (float)(48. / 57.);
+constexpr auto kMainRadiusFactor = (float)(50. / 57.);
 
 constexpr auto kGlowPaddingFactor = 1.2;
 constexpr auto kGlowMinScale = 0.6;
@@ -49,7 +49,7 @@ constexpr auto kShiftDuration = crl::time(300);
 constexpr auto kSwitchStateDuration = crl::time(120);
 
 // Switch state from Connecting animation.
-constexpr auto kSwitchRadialDuration = crl::time(225);
+constexpr auto kSwitchRadialDuration = crl::time(350);
 constexpr auto kSwitchCirclelDuration = crl::time(275);
 constexpr auto kBlobsScaleEnterDuration = crl::time(400);
 constexpr auto kSwitchStateFromConnectingDuration = kSwitchRadialDuration
@@ -65,6 +65,8 @@ constexpr auto kBlobPartAnimation = float(kBlobsScaleEnterDuration)
 	/ (kSwitchCirclelDuration + kBlobsScaleEnterDuration);
 
 constexpr auto kOverlapProgressRadialHide = 1.2;
+
+constexpr auto kRadialFinishArcShift = 1200;
 
 auto MuteBlobs() {
 	return std::vector<Paint::Blobs::BlobData>{
@@ -137,6 +139,13 @@ auto Clamp(float64 value) {
 	return std::clamp(value, 0., 1.);
 }
 
+void ComputeRadialFinish(
+		int &value,
+		float64 progress,
+		int to = -RadialState::kFull) {
+	value = anim::interpolate(value, to, Clamp(progress));
+}
+
 } // namespace
 
 class BlobsWidget final : public RpWidget {
@@ -159,7 +168,7 @@ private:
 
 	Paint::Blobs _blobs;
 
-	const float _circleRaidus;
+	const float _circleRadius;
 	QBrush _blobBrush;
 	QBrush _glowBrush;
 	int _center = 0;
@@ -184,7 +193,7 @@ BlobsWidget::BlobsWidget(
 	rpl::producer<bool> &&hideBlobs)
 : RpWidget(parent)
 , _blobs(MuteBlobs(), kLevelDuration, kMaxLevel)
-, _circleRaidus(st::callMuteMainBlobMinRadius * kMainRadiusFactor)
+, _circleRadius(st::callMuteButtonActive.bgSize / 2.)
 , _blobBrush(Qt::transparent)
 , _glowBrush(Qt::transparent)
 , _blobsLastTime(crl::now())
@@ -224,7 +233,7 @@ void BlobsWidget::init() {
 		_center = size.width() / 2;
 
 		{
-			const auto &r = _circleRaidus;
+			const auto &r = _circleRadius;
 			const auto left = (size.width() - r * 2.) / 2.;
 			const auto add = st::callConnectingRadial.thickness / 2;
 			_circleRect = QRectF(left, left, r * 2, r * 2).marginsAdded(
@@ -302,7 +311,7 @@ void BlobsWidget::init() {
 		const auto dt = Clamp(
 			(now - _blobsScaleLastTime) / float64(kBlobsScaleEnterDuration));
 		_blobsScaleEnter = _hideBlobs
-			? (1. - anim::linear(1., dt))
+			? (1. - anim::easeInCirc(1., dt))
 			: anim::easeOutBack(1., dt);
 
 		update();
@@ -417,8 +426,11 @@ void CallMuteButton::init() {
 	}, _sublabel->lifetime());
 	_sublabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-	_radialShowProgress.value(
+	_radialInfo.rawShowProgress.value(
 	) | rpl::start_with_next([=](float64 value) {
+		auto &info = _radialInfo;
+		info.realShowProgress = (1. - value) / kRadialEndPartAnimation;
+
 		if (((value == 0.) || anim::Disabled()) && _radial) {
 			_radial->stop();
 			_radial = nullptr;
@@ -427,15 +439,21 @@ void CallMuteButton::init() {
 		if ((value > 0.) && !anim::Disabled() && !_radial) {
 			_radial = std::make_unique<InfiniteRadialAnimation>(
 				[=] { _content->update(); },
-				st::callConnectingRadial);
+				_radialInfo.st);
 			_radial->start();
+		}
+		if ((info.realShowProgress < 1.) && !info.isDirectionToShow) {
+			_radial->stop(anim::type::instant);
+			_radial->start();
+			info.state = std::nullopt;
+			return;
 		}
 
 		if (value == 1.) {
-			_lastRadialState = std::nullopt;
+			info.state = std::nullopt;
 		} else {
-			if (_radial && !_lastRadialState.has_value()) {
-				_lastRadialState = _radial->computeState();
+			if (_radial && !info.state.has_value()) {
+				info.state = _radial->computeState();
 			}
 		}
 	}, lifetime());
@@ -503,6 +521,8 @@ void CallMuteButton::init() {
 			: 0.;
 		const auto to = 1.;
 
+		_radialInfo.isDirectionToShow = fromConnecting;
+
 		auto callback = [=](float64 value) {
 			const auto brushProgress = fromConnecting ? 1. : value;
 			_blobs->setBlobBrush(QBrush(
@@ -522,8 +542,8 @@ void CallMuteButton::init() {
 			const auto radialShowProgress = (radialShowFrom == radialShowTo)
 				? radialShowTo
 				: anim::interpolateF(radialShowFrom, radialShowTo, value);
-			if (radialShowProgress != _radialShowProgress.current()) {
-				_radialShowProgress = radialShowProgress;
+			if (radialShowProgress != _radialInfo.rawShowProgress.current()) {
+				_radialInfo.rawShowProgress = radialShowProgress;
 				_blobs->setSwitchConnectingProgress(Clamp(
 					radialShowProgress / kBlobsWidgetPartAnimation));
 			}
@@ -565,15 +585,16 @@ void CallMuteButton::init() {
 			_muteIconRect.topLeft(),
 			1. - _crossLineProgress);
 
-		if (_lastRadialState.has_value() && _switchAnimation.animating()) {
-			const auto radialProgress = (1. - _radialShowProgress.current())
-				/ kRadialEndPartAnimation;
+		if (_radialInfo.state.has_value() && _switchAnimation.animating()) {
+			const auto radialProgress = _radialInfo.realShowProgress;
 
-			auto r = *_lastRadialState;
-			r.arcLength = anim::interpolate(
-				r.arcLength,
-				-RadialState::kFull,
-				Clamp(radialProgress));
+			auto r = *_radialInfo.state;
+			r.shown = 1.;
+			if (_radialInfo.isDirectionToShow) {
+				const auto to = r.arcFrom - kRadialFinishArcShift;
+				ComputeRadialFinish(r.arcFrom, radialProgress, to);
+				ComputeRadialFinish(r.arcLength, radialProgress);
+			}
 
 			const auto opacity = (radialProgress > kOverlapProgressRadialHide)
 				? 0.
@@ -583,15 +604,22 @@ void CallMuteButton::init() {
 				p,
 				r,
 				_st.bgPosition,
-				st::callConnectingRadial.size,
+				_radialInfo.st.size,
 				_content->width(),
-				QPen(st::callConnectingRadial.color),
-				st::callConnectingRadial.thickness);
+				QPen(_radialInfo.st.color),
+				_radialInfo.st.thickness);
 		} else if (_radial) {
-			_radial->draw(
+			auto state = _radial->computeState();
+			state.shown = 1.;
+
+			InfiniteRadialAnimation::Draw(
 				p,
+				std::move(state),
 				_st.bgPosition,
-				_content->width());
+				_radialInfo.st.size,
+				_content->width(),
+				QPen(_radialInfo.st.color),
+				_radialInfo.st.thickness);
 		}
 	}, _content->lifetime());
 }
