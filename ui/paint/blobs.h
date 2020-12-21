@@ -22,6 +22,8 @@ public:
 		float maxRadius = 0;
 		float speedScale = 0;
 		float alpha = 0;
+		float minSpeed = 0;
+		float maxSpeed = 0;
 	};
 
 	Blobs(

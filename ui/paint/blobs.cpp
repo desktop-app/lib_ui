@@ -22,7 +22,11 @@ Blobs::Blobs(
 
 void Blobs::init() {
 	for (const auto &data : _blobDatas) {
-		auto blob = Paint::RadialBlob(data.segmentsCount, data.minScale);
+		auto blob = Paint::RadialBlob(
+			data.segmentsCount,
+			data.minScale,
+			data.minSpeed,
+			data.maxSpeed);
 		blob.setRadiuses({ data.minRadius, data.maxRadius });
 		blob.generateBlob();
 		_blobs.push_back(std::move(blob));

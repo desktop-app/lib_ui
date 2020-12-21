@@ -26,7 +26,9 @@ void LinearBlobs::init() {
 	for (const auto &data : _blobDatas) {
 		auto blob = Paint::LinearBlob(
 			data.segmentsCount,
-			_direction);
+			_direction,
+			data.minSpeed,
+			data.maxSpeed);
 		blob.setRadiuses({ data.minRadius, data.idleRadius });
 		blob.generateBlob();
 		_blobs.push_back(std::move(blob));
