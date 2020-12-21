@@ -69,6 +69,10 @@ void Blobs::setLevel(float value) {
 	_levelValue.start(to);
 }
 
+void Blobs::resetLevel() {
+	_levelValue.reset();
+}
+
 void Blobs::paint(Painter &p, const QBrush &brush, float outerScale) {
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
