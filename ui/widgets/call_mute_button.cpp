@@ -553,25 +553,33 @@ void CallMuteButton::init() {
 	}, _centerLabel->lifetime());
 	_centerLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-	_radialInfo.rawShowProgress.value(
-	) | rpl::start_with_next([=](float64 value) {
+	rpl::combine(
+		_radialInfo.rawShowProgress.value(),
+		anim::Disables()
+	) | rpl::start_with_next([=](float64 value, bool disabled) {
 		auto &info = _radialInfo;
 		info.realShowProgress = (1. - value) / kRadialEndPartAnimation;
 
-		if (((value == 0.) || anim::Disabled()) && _radial) {
+		const auto guard = gsl::finally([&] {
+			_content->update();
+		});
+
+		if (((value == 0.) || disabled) && _radial) {
 			_radial->stop();
 			_radial = nullptr;
 			return;
 		}
-		if ((value > 0.) && !anim::Disabled() && !_radial) {
+		if ((value > 0.) && !disabled && !_radial) {
 			_radial = std::make_unique<InfiniteRadialAnimation>(
 				[=] { _content->update(); },
 				_radialInfo.st);
 			_radial->start();
 		}
 		if ((info.realShowProgress < 1.) && !info.isDirectionToShow) {
-			_radial->stop(anim::type::instant);
-			_radial->start();
+			if (_radial) {
+				_radial->stop(anim::type::instant);
+				_radial->start();
+			}
 			info.state = std::nullopt;
 			return;
 		}
