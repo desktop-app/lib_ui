@@ -328,6 +328,15 @@ BlobsWidget::BlobsWidget(
 void BlobsWidget::init() {
 	setAttribute(Qt::WA_TransparentForMouseEvents);
 
+	const auto cutRect = [](Painter &p, const QRectF &r) {
+		p.save();
+		p.setOpacity(1.);
+		p.setBrush(st::groupCallBg);
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.drawEllipse(r);
+		p.restore();
+	};
+
 	{
 		const auto s = _blobs.maxRadius() * 2 * kGlowPaddingFactor;
 		resize(s, s);
@@ -351,6 +360,8 @@ void BlobsWidget::init() {
 		Painter p(this);
 		PainterHighQualityEnabler hq(p);
 
+		p.setPen(Qt::NoPen);
+
 		// Glow.
 		const auto s = kGlowMinScale
 			+ (1. - kGlowMinScale) * _blobs.currentLevel();
@@ -369,37 +380,41 @@ void BlobsWidget::init() {
 					_switchConnectingProgress / kBlobPartAnimation)))
 			: _blobsScaleEnter;
 		_blobs.paint(p, _blobBrush, scale);
+		p.translate(-_center, -_center);
+
+		if (scale < 1.) {
+			cutRect(p, _circleRect);
+		}
 
 		// Main circle.
-		p.translate(-_center, -_center);
-		p.setPen(Qt::NoPen);
-		p.setBrush(_blobBrush);
-		p.drawEllipse(_circleRect);
+		const auto circleProgress =
+			Clamp(_switchConnectingProgress - kBlobPartAnimation)
+				/ kFillCirclePartAnimation;
+		const auto skipColoredCircle = (circleProgress == 1.);
+
+		if (!skipColoredCircle) {
+			p.setBrush(_blobBrush);
+			p.drawEllipse(_circleRect);
+		}
 
 		if (_switchConnectingProgress > 0.) {
 			p.resetTransform();
-
-			const auto circleProgress =
-				Clamp(_switchConnectingProgress - kBlobPartAnimation)
-					/ kFillCirclePartAnimation;
 
 			const auto mF = (_circleRect.width() / 2) * (1. - circleProgress);
 			const auto cutOutRect = _circleRect.marginsRemoved(
 				QMarginsF(mF, mF, mF, mF));
 
-			p.setPen(Qt::NoPen);
-			p.setBrush(st::callConnectingRadial.color);
-			p.setOpacity(circleProgress);
-			p.drawEllipse(_circleRect);
+			if (!skipColoredCircle) {
+				p.setBrush(st::callConnectingRadial.color);
+				p.setOpacity(circleProgress);
+				p.drawEllipse(_circleRect);
+			}
 
 			p.setOpacity(1.);
+
+			cutRect(p, cutOutRect);
+
 			p.setBrush(st::callIconBg);
-
-			p.save();
-			p.setCompositionMode(QPainter::CompositionMode_Source);
-			p.drawEllipse(cutOutRect);
-			p.restore();
-
 			p.drawEllipse(cutOutRect);
 		}
 	}, lifetime());
@@ -729,6 +744,8 @@ void CallMuteButton::init() {
 				const auto to = r.arcFrom - kRadialFinishArcShift;
 				ComputeRadialFinish(r.arcFrom, radialProgress, to);
 				ComputeRadialFinish(r.arcLength, radialProgress);
+			} else {
+				r.arcLength = RadialState::kFull;
 			}
 
 			const auto opacity = (radialProgress > kOverlapProgressRadialHide)
