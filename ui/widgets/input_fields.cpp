@@ -2630,12 +2630,18 @@ bool InputField::ShouldSubmit(
 }
 
 void InputField::keyPressEventInner(QKeyEvent *e) {
-	bool shift = e->modifiers().testFlag(Qt::ShiftModifier), alt = e->modifiers().testFlag(Qt::AltModifier);
-	bool macmeta = Platform::IsMac() && e->modifiers().testFlag(Qt::ControlModifier) && !e->modifiers().testFlag(Qt::MetaModifier) && !e->modifiers().testFlag(Qt::AltModifier);
-	bool ctrl = e->modifiers().testFlag(Qt::ControlModifier) || e->modifiers().testFlag(Qt::MetaModifier);
-	bool enterSubmit = (_mode != Mode::MultiLine)
+	const auto shift = e->modifiers().testFlag(Qt::ShiftModifier);
+	const auto alt = e->modifiers().testFlag(Qt::AltModifier);
+	const auto macmeta = Platform::IsMac()
+		&& e->modifiers().testFlag(Qt::ControlModifier)
+		&& !e->modifiers().testFlag(Qt::MetaModifier)
+		&& !e->modifiers().testFlag(Qt::AltModifier);
+	const auto ctrl = e->modifiers().testFlag(Qt::ControlModifier)
+		|| e->modifiers().testFlag(Qt::MetaModifier);
+	const auto enterSubmit = (_mode != Mode::MultiLine)
 		|| ShouldSubmit(_submitSettings, e->modifiers());
-	bool enter = (e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return);
+	const auto enter = (e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return);
+	const auto backspace = (e->key() == Qt::Key_Backspace);
 	if (e->key() == Qt::Key_Left
 		|| e->key() == Qt::Key_Right
 		|| e->key() == Qt::Key_Up
@@ -2645,12 +2651,12 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		_reverseMarkdownReplacement = false;
 	}
 
-	if (macmeta && e->key() == Qt::Key_Backspace) {
+	if (macmeta && backspace) {
 		QTextCursor tc(textCursor()), start(tc);
 		start.movePosition(QTextCursor::StartOfLine);
 		tc.setPosition(start.position(), QTextCursor::KeepAnchor);
 		tc.removeSelectedText();
-	} else if (e->key() == Qt::Key_Backspace
+	} else if (backspace
 		&& e->modifiers() == 0
 		&& revertFormatReplace()) {
 		e->accept();
@@ -2687,12 +2693,22 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 	} else {
 		const auto text = e->text();
 		const auto oldPosition = textCursor().position();
-		if (enter && ctrl) {
-			e->setModifiers(e->modifiers() & ~Qt::ControlModifier);
-		} else if (enter && shift) {
-			e->setModifiers(e->modifiers() & ~Qt::ShiftModifier);
+		const auto oldModifiers = e->modifiers();
+		const auto allowedModifiers = (enter && ctrl)
+			? (~Qt::ControlModifier)
+			: (enter && shift)
+			? (~Qt::ShiftModifier)
+			: (backspace && Platform::IsLinux())
+			? (Qt::ControlModifier)
+			: oldModifiers;
+		const auto changeModifiers = (oldModifiers & ~allowedModifiers) != 0;
+		if (changeModifiers) {
+			e->setModifiers(oldModifiers & allowedModifiers);
 		}
 		_inner->QTextEdit::keyPressEvent(e);
+		if (changeModifiers) {
+			e->setModifiers(oldModifiers);
+		}
 		auto cursor = textCursor();
 		if (cursor.position() == oldPosition) {
 			bool check = false;
