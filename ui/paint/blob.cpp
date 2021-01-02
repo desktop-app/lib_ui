@@ -52,11 +52,12 @@ void Blob::generateSingleValues(int i) {
 		+ kSegmentSpeedDiff * std::abs(RandomAdditional());
 }
 
-void Blob::update(float level, float speedScale) {
+void Blob::update(float level, float speedScale, float64 rate) {
 	for (auto i = 0; i < _segmentsCount; i++) {
 		auto &segment = segmentAt(i);
-		segment.progress += (segment.speed * _minSpeed)
-			+ level * segment.speed * _maxSpeed * speedScale;
+		segment.progress += (_minSpeed + level * _maxSpeed * speedScale)
+			* segment.speed
+			* rate;
 		if (segment.progress >= 1) {
 			generateSingleValues(i);
 			generateTwoValues(i);
@@ -152,9 +153,9 @@ void RadialBlob::generateTwoValues(int i) {
 	radius.setNext(_radiuses.min + std::abs(RandomAdditional()) * radDiff);
 }
 
-void RadialBlob::update(float level, float speedScale) {
+void RadialBlob::update(float level, float speedScale, float64 rate) {
 	_scale = level;
-	Blob::update(level, speedScale);
+	Blob::update(level, speedScale, rate);
 }
 
 Blob::Segment &RadialBlob::segmentAt(int i) {

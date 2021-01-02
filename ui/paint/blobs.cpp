@@ -10,6 +10,13 @@
 
 namespace Ui::Paint {
 
+namespace {
+
+constexpr auto kRateLimitF = 1000. / 60.;
+constexpr auto kRateLimit = int(kRateLimitF + 0.5); // Round.
+
+} // namespace
+
 Blobs::Blobs(
 	std::vector<BlobData> blobDatas,
 	float levelDuration,
@@ -76,7 +83,6 @@ void Blobs::resetLevel() {
 void Blobs::paint(Painter &p, const QBrush &brush, float outerScale) {
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
-		_blobs[i].update(_levelValue.current(), _blobDatas[i].speedScale);
 		const auto alpha = _blobDatas[i].alpha;
 		if (alpha != 1.) {
 			p.setOpacity(opacity * alpha);
@@ -89,7 +95,15 @@ void Blobs::paint(Painter &p, const QBrush &brush, float outerScale) {
 }
 
 void Blobs::updateLevel(crl::time dt) {
-	_levelValue.update((dt > 20) ? 17 : dt);
+	const auto limitedDt = (dt > 20) ? kRateLimit : dt;
+	_levelValue.update(limitedDt);
+
+	for (auto i = 0; i < _blobs.size(); i++) {
+		_blobs[i].update(
+			_levelValue.current(),
+			_blobDatas[i].speedScale,
+			limitedDt / kRateLimitF);
+	}
 }
 
 float64 Blobs::currentLevel() const {

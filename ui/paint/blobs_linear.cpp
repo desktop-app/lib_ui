@@ -10,6 +10,13 @@
 
 namespace Ui::Paint {
 
+namespace {
+
+constexpr auto kRateLimitF = 1000. / 60.;
+constexpr auto kRateLimit = int(kRateLimitF + 0.5); // Round.
+
+} // namespace
+
 LinearBlobs::LinearBlobs(
 	std::vector<BlobData> blobDatas,
 	float levelDuration,
@@ -75,7 +82,6 @@ void LinearBlobs::paint(Painter &p, const QBrush &brush, int width) {
 	PainterHighQualityEnabler hq(p);
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
-		_blobs[i].update(_levelValue.current(), _blobDatas[i].speedScale);
 		const auto alpha = _blobDatas[i].alpha;
 		if (alpha != 1.) {
 			p.setOpacity(opacity * alpha);
@@ -88,8 +94,8 @@ void LinearBlobs::paint(Painter &p, const QBrush &brush, int width) {
 }
 
 void LinearBlobs::updateLevel(crl::time dt) {
-	const auto d = (dt > 20) ? 17 : dt;
-	_levelValue.update(d);
+	const auto limitedDt = (dt > 20) ? kRateLimit : dt;
+	_levelValue.update(limitedDt);
 
 	const auto level = (float)currentLevel();
 	for (auto i = 0; i < _blobs.size(); i++) {
@@ -97,6 +103,10 @@ void LinearBlobs::updateLevel(crl::time dt) {
 		_blobs[i].setRadiuses({
 			data.minRadius,
 			data.idleRadius + (data.maxRadius - data.idleRadius) * level });
+		_blobs[i].update(
+			_levelValue.current(),
+			data.speedScale,
+			limitedDt / kRateLimitF);
 	}
 }
 
