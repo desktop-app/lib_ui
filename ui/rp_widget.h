@@ -243,7 +243,7 @@ using RpWidgetParent = std::conditional_t<
 	TWidget,
 	TWidgetHelper<Widget>>;
 
-template <typename Widget>
+template <typename Widget, typename Traits>
 class RpWidgetWrap;
 
 class RpWidgetMethods {
@@ -281,7 +281,7 @@ protected:
 	virtual bool eventHook(QEvent *event) = 0;
 
 private:
-	template <typename Widget>
+	template <typename Widget, typename Traits>
 	friend class RpWidgetWrap;
 
 	struct EventStreams {
@@ -292,7 +292,7 @@ private:
 		rpl::event_stream<> alive;
 	};
 	struct Initer {
-		Initer(QWidget *parent);
+		Initer(QWidget *parent, bool setZeroGeometry);
 	};
 
 	virtual void callSetVisible(bool visible) = 0;
@@ -310,11 +310,15 @@ private:
 
 };
 
-template <typename Widget>
+struct RpWidgetDefaultTraits {
+	static constexpr bool kSetZeroGeometry = true;
+};
+
+template <typename Widget, typename Traits = RpWidgetDefaultTraits>
 class RpWidgetWrap
 	: public RpWidgetParent<Widget>
 	, public RpWidgetMethods {
-	using Self = RpWidgetWrap<Widget>;
+	using Self = RpWidgetWrap<Widget, Traits>;
 	using Parent = RpWidgetParent<Widget>;
 
 public:
@@ -362,7 +366,7 @@ private:
 		return this->isHidden();
 	}
 
-	Initer _initer = { this };
+	Initer _initer = { this, Traits::kSetZeroGeometry };
 
 };
 

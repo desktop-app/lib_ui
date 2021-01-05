@@ -160,8 +160,10 @@ bool RpWidgetMethods::handleEvent(QEvent *event) {
 	return eventHook(event);
 }
 
-RpWidgetMethods::Initer::Initer(QWidget *parent) {
-	parent->setGeometry(0, 0, 0, 0);
+RpWidgetMethods::Initer::Initer(QWidget *parent, bool setZeroGeometry) {
+	if (setZeroGeometry) {
+		parent->setGeometry(0, 0, 0, 0);
+	}
 }
 
 void RpWidgetMethods::visibilityChangedHook(bool wasVisible, bool nowVisible) {
