@@ -95,12 +95,6 @@ void Menu::init() {
 	}
 }
 
-not_null<QAction*> Menu::addAction(const QString &text, const QObject *receiver, const char* member, const style::icon *icon, const style::icon *iconOver) {
-	const auto action = addAction(new QAction(text, this), icon, iconOver);
-	connect(action, SIGNAL(triggered(bool)), receiver, member, Qt::QueuedConnection);
-	return action;
-}
-
 not_null<QAction*> Menu::addAction(const QString &text, Fn<void()> callback, const style::icon *icon, const style::icon *iconOver) {
 	const auto action = addAction(new QAction(text, this), icon, iconOver);
 	connect(action, &QAction::triggered, action, std::move(callback), Qt::QueuedConnection);

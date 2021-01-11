@@ -637,12 +637,17 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	_contextMenu = new PopupMenu(this);
 
 	if (fullSelection && !_contextCopyText.isEmpty()) {
-		_contextMenu->addAction(_contextCopyText, this, SLOT(onCopyContextText()));
+		_contextMenu->addAction(
+			_contextCopyText,
+			[=] { onCopyContextText(); });
 	} else if (uponSelection && !fullSelection) {
-		const auto text = Integration::Instance().phraseContextCopySelected();
-		_contextMenu->addAction(text, this, SLOT(onCopySelectedText()));
+		_contextMenu->addAction(
+			Integration::Instance().phraseContextCopySelected(),
+			[=] { onCopySelectedText(); });
 	} else if (_selectable && !hasSelection && !_contextCopyText.isEmpty()) {
-		_contextMenu->addAction(_contextCopyText, this, SLOT(onCopyContextText()));
+		_contextMenu->addAction(
+			_contextCopyText,
+			[=] { onCopyContextText(); });
 	}
 
 	if (const auto link = ClickHandler::getActive()) {

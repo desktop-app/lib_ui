@@ -50,10 +50,6 @@ void DropdownMenu::init() {
 	hide();
 }
 
-not_null<QAction*> DropdownMenu::addAction(const QString &text, const QObject *receiver, const char* member, const style::icon *icon, const style::icon *iconOver) {
-	return _menu->addAction(text, receiver, member, icon, iconOver);
-}
-
 not_null<QAction*> DropdownMenu::addAction(const QString &text, Fn<void()> callback, const style::icon *icon, const style::icon *iconOver) {
 	return _menu->addAction(text, std::move(callback), icon, iconOver);
 }
