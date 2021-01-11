@@ -635,3 +635,5 @@ sideBarIconFgActive: #5eb5f7; // filters side bar active item icon
 sideBarBadgeBg: #5eb5f7; // filters side bar badge background
 sideBarBadgeBgMuted: #8393a3; // filters side bar unimportant badge background
 sideBarBadgeFg: #ffffff; // filters side bar badge text
+
+songCoverOverlayFg: #00000066; // song cover overlay
