@@ -76,7 +76,6 @@ protected:
 	void mouseReleaseEvent(QMouseEvent *e) override;
 
 private:
-	class Separator;
 	class Action;
 
 	void updateSelected(QPoint globalPosition);

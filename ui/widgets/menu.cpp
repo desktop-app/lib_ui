@@ -10,6 +10,7 @@
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/menu/menu_item_base.h"
+#include "ui/widgets/menu/menu_separator.h"
 #include "ui/text/text.h"
 
 #include <QtGui/QtEvents>
@@ -50,55 +51,6 @@ TextParseOptions MenuTextOptions = {
 };
 
 } // namespace
-
-class Menu::Separator : public ItemBase {
-public:
-	Separator(not_null<RpWidget*> parent, const style::Menu &st, int index)
-	: ItemBase(parent, st, index)
-	, _lineWidth(st.separatorWidth)
-	, _padding(st.separatorPadding)
-	, _fg(st.separatorFg)
-	, _bg(st.itemBg)
-	, _height(_padding.top() + _lineWidth + _padding.bottom()) {
-
-		initResizeHook(parent->sizeValue());
-		// setAttribute(Qt::WA_TransparentForMouseEvents, true);
-		paintRequest(
-		) | rpl::start_with_next([=] {
-			Painter p(this);
-
-			p.fillRect(0, 0, width(), _height, _bg);
-			p.fillRect(
-				_padding.left(),
-				_padding.top(),
-				width() - _padding.left() - _padding.right(),
-				_lineWidth,
-				_fg);
-		}, lifetime());
-
-	}
-
-	QAction *action() const override {
-		return nullptr;
-	}
-
-	bool isEnabled() const override {
-		return false;
-	}
-
-protected:
-	int contentHeight() const override {
-		return _height;
-	}
-
-private:
-	const int _lineWidth;
-	const style::margins &_padding;
-	const style::color &_fg;
-	const style::color &_bg;
-	const int _height;
-
-};
 
 class Menu::Action : public ItemBase {
 public:
@@ -329,7 +281,7 @@ not_null<QAction*> Menu::addAction(not_null<QAction*> action, const style::icon 
 		: _actionWidgets.back()->y() + _actionWidgets.back()->height();
 	const auto index = _actionWidgets.size();
 	if (action->isSeparator()) {
-		auto widget = base::make_unique_q<Separator>(this, _st, index);
+		auto widget = base::make_unique_q<Ui::Separator>(this, _st, index);
 		widget->moveToLeft(0, top);
 		widget->show();
 		_actionWidgets.push_back(std::move(widget));

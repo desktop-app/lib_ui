@@ -151,6 +151,8 @@ PRIVATE
     ui/widgets/menu/menu_common.h
     ui/widgets/menu/menu_item_base.cpp
     ui/widgets/menu/menu_item_base.h
+    ui/widgets/menu/menu_separator.cpp
+    ui/widgets/menu/menu_separator.h
     ui/widgets/popup_menu.cpp
     ui/widgets/popup_menu.h
     ui/widgets/scroll_area.cpp
