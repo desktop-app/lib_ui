@@ -7,7 +7,7 @@
 #pragma once
 
 #include "styles/style_widgets.h"
-#include "ui/widgets/menu.h"
+#include "ui/widgets/menu/menu.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/panel_animation.h"
 #include "ui/round_rect.h"
@@ -99,7 +99,7 @@ private:
 	const style::PopupMenu &_st;
 
 	RoundRect _roundRect;
-	object_ptr<Menu> _menu;
+	object_ptr<Menu::Menu> _menu;
 
 	using Submenus = QMap<QAction*, SubmenuPointer>;
 	Submenus _submenus;

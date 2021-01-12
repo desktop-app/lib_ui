@@ -8,7 +8,7 @@
 
 #include "ui/painter.h"
 
-namespace Ui {
+namespace Ui::Menu {
 
 Separator::Separator(
 	not_null<RpWidget*> parent,
@@ -48,4 +48,4 @@ int Separator::contentHeight() const {
 	return _height;
 }
 
-} // namespace Ui
+} // namespace Ui::Menu

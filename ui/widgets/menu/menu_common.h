@@ -6,11 +6,11 @@
 //
 #pragma once
 
-namespace Ui::ContextMenu {
+namespace Ui::Menu {
 
 enum class TriggeredSource {
 	Mouse,
 	Keyboard,
 };
 
-} // namespace Ui::ContextMenu
+} // namespace Ui::Menu

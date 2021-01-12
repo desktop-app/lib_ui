@@ -13,7 +13,7 @@
 
 #include <QtWidgets/QMenu>
 
-namespace Ui {
+namespace Ui::Menu {
 
 class ItemBase;
 class ToggleView;
@@ -33,7 +33,6 @@ public:
 
 	void clearSelection();
 
-	using TriggeredSource = ContextMenu::TriggeredSource;
 	void setChildShown(bool shown) {
 		_childShown = shown;
 	}
@@ -110,4 +109,4 @@ private:
 
 };
 
-} // namespace Ui
+} // namespace Ui::Menu

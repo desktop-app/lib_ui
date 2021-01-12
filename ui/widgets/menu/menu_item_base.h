@@ -7,17 +7,16 @@
 #pragma once
 
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/menu.h"
+#include "ui/widgets/menu/menu.h"
 #include "ui/widgets/menu/menu_common.h"
 #include "styles/style_widgets.h"
 
-namespace Ui {
+namespace Ui::Menu {
 
 class ItemBase : public RippleButton {
 public:
 	ItemBase(not_null<RpWidget*> parent, const style::Menu &st, int index);
 
-	using TriggeredSource = ContextMenu::TriggeredSource;
 	TriggeredSource lastTriggeredSource() const;
 
 	rpl::producer<bool> selects() const;
@@ -62,4 +61,4 @@ private:
 
 };
 
-} // namespace Ui
+} // namespace Ui::Menu

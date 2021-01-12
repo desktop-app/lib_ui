@@ -11,7 +11,7 @@
 
 class Painter;
 
-namespace Ui {
+namespace Ui::Menu {
 
 class Separator : public ItemBase {
 public:
@@ -32,4 +32,4 @@ private:
 
 };
 
-} // namespace Ui
+} // namespace Ui::Menu

@@ -9,7 +9,7 @@
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 
-namespace Ui {
+namespace Ui::Menu {
 namespace {
 
 [[nodiscard]] TextWithEntities ParseMenuItem(const QString &text) {
@@ -195,11 +195,11 @@ QPoint Action::prepareRippleStartPosition() const {
 }
 
 QImage Action::prepareRippleMask() const {
-	return RippleAnimation::rectMask(size());
+	return Ui::RippleAnimation::rectMask(size());
 }
 
 int Action::contentHeight() const {
 	return _height;
 }
 
-} // namespace Ui
+} // namespace Ui::Menu

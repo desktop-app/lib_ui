@@ -146,8 +146,8 @@ PRIVATE
     ui/widgets/input_fields.h
     ui/widgets/labels.cpp
     ui/widgets/labels.h
-    ui/widgets/menu.cpp
-    ui/widgets/menu.h
+    ui/widgets/menu/menu.cpp
+    ui/widgets/menu/menu.h
     ui/widgets/menu/menu_action.cpp
     ui/widgets/menu/menu_action.h
     ui/widgets/menu/menu_common.h

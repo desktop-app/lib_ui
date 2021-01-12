@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/widgets/menu.h"
+#include "ui/widgets/menu/menu.h"
 
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
@@ -14,7 +14,7 @@
 
 #include <QtGui/QtEvents>
 
-namespace Ui {
+namespace Ui::Menu {
 
 Menu::Menu(QWidget *parent, const style::Menu &st)
 : RpWidget(parent)
@@ -73,12 +73,12 @@ not_null<QAction*> Menu::addAction(not_null<QAction*> action, const style::icon 
 		: _actionWidgets.back()->y() + _actionWidgets.back()->height();
 	const auto index = _actionWidgets.size();
 	if (action->isSeparator()) {
-		auto widget = base::make_unique_q<Ui::Separator>(this, _st, index);
+		auto widget = base::make_unique_q<Separator>(this, _st, index);
 		widget->moveToLeft(0, top);
 		widget->show();
 		_actionWidgets.push_back(std::move(widget));
 	} else {
-		auto widget = base::make_unique_q<Ui::Action>(
+		auto widget = base::make_unique_q<Action>(
 			this,
 			_st,
 			index,
@@ -336,4 +336,4 @@ void Menu::handleMouseRelease(QPoint globalPosition) {
 	}
 }
 
-} // namespace Ui
+} // namespace Ui::Menu

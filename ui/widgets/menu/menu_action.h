@@ -12,7 +12,7 @@
 
 class Painter;
 
-namespace Ui {
+namespace Ui::Menu {
 
 class Action : public ItemBase {
 public:
@@ -50,4 +50,4 @@ private:
 
 };
 
-} // namespace Ui
+} // namespace Ui::Menu

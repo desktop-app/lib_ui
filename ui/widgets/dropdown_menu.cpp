@@ -12,7 +12,7 @@ namespace Ui {
 
 DropdownMenu::DropdownMenu(QWidget *parent, const style::DropdownMenu &st) : InnerDropdown(parent, st.wrap)
 , _st(st) {
-	_menu = setOwnedWidget(object_ptr<Menu>(this, _st.menu));
+	_menu = setOwnedWidget(object_ptr<Menu::Menu>(this, _st.menu));
 	init();
 }
 

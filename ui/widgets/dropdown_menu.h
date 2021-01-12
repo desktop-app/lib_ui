@@ -8,7 +8,7 @@
 
 #include "styles/style_widgets.h"
 #include "ui/widgets/inner_dropdown.h"
-#include "ui/widgets/menu.h"
+#include "ui/widgets/menu/menu.h"
 
 namespace Ui {
 
@@ -80,7 +80,7 @@ private:
 	const style::DropdownMenu &_st;
 	Fn<void()> _hiddenCallback;
 
-	QPointer<Menu> _menu;
+	QPointer<Menu::Menu> _menu;
 
 	// Not ready with submenus yet.
 	//using Submenus = QMap<QAction*, SubmenuPointer>;

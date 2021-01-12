@@ -6,13 +6,7 @@
 //
 #include "ui/widgets/menu/menu_item_base.h"
 
-namespace Ui {
-
-namespace {
-
-using TriggeredSource = Menu::TriggeredSource;
-
-} // namespace
+namespace Ui::Menu {
 
 ItemBase::ItemBase(
 	not_null<RpWidget*> parent,
@@ -105,4 +99,4 @@ void ItemBase::setContentWidth(int w) {
 	_contentWidth = w;
 }
 
-} // namespace Ui
+} // namespace Ui::Menu
