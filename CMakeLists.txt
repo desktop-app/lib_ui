@@ -148,6 +148,8 @@ PRIVATE
     ui/widgets/labels.h
     ui/widgets/menu.cpp
     ui/widgets/menu.h
+    ui/widgets/menu/menu_action.cpp
+    ui/widgets/menu/menu_action.h
     ui/widgets/menu/menu_common.h
     ui/widgets/menu/menu_item_base.cpp
     ui/widgets/menu/menu_item_base.h

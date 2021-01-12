@@ -76,8 +76,6 @@ protected:
 	void mouseReleaseEvent(QMouseEvent *e) override;
 
 private:
-	class Action;
-
 	void updateSelected(QPoint globalPosition);
 	void init();
 

@@ -6,223 +6,15 @@
 //
 #include "ui/widgets/menu.h"
 
-#include "ui/effects/ripple_animation.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
-#include "ui/text/text.h"
 
 #include <QtGui/QtEvents>
 
 namespace Ui {
-namespace {
-
-[[nodiscard]] TextWithEntities ParseMenuItem(const QString &text) {
-	auto result = TextWithEntities();
-	result.text.reserve(text.size());
-	auto afterAmpersand = false;
-	for (const auto ch : text) {
-		if (afterAmpersand) {
-			afterAmpersand = false;
-			if (ch == '&') {
-				result.text.append(ch);
-			} else {
-				result.entities.append(EntityInText{
-					EntityType::Underline,
-					result.text.size(),
-					1 });
-				result.text.append(ch);
-			}
-		} else if (ch == '&') {
-			afterAmpersand = true;
-		} else {
-			result.text.append(ch);
-		}
-	}
-	return result;
-}
-
-TextParseOptions MenuTextOptions = {
-	TextParseLinks | TextParseRichText, // flags
-	0, // maxw
-	0, // maxh
-	Qt::LayoutDirectionAuto, // dir
-};
-
-} // namespace
-
-class Menu::Action : public ItemBase {
-public:
-	Action(
-		not_null<RpWidget*> parent,
-		const style::Menu &st,
-		int index,
-		not_null<QAction*> action,
-		const style::icon *icon,
-		const style::icon *iconOver,
-		bool hasSubmenu)
-	: ItemBase(parent, st, index)
-	, _action(action)
-	, _st(st)
-	, _icon(icon)
-	, _iconOver(iconOver)
-	, _height(_st.itemPadding.top()
-		+ _st.itemStyle.font->height
-		+ _st.itemPadding.bottom()) {
-
-		initResizeHook(parent->sizeValue());
-		processAction();
-		setHasSubmenu(hasSubmenu);
-
-		paintRequest(
-		) | rpl::start_with_next([=] {
-			Painter p(this);
-			paint(p);
-		}, lifetime());
-
-		events(
-		) | rpl::filter([=](not_null<QEvent*> e) {
-			return _action->isEnabled()
-				&& ((e->type() == QEvent::Leave)
-					|| (e->type() == QEvent::Enter));
-		}) | rpl::map([=](not_null<QEvent*> e) {
-			return (e->type() == QEvent::Enter);
-		}) | rpl::start_with_next([=](bool selected) {
-			setSelected(selected);
-		}, lifetime());
-
-		events(
-		) | rpl::filter([=](not_null<QEvent*> e) {
-			return _action->isEnabled() && (e->type() == QEvent::MouseMove);
-		}) | rpl::start_with_next([=](not_null<QEvent*> e) {
-			setSelected(true);
-		}, lifetime());
-
-		connect(_action, &QAction::changed, [=] { processAction(); });
-	}
-
-void paint(Painter &p) {
-
-	const auto enabled = _action->isEnabled();
-	const auto selected = isSelected();
-	if (selected && _st.itemBgOver->c.alpha() < 255) {
-		p.fillRect(0, 0, width(), _height, _st.itemBg);
-	}
-	p.fillRect(0, 0, width(), _height, selected ? _st.itemBgOver : _st.itemBg);
-	if (isEnabled()) {
-		paintRipple(p, 0, 0);
-	}
-	if (const auto icon = (selected ? _iconOver : _icon)) {
-		icon->paint(p, _st.itemIconPosition, width());
-	}
-	p.setPen(selected ? _st.itemFgOver : (enabled ? _st.itemFg : _st.itemFgDisabled));
-	_text.drawLeftElided(p, _st.itemPadding.left(), _st.itemPadding.top(), _textWidth, width());
-	if (hasSubmenu()) {
-		const auto left = width() - _st.itemPadding.right() - _st.arrow.width();
-		const auto top = (_height - _st.arrow.height()) / 2;
-		if (enabled) {
-			_st.arrow.paint(p, left, top, width());
-		} else {
-			_st.arrow.paint(
-				p,
-				left,
-				top,
-				width(),
-				_st.itemFgDisabled->c);
-		}
-	} else if (!_shortcut.isEmpty()) {
-		p.setPen(selected ? _st.itemFgShortcutOver : (enabled ? _st.itemFgShortcut : _st.itemFgShortcutDisabled));
-		p.drawTextRight(_st.itemPadding.right(), _st.itemPadding.top(), width(), _shortcut);
-	}
-}
-
-void processAction() {
-	if (_action->text().isEmpty()) {
-		_shortcut = QString();
-		_text.clear();
-		return;
-	}
-	const auto actionTextParts = _action->text().split('\t');
-	const auto actionText = actionTextParts.empty()
-		? QString()
-		: actionTextParts[0];
-	const auto actionShortcut = (actionTextParts.size() > 1)
-		? actionTextParts[1]
-		: QString();
-	_text.setMarkedText(
-		_st.itemStyle,
-		ParseMenuItem(actionText),
-		MenuTextOptions);
-	const auto textWidth = _text.maxWidth();
-	const auto &padding = _st.itemPadding;
-
-	const auto additionalWidth = hasSubmenu()
-		? padding.right() + _st.arrow.width()
-		: (!actionShortcut.isEmpty())
-		? (padding.right() + _st.itemStyle.font->width(actionShortcut))
-		: 0;
-	const auto goodWidth = padding.left()
-		+ textWidth
-		+ padding.right()
-		+ additionalWidth;
-	// if (action->isCheckable()) {
-	// 	auto updateCallback = [this, index] { updateItem(index); };
-	// 	if (_toggle) {
-	// 		_toggle->setUpdateCallback(updateCallback);
-	// 		_toggle->setChecked(action->isChecked(), anim::type::normal);
-	// 	} else {
-	// 		_toggle = std::make_unique<ToggleView>(_st.itemToggle, action->isChecked(), updateCallback);
-	// 	}
-	// 	goodWidth += _st.itemPadding.right() + _toggle->getSize().width() - _st.itemToggleShift;
-	// } else {
-	// 	_toggle.reset();
-	// }
-	const auto w = std::clamp(goodWidth, _st.widthMin, _st.widthMax);
-	_textWidth = w - (goodWidth - textWidth);
-	_shortcut = actionShortcut;
-	setContentWidth(w);
-	update();
-}
-
-bool isEnabled() const override {
-	return _action->isEnabled();
-}
-
-QAction *action() const override {
-	return _action;
-}
-
-protected:
-QPoint prepareRippleStartPosition() const override {
-	return mapFromGlobal(QCursor::pos());
-}
-
-QImage prepareRippleMask() const override {
-	return RippleAnimation::rectMask(size());
-}
-
-protected:
-	int contentHeight() const override {
-		return _height;
-	}
-
-private:
-
-	Text::String _text;
-	QString _shortcut;
-	const not_null<QAction*> _action;
-	const style::Menu &_st;
-	const style::icon *_icon;
-	const style::icon *_iconOver;
-	// std::unique_ptr<RippleAnimation> _ripple;
-	std::unique_ptr<ToggleView> _toggle;
-	int _textWidth = 0;
-	const int _height;
-
-	// rpl::variable<bool> _selected = false;
-
-};
 
 Menu::Menu(QWidget *parent, const style::Menu &st)
 : RpWidget(parent)
@@ -286,7 +78,7 @@ not_null<QAction*> Menu::addAction(not_null<QAction*> action, const style::icon 
 		widget->show();
 		_actionWidgets.push_back(std::move(widget));
 	} else {
-		auto widget = base::make_unique_q<Action>(
+		auto widget = base::make_unique_q<Ui::Action>(
 			this,
 			_st,
 			index,
