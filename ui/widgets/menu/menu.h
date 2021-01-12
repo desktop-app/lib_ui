@@ -41,10 +41,10 @@ public:
 
 	const std::vector<not_null<QAction*>> &actions() const;
 
-	void setActivatedCallback(Fn<void(QAction *action, int actionTop, TriggeredSource source)> callback) {
+	void setActivatedCallback(Fn<void(const CallbackData &data)> callback) {
 		_activatedCallback = std::move(callback);
 	}
-	void setTriggeredCallback(Fn<void(QAction *action, int actionTop, TriggeredSource source)> callback) {
+	void setTriggeredCallback(Fn<void(const CallbackData &data)> callback) {
 		_triggeredCallback = std::move(callback);
 	}
 
@@ -89,8 +89,8 @@ private:
 
 	const style::Menu &_st;
 
-	Fn<void(QAction *action, int actionTop, TriggeredSource source)> _activatedCallback;
-	Fn<void(QAction *action, int actionTop, TriggeredSource source)> _triggeredCallback;
+	Fn<void(const CallbackData &data)> _activatedCallback;
+	Fn<void(const CallbackData &data)> _triggeredCallback;
 	Fn<bool(int key)> _keyPressDelegate;
 	Fn<void(QPoint globalPosition)> _mouseMoveDelegate;
 	Fn<void(QPoint globalPosition)> _mousePressDelegate;

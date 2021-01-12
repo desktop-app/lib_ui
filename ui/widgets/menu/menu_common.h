@@ -13,4 +13,12 @@ enum class TriggeredSource {
 	Keyboard,
 };
 
+struct CallbackData {
+	QAction *action;
+	int actionTop = 0;
+	TriggeredSource source;
+	int index = 0;
+	bool selected = false;
+};
+
 } // namespace Ui::Menu

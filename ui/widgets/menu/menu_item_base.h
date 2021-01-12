@@ -19,7 +19,7 @@ public:
 
 	TriggeredSource lastTriggeredSource() const;
 
-	rpl::producer<bool> selects() const;
+	rpl::producer<CallbackData> selects() const;
 	void setSelected(
 		bool selected,
 		TriggeredSource source = TriggeredSource::Mouse);
@@ -29,7 +29,7 @@ public:
 
 	void setClicked(TriggeredSource source = TriggeredSource::Mouse);
 
-	rpl::producer<> clicks() const;
+	rpl::producer<CallbackData> clicks() const;
 
 	rpl::producer<int> contentWidthValue() const;
 	int contentWidth() const;

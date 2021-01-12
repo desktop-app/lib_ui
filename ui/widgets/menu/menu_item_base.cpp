@@ -32,8 +32,12 @@ void ItemBase::setSelected(
 bool ItemBase::isSelected() const {
 	return _selected.current();
 }
-rpl::producer<bool> ItemBase::selects() const {
-	return _selected.changes();
+
+rpl::producer<CallbackData> ItemBase::selects() const {
+	return _selected.changes(
+	) | rpl::map([=](bool selected) -> CallbackData {
+		return { action(), y(), _lastTriggeredSource, _index, selected };
+	});
 }
 
 TriggeredSource ItemBase::lastTriggeredSource() const {
@@ -51,10 +55,13 @@ void ItemBase::setClicked(TriggeredSource source) {
 	}
 }
 
-rpl::producer<> ItemBase::clicks() const {
+rpl::producer<CallbackData> ItemBase::clicks() const {
 	return rpl::merge(
 		AbstractButton::clicks() | rpl::to_empty,
-		_clicks.events());
+		_clicks.events()
+	) | rpl::map([=]() -> CallbackData {
+		return { action(), y(), _lastTriggeredSource, _index, true };
+	});;
 }
 
 rpl::producer<int> ItemBase::contentWidthValue() const {

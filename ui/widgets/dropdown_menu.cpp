@@ -37,11 +37,11 @@ void DropdownMenu::init() {
 	) | rpl::start_with_next([=] {
 		resizeToContent();
 	}, _menu->lifetime());
-	_menu->setActivatedCallback([this](QAction *action, int actionTop, TriggeredSource source) {
-		handleActivated(action, actionTop, source);
+	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
+		handleActivated(data);
 	});
-	_menu->setTriggeredCallback([this](QAction *action, int actionTop, TriggeredSource source) {
-		handleTriggered(action, actionTop, source);
+	_menu->setTriggeredCallback([this](const Menu::CallbackData &data) {
+		handleTriggered(data);
 	});
 	_menu->setKeyPressDelegate([this](int key) { return handleKeyPress(key); });
 	_menu->setMouseMoveDelegate([this](QPoint globalPosition) { handleMouseMove(globalPosition); });
@@ -72,9 +72,9 @@ const std::vector<not_null<QAction*>> &DropdownMenu::actions() const {
 	return _menu->actions();
 }
 
-void DropdownMenu::handleActivated(QAction *action, int actionTop, TriggeredSource source) {
-	if (source == TriggeredSource::Mouse) {
-		if (!popupSubmenuFromAction(action, actionTop, source)) {
+void DropdownMenu::handleActivated(const Menu::CallbackData &data) {
+	if (data.source == TriggeredSource::Mouse) {
+		if (!popupSubmenuFromAction(data)) {
 			if (auto currentSubmenu = base::take(_activeSubmenu)) {
 				currentSubmenu->hideMenu(true);
 			}
@@ -82,11 +82,11 @@ void DropdownMenu::handleActivated(QAction *action, int actionTop, TriggeredSour
 	}
 }
 
-void DropdownMenu::handleTriggered(QAction *action, int actionTop, TriggeredSource source) {
-	if (!popupSubmenuFromAction(action, actionTop, source)) {
+void DropdownMenu::handleTriggered(const Menu::CallbackData &data) {
+	if (!popupSubmenuFromAction(data)) {
 		hideMenu();
 		_triggering = true;
-		emit action->trigger();
+		emit data.action->trigger();
 		_triggering = false;
 		if (_deleteLater) {
 			_deleteLater = false;
@@ -96,7 +96,7 @@ void DropdownMenu::handleTriggered(QAction *action, int actionTop, TriggeredSour
 }
 
 // Not ready with submenus yet.
-bool DropdownMenu::popupSubmenuFromAction(QAction *action, int actionTop, TriggeredSource source) {
+bool DropdownMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
 	//if (auto submenu = _submenus.value(action)) {
 	//	if (_activeSubmenu == submenu) {
 	//		submenu->hideMenu(true);

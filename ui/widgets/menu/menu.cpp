@@ -90,27 +90,24 @@ not_null<QAction*> Menu::addAction(not_null<QAction*> action, const style::icon 
 		widget->show();
 
 		widget->selects(
-		) | rpl::start_with_next([=, w = widget.get()](bool selected) {
-			if (!selected) {
+		) | rpl::start_with_next([=](const CallbackData &data) {
+			if (!data.selected) {
 				return;
 			}
 			for (auto i = 0; i < _actionWidgets.size(); i++) {
-				if (_actionWidgets[i].get() != w) {
+				if (i != data.index) {
 					_actionWidgets[i]->setSelected(false);
 				}
 			}
 			if (_activatedCallback) {
-				_activatedCallback(
-					w->action(),
-					w->y(),
-					w->lastTriggeredSource());
+				_activatedCallback(data);
 			}
 		}, widget->lifetime());
 
 		widget->clicks(
-		) | rpl::start_with_next([=, w = widget.get()]() {
+		) | rpl::start_with_next([=](const CallbackData &data) {
 			if (_triggeredCallback) {
-				_triggeredCallback(w->action(), w->y(), w->lastTriggeredSource());
+				_triggeredCallback(data);
 			}
 		}, widget->lifetime());
 

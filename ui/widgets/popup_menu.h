@@ -74,8 +74,8 @@ private:
 	using TriggeredSource = Menu::TriggeredSource;
 	void handleCompositingUpdate();
 	void handleMenuResize();
-	void handleActivated(QAction *action, int actionTop, TriggeredSource source);
-	void handleTriggered(QAction *action, int actionTop, TriggeredSource source);
+	void handleActivated(const Menu::CallbackData &data);
+	void handleTriggered(const Menu::CallbackData &data);
 	void forwardKeyPress(int key);
 	bool handleKeyPress(int key);
 	void forwardMouseMove(QPoint globalPosition) {
@@ -92,7 +92,7 @@ private:
 	void handleMouseRelease(QPoint globalPosition);
 
 	using SubmenuPointer = QPointer<PopupMenu>;
-	bool popupSubmenuFromAction(QAction *action, int actionTop, TriggeredSource source);
+	bool popupSubmenuFromAction(const Menu::CallbackData &data);
 	void popupSubmenu(SubmenuPointer submenu, int actionTop, TriggeredSource source);
 	void showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source);
 

@@ -56,11 +56,11 @@ void PopupMenu::init() {
 	) | rpl::start_with_next([=] {
 		handleMenuResize();
 	}, _menu->lifetime());
-	_menu->setActivatedCallback([this](QAction *action, int actionTop, TriggeredSource source) {
-		handleActivated(action, actionTop, source);
+	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
+		handleActivated(data);
 	});
-	_menu->setTriggeredCallback([this](QAction *action, int actionTop, TriggeredSource source) {
-		handleTriggered(action, actionTop, source);
+	_menu->setTriggeredCallback([this](const Menu::CallbackData &data) {
+		handleTriggered(data);
 	});
 	_menu->setKeyPressDelegate([this](int key) { return handleKeyPress(key); });
 	_menu->setMouseMoveDelegate([this](QPoint globalPosition) { handleMouseMove(globalPosition); });
@@ -152,9 +152,9 @@ void PopupMenu::paintBg(QPainter &p) {
 	}
 }
 
-void PopupMenu::handleActivated(QAction *action, int actionTop, TriggeredSource source) {
-	if (source == TriggeredSource::Mouse) {
-		if (!popupSubmenuFromAction(action, actionTop, source)) {
+void PopupMenu::handleActivated(const Menu::CallbackData &data) {
+	if (data.source == TriggeredSource::Mouse) {
+		if (!popupSubmenuFromAction(data)) {
 			if (auto currentSubmenu = base::take(_activeSubmenu)) {
 				currentSubmenu->hideMenu(true);
 			}
@@ -162,11 +162,11 @@ void PopupMenu::handleActivated(QAction *action, int actionTop, TriggeredSource 
 	}
 }
 
-void PopupMenu::handleTriggered(QAction *action, int actionTop, TriggeredSource source) {
-	if (!popupSubmenuFromAction(action, actionTop, source)) {
+void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
+	if (!popupSubmenuFromAction(data)) {
 		_triggering = true;
 		hideMenu();
-		emit action->trigger();
+		emit data.action->trigger();
 		_triggering = false;
 		if (_deleteLater) {
 			_deleteLater = false;
@@ -175,12 +175,12 @@ void PopupMenu::handleTriggered(QAction *action, int actionTop, TriggeredSource 
 	}
 }
 
-bool PopupMenu::popupSubmenuFromAction(QAction *action, int actionTop, TriggeredSource source) {
-	if (auto submenu = _submenus.value(action)) {
+bool PopupMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
+	if (auto submenu = _submenus.value(data.action)) {
 		if (_activeSubmenu == submenu) {
 			submenu->hideMenu(true);
 		} else {
-			popupSubmenu(submenu, actionTop, source);
+			popupSubmenu(submenu, data.actionTop, data.source);
 		}
 		return true;
 	}
