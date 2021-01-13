@@ -133,7 +133,7 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 				_actionWidgets,
 				std::greater<>(),
 				&ItemBase::width))->contentWidth();
-		resize(newWidth, height());
+		resizeFromInner(newWidth, height());
 	}, widget->lifetime());
 
 	_actionWidgets.push_back(std::move(widget));
@@ -143,7 +143,7 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 		0,
 		ranges::plus(),
 		&ItemBase::height);
-	resize(width(), newHeight);
+	resizeFromInner(width(), newHeight);
 	updateSelected(QCursor::pos());
 
 	return action;
@@ -164,7 +164,7 @@ void Menu::clearActions() {
 			delete action;
 		}
 	}
-	resize(_forceWidth ? _forceWidth : _st.widthMin, _st.skip * 2);
+	resizeFromInner(_forceWidth ? _forceWidth : _st.widthMin, _st.skip * 2);
 }
 
 void Menu::finishAnimating() {
@@ -175,6 +175,18 @@ void Menu::finishAnimating() {
 
 bool Menu::empty() const {
 	return _actionWidgets.empty();
+}
+
+void Menu::resizeFromInner(int w, int h) {
+	if ((w == width()) && (h == height())) {
+		return;
+	}
+	resize(w, h);
+	_resizesFromInner.fire({});
+}
+
+rpl::producer<> Menu::resizesFromInner() const {
+	return _resizesFromInner.events();
 }
 
 void Menu::setShowSource(TriggeredSource source) {
@@ -188,7 +200,7 @@ const std::vector<not_null<QAction*>> &Menu::actions() const {
 
 void Menu::setForceWidth(int forceWidth) {
 	_forceWidth = forceWidth;
-	resize(_forceWidth, height());
+	resizeFromInner(_forceWidth, height());
 }
 
 void Menu::updateSelected(QPoint globalPosition) {

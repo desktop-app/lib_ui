@@ -76,6 +76,8 @@ public:
 	}
 	void handleMouseRelease(QPoint globalPosition);
 
+	rpl::producer<> resizesFromInner() const;
+
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
@@ -98,6 +100,8 @@ private:
 
 	ItemBase *findSelectedAction() const;
 
+	void resizeFromInner(int w, int h);
+
 	const style::Menu &_st;
 
 	Fn<void(const CallbackData &data)> _activatedCallback;
@@ -117,6 +121,8 @@ private:
 
 	int _selected = -1;
 	bool _childShown = false;
+
+	rpl::event_stream<> _resizesFromInner;
 
 };
 

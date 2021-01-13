@@ -52,7 +52,7 @@ void PopupMenu::init() {
 		hideMenu(true);
 	}, lifetime());
 
-	_menu->sizeValue(
+	_menu->resizesFromInner(
 	) | rpl::start_with_next([=] {
 		handleMenuResize();
 	}, _menu->lifetime());
