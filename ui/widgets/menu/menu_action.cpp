@@ -149,7 +149,7 @@ void Action::processAction() {
 	const auto w = std::clamp(goodWidth, _st.widthMin, _st.widthMax);
 	_textWidth = w - (goodWidth - textWidth);
 	_shortcut = actionShortcut;
-	setContentWidth(w);
+	setMinWidth(w);
 	update();
 }
 

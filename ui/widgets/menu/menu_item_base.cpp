@@ -69,12 +69,12 @@ rpl::producer<CallbackData> ItemBase::clicks() const {
 	});
 }
 
-rpl::producer<int> ItemBase::contentWidthValue() const {
-	return _contentWidth.value();
+rpl::producer<int> ItemBase::minWidthValue() const {
+	return _minWidth.value();
 }
 
-int ItemBase::contentWidth() const {
-	return _contentWidth.current();
+int ItemBase::minWidth() const {
+	return _minWidth.current();
 }
 
 bool ItemBase::hasSubmenu() const {
@@ -107,8 +107,8 @@ void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
 	}, lifetime());
 }
 
-void ItemBase::setContentWidth(int w) {
-	_contentWidth = w;
+void ItemBase::setMinWidth(int w) {
+	_minWidth = w;
 }
 
 void ItemBase::finishAnimating() {

@@ -32,9 +32,9 @@ public:
 
 	rpl::producer<CallbackData> clicks() const;
 
-	rpl::producer<int> contentWidthValue() const;
-	int contentWidth() const;
-	void setContentWidth(int w);
+	rpl::producer<int> minWidthValue() const;
+	int minWidth() const;
+	void setMinWidth(int w);
 
 	bool hasSubmenu() const;
 	void setHasSubmenu(bool value);
@@ -60,7 +60,7 @@ private:
 	rpl::variable<bool> _selected = false;
 	rpl::event_stream<> _clicks;
 
-	rpl::variable<int> _contentWidth = 0;
+	rpl::variable<int> _minWidth = 0;
 
 	TriggeredSource _lastTriggeredSource = TriggeredSource::Mouse;
 
