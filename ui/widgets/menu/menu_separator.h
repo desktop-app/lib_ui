@@ -15,7 +15,11 @@ namespace Ui::Menu {
 
 class Separator : public ItemBase {
 public:
-	Separator(not_null<RpWidget*> parent, const style::Menu &st, int index);
+	Separator(
+		not_null<RpWidget*> parent,
+		const style::Menu &st,
+		int index,
+		not_null<QAction*> action);
 
 	QAction *action() const override;
 	bool isEnabled() const override;
@@ -29,6 +33,7 @@ private:
 	const style::color &_fg;
 	const style::color &_bg;
 	const int _height;
+	const not_null<QAction*> _action;
 
 };
 

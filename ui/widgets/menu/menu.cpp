@@ -53,80 +53,94 @@ void Menu::init() {
 	}, lifetime());
 }
 
-not_null<QAction*> Menu::addAction(const QString &text, Fn<void()> callback, const style::icon *icon, const style::icon *iconOver) {
+not_null<QAction*> Menu::addAction(
+		const QString &text,
+		Fn<void()> callback,
+		const style::icon *icon,
+		const style::icon *iconOver) {
 	const auto action = addAction(new QAction(text, this), icon, iconOver);
-	connect(action, &QAction::triggered, action, std::move(callback), Qt::QueuedConnection);
+	connect(
+		action,
+		&QAction::triggered,
+		action,
+		std::move(callback),
+		Qt::QueuedConnection);
 	return action;
 }
 
-not_null<QAction*> Menu::addAction(const QString &text, std::unique_ptr<QMenu> submenu) {
+not_null<QAction*> Menu::addAction(
+		const QString &text,
+		std::unique_ptr<QMenu> submenu) {
 	const auto action = new QAction(text, this);
 	action->setMenu(submenu.release());
 	return addAction(action, nullptr, nullptr);
 }
 
-not_null<QAction*> Menu::addAction(not_null<QAction*> action, const style::icon *icon, const style::icon *iconOver) {
+not_null<QAction*> Menu::addAction(
+		not_null<QAction*> action,
+		const style::icon *icon,
+		const style::icon *iconOver) {
+	if (action->isSeparator()) {
+		return addSeparator();
+	}
+	auto item = base::make_unique_q<Action>(
+		this,
+		_st,
+		0,
+		std::move(action),
+		icon,
+		iconOver ? iconOver : icon,
+		(action->menu() != nullptr));
+	return addAction(std::move(item));
+}
+
+not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
+	const auto action = widget->action();
 	_actions.emplace_back(action);
 
 	const auto top = _actionWidgets.empty()
 		? 0
 		: _actionWidgets.back()->y() + _actionWidgets.back()->height();
-	const auto index = _actionWidgets.size();
-	if (action->isSeparator()) {
-		auto widget = base::make_unique_q<Separator>(this, _st, index);
-		widget->moveToLeft(0, top);
-		widget->show();
-		_actionWidgets.push_back(std::move(widget));
-	} else {
-		auto widget = base::make_unique_q<Action>(
-			this,
-			_st,
-			index,
-			action,
-			icon,
-			iconOver ? iconOver : icon,
-			(action->menu() != nullptr));
-		widget->moveToLeft(0, top);
-		widget->show();
 
-		widget->selects(
-		) | rpl::start_with_next([=](const CallbackData &data) {
-			if (!data.selected) {
-				return;
+	widget->moveToLeft(0, top);
+	widget->show();
+
+	widget->selects(
+	) | rpl::start_with_next([=](const CallbackData &data) {
+		if (!data.selected) {
+			return;
+		}
+		for (auto i = 0; i < _actionWidgets.size(); i++) {
+			if (i != data.index) {
+				_actionWidgets[i]->setSelected(false);
 			}
-			for (auto i = 0; i < _actionWidgets.size(); i++) {
-				if (i != data.index) {
-					_actionWidgets[i]->setSelected(false);
-				}
-			}
-			if (_activatedCallback) {
-				_activatedCallback(data);
-			}
-		}, widget->lifetime());
+		}
+		if (_activatedCallback) {
+			_activatedCallback(data);
+		}
+	}, widget->lifetime());
 
-		widget->clicks(
-		) | rpl::start_with_next([=](const CallbackData &data) {
-			if (_triggeredCallback) {
-				_triggeredCallback(data);
-			}
-		}, widget->lifetime());
+	widget->clicks(
+	) | rpl::start_with_next([=](const CallbackData &data) {
+		if (_triggeredCallback) {
+			_triggeredCallback(data);
+		}
+	}, widget->lifetime());
 
-		widget->contentWidthValue(
-		) | rpl::start_with_next([=] {
-			const auto newWidth = _forceWidth
-				? _forceWidth
-				: _actionWidgets.empty()
-				? _st.widthMin
-				: (*ranges::max_element(
-					_actionWidgets,
-					std::greater<>(),
-					&ItemBase::width))->contentWidth();
-			resize(newWidth, height());
-		}, widget->lifetime());
+	widget->contentWidthValue(
+	) | rpl::start_with_next([=] {
+		const auto newWidth = _forceWidth
+			? _forceWidth
+			: _actionWidgets.empty()
+			? _st.widthMin
+			: (*ranges::max_element(
+				_actionWidgets,
+				std::greater<>(),
+				&ItemBase::width))->contentWidth();
+		resize(newWidth, height());
+	}, widget->lifetime());
 
-		_actionWidgets.push_back(std::move(widget));
-	}
-
+	_actionWidgets.push_back(std::move(widget));
 
 	const auto newHeight = ranges::accumulate(
 		_actionWidgets,
@@ -142,7 +156,8 @@ not_null<QAction*> Menu::addAction(not_null<QAction*> action, const style::icon 
 not_null<QAction*> Menu::addSeparator() {
 	const auto separator = new QAction(this);
 	separator->setSeparator(true);
-	return addAction(separator);
+	auto item = base::make_unique_q<Separator>(this, _st, 0, separator);
+	return addAction(std::move(item));
 }
 
 void Menu::clearActions() {

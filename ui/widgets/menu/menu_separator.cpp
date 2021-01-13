@@ -13,13 +13,15 @@ namespace Ui::Menu {
 Separator::Separator(
 	not_null<RpWidget*> parent,
 	const style::Menu &st,
-	int index)
+	int index,
+	not_null<QAction*> action)
 : ItemBase(parent, st, index)
 , _lineWidth(st.separatorWidth)
 , _padding(st.separatorPadding)
 , _fg(st.separatorFg)
 , _bg(st.itemBg)
-, _height(_padding.top() + _lineWidth + _padding.bottom()) {
+, _height(_padding.top() + _lineWidth + _padding.bottom())
+, _action(action) {
 
 	initResizeHook(parent->sizeValue());
 	paintRequest(
@@ -37,7 +39,7 @@ Separator::Separator(
 }
 
 QAction *Separator::action() const {
-	return nullptr;
+	return _action;
 }
 
 bool Separator::isEnabled() const {

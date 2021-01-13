@@ -25,8 +25,14 @@ public:
 	Menu(QWidget *parent, QMenu *menu, const style::Menu &st = st::defaultMenu);
 	~Menu();
 
-	not_null<QAction*> addAction(const QString &text, Fn<void()> callback, const style::icon *icon = nullptr, const style::icon *iconOver = nullptr);
-	not_null<QAction*> addAction(const QString &text, std::unique_ptr<QMenu> submenu);
+	not_null<QAction*> addAction(
+		const QString &text,
+		Fn<void()> callback,
+		const style::icon *icon = nullptr,
+		const style::icon *iconOver = nullptr);
+	not_null<QAction*> addAction(
+		const QString &text,
+		std::unique_ptr<QMenu> submenu);
 	not_null<QAction*> addSeparator();
 	void clearActions();
 	void finishAnimating();
@@ -80,7 +86,11 @@ private:
 	void updateSelected(QPoint globalPosition);
 	void init();
 
-	not_null<QAction*> addAction(not_null<QAction*> action, const style::icon *icon = nullptr, const style::icon *iconOver = nullptr);
+	not_null<QAction*> addAction(
+		not_null<QAction*> action,
+		const style::icon *icon = nullptr,
+		const style::icon *iconOver = nullptr);
+	not_null<QAction*> addAction(base::unique_qptr<ItemBase> widget);
 
 	void setSelected(int selected);
 	void clearMouseSelection();
