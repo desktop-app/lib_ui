@@ -21,8 +21,7 @@ public:
 		const style::Menu &st,
 		not_null<QAction*> action,
 		const style::icon *icon,
-		const style::icon *iconOver,
-		bool hasSubmenu);
+		const style::icon *iconOver);
 
 	bool isEnabled() const override;
 	QAction *action() const override;

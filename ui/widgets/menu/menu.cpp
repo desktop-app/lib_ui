@@ -88,8 +88,7 @@ not_null<QAction*> Menu::addAction(
 		_st,
 		std::move(action),
 		icon,
-		iconOver ? iconOver : icon,
-		(action->menu() != nullptr));
+		iconOver ? iconOver : icon);
 	return addAction(std::move(item));
 }
 

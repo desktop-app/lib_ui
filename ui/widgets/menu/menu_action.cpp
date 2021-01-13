@@ -51,8 +51,7 @@ Action::Action(
 	const style::Menu &st,
 	not_null<QAction*> action,
 	const style::icon *icon,
-	const style::icon *iconOver,
-	bool hasSubmenu)
+	const style::icon *iconOver)
 : ItemBase(parent, st)
 , _action(action)
 , _st(st)
@@ -64,7 +63,7 @@ Action::Action(
 
 	initResizeHook(parent->sizeValue());
 	processAction();
-	setHasSubmenu(hasSubmenu);
+	setHasSubmenu(action->menu() != nullptr);
 
 	paintRequest(
 	) | rpl::start_with_next([=] {
