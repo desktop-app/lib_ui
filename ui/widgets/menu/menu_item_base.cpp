@@ -59,9 +59,11 @@ rpl::producer<CallbackData> ItemBase::clicks() const {
 	return rpl::merge(
 		AbstractButton::clicks() | rpl::to_empty,
 		_clicks.events()
-	) | rpl::map([=]() -> CallbackData {
+	) | rpl::filter([=] {
+		return isEnabled();
+	}) | rpl::map([=]() -> CallbackData {
 		return { action(), y(), _lastTriggeredSource, _index, true };
-	});;
+	});
 }
 
 rpl::producer<int> ItemBase::contentWidthValue() const {
