@@ -16,7 +16,6 @@
 namespace Ui::Menu {
 
 class ItemBase;
-//class ToggleView;
 class RippleAnimation;
 
 class Menu : public RpWidget {

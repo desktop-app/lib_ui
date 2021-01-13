@@ -58,14 +58,8 @@ not_null<QAction*> Menu::addAction(
 		Fn<void()> callback,
 		const style::icon *icon,
 		const style::icon *iconOver) {
-	const auto action = addAction(new QAction(text, this), icon, iconOver);
-	connect(
-		action,
-		&QAction::triggered,
-		action,
-		std::move(callback),
-		Qt::QueuedConnection);
-	return action;
+	auto action = CreateAction(this, text, std::move(callback));
+	return addAction(std::move(action), icon, iconOver);
 }
 
 not_null<QAction*> Menu::addAction(
@@ -288,10 +282,6 @@ void Menu::setSelected(int selected) {
 		const auto source = _mouseSelection
 			? TriggeredSource::Mouse
 			: TriggeredSource::Keyboard;
-		// updateSelectedItem();
-		// if (_selected >= 0 && _selected != _pressed && _actionsData[_selected].toggle) {
-		// 	_actionsData[_selected].toggle->setStyle(_st.itemToggle);
-		// }
 		if (_selected >= 0) {
 			_actionWidgets[_selected]->setSelected(false, source);
 		}
@@ -299,17 +289,6 @@ void Menu::setSelected(int selected) {
 		if (_selected >= 0) {
 			_actionWidgets[_selected]->setSelected(true, source);
 		}
-		// if (_selected >= 0 && _actionsData[_selected].toggle && _actions[_selected]->isEnabled()) {
-		// 	_actionsData[_selected].toggle->setStyle(_st.itemToggleOver);
-		// }
-		// updateSelectedItem();
-		// if (_activatedCallback) {
-		// 	auto source = _mouseSelection ? TriggeredSource::Mouse : TriggeredSource::Keyboard;
-		// 	_activatedCallback(
-		// 		(_selected >= 0) ? _actions[_selected].get() : nullptr,
-		// 		itemTop(_selected),
-		// 		source);
-		// }
 	}
 }
 

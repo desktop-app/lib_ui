@@ -161,18 +161,7 @@ void Action::processAction() {
 		+ textWidth
 		+ padding.right()
 		+ additionalWidth;
-	// if (action->isCheckable()) {
-	// 	auto updateCallback = [this, index] { updateItem(index); };
-	// 	if (_toggle) {
-	// 		_toggle->setUpdateCallback(updateCallback);
-	// 		_toggle->setChecked(action->isChecked(), anim::type::normal);
-	// 	} else {
-	// 		_toggle = std::make_unique<ToggleView>(_st.itemToggle, action->isChecked(), updateCallback);
-	// 	}
-	// 	goodWidth += _st.itemPadding.right() + _toggle->getSize().width() - _st.itemToggleShift;
-	// } else {
-	// 	_toggle.reset();
-	// }
+
 	const auto w = std::clamp(goodWidth, _st.widthMin, _st.widthMax);
 	_textWidth = w - (goodWidth - textWidth);
 	_shortcut = actionShortcut;

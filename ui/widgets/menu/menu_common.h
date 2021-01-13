@@ -21,4 +21,9 @@ struct CallbackData {
 	bool selected = false;
 };
 
+not_null<QAction*> CreateAction(
+	QWidget *parent,
+	const QString &text,
+	Fn<void()> &&callback);
+
 } // namespace Ui::Menu
