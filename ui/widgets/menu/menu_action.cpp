@@ -49,12 +49,11 @@ TextParseOptions MenuTextOptions = {
 Action::Action(
 	not_null<RpWidget*> parent,
 	const style::Menu &st,
-	int index,
 	not_null<QAction*> action,
 	const style::icon *icon,
 	const style::icon *iconOver,
 	bool hasSubmenu)
-: ItemBase(parent, st, index)
+: ItemBase(parent, st)
 , _action(action)
 , _st(st)
 , _icon(icon)

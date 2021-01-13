@@ -13,9 +13,8 @@ namespace Ui::Menu {
 Separator::Separator(
 	not_null<RpWidget*> parent,
 	const style::Menu &st,
-	int index,
 	not_null<QAction*> action)
-: ItemBase(parent, st, index)
+: ItemBase(parent, st)
 , _lineWidth(st.separatorWidth)
 , _padding(st.separatorPadding)
 , _fg(st.separatorFg)

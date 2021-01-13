@@ -86,7 +86,6 @@ not_null<QAction*> Menu::addAction(
 	auto item = base::make_unique_q<Action>(
 		this,
 		_st,
-		0,
 		std::move(action),
 		icon,
 		iconOver ? iconOver : icon,
@@ -104,6 +103,8 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 
 	widget->moveToLeft(0, top);
 	widget->show();
+
+	widget->setIndex(_actionWidgets.size());
 
 	widget->selects(
 	) | rpl::start_with_next([=](const CallbackData &data) {
@@ -156,7 +157,7 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 not_null<QAction*> Menu::addSeparator() {
 	const auto separator = new QAction(this);
 	separator->setSeparator(true);
-	auto item = base::make_unique_q<Separator>(this, _st, 0, separator);
+	auto item = base::make_unique_q<Separator>(this, _st, separator);
 	return addAction(std::move(item));
 }
 

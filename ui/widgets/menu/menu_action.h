@@ -19,7 +19,6 @@ public:
 	Action(
 		not_null<RpWidget*> parent,
 		const style::Menu &st,
-		int index,
 		not_null<QAction*> action,
 		const style::icon *icon,
 		const style::icon *iconOver,

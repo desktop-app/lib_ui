@@ -15,7 +15,7 @@ namespace Ui::Menu {
 
 class ItemBase : public RippleButton {
 public:
-	ItemBase(not_null<RpWidget*> parent, const style::Menu &st, int index);
+	ItemBase(not_null<RpWidget*> parent, const style::Menu &st);
 
 	TriggeredSource lastTriggeredSource() const;
 
@@ -26,6 +26,7 @@ public:
 	bool isSelected() const;
 
 	int index() const;
+	void setIndex(int index);
 
 	void setClicked(TriggeredSource source = TriggeredSource::Mouse);
 
@@ -48,7 +49,7 @@ protected:
 	virtual int contentHeight() const = 0;
 
 private:
-	const int _index;
+	int _index = -1;
 
 	bool _hasSubmenu = false;
 

@@ -18,7 +18,6 @@ public:
 	Separator(
 		not_null<RpWidget*> parent,
 		const style::Menu &st,
-		int index,
 		not_null<QAction*> action);
 
 	QAction *action() const override;

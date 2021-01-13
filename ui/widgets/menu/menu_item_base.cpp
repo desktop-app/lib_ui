@@ -10,9 +10,8 @@ namespace Ui::Menu {
 
 ItemBase::ItemBase(
 	not_null<RpWidget*> parent,
-	const style::Menu &st, int index)
-: RippleButton(parent, st.ripple)
-, _index(index) {
+	const style::Menu &st)
+: RippleButton(parent, st.ripple) {
 	init();
 }
 
@@ -46,6 +45,10 @@ TriggeredSource ItemBase::lastTriggeredSource() const {
 
 int ItemBase::index() const {
 	return _index;
+}
+
+void ItemBase::setIndex(int index) {
+	_index = index;
 }
 
 void ItemBase::setClicked(TriggeredSource source) {
