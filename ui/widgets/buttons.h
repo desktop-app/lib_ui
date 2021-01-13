@@ -60,6 +60,8 @@ public:
 
 	void paintRipple(QPainter &p, int x, int y, const QColor *colorOverride = nullptr);
 
+	void finishAnimating();
+
 	~RippleButton();
 
 protected:

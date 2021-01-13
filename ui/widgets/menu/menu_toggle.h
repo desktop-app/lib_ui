@@ -25,6 +25,8 @@ public:
 		const style::icon *icon,
 		const style::icon *iconOver);
 
+	void finishAnimating() override;
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 

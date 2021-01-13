@@ -168,6 +168,9 @@ void Menu::clearActions() {
 }
 
 void Menu::finishAnimating() {
+	for (const auto &widget : _actionWidgets) {
+		widget->finishAnimating();
+	}
 }
 
 bool Menu::empty() const {

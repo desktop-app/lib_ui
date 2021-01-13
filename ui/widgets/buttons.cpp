@@ -79,6 +79,10 @@ RippleButton::RippleButton(QWidget *parent, const style::RippleAnimation &st)
 
 void RippleButton::clearState() {
 	AbstractButton::clearState();
+	finishAnimating();
+}
+
+void RippleButton::finishAnimating() {
 	if (_ripple) {
 		_ripple.reset();
 		update();

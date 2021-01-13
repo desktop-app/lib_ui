@@ -67,4 +67,11 @@ void Toggle::paintEvent(QPaintEvent *e) {
 	}
 }
 
+void Toggle::finishAnimating() {
+	ItemBase::finishAnimating();
+	if (_toggle) {
+		_toggle->finishAnimating();
+	}
+}
+
 } // namespace Ui::Menu

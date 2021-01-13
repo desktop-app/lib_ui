@@ -42,6 +42,8 @@ public:
 	virtual QAction *action() const = 0;
 	virtual bool isEnabled() const = 0;
 
+	virtual void finishAnimating();
+
 protected:
 	void init();
 	void initResizeHook(rpl::producer<QSize> &&size);

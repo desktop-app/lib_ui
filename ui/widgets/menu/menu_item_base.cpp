@@ -111,4 +111,8 @@ void ItemBase::setContentWidth(int w) {
 	_contentWidth = w;
 }
 
+void ItemBase::finishAnimating() {
+	RippleButton::finishAnimating();
+}
+
 } // namespace Ui::Menu
