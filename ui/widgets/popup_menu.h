@@ -21,6 +21,7 @@ public:
 	PopupMenu(QWidget *parent, const style::PopupMenu &st = st::defaultPopupMenu);
 	PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st = st::defaultPopupMenu);
 
+	not_null<QAction*> addAction(base::unique_qptr<Menu::ItemBase> widget);
 	not_null<QAction*> addAction(const QString &text, Fn<void()> callback, const style::icon *icon = nullptr, const style::icon *iconOver = nullptr);
 	not_null<QAction*> addAction(const QString &text, std::unique_ptr<PopupMenu> submenu);
 	not_null<QAction*> addSeparator();

@@ -16,7 +16,7 @@
 namespace Ui::Menu {
 
 class ItemBase;
-class ToggleView;
+//class ToggleView;
 class RippleAnimation;
 
 class Menu : public RpWidget {
@@ -25,6 +25,7 @@ public:
 	Menu(QWidget *parent, QMenu *menu, const style::Menu &st = st::defaultMenu);
 	~Menu();
 
+	not_null<QAction*> addAction(base::unique_qptr<ItemBase> widget);
 	not_null<QAction*> addAction(
 		const QString &text,
 		Fn<void()> callback,
@@ -90,7 +91,6 @@ private:
 		not_null<QAction*> action,
 		const style::icon *icon = nullptr,
 		const style::icon *iconOver = nullptr);
-	not_null<QAction*> addAction(base::unique_qptr<ItemBase> widget);
 
 	void setSelected(int selected);
 	void clearMouseSelection();

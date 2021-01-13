@@ -97,6 +97,8 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 	const auto action = widget->action();
 	_actions.emplace_back(action);
 
+	widget->setParent(this);
+
 	const auto top = _actionWidgets.empty()
 		? 0
 		: _actionWidgets.back()->y() + _actionWidgets.back()->height();

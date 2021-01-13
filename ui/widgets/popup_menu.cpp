@@ -91,6 +91,11 @@ void PopupMenu::handleMenuResize() {
 	_inner = rect().marginsRemoved(_padding);
 }
 
+not_null<QAction*> PopupMenu::addAction(
+		base::unique_qptr<Menu::ItemBase> widget) {
+	return _menu->addAction(std::move(widget));
+}
+
 not_null<QAction*> PopupMenu::addAction(const QString &text, Fn<void()> callback, const style::icon *icon, const style::icon *iconOver) {
 	return _menu->addAction(text, std::move(callback), icon, iconOver);
 }
