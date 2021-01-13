@@ -37,7 +37,7 @@ Separator::Separator(
 	}, lifetime());
 }
 
-QAction *Separator::action() const {
+not_null<QAction*> Separator::action() const {
 	return _action;
 }
 

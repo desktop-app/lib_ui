@@ -173,7 +173,7 @@ bool Action::isEnabled() const {
 	return _action->isEnabled();
 }
 
-QAction *Action::action() const {
+not_null<QAction*> Action::action() const {
 	return _action;
 }
 

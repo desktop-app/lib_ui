@@ -24,7 +24,7 @@ public:
 		const style::icon *iconOver);
 
 	bool isEnabled() const override;
-	QAction *action() const override;
+	not_null<QAction*> action() const override;
 
 protected:
 	QPoint prepareRippleStartPosition() const override;

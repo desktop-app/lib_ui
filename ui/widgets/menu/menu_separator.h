@@ -20,7 +20,7 @@ public:
 		const style::Menu &st,
 		not_null<QAction*> action);
 
-	QAction *action() const override;
+	not_null<QAction*> action() const override;
 	bool isEnabled() const override;
 
 protected:
