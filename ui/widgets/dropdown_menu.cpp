@@ -72,6 +72,10 @@ const std::vector<not_null<QAction*>> &DropdownMenu::actions() const {
 	return _menu->actions();
 }
 
+bool DropdownMenu::empty() const {
+	return _menu->empty();
+}
+
 void DropdownMenu::handleActivated(const Menu::CallbackData &data) {
 	if (data.source == TriggeredSource::Mouse) {
 		if (!popupSubmenuFromAction(data)) {

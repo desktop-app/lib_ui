@@ -118,6 +118,10 @@ const std::vector<not_null<QAction*>> &PopupMenu::actions() const {
 	return _menu->actions();
 }
 
+bool PopupMenu::empty() const {
+	return _menu->empty();
+}
+
 void PopupMenu::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
 

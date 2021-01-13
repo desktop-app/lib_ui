@@ -159,6 +159,10 @@ void Menu::clearActions() {
 void Menu::finishAnimating() {
 }
 
+bool Menu::empty() const {
+	return _actionWidgets.empty();
+}
+
 void Menu::setShowSource(TriggeredSource source) {
 	_mouseSelection = (source == TriggeredSource::Mouse);
 	setSelected((source == TriggeredSource::Mouse || _actions.empty()) ? -1 : 0);

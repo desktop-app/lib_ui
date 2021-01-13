@@ -31,6 +31,8 @@ public:
 	void clearActions();
 	void finishAnimating();
 
+	bool empty() const;
+
 	void clearSelection();
 
 	void setChildShown(bool shown) {

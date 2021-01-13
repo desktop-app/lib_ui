@@ -27,6 +27,7 @@ public:
 	}
 
 	const std::vector<not_null<QAction*>> &actions() const;
+	bool empty() const;
 
 	~DropdownMenu();
 

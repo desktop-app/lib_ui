@@ -27,6 +27,7 @@ public:
 	void clearActions();
 
 	const std::vector<not_null<QAction*>> &actions() const;
+	bool empty() const;
 
 	void deleteOnHide(bool del);
 	void popup(const QPoint &p);
