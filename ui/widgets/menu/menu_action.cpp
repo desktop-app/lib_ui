@@ -71,23 +71,7 @@ Action::Action(
 		paint(p);
 	}, lifetime());
 
-	events(
-	) | rpl::filter([=](not_null<QEvent*> e) {
-		return _action->isEnabled()
-			&& ((e->type() == QEvent::Leave)
-				|| (e->type() == QEvent::Enter));
-	}) | rpl::map([=](not_null<QEvent*> e) {
-		return (e->type() == QEvent::Enter);
-	}) | rpl::start_with_next([=](bool selected) {
-		setSelected(selected);
-	}, lifetime());
-
-	events(
-	) | rpl::filter([=](not_null<QEvent*> e) {
-		return _action->isEnabled() && (e->type() == QEvent::MouseMove);
-	}) | rpl::start_with_next([=](not_null<QEvent*> e) {
-		setSelected(true);
-	}, lifetime());
+	enableMouseSelecting();
 
 	connect(_action, &QAction::changed, [=] { processAction(); });
 }

@@ -48,6 +48,8 @@ protected:
 	void init();
 	void initResizeHook(rpl::producer<QSize> &&size);
 
+	void enableMouseSelecting();
+
 	virtual int contentHeight() const = 0;
 
 private:

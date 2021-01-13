@@ -115,4 +115,17 @@ void ItemBase::finishAnimating() {
 	RippleButton::finishAnimating();
 }
 
+void ItemBase::enableMouseSelecting() {
+	events(
+	) | rpl::filter([=](not_null<QEvent*> e) {
+		return action()->isEnabled()
+			&& ((e->type() == QEvent::Leave)
+				|| (e->type() == QEvent::Enter));
+	}) | rpl::map([=](not_null<QEvent*> e) {
+		return (e->type() == QEvent::Enter);
+	}) | rpl::start_with_next([=](bool selected) {
+		setSelected(selected);
+	}, lifetime());
+}
+
 } // namespace Ui::Menu
