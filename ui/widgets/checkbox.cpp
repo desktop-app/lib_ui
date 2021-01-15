@@ -320,7 +320,8 @@ void RadioView::paint(Painter &p, int left, int top, int outerWidth) {
 	p.setBrush(_st->bg);
 	//int32 skip = qCeil(_st->thickness / 2.);
 	//p.drawEllipse(_checkRect.marginsRemoved(QMargins(skip, skip, skip, skip)));
-	p.drawEllipse(style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(_st->thickness / 2., _st->thickness / 2., _st->thickness / 2., _st->thickness / 2.)), outerWidth));
+	const auto skip = (_st->outerSkip / 10.) + (_st->thickness / 2);
+	p.drawEllipse(style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(skip, skip, skip, skip)), outerWidth));
 
 	if (toggled > 0) {
 		p.setPen(Qt::NoPen);
@@ -332,7 +333,7 @@ void RadioView::paint(Painter &p, int left, int top, int outerWidth) {
 				? anim::brush(*_untoggledOverride, _st->toggledFg, toggled)
 				: anim::brush(_st->untoggledFg, _st->toggledFg, toggled)));
 
-		auto skip0 = _st->diameter / 2., skip1 = _st->skip / 10., checkSkip = skip0 * (1. - toggled) + skip1 * toggled;
+		const auto skip0 = _st->diameter / 2., skip1 = _st->skip / 10., checkSkip = skip0 * (1. - toggled) + skip1 * toggled;
 		p.drawEllipse(style::rtlrect(QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(QMarginsF(checkSkip, checkSkip, checkSkip, checkSkip)), outerWidth));
 		//int32 fskip = qFloor(checkSkip), cskip = qCeil(checkSkip);
 		//if (2 * fskip < _checkRect.width()) {

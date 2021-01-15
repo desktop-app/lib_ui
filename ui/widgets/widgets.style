@@ -135,6 +135,7 @@ Radio {
 	toggledFg: color;
 	diameter: pixels;
 	thickness: pixels;
+	outerSkip: pixels;
 	skip: pixels;
 	duration: int;
 	rippleAreaPadding: pixels;
@@ -741,7 +742,8 @@ defaultRadio: Radio {
 	toggledFg: windowBgActive;
 	diameter: 22px;
 	thickness: 2px;
-	skip: 65px; // * 0.1
+	outerSkip: 10px; // * 0.1
+	skip: 60px; // * 0.1
 	duration: 120;
 	rippleAreaPadding: 8px;
 }
