@@ -93,6 +93,7 @@ RoundButton {
 	textTop: pixels;
 
 	icon: icon;
+	iconOver: icon;
 	iconPosition: point;
 
 	font: font;
