@@ -33,7 +33,10 @@ DropdownMenu::DropdownMenu(QWidget *parent, const style::DropdownMenu &st) : Inn
 void DropdownMenu::init() {
 	InnerDropdown::setHiddenCallback([this] { hideFinish(); });
 
-	_menu->setResizedCallback([this] { resizeToContent(); });
+	_menu->sizeValue(
+	) | rpl::start_with_next([=] {
+		resizeToContent();
+	}, _menu->lifetime());
 	_menu->setActivatedCallback([this](QAction *action, int actionTop, TriggeredSource source) {
 		handleActivated(action, actionTop, source);
 	});

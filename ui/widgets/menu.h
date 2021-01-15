@@ -6,13 +6,16 @@
 //
 #pragma once
 
+#include "base/unique_qptr.h"
 #include "ui/rp_widget.h"
+#include "ui/widgets/menu/menu_common.h"
 #include "styles/style_widgets.h"
 
 #include <QtWidgets/QMenu>
 
 namespace Ui {
 
+class ItemBase;
 class ToggleView;
 class RippleAnimation;
 
@@ -30,10 +33,7 @@ public:
 
 	void clearSelection();
 
-	enum class TriggeredSource {
-		Mouse,
-		Keyboard,
-	};
+	using TriggeredSource = ContextMenu::TriggeredSource;
 	void setChildShown(bool shown) {
 		_childShown = shown;
 	}
@@ -41,10 +41,6 @@ public:
 	void setForceWidth(int forceWidth);
 
 	const std::vector<not_null<QAction*>> &actions() const;
-
-	void setResizedCallback(Fn<void()> callback) {
-		_resizedCallback = std::move(callback);
-	}
 
 	void setActivatedCallback(Fn<void(QAction *action, int actionTop, TriggeredSource source)> callback) {
 		_activatedCallback = std::move(callback);
@@ -74,38 +70,29 @@ public:
 	void handleMouseRelease(QPoint globalPosition);
 
 protected:
-	void paintEvent(QPaintEvent *e) override;
 	void keyPressEvent(QKeyEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
-	void enterEventHook(QEvent *e) override;
-	void leaveEventHook(QEvent *e) override;
 
 private:
-	struct ActionData;
+	class Separator;
+	class Action;
 
 	void updateSelected(QPoint globalPosition);
-	void actionChanged();
 	void init();
 
-	// Returns the new width.
-	int processAction(not_null<QAction*> action, int index, int width);
 	not_null<QAction*> addAction(not_null<QAction*> action, const style::icon *icon = nullptr, const style::icon *iconOver = nullptr);
 
 	void setSelected(int selected);
-	void setPressed(int pressed);
 	void clearMouseSelection();
 
-	int itemTop(int index);
-	void updateItem(int index);
-	void updateSelectedItem();
 	void itemPressed(TriggeredSource source);
-	void itemReleased(TriggeredSource source);
+
+	ItemBase *findSelectedAction() const;
 
 	const style::Menu &_st;
 
-	Fn<void()> _resizedCallback;
 	Fn<void(QAction *action, int actionTop, TriggeredSource source)> _activatedCallback;
 	Fn<void(QAction *action, int actionTop, TriggeredSource source)> _triggeredCallback;
 	Fn<bool(int key)> _keyPressDelegate;
@@ -115,15 +102,13 @@ private:
 
 	QMenu *_wappedMenu = nullptr;
 	std::vector<not_null<QAction*>> _actions;
-	std::vector<ActionData> _actionsData;
+	std::vector<base::unique_qptr<ItemBase>> _actionWidgets;
 
 	int _forceWidth = 0;
-	int _itemHeight, _separatorHeight;
 
 	bool _mouseSelection = false;
 
 	int _selected = -1;
-	int _pressed = -1;
 	bool _childShown = false;
 
 };

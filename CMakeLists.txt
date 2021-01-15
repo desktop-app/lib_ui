@@ -148,6 +148,9 @@ PRIVATE
     ui/widgets/labels.h
     ui/widgets/menu.cpp
     ui/widgets/menu.h
+    ui/widgets/menu/menu_common.h
+    ui/widgets/menu/menu_item_base.cpp
+    ui/widgets/menu/menu_item_base.h
     ui/widgets/popup_menu.cpp
     ui/widgets/popup_menu.h
     ui/widgets/scroll_area.cpp

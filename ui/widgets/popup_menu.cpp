@@ -52,7 +52,10 @@ void PopupMenu::init() {
 		hideMenu(true);
 	}, lifetime());
 
-	_menu->setResizedCallback([this] { handleMenuResize(); });
+	_menu->sizeValue(
+	) | rpl::start_with_next([=] {
+		handleMenuResize();
+	}, _menu->lifetime());
 	_menu->setActivatedCallback([this](QAction *action, int actionTop, TriggeredSource source) {
 		handleActivated(action, actionTop, source);
 	});
