@@ -410,6 +410,17 @@ CrossLineAnimation {
 	stroke: pixels;
 }
 
+ArcsAnimation {
+	fg: color;
+	stroke: pixels;
+	space: pixels;
+	deltaAngle: int;
+	deltaHeight: pixels;
+	deltaWidth: pixels;
+	startHeight: pixels;
+	startWidth: pixels;
+}
+
 MultiSelectItem {
 	padding: margins;
 	maxWidth: pixels;
