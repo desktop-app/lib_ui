@@ -414,6 +414,7 @@ ArcsAnimation {
 	fg: color;
 	stroke: pixels;
 	space: pixels;
+	duration: int;
 	deltaAngle: int;
 	deltaHeight: pixels;
 	deltaWidth: pixels;

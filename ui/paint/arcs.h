@@ -29,14 +29,16 @@ public:
 
 	ArcsAnimation(
 		const style::ArcsAnimation &st,
-		int count,
+		std::vector<float> thresholds,
+		float64 startValue,
 		VerticalDirection direction,
 		int centerX,
 		int startY);
 
 	ArcsAnimation(
 		const style::ArcsAnimation &st,
-		int count,
+		std::vector<float> thresholds,
+		float64 startValue,
 		HorizontalDirection direction,
 		int startX,
 		int centerY);
@@ -45,13 +47,31 @@ public:
 		Painter &p,
 		std::optional<QColor> colorOverride = std::nullopt);
 
+	void setValue(float64 value);
+
+	rpl::producer<> startUpdateRequests();
+	rpl::producer<> stopUpdateRequests();
+
+	void update(crl::time now);
+
+	bool isFinished() const;
+
 private:
 	struct Arc {
 		QRectF rect;
+		float threshold;
+		crl::time startTime = 0;
+		float64 progress = 0.;
 	};
 
-	void initArcs(int count);
+	void initArcs(std::vector<float> thresholds);
 	QRectF computeArcRect(int index) const;
+
+	bool isArcFinished(const Arc &arc) const;
+	void updateArcStartTime(
+		Arc &arc,
+		float64 previousValue,
+		crl::time now);
 
 	const style::ArcsAnimation &_st;
 	const int _center;
@@ -60,6 +80,12 @@ private:
 	const VerticalDirection _verticalDirection;
 	const int _startAngle;
 	const int _spanAngle;
+	const QRectF _emptyRect;
+
+	float64 _currentValue = 0.;
+
+	rpl::event_stream<> _startUpdateRequests;
+	rpl::event_stream<> _stopUpdateRequests;
 
 	std::vector<Arc> _arcs;
 
