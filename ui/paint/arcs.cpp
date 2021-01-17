@@ -30,12 +30,8 @@ ArcsAnimation::ArcsAnimation(
 	const style::ArcsAnimation &st,
 	std::vector<float> thresholds,
 	float64 startValue,
-	VerticalDirection direction,
-	int centerX,
-	int startY)
+	VerticalDirection direction)
 : _st(st)
-, _center(centerX)
-, _start(startY)
 , _horizontalDirection(HorizontalDirection::None)
 , _verticalDirection(direction)
 , _startAngle((st.deltaAngle
@@ -50,12 +46,8 @@ ArcsAnimation::ArcsAnimation(
 	const style::ArcsAnimation &st,
 	std::vector<float> thresholds,
 	float64 startValue,
-	HorizontalDirection direction,
-	int startX,
-	int centerY)
+	HorizontalDirection direction)
 : _st(st)
-, _center(centerY)
-, _start(startX)
 , _horizontalDirection(direction)
 , _verticalDirection(VerticalDirection::None)
 , _startAngle((st.deltaAngle
@@ -86,19 +78,19 @@ QRectF ArcsAnimation::computeArcRect(int index) const {
 	const auto w = _st.startWidth + _st.deltaWidth * index;
 	const auto h = _st.startHeight + _st.deltaHeight * index;
 	if (_horizontalDirection != HorizontalDirection::None) {
-		auto rect = QRectF(0, _center - h / 2.0, w, h);
+		auto rect = QRectF(0, -h / 2.0, w, h);
 		if (_horizontalDirection == HorizontalDirection::Right) {
-			rect.moveRight(_start + index * _st.space);
+			rect.moveRight(index * _st.space);
 		} else {
-			rect.moveLeft(_start - index * _st.space);
+			rect.moveLeft(-index * _st.space);
 		}
 		return rect;
 	} else if (_verticalDirection != VerticalDirection::None) {
-		auto rect = QRectF(_center - w / 2.0, 0, w, h);
+		auto rect = QRectF(-w / 2.0, 0, w, h);
 		if (_verticalDirection == VerticalDirection::Up) {
-			rect.moveTop(_start - index * _st.space);
+			rect.moveTop(-index * _st.space);
 		} else {
-			rect.moveBottom(_start + index * _st.space);
+			rect.moveBottom(index * _st.space);
 		}
 		return rect;
 	}
@@ -155,6 +147,20 @@ void ArcsAnimation::updateArcStartTime(
 			: passedTime;
 		arc.startTime = now - newDelta;
 	}
+}
+
+float ArcsAnimation::width() const {
+	if (_arcs.empty()) {
+		return 0;
+	}
+	const auto &r = _arcs.back().rect;
+	return r.x() + r.width();
+}
+
+float ArcsAnimation::height() const {
+	return _arcs.empty()
+		? 0
+		: _arcs.back().rect.height();
 }
 
 rpl::producer<> ArcsAnimation::startUpdateRequests() {

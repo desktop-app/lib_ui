@@ -31,17 +31,13 @@ public:
 		const style::ArcsAnimation &st,
 		std::vector<float> thresholds,
 		float64 startValue,
-		VerticalDirection direction,
-		int centerX,
-		int startY);
+		VerticalDirection direction);
 
 	ArcsAnimation(
 		const style::ArcsAnimation &st,
 		std::vector<float> thresholds,
 		float64 startValue,
-		HorizontalDirection direction,
-		int startX,
-		int centerY);
+		HorizontalDirection direction);
 
 	void paint(
 		Painter &p,
@@ -55,6 +51,9 @@ public:
 	void update(crl::time now);
 
 	bool isFinished() const;
+
+	float width() const;
+	float height() const;
 
 private:
 	struct Arc {
@@ -74,8 +73,6 @@ private:
 		crl::time now);
 
 	const style::ArcsAnimation &_st;
-	const int _center;
-	const int _start;
 	const HorizontalDirection _horizontalDirection;
 	const VerticalDirection _verticalDirection;
 	const int _startAngle;
