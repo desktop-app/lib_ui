@@ -22,6 +22,7 @@ void ItemBase::setSelected(
 		return;
 	}
 	if (_selected.current() != selected) {
+		setMouseTracking(!selected);
 		_lastTriggeredSource = source;
 		_selected = selected;
 		update();
@@ -112,9 +113,10 @@ void ItemBase::enableMouseSelecting() {
 	) | rpl::filter([=](not_null<QEvent*> e) {
 		return action()->isEnabled()
 			&& ((e->type() == QEvent::Leave)
-				|| (e->type() == QEvent::Enter));
+				|| (e->type() == QEvent::Enter)
+				|| (e->type() == QEvent::MouseMove));
 	}) | rpl::map([=](not_null<QEvent*> e) {
-		return (e->type() == QEvent::Enter);
+		return (e->type() != QEvent::Leave);
 	}) | rpl::start_with_next([=](bool selected) {
 		setSelected(selected);
 	}, lifetime());
