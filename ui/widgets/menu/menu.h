@@ -93,7 +93,7 @@ private:
 		const style::icon *icon = nullptr,
 		const style::icon *iconOver = nullptr);
 
-	void setSelected(int selected);
+	void setSelected(int selected, bool isMouseSelection);
 	void clearMouseSelection();
 
 	void itemPressed(TriggeredSource source);
@@ -116,8 +116,6 @@ private:
 	std::vector<base::unique_qptr<ItemBase>> _actionWidgets;
 
 	int _forceWidth = 0;
-
-	bool _mouseSelection = false;
 
 	bool _childShown = false;
 

@@ -6,8 +6,6 @@
 //
 #include "ui/widgets/menu/menu.h"
 
-#include "ui/widgets/buttons.h"
-#include "ui/widgets/checkbox.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
@@ -157,7 +155,6 @@ not_null<QAction*> Menu::addSeparator() {
 }
 
 void Menu::clearActions() {
-	setSelected(-1);
 	_actionWidgets.clear();
 	for (auto action : base::take(_actions)) {
 		if (action->parent() == this) {
@@ -190,8 +187,10 @@ rpl::producer<> Menu::resizesFromInner() const {
 }
 
 void Menu::setShowSource(TriggeredSource source) {
-	_mouseSelection = (source == TriggeredSource::Mouse);
-	setSelected((source == TriggeredSource::Mouse || _actions.empty()) ? -1 : 0);
+	const auto mouseSelection = (source == TriggeredSource::Mouse);
+	setSelected(
+		(mouseSelection || _actions.empty()) ? -1 : 0,
+		mouseSelection);
 }
 
 const std::vector<not_null<QAction*>> &Menu::actions() const {
@@ -204,10 +203,6 @@ void Menu::setForceWidth(int forceWidth) {
 }
 
 void Menu::updateSelected(QPoint globalPosition) {
-	if (!_mouseSelection) {
-		return;
-	}
-
 	const auto p = mapFromGlobal(globalPosition) - QPoint(0, _st.skip);
 	for (const auto &widget : _actionWidgets) {
 		const auto widgetRect = QRect(widget->pos(), widget->size());
@@ -264,27 +259,29 @@ void Menu::handleKeyPress(not_null<QKeyEvent*> e) {
 	} while (newSelected != start && (!_actionWidgets[newSelected]->isEnabled()));
 
 	if (_actionWidgets[newSelected]->isEnabled()) {
-		_mouseSelection = false;
-		setSelected(newSelected);
+		setSelected(newSelected, false);
 	}
 }
 
 void Menu::clearSelection() {
-	_mouseSelection = false;
-	setSelected(-1);
+	setSelected(-1, false);
 }
 
 void Menu::clearMouseSelection() {
-	if (_mouseSelection && !_childShown) {
+	const auto selected = findSelectedAction();
+	const auto mouseSelection = selected
+		? (selected->lastTriggeredSource() == TriggeredSource::Mouse)
+		: false;
+	if (mouseSelection && !_childShown) {
 		clearSelection();
 	}
 }
 
-void Menu::setSelected(int selected) {
+void Menu::setSelected(int selected, bool isMouseSelection) {
 	if (selected >= _actionWidgets.size()) {
 		selected = -1;
 	}
-	const auto source = _mouseSelection
+	const auto source = isMouseSelection
 		? TriggeredSource::Mouse
 		: TriggeredSource::Keyboard;
 	if (const auto selectedItem = findSelectedAction()) {
@@ -307,7 +304,6 @@ void Menu::handleMouseMove(QPoint globalPosition) {
 	const auto inner = rect().marginsRemoved(margins);
 	const auto localPosition = mapFromGlobal(globalPosition);
 	if (inner.contains(localPosition)) {
-		_mouseSelection = true;
 		updateSelected(globalPosition);
 	} else {
 		clearMouseSelection();
