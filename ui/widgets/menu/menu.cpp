@@ -281,20 +281,20 @@ void Menu::clearMouseSelection() {
 }
 
 void Menu::setSelected(int selected) {
-	if (selected >= _actions.size()) {
+	if (selected >= _actionWidgets.size()) {
 		selected = -1;
 	}
-	if (_selected != selected) {
-		const auto source = _mouseSelection
-			? TriggeredSource::Mouse
-			: TriggeredSource::Keyboard;
-		if (_selected >= 0) {
-			_actionWidgets[_selected]->setSelected(false, source);
+	const auto source = _mouseSelection
+		? TriggeredSource::Mouse
+		: TriggeredSource::Keyboard;
+	if (const auto selectedItem = findSelectedAction()) {
+		if (selectedItem->index() == selected) {
+			return;
 		}
-		_selected = selected;
-		if (_selected >= 0) {
-			_actionWidgets[_selected]->setSelected(true, source);
-		}
+		selectedItem->setSelected(false, source);
+	}
+	if (selected >= 0) {
+		_actionWidgets[selected]->setSelected(true, source);
 	}
 }
 

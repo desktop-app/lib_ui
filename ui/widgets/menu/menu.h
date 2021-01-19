@@ -119,7 +119,6 @@ private:
 
 	bool _mouseSelection = false;
 
-	int _selected = -1;
 	bool _childShown = false;
 
 	rpl::event_stream<> _resizesFromInner;
