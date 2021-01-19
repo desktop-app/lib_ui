@@ -59,7 +59,7 @@ public:
 	void setKeyPressDelegate(Fn<bool(int key)> delegate) {
 		_keyPressDelegate = std::move(delegate);
 	}
-	void handleKeyPress(int key);
+	void handleKeyPress(not_null<QKeyEvent*> e);
 
 	void setMouseMoveDelegate(Fn<void(QPoint globalPosition)> delegate) {
 		_mouseMoveDelegate = std::move(delegate);

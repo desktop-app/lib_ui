@@ -134,9 +134,9 @@ bool DropdownMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
 //	}
 //}
 
-void DropdownMenu::forwardKeyPress(int key) {
-	if (!handleKeyPress(key)) {
-		_menu->handleKeyPress(key);
+void DropdownMenu::forwardKeyPress(not_null<QKeyEvent*> e) {
+	if (!handleKeyPress(e->key())) {
+		_menu->handleKeyPress(e);
 	}
 }
 
@@ -193,7 +193,7 @@ void DropdownMenu::hideEvent(QHideEvent *e) {
 }
 
 void DropdownMenu::keyPressEvent(QKeyEvent *e) {
-	forwardKeyPress(e->key());
+	forwardKeyPress(e);
 }
 
 void DropdownMenu::mouseMoveEvent(QMouseEvent *e) {

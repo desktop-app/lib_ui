@@ -211,9 +211,9 @@ void PopupMenu::popupSubmenu(SubmenuPointer submenu, int actionTop, TriggeredSou
 	}
 }
 
-void PopupMenu::forwardKeyPress(int key) {
-	if (!handleKeyPress(key)) {
-		_menu->handleKeyPress(key);
+void PopupMenu::forwardKeyPress(not_null<QKeyEvent*> e) {
+	if (!handleKeyPress(e->key())) {
+		_menu->handleKeyPress(e);
 	}
 }
 
@@ -270,7 +270,7 @@ void PopupMenu::hideEvent(QHideEvent *e) {
 }
 
 void PopupMenu::keyPressEvent(QKeyEvent *e) {
-	forwardKeyPress(e->key());
+	forwardKeyPress(e);
 }
 
 void PopupMenu::mouseMoveEvent(QMouseEvent *e) {

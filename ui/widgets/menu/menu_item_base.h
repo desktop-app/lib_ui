@@ -39,6 +39,9 @@ public:
 	bool hasSubmenu() const;
 	void setHasSubmenu(bool value);
 
+	virtual void handleKeyPress(not_null<QKeyEvent*> e) {
+	}
+
 	virtual not_null<QAction*> action() const = 0;
 	virtual bool isEnabled() const = 0;
 

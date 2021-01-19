@@ -26,6 +26,8 @@ public:
 	bool isEnabled() const override;
 	not_null<QAction*> action() const override;
 
+	void handleKeyPress(not_null<QKeyEvent*> e) override;
+
 protected:
 	QPoint prepareRippleStartPosition() const override;
 	QImage prepareRippleMask() const override;

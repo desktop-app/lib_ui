@@ -9,6 +9,8 @@
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 
+#include <QtGui/QtEvents>
+
 namespace Ui::Menu {
 namespace {
 
@@ -171,6 +173,23 @@ QImage Action::prepareRippleMask() const {
 
 int Action::contentHeight() const {
 	return _height;
+}
+
+void Action::handleKeyPress(not_null<QKeyEvent*> e) {
+	if (!isSelected()) {
+		return;
+	}
+	const auto key = e->key();
+	if (key == Qt::Key_Enter || key == Qt::Key_Return) {
+		setClicked(TriggeredSource::Keyboard);
+		return;
+	}
+	if (key == (style::RightToLeft() ? Qt::Key_Left : Qt::Key_Right)) {
+		if (hasSubmenu()) {
+			setClicked(TriggeredSource::Keyboard);
+			return;
+		}
+	}
 }
 
 } // namespace Ui::Menu

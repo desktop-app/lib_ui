@@ -78,7 +78,7 @@ private:
 	void handleMenuResize();
 	void handleActivated(const Menu::CallbackData &data);
 	void handleTriggered(const Menu::CallbackData &data);
-	void forwardKeyPress(int key);
+	void forwardKeyPress(not_null<QKeyEvent*> e);
 	bool handleKeyPress(int key);
 	void forwardMouseMove(QPoint globalPosition) {
 		_menu->handleMouseMove(globalPosition);

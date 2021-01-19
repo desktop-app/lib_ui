@@ -229,7 +229,7 @@ void Menu::itemPressed(TriggeredSource source) {
 void Menu::keyPressEvent(QKeyEvent *e) {
 	const auto key = e->key();
 	if (!_keyPressDelegate || !_keyPressDelegate(key)) {
-		handleKeyPress(key);
+		handleKeyPress(e);
 	}
 }
 
@@ -238,26 +238,17 @@ ItemBase *Menu::findSelectedAction() const {
 	return (it == end(_actionWidgets)) ? nullptr : it->get();
 }
 
-void Menu::handleKeyPress(int key) {
-	if (key == Qt::Key_Enter || key == Qt::Key_Return) {
-		itemPressed(TriggeredSource::Keyboard);
-		return;
-	}
-	if (key == (style::RightToLeft() ? Qt::Key_Left : Qt::Key_Right)) {
-		if (_selected >= 0 && _actionWidgets[_selected]->hasSubmenu()) {
-			itemPressed(TriggeredSource::Keyboard);
-			return;
-		} else if (_selected < 0 && !_actions.empty()) {
-			_mouseSelection = false;
-			setSelected(0);
-		}
-	}
+void Menu::handleKeyPress(not_null<QKeyEvent*> e) {
+	const auto key = e->key();
+	const auto selected = findSelectedAction();
 	if ((key != Qt::Key_Up && key != Qt::Key_Down) || _actions.empty()) {
+		if (selected) {
+			selected->handleKeyPress(e);
+		}
 		return;
 	}
 
 	const auto delta = (key == Qt::Key_Down ? 1 : -1);
-	const auto selected = findSelectedAction();
 	auto start = selected ? selected->index() : -1;
 	if (start < 0 || start >= _actions.size()) {
 		start = (delta > 0) ? (_actions.size() - 1) : 0;
