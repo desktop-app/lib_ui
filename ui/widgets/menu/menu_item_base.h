@@ -36,9 +36,6 @@ public:
 	int minWidth() const;
 	void setMinWidth(int w);
 
-	bool hasSubmenu() const;
-	void setHasSubmenu(bool value);
-
 	virtual void handleKeyPress(not_null<QKeyEvent*> e) {
 	}
 
@@ -57,8 +54,6 @@ protected:
 
 private:
 	int _index = -1;
-
-	bool _hasSubmenu = false;
 
 	rpl::variable<bool> _selected = false;
 	rpl::event_stream<> _clicks;

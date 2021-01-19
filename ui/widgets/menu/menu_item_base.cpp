@@ -77,14 +77,6 @@ int ItemBase::minWidth() const {
 	return _minWidth.current();
 }
 
-bool ItemBase::hasSubmenu() const {
-	return _hasSubmenu;
-}
-
-void ItemBase::setHasSubmenu(bool value) {
-	_hasSubmenu = value;
-}
-
 void ItemBase::init() {
 	events(
 	) | rpl::filter([=](not_null<QEvent*> e) {

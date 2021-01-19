@@ -38,6 +38,8 @@ private:
 	void processAction();
 	void paint(Painter &p);
 
+	bool hasSubmenu() const;
+
 	Text::String _text;
 	QString _shortcut;
 	const not_null<QAction*> _action;

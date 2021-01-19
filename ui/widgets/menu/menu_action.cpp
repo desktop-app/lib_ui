@@ -65,7 +65,6 @@ Action::Action(
 
 	initResizeHook(parent->sizeValue());
 	processAction();
-	setHasSubmenu(action->menu() != nullptr);
 
 	paintRequest(
 	) | rpl::start_with_next([=] {
@@ -76,6 +75,10 @@ Action::Action(
 	enableMouseSelecting();
 
 	connect(_action, &QAction::changed, [=] { processAction(); });
+}
+
+bool Action::hasSubmenu() const {
+	return _action->menu() != nullptr;
 }
 
 void Action::paint(Painter &p) {
