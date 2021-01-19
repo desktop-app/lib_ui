@@ -695,9 +695,14 @@ public:
 
 };
 
-class PortInput : public MaskedInputField {
+class NumberInput : public MaskedInputField {
 public:
-	PortInput(QWidget *parent, const style::InputField &st, rpl::producer<QString> placeholder, const QString &val);
+	NumberInput(
+		QWidget *parent,
+		const style::InputField &st,
+		rpl::producer<QString> placeholder,
+		const QString &value,
+		int limit);
 
 protected:
 	void correctValue(
@@ -705,6 +710,9 @@ protected:
 		int wasCursor,
 		QString &now,
 		int &nowCursor) override;
+
+private:
+	int _limit = 0;
 
 };
 

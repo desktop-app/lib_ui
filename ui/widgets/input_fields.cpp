@@ -4010,18 +4010,20 @@ PasswordInput::PasswordInput(
 	setEchoMode(QLineEdit::Password);
 }
 
-PortInput::PortInput(
+NumberInput::NumberInput(
 	QWidget *parent,
 	const style::InputField &st,
 	rpl::producer<QString> placeholder,
-	const QString &val)
-: MaskedInputField(parent, st, std::move(placeholder), val) {
-	if (!val.toInt() || val.toInt() > 65535) {
+	const QString &value,
+	int limit)
+: MaskedInputField(parent, st, std::move(placeholder), value)
+, _limit(limit) {
+	if (!value.toInt() || (limit > 0 && value.toInt() > limit)) {
 		setText(QString());
 	}
 }
 
-void PortInput::correctValue(
+void NumberInput::correctValue(
 		const QString &was,
 		int wasCursor,
 		QString &now,
@@ -4039,7 +4041,7 @@ void PortInput::correctValue(
 	if (!newText.toInt()) {
 		newText = QString();
 		newPos = 0;
-	} else if (newText.toInt() > 65535) {
+	} else if (_limit > 0 && newText.toInt() > _limit) {
 		newText = was;
 		newPos = wasCursor;
 	}
