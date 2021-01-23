@@ -129,8 +129,8 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 			? _st.widthMin
 			: (*ranges::max_element(
 				_actionWidgets,
-				std::greater<>(),
-				&ItemBase::width))->minWidth();
+				std::less<>(),
+				&ItemBase::minWidth))->minWidth();
 		resizeFromInner(newWidth, height());
 	}, widget->lifetime());
 
