@@ -54,6 +54,7 @@ public:
 
 	float width() const;
 	float maxWidth() const;
+	float finishedWidth() const;
 	float height() const;
 
 private:
