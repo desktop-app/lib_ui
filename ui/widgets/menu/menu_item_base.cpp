@@ -12,7 +12,6 @@ ItemBase::ItemBase(
 	not_null<RpWidget*> parent,
 	const style::Menu &st)
 : RippleButton(parent, st.ripple) {
-	init();
 }
 
 void ItemBase::setSelected(
@@ -78,20 +77,6 @@ int ItemBase::minWidth() const {
 	return _minWidth.current();
 }
 
-void ItemBase::init() {
-	events(
-	) | rpl::filter([=](not_null<QEvent*> e) {
-		return isEnabled()
-			&& isSelected()
-			&& (e->type() == QEvent::MouseButtonRelease);
-	}) | rpl::to_empty | rpl::start_with_next([=] {
-		const auto point = mapFromGlobal(QCursor::pos());
-		if (!rect().contains(point)) {
-			setSelected(false);
-		}
-	}, lifetime());
-}
-
 void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
 	std::move(
 		size
@@ -109,16 +94,25 @@ void ItemBase::finishAnimating() {
 }
 
 void ItemBase::enableMouseSelecting() {
-	events(
-	) | rpl::filter([=](not_null<QEvent*> e) {
-		return action()->isEnabled()
-			&& ((e->type() == QEvent::Leave)
-				|| (e->type() == QEvent::Enter)
-				|| (e->type() == QEvent::MouseMove));
-	}) | rpl::map([=](not_null<QEvent*> e) {
-		return (e->type() != QEvent::Leave);
-	}) | rpl::start_with_next([=](bool selected) {
-		setSelected(selected);
+	enableMouseSelecting(this);
+}
+
+void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
+	widget->events(
+	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+		const auto type = e->type();
+		if (((type == QEvent::Leave)
+			|| (type == QEvent::Enter)
+			|| (type == QEvent::MouseMove)) && action()->isEnabled()) {
+			setSelected(e->type() != QEvent::Leave);
+		} else if ((type == QEvent::MouseButtonRelease)
+			&& isEnabled()
+			&& isSelected()) {
+			const auto point = mapFromGlobal(QCursor::pos());
+			if (!rect().contains(point)) {
+				setSelected(false);
+			}
+		}
 	}, lifetime());
 }
 

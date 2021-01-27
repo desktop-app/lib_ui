@@ -45,10 +45,10 @@ public:
 	virtual void finishAnimating();
 
 protected:
-	void init();
 	void initResizeHook(rpl::producer<QSize> &&size);
 
 	void enableMouseSelecting();
+	void enableMouseSelecting(not_null<RpWidget*> widget);
 
 	virtual int contentHeight() const = 0;
 
