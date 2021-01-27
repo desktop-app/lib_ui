@@ -209,7 +209,11 @@ bool ArcsAnimation::isArcFinished(const Arc &arc) const {
 void ArcsAnimation::paint(Painter &p, std::optional<QColor> colorOverride) {
 	PainterHighQualityEnabler hq(p);
 	QPen pen;
-	pen.setWidth(_st.stroke);
+	if (_strokeRatio) {
+		pen.setWidthF(_st.stroke * _strokeRatio);
+	} else {
+		pen.setWidth(_st.stroke);
+	}
 	pen.setCapStyle(Qt::RoundCap);
 	pen.setColor(colorOverride ? (*colorOverride) : _st.fg->c);
 	p.setPen(pen);
@@ -228,5 +232,8 @@ void ArcsAnimation::paint(Painter &p, std::optional<QColor> colorOverride) {
 	}
 }
 
+void ArcsAnimation::setStrokeRatio(float ratio) {
+	_strokeRatio = ratio;
+}
 
 } // namespace Ui::Paint
