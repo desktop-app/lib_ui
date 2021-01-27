@@ -153,6 +153,18 @@ float ArcsAnimation::width() const {
 	if (_arcs.empty()) {
 		return 0;
 	}
+	for (const auto &arc : ranges::view::reverse(_arcs)) {
+		if ((arc.progress != 1.)) {
+			return arc.rect.x() + arc.rect.width();
+		}
+	}
+	return 0;
+}
+
+float ArcsAnimation::maxWidth() const {
+	if (_arcs.empty()) {
+		return 0;
+	}
 	const auto &r = _arcs.back().rect;
 	return r.x() + r.width();
 }

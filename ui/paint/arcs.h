@@ -53,6 +53,7 @@ public:
 	bool isFinished() const;
 
 	float width() const;
+	float maxWidth() const;
 	float height() const;
 
 private:
