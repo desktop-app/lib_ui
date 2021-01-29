@@ -122,15 +122,17 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 	}, widget->lifetime());
 
 	widget->minWidthValue(
-	) | rpl::start_with_next([=] {
+	) | rpl::start_with_next([=](int minWidth) {
 		const auto newWidth = _forceWidth
 			? _forceWidth
 			: _actionWidgets.empty()
 			? _st.widthMin
-			: (*ranges::max_element(
-				_actionWidgets,
-				std::less<>(),
-				&ItemBase::minWidth))->minWidth();
+			: std::max(
+				minWidth,
+				(*ranges::max_element(
+					_actionWidgets,
+					std::less<>(),
+					&ItemBase::minWidth))->minWidth());
 		resizeFromInner(newWidth, height());
 	}, widget->lifetime());
 
