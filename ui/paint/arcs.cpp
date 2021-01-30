@@ -30,28 +30,18 @@ ArcsAnimation::ArcsAnimation(
 	const style::ArcsAnimation &st,
 	std::vector<float> thresholds,
 	float64 startValue,
-	VerticalDirection direction)
+	Direction direction)
 : _st(st)
-, _horizontalDirection(HorizontalDirection::None)
-, _verticalDirection(direction)
-, _startAngle((st.deltaAngle
-	+ ((direction == VerticalDirection::Up) ? 90 : 270)) * 16)
-, _spanAngle(-st.deltaAngle * 2 * 16)
-, _emptyRect(computeArcRect(0))
-, _currentValue(startValue) {
-	initArcs(std::move(thresholds));
-}
-
-ArcsAnimation::ArcsAnimation(
-	const style::ArcsAnimation &st,
-	std::vector<float> thresholds,
-	float64 startValue,
-	HorizontalDirection direction)
-: _st(st)
-, _horizontalDirection(direction)
-, _verticalDirection(VerticalDirection::None)
-, _startAngle((st.deltaAngle
-	+ ((direction == HorizontalDirection::Left) ? 180 : 0)) * 16)
+, _direction(direction)
+, _startAngle(16
+	* (st.deltaAngle
+		+ ((direction == Direction::Up)
+			? 90
+			: (direction == Direction::Down)
+			? 270
+			: (direction == Direction::Left)
+			? 180
+			: 0)))
 , _spanAngle(-st.deltaAngle * 2 * 16)
 , _emptyRect(computeArcRect(0))
 , _currentValue(startValue) {
@@ -74,20 +64,24 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
 	}
 }
 
+bool ArcsAnimation::isHorizontal() const {
+	return _direction == Direction::Left || _direction == Direction::Right;
+}
+
 QRectF ArcsAnimation::computeArcRect(int index) const {
 	const auto w = _st.startWidth + _st.deltaWidth * index;
 	const auto h = _st.startHeight + _st.deltaHeight * index;
-	if (_horizontalDirection != HorizontalDirection::None) {
+	if (isHorizontal()) {
 		auto rect = QRectF(0, -h / 2.0, w, h);
-		if (_horizontalDirection == HorizontalDirection::Right) {
+		if (_direction == Direction::Right) {
 			rect.moveRight(index * _st.space);
 		} else {
 			rect.moveLeft(-index * _st.space);
 		}
 		return rect;
-	} else if (_verticalDirection != VerticalDirection::None) {
+	} else {
 		auto rect = QRectF(-w / 2.0, 0, w, h);
-		if (_verticalDirection == VerticalDirection::Up) {
+		if (_direction == Direction::Up) {
 			rect.moveTop(-index * _st.space);
 		} else {
 			rect.moveBottom(index * _st.space);

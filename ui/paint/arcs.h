@@ -15,29 +15,18 @@ namespace Ui::Paint {
 class ArcsAnimation {
 public:
 
-	enum class HorizontalDirection {
-		Left,
-		Right,
-		None,
-	};
-
-	enum class VerticalDirection {
+	enum class Direction {
 		Up,
 		Down,
-		None,
+		Left,
+		Right,
 	};
 
 	ArcsAnimation(
 		const style::ArcsAnimation &st,
 		std::vector<float> thresholds,
 		float64 startValue,
-		VerticalDirection direction);
-
-	ArcsAnimation(
-		const style::ArcsAnimation &st,
-		std::vector<float> thresholds,
-		float64 startValue,
-		HorizontalDirection direction);
+		Direction direction);
 
 	void paint(
 		Painter &p,
@@ -69,6 +58,7 @@ private:
 
 	void initArcs(std::vector<float> thresholds);
 	QRectF computeArcRect(int index) const;
+	bool isHorizontal() const;
 
 	bool isArcFinished(const Arc &arc) const;
 	void updateArcStartTime(
@@ -77,8 +67,7 @@ private:
 		crl::time now);
 
 	const style::ArcsAnimation &_st;
-	const HorizontalDirection _horizontalDirection;
-	const VerticalDirection _verticalDirection;
+	const Direction _direction;
 	const int _startAngle;
 	const int _spanAngle;
 	const QRectF _emptyRect;
