@@ -63,6 +63,8 @@ Action::Action(
 	+ _st.itemStyle.font->height
 	+ _st.itemPadding.bottom()) {
 
+	setAcceptBoth(true);
+
 	initResizeHook(parent->sizeValue());
 	processAction();
 
