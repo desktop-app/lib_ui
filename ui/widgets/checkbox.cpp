@@ -570,11 +570,7 @@ void Checkbox::paintEvent(QPaintEvent *e) {
 		p.setOpacity(_st.disabledOpacity);
 	} else {
 		auto color = anim::color(_st.rippleBg, _st.rippleBgActive, active);
-		paintRipple(
-			p,
-			check.x() + _st.rippleAreaPosition.x(),
-			check.y() + _st.rippleAreaPosition.y(),
-			&color);
+		paintRipple(p, check.topLeft() + _st.rippleAreaPosition, &color);
 	}
 
 	auto realCheckRect = myrtlrect(check);

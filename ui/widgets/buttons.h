@@ -58,7 +58,15 @@ public:
 
 	void clearState() override;
 
-	void paintRipple(QPainter &p, int x, int y, const QColor *colorOverride = nullptr);
+	void paintRipple(
+		QPainter &p,
+		const QPoint &point,
+		const QColor *colorOverride = nullptr);
+	void paintRipple(
+		QPainter &p,
+		int x,
+		int y,
+		const QColor *colorOverride = nullptr);
 
 	void finishAnimating();
 

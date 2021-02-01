@@ -153,7 +153,7 @@ void CallButton::paintEvent(QPaintEvent *e) {
 	} else {
 		rippleColorInterpolated = anim::color(_stFrom->button.ripple.color, _stTo->button.ripple.color, _progress);
 	}
-	paintRipple(p, _stFrom->button.rippleAreaPosition.x(), _stFrom->button.rippleAreaPosition.y(), rippleColorOverride);
+	paintRipple(p, _stFrom->button.rippleAreaPosition, rippleColorOverride);
 
 	auto positionFrom = iconPosition(_stFrom);
 	if (paintFrom) {
