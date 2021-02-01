@@ -77,6 +77,8 @@ PRIVATE
     ui/paint/blobs.h
     ui/paint/blobs_linear.cpp
     ui/paint/blobs_linear.h
+    ui/platform/linux/ui_linux_wayland_integration.cpp
+    ui/platform/linux/ui_linux_wayland_integration.h
     ui/platform/linux/ui_window_linux.cpp
     ui/platform/linux/ui_window_linux.h
     ui/platform/linux/ui_utility_linux.cpp
@@ -95,6 +97,8 @@ PRIVATE
     ui/platform/win/ui_window_win.h
     ui/platform/win/ui_utility_win.cpp
     ui/platform/win/ui_utility_win.h
+    ui/platform/ui_platform_window_title.cpp
+    ui/platform/ui_platform_window_title.h
     ui/platform/ui_platform_window.cpp
     ui/platform/ui_platform_window.h
     ui/platform/ui_platform_utility.h
@@ -226,6 +230,11 @@ endif()
 
 if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
     nice_target_sources(lib_ui ${src_loc} PRIVATE fonts/fonts.qrc)
+endif()
+
+if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+    remove_target_sources(Telegram ${src_loc} ui/platform/linux/ui_linux_wayland_integration.cpp)
+    nice_target_sources(Telegram ${src_loc} PRIVATE ui/platform/linux/ui_linux_wayland_integration_dummy.cpp)
 endif()
 
 target_include_directories(lib_ui

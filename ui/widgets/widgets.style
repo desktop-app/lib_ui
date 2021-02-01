@@ -1582,3 +1582,17 @@ defaultWindowTitle: WindowTitle {
 
 windowShadow: icon {{ "window_shadow", windowShadowFg }};
 windowShadowShift: 1px;
+
+callRadius: 6px;
+callShadow: Shadow {
+	left: icon {{ "calls/call_shadow_left", windowShadowFg }};
+	topLeft: icon {{ "calls/call_shadow_top_left", windowShadowFg }};
+	top: icon {{ "calls/call_shadow_top", windowShadowFg }};
+	topRight: icon {{ "calls/call_shadow_top_left-flip_horizontal", windowShadowFg }};
+	right: icon {{ "calls/call_shadow_left-flip_horizontal", windowShadowFg }};
+	bottomRight: icon {{ "calls/call_shadow_top_left-flip_vertical-flip_horizontal", windowShadowFg }};
+	bottom: icon {{ "calls/call_shadow_top-flip_vertical", windowShadowFg }};
+	bottomLeft: icon {{ "calls/call_shadow_top_left-flip_vertical", windowShadowFg }};
+	extend: margins(9px, 8px, 9px, 10px);
+	fallback: windowShadowFgFallback;
+}

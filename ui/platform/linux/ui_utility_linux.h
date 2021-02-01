@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/platform/ui_platform_utility.h"
+
 class QPainter;
 class QPaintEvent;
 

@@ -99,5 +99,15 @@ void DrainMainQueue() {
 void IgnoreAllActivation(not_null<QWidget*> widget) {
 }
 
+TitleControls::Layout TitleControlsLayout() {
+	return TitleControls::Layout{
+		.left = {
+			TitleControls::Control::Close,
+			TitleControls::Control::Minimize,
+			TitleControls::Control::Maximize,
+		}
+	};
+}
+
 } // namespace Platform
 } // namespace Ui

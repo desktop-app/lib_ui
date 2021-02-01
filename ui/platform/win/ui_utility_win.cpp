@@ -44,5 +44,27 @@ void IgnoreAllActivation(not_null<QWidget*> widget) {
 	ShowWindow(handle, SW_SHOW);
 }
 
+bool ShowWindowMenu(QWindow *window) {
+	const auto pos = QCursor::pos();
+
+	SendMessage(
+		HWND(window->winId()),
+		WM_SYSCOMMAND,
+		SC_MOUSEMENU,
+		MAKELPARAM(pos.x(), pos.y()));
+
+	return true;
+}
+
+TitleControls::Layout TitleControlsLayout() {
+	return TitleControls::Layout{
+		.right = {
+			TitleControls::Control::Minimize,
+			TitleControls::Control::Maximize,
+			TitleControls::Control::Close,
+		}
+	};
+}
+
 } // namespace Platform
 } // namespace Ui

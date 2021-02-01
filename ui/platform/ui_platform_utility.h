@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/platform/ui_platform_window_title.h"
+
 class QPoint;
 class QPainter;
 class QPaintEvent;
@@ -29,6 +31,12 @@ void IgnoreAllActivation(not_null<QWidget*> widget);
 
 [[nodiscard]] constexpr bool UseMainQueueGeneric();
 void DrainMainQueue(); // Needed only if UseMainQueueGeneric() is false.
+
+[[nodiscard]] bool WindowExtentsSupported();
+bool SetWindowExtents(QWindow *window, const QMargins &extents);
+bool UnsetWindowExtents(QWindow *window);
+bool ShowWindowMenu(QWindow *window);
+[[nodiscard]] TitleControls::Layout TitleControlsLayout();
 
 } // namespace Platform
 } // namespace Ui

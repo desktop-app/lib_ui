@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/platform/ui_platform_utility.h"
+
 #include <QtCore/QPoint>
 
 class QPainter;
@@ -38,6 +40,18 @@ inline void BringToBack(not_null<QWidget*> widget) {
 
 inline constexpr bool UseMainQueueGeneric() {
 	return true;
+}
+
+inline bool WindowExtentsSupported() {
+	return false;
+}
+
+inline bool SetWindowExtents(QWindow *window, const QMargins &extents) {
+	return false;
+}
+
+inline bool UnsetWindowExtents(QWindow *window) {
+	return false;
 }
 
 } // namespace Platform

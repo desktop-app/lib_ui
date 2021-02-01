@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "ui/platform/ui_platform_utility.h"
 #include "base/platform/base_platform_info.h"
 #include <QtCore/QPoint>
 
@@ -21,6 +22,22 @@ inline void UpdateOverlayed(not_null<QWidget*> widget) {
 
 inline constexpr bool UseMainQueueGeneric() {
 	return ::Platform::IsMacStoreBuild();
+}
+
+inline bool WindowExtentsSupported() {
+	return false;
+}
+
+inline bool SetWindowExtents(QWindow *window, const QMargins &extents) {
+	return false;
+}
+
+inline bool UnsetWindowExtents(QWindow *window) {
+	return false;
+}
+
+inline bool ShowWindowMenu(QWindow *window) {
+	return false;
 }
 
 } // namespace Platform
