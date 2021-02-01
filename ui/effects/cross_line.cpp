@@ -98,6 +98,7 @@ void CrossLineAnimation::fillFrame(
 void CrossLineAnimation::invalidate() {
 	_completeCross = QImage();
 	_completeCrossOverride = QImage();
+	_strokePen = QPen(_st.fg, _st.stroke, Qt::SolidLine, Qt::RoundCap);
 }
 
 } // namespace Ui
