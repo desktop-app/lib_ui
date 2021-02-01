@@ -20,6 +20,8 @@ using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 
 namespace Platform {
 
+class DefaultTitleWidget;
+
 class BasicWindowHelper {
 public:
 	explicit BasicWindowHelper(not_null<RpWidget*> window);
@@ -57,6 +59,35 @@ private:
 
 };
 
+class DefaultWindowHelper final : public QObject, public BasicWindowHelper {
+public:
+	explicit DefaultWindowHelper(not_null<RpWidget*> window);
+
+	not_null<RpWidget*> body() override;
+	void setTitle(const QString &title) override;
+	void setTitleStyle(const style::WindowTitle &st) override;
+	void setMinimumSize(QSize size) override;
+	void setFixedSize(QSize size) override;
+	void setGeometry(QRect rect) override;
+
+protected:
+	bool eventFilter(QObject *obj, QEvent *e) override;
+
+private:
+	void init();
+	[[nodiscard]] bool hasShadow() const;
+	[[nodiscard]] QMargins resizeArea() const;
+	[[nodiscard]] Qt::Edges edgesFromPos(const QPoint &pos) const;
+	void paintBorders(QPainter &p);
+	void updateWindowExtents();
+	void updateCursor(Qt::Edges edges);
+
+	const not_null<DefaultTitleWidget*> _title;
+	const not_null<RpWidget*> _body;
+	bool _extentsSet = false;
+
+};
+
 [[nodiscard]] std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 	not_null<RpWidget*> window);
 
@@ -65,7 +96,7 @@ private:
 	if (auto special = CreateSpecialWindowHelper(window)) {
 		return special;
 	}
-	return std::make_unique<BasicWindowHelper>(window);
+	return std::make_unique<DefaultWindowHelper>(window);
 }
 
 } // namespace Platform
