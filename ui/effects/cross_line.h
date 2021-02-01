@@ -43,6 +43,7 @@ private:
 	QLineF _line;
 	QImage _frame;
 	QImage _completeCross;
+	QImage _completeCrossOverride;
 
 };
 

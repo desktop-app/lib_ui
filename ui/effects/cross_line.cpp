@@ -43,11 +43,14 @@ void CrossLineAnimation::paint(
 			_st.icon.paint(p, left, top, _st.icon.width());
 		}
 	} else if (progress == 1.) {
-		if (_completeCross.isNull()) {
+		auto &complete = colorOverride
+			? _completeCrossOverride
+			: _completeCross;
+		if (complete.isNull()) {
 			fillFrame(progress, colorOverride);
-			_completeCross = _frame;
+			complete = _frame;
 		}
-		p.drawImage(left, top, _completeCross);
+		p.drawImage(left, top, complete);
 	} else {
 		fillFrame(progress, colorOverride);
 		p.drawImage(left, top, _frame);
@@ -94,6 +97,7 @@ void CrossLineAnimation::fillFrame(
 
 void CrossLineAnimation::invalidate() {
 	_completeCross = QImage();
+	_completeCrossOverride = QImage();
 }
 
 } // namespace Ui
