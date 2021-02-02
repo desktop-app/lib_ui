@@ -49,6 +49,11 @@ void Menu::init() {
 		Painter p(this);
 		p.fillRect(clip, _st.itemBg);
 	}, lifetime());
+
+	positionValue(
+	) | rpl::start_with_next([=] {
+		handleMouseMove(QCursor::pos());
+	}, lifetime());
 }
 
 not_null<QAction*> Menu::addAction(
