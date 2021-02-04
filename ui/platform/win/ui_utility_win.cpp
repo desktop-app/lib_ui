@@ -6,9 +6,10 @@
 //
 #include "ui/platform/win/ui_utility_win.h"
 
-#include <QtWidgets/QApplication>
-
 #include "base/platform/win/base_windows_h.h"
+
+#include <QtWidgets/QApplication>
+#include <QtGui/QWindow>
 
 namespace Ui {
 namespace Platform {
