@@ -51,6 +51,7 @@ public:
 private:
 	[[nodiscard]] not_null<RpWidget*> parent() const;
 	[[nodiscard]] not_null<QWidget*> window() const;
+	[[nodiscard]] Ui::IconButton *controlWidget(Control control) const;
 
 	void init(Fn<void(bool maximized)> maximize);
 	void updateButtonsState();
