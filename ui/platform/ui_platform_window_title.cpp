@@ -21,6 +21,19 @@
 
 namespace Ui {
 namespace Platform {
+namespace {
+
+template <typename T>
+void RemoveDuplicates(std::vector<T> &v) {
+	auto end = v.end();
+	for (auto it = v.begin(); it != end; ++it) {
+		end = std::remove(it + 1, end, *it);
+	}
+
+	v.erase(end, v.end());
+}
+
+} // namespace
 
 TitleControls::TitleControls(
 	not_null<RpWidget*> parent,
@@ -197,9 +210,11 @@ void TitleControls::updateControlsPosition() {
 void TitleControls::updateControlsPositionBySide(
 		const std::vector<Control> &controls,
 		bool right) {
-	const auto preparedControls = right
+	auto preparedControls = right
 		? (ranges::view::reverse(controls) | ranges::to_vector)
 		: controls;
+
+	RemoveDuplicates(preparedControls);
 
 	auto position = 0;
 	for (const auto &control : preparedControls) {
