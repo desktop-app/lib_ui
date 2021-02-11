@@ -24,6 +24,10 @@ public:
 	Menu(QWidget *parent, QMenu *menu, const style::Menu &st = st::defaultMenu);
 	~Menu();
 
+	[[nodiscard]] const style::Menu &st() const {
+		return _st;
+	}
+
 	not_null<QAction*> addAction(base::unique_qptr<ItemBase> widget);
 	not_null<QAction*> addAction(
 		const QString &text,
