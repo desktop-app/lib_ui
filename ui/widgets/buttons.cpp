@@ -206,6 +206,11 @@ void FlatButton::setWidth(int w) {
 	resize(_width, height());
 }
 
+void FlatButton::setColorOverride(std::optional<QColor> color) {
+	_colorOverride = color;
+	update();
+}
+
 int32 FlatButton::textWidth() const {
 	return _st.font->width(_text);
 }
@@ -225,7 +230,11 @@ void FlatButton::paintEvent(QPaintEvent *e) {
 
 	p.setFont(isOver() ? _st.overFont : _st.font);
 	p.setRenderHint(QPainter::TextAntialiasing);
-	p.setPen(isOver() ? _st.overColor : _st.color);
+	if (_colorOverride) {
+		p.setPen(*_colorOverride);
+	} else {
+		p.setPen(isOver() ? _st.overColor : _st.color);
+	}
 
 	const auto textRect = inner.marginsRemoved(
 		_textMargins

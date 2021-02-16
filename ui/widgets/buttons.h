@@ -94,6 +94,7 @@ public:
 
 	void setText(const QString &text);
 	void setWidth(int w);
+	void setColorOverride(std::optional<QColor> color);
 	void setTextMargins(QMargins margins);
 
 	int32 textWidth() const;
@@ -107,6 +108,7 @@ private:
 	QString _text;
 	QMargins _textMargins;
 	int _width = 0;
+	std::optional<QColor> _colorOverride;
 
 	const style::FlatButton &_st;
 
