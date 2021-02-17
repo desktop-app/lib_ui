@@ -111,6 +111,10 @@ public:
 		object_ptr<BoxContent> box,
 		LayerOptions options,
 		anim::type animated);
+	void showLayer(
+		std::unique_ptr<LayerWidget> layer,
+		LayerOptions options,
+		anim::type animated);
 	void showSpecialLayer(
 		object_ptr<LayerWidget> layer,
 		anim::type animated);
@@ -149,19 +153,19 @@ protected:
 	void resizeEvent(QResizeEvent *e) override;
 
 private:
-	void appendBox(
-		object_ptr<BoxContent> box,
+	void appendLayer(
+		std::unique_ptr<LayerWidget> layer,
 		anim::type animated);
-	void prependBox(
-		object_ptr<BoxContent> box,
+	void prependLayer(
+		std::unique_ptr<LayerWidget> layer,
 		anim::type animated);
-	void replaceBox(
-		object_ptr<BoxContent> box,
+	void replaceLayer(
+		std::unique_ptr<LayerWidget> layer,
 		anim::type animated);
 	void backgroundClicked();
 
-	LayerWidget *pushBox(
-		object_ptr<BoxContent> box,
+	LayerWidget *pushLayer(
+		std::unique_ptr<LayerWidget> layer,
 		anim::type animated);
 	void showFinished();
 	void hideCurrent(anim::type animated);

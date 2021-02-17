@@ -652,37 +652,6 @@ void LayerStackWidget::resizeEvent(QResizeEvent *e) {
 	updateLayerBoxes();
 }
 
-void LayerStackWidget::showBox(
-		object_ptr<BoxContent> box,
-		LayerOptions options,
-		anim::type animated) {
-	if (options & LayerOption::KeepOther) {
-		if (options & LayerOption::ShowAfterOther) {
-			prependBox(std::move(box), animated);
-		} else {
-			appendBox(std::move(box), animated);
-		}
-	} else {
-		replaceBox(std::move(box), animated);
-	}
-}
-
-void LayerStackWidget::replaceBox(
-		object_ptr<BoxContent> box,
-		anim::type animated) {
-	const auto pointer = pushBox(std::move(box), animated);
-	const auto removeTill = ranges::find(
-		_layers,
-		pointer,
-		&std::unique_ptr<LayerWidget>::get);
-	_closingLayers.insert(
-		end(_closingLayers),
-		std::make_move_iterator(begin(_layers)),
-		std::make_move_iterator(removeTill));
-	_layers.erase(begin(_layers), removeTill);
-	clearClosingLayers();
-}
-
 void LayerStackWidget::prepareForAnimation() {
 	if (isHidden()) {
 		show();
@@ -789,14 +758,33 @@ void LayerStackWidget::showMainMenu(
 	}, Action::ShowMainMenu, animated);
 }
 
-void LayerStackWidget::appendBox(
+void LayerStackWidget::showBox(
 		object_ptr<BoxContent> box,
+		LayerOptions options,
 		anim::type animated) {
-	pushBox(std::move(box), animated);
+	showLayer(
+		std::make_unique<BoxLayerWidget>(this, std::move(box)),
+		options,
+		animated);
 }
 
-LayerWidget *LayerStackWidget::pushBox(
-		object_ptr<BoxContent> box,
+void LayerStackWidget::showLayer(
+		std::unique_ptr<LayerWidget> layer,
+		LayerOptions options,
+		anim::type animated) {
+	if (options & LayerOption::KeepOther) {
+		if (options & LayerOption::ShowAfterOther) {
+			prependLayer(std::move(layer), animated);
+		} else {
+			appendLayer(std::move(layer), animated);
+		}
+	} else {
+		replaceLayer(std::move(layer), animated);
+	}
+}
+
+LayerWidget *LayerStackWidget::pushLayer(
+		std::unique_ptr<LayerWidget> layer,
 		anim::type animated) {
 	const auto oldLayer = currentLayer();
 	if (oldLayer) {
@@ -805,8 +793,7 @@ LayerWidget *LayerStackWidget::pushBox(
 		}
 		oldLayer->hide();
 	}
-	_layers.push_back(
-		std::make_unique<BoxLayerWidget>(this, std::move(box)));
+	_layers.push_back(std::move(layer));
 	const auto raw = _layers.back().get();
 	initChildLayer(raw);
 
@@ -824,19 +811,41 @@ LayerWidget *LayerStackWidget::pushBox(
 	return raw;
 }
 
-void LayerStackWidget::prependBox(
-		object_ptr<BoxContent> box,
+void LayerStackWidget::appendLayer(
+		std::unique_ptr<LayerWidget> layer,
+		anim::type animated) {
+	pushLayer(std::move(layer), animated);
+}
+
+void LayerStackWidget::prependLayer(
+		std::unique_ptr<LayerWidget> layer,
 		anim::type animated) {
 	if (_layers.empty()) {
-		replaceBox(std::move(box), animated);
+		replaceLayer(std::move(layer), animated);
 		return;
 	}
 	_layers.insert(
 		begin(_layers),
-		std::make_unique<BoxLayerWidget>(this, std::move(box)));
+		std::move(layer));
 	const auto raw = _layers.front().get();
 	raw->hide();
 	initChildLayer(raw);
+}
+
+void LayerStackWidget::replaceLayer(
+		std::unique_ptr<LayerWidget> layer,
+		anim::type animated) {
+	const auto pointer = pushLayer(std::move(layer), animated);
+	const auto removeTill = ranges::find(
+		_layers,
+		pointer,
+		&std::unique_ptr<LayerWidget>::get);
+	_closingLayers.insert(
+		end(_closingLayers),
+		std::make_move_iterator(begin(_layers)),
+		std::make_move_iterator(removeTill));
+	_layers.erase(begin(_layers), removeTill);
+	clearClosingLayers();
 }
 
 bool LayerStackWidget::takeToThirdSection() {
