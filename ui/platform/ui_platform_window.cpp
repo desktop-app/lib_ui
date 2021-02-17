@@ -149,10 +149,11 @@ void DefaultWindowHelper::init() {
 
 	window()->widthValue(
 	) | rpl::start_with_next([=](int width) {
+		const auto area = resizeArea();
 		_title->setGeometry(
-			resizeArea().left(),
-			resizeArea().top(),
-			width - resizeArea().left() - resizeArea().right(),
+			area.left(),
+			area.top(),
+			width - area.left() - area.right(),
 			_title->st()->height);
 	}, _title->lifetime());
 
@@ -160,20 +161,24 @@ void DefaultWindowHelper::init() {
 		window()->sizeValue(),
 		_title->heightValue()
 	) | rpl::start_with_next([=](QSize size, int titleHeight) {
+		const auto area = resizeArea();
+
 		const auto sizeWithoutMargins = size
 			.shrunkBy({ 0, titleHeight, 0, 0 })
-			.shrunkBy(resizeArea());
+			.shrunkBy(area);
 
 		const auto topLeft = QPoint(
-			resizeArea().left(),
-			resizeArea().top() + titleHeight);
+			area.left(),
+			area.top() + titleHeight);
 
 		_body->setGeometry(QRect(topLeft, sizeWithoutMargins));
 	}, _body->lifetime());
 
 	window()->paintRequest(
 	) | rpl::start_with_next([=] {
-		if (resizeArea().isNull()) {
+		const auto area = resizeArea();
+
+		if (area.isNull()) {
 			return;
 		}
 
@@ -182,7 +187,7 @@ void DefaultWindowHelper::init() {
 		if (hasShadow()) {
 			Ui::Shadow::paint(
 				p,
-				QRect(QPoint(), window()->size()).marginsRemoved(resizeArea()),
+				QRect(QPoint(), window()->size()).marginsRemoved(area),
 				window()->width(),
 				Shadow());
 		} else {
@@ -234,29 +239,33 @@ QMargins DefaultWindowHelper::resizeArea() const {
 }
 
 Qt::Edges DefaultWindowHelper::edgesFromPos(const QPoint &pos) const {
-	if (pos.x() <= resizeArea().left()) {
-		if (pos.y() <= resizeArea().top()) {
+	const auto area = resizeArea();
+
+	if (area.isNull()) {
+		return Qt::Edges();
+	} else if (pos.x() <= area.left()) {
+		if (pos.y() <= area.top()) {
 			return Qt::LeftEdge | Qt::TopEdge;
-		} else if (pos.y() >= (window()->height() - resizeArea().bottom())) {
+		} else if (pos.y() >= (window()->height() - area.bottom())) {
 			return Qt::LeftEdge | Qt::BottomEdge;
 		}
 
 		return Qt::LeftEdge;
-	} else if (pos.x() >= (window()->width() - resizeArea().right())) {
-		if (pos.y() <= resizeArea().top()) {
+	} else if (pos.x() >= (window()->width() - area.right())) {
+		if (pos.y() <= area.top()) {
 			return Qt::RightEdge | Qt::TopEdge;
-		} else if (pos.y() >= (window()->height() - resizeArea().bottom())) {
+		} else if (pos.y() >= (window()->height() - area.bottom())) {
 			return Qt::RightEdge | Qt::BottomEdge;
 		}
 
 		return Qt::RightEdge;
-	} else if (pos.y() <= resizeArea().top()) {
+	} else if (pos.y() <= area.top()) {
 		return Qt::TopEdge;
-	} else if (pos.y() >= (window()->height() - resizeArea().bottom())) {
+	} else if (pos.y() >= (window()->height() - area.bottom())) {
 		return Qt::BottomEdge;
-	} else {
-		return Qt::Edges();
 	}
+
+	return Qt::Edges();
 }
 
 bool DefaultWindowHelper::eventFilter(QObject *obj, QEvent *e) {
@@ -282,11 +291,12 @@ void DefaultWindowHelper::setTitle(const QString &title) {
 }
 
 void DefaultWindowHelper::setTitleStyle(const style::WindowTitle &st) {
+	const auto area = resizeArea();
 	_title->setStyle(st);
 	_title->setGeometry(
-		resizeArea().left(),
-		resizeArea().top(),
-		window()->width() - resizeArea().left() - resizeArea().right(),
+		area.left(),
+		area.top(),
+		window()->width() - area.left() - area.right(),
 		_title->st()->height);
 }
 
@@ -324,32 +334,34 @@ void DefaultWindowHelper::paintBorders(QPainter &p) {
 		? titleBackground
 		: defaultTitleBackground;
 
+	const auto area = resizeArea();
+
 	p.fillRect(
 		0,
-		resizeArea().top(),
-		resizeArea().left(),
-		window()->height() - resizeArea().top() - resizeArea().bottom(),
+		area.top(),
+		area.left(),
+		window()->height() - area.top() - area.bottom(),
 		borderColor);
 
 	p.fillRect(
-		window()->width() - resizeArea().right(),
-		resizeArea().top(),
-		resizeArea().right(),
-		window()->height() - resizeArea().top() - resizeArea().bottom(),
+		window()->width() - area.right(),
+		area.top(),
+		area.right(),
+		window()->height() - area.top() - area.bottom(),
 		borderColor);
 
 	p.fillRect(
 		0,
 		0,
 		window()->width(),
-		resizeArea().top(),
+		area.top(),
 		borderColor);
 
 	p.fillRect(
 		0,
-		window()->height() - resizeArea().bottom(),
+		window()->height() - area.bottom(),
 		window()->width(),
-		resizeArea().bottom(),
+		area.bottom(),
 		borderColor);
 }
 
