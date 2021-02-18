@@ -126,22 +126,24 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 		}
 	}, widget->lifetime());
 
-	widget->minWidthValue(
-	) | rpl::start_with_next([=](int minWidth) {
+	const auto raw = widget.get();
+	_actionWidgets.push_back(std::move(widget));
+
+	raw->minWidthValue(
+	) | rpl::start_with_next([=] {
 		const auto newWidth = _forceWidth
 			? _forceWidth
-			: _actionWidgets.empty()
-			? _st.widthMin
-			: std::max(
-				minWidth,
-				(*ranges::max_element(
-					_actionWidgets,
-					std::less<>(),
-					&ItemBase::minWidth))->minWidth());
+			: std::clamp(
+				_actionWidgets.empty()
+					? 0
+					: (*ranges::max_element(
+						_actionWidgets,
+						std::less<>(),
+						&ItemBase::minWidth))->minWidth(),
+				_st.widthMin,
+				_st.widthMax);
 		resizeFromInner(newWidth, height());
-	}, widget->lifetime());
-
-	_actionWidgets.push_back(std::move(widget));
+	}, raw->lifetime());
 
 	const auto newHeight = ranges::accumulate(
 		_actionWidgets,
