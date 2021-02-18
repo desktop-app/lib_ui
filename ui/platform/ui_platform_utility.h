@@ -36,7 +36,10 @@ void DrainMainQueue(); // Needed only if UseMainQueueGeneric() is false.
 bool SetWindowExtents(QWindow *window, const QMargins &extents);
 bool UnsetWindowExtents(QWindow *window);
 bool ShowWindowMenu(QWindow *window);
+
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();
+[[nodiscard]] rpl::producer<> TitleControlsLayoutChanged();
+void NotifyTitleControlsLayoutChanged();
 
 } // namespace Platform
 } // namespace Ui
