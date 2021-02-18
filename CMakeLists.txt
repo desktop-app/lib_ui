@@ -101,6 +101,7 @@ PRIVATE
     ui/platform/ui_platform_window_title.h
     ui/platform/ui_platform_window.cpp
     ui/platform/ui_platform_window.h
+    ui/platform/ui_platform_utility.cpp
     ui/platform/ui_platform_utility.h
     ui/style/style_core.cpp
     ui/style/style_core.h

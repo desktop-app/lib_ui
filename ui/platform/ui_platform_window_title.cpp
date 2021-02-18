@@ -117,6 +117,11 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 		updateControlsPosition();
 	}, _close->lifetime());
 
+	TitleControlsLayoutChanged(
+	) | rpl::start_with_next([=] {
+		updateControlsPosition();
+	}, _close->lifetime());
+
 	const auto winIdEventFilter = std::make_shared<QObject*>(nullptr);
 	*winIdEventFilter = base::install_event_filter(
 		window(),
