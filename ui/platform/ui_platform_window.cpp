@@ -11,7 +11,6 @@
 #include "ui/widgets/window.h"
 #include "ui/widgets/shadow.h"
 #include "ui/painter.h"
-#include "ui/style/style_core_scale.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
 
@@ -369,7 +368,7 @@ void DefaultWindowHelper::updateWindowExtents() {
 	if (hasShadow()) {
 		Platform::SetWindowExtents(
 			window()->windowHandle(),
-			resizeArea() * style::DevicePixelRatio());
+			resizeArea());
 
 		_extentsSet = true;
 	} else if (_extentsSet) {
