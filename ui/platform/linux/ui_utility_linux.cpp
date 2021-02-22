@@ -288,6 +288,17 @@ TitleControls::Layout TitleControlsLayout() {
 		return *gtkResult;
 	}
 
+#ifdef __HAIKU__
+	return TitleControls::Layout{
+		.left = {
+			TitleControls::Control::Close,
+		},
+		.right = {
+			TitleControls::Control::Minimize,
+			TitleControls::Control::Maximize,
+		}
+	};
+#else // __HAIKU__
 	return TitleControls::Layout{
 		.right = {
 			TitleControls::Control::Minimize,
@@ -295,6 +306,7 @@ TitleControls::Layout TitleControlsLayout() {
 			TitleControls::Control::Close,
 		}
 	};
+#endif // !__HAIKU__
 }
 
 } // namespace Platform
