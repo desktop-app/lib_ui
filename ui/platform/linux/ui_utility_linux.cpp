@@ -8,12 +8,15 @@
 
 #include "ui/ui_log.h"
 #include "base/platform/base_platform_info.h"
-#include "base/platform/linux/base_linux_xcb_utilities.h"
 #include "base/platform/linux/base_linux_gtk_integration.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 #include "base/const_string.h"
 #include "base/qt_adapters.h"
 #include "base/flat_set.h"
+
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+#include "base/platform/linux/base_linux_xcb_utilities.h"
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #include <QtCore/QPoint>
 #include <QtGui/QScreen>
@@ -33,6 +36,7 @@ constexpr auto kXDGDesktopPortalService = "org.freedesktop.portal.Desktop"_cs;
 constexpr auto kXDGDesktopPortalObjectPath = "/org/freedesktop/portal/desktop"_cs;
 constexpr auto kSettingsPortalInterface = "org.freedesktop.portal.Settings"_cs;
 
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 bool SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
 	if (!connection) {
@@ -133,6 +137,7 @@ bool ShowXCBWindowMenu(QWindow *window) {
 
 	return true;
 }
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 TitleControls::Control GtkKeywordToTitleControl(const QString &keyword) {
 	if (keyword == qstr("minimize")) {
@@ -186,11 +191,13 @@ bool WindowExtentsSupported() {
 	}
 #endif // DESKTOP_APP_QT_PATCHED
 
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
 	if (!::Platform::IsWayland()
 		&& XCB::IsSupportedByWM(kXCBFrameExtentsAtomName.utf16())) {
 		return true;
 	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 	return false;
 }
@@ -204,7 +211,11 @@ bool SetWindowExtents(QWindow *window, const QMargins &extents) {
 		return false;
 #endif // !DESKTOP_APP_QT_PATCHED
 	} else {
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return SetXCBFrameExtents(window, extents);
+#else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+		return false;
+#endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
 }
 
@@ -217,7 +228,11 @@ bool UnsetWindowExtents(QWindow *window) {
 		return false;
 #endif // !DESKTOP_APP_QT_PATCHED
 	} else {
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return UnsetXCBFrameExtents(window);
+#else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+		return false;
+#endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
 }
 
@@ -225,7 +240,11 @@ bool ShowWindowMenu(QWindow *window) {
 	if (const auto integration = WaylandIntegration::Instance()) {
 		return integration->showWindowMenu(window);
 	} else {
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return ShowXCBWindowMenu(window);
+#else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+		return false;
+#endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
 }
 
