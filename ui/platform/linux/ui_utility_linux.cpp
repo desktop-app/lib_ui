@@ -161,23 +161,27 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 	if (::Platform::IsWayland()) {
 		return true;
 	}
-	if (const auto native = QGuiApplication::platformNativeInterface()) {
-		if (const auto desktop = QApplication::desktop()) {
-			if (const auto screen = base::QScreenNearestTo(globalPosition)) {
-				if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
-					return true;
+
+	if (::Platform::IsX11()) {
+		if (const auto native = QGuiApplication::platformNativeInterface()) {
+			if (const auto desktop = QApplication::desktop()) {
+				if (const auto screen = base::QScreenNearestTo(globalPosition)) {
+					if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
+						return true;
+					}
+					const auto index = QGuiApplication::screens().indexOf(screen);
+					static auto WarnedAbout = base::flat_set<int>();
+					if (!WarnedAbout.contains(index)) {
+						WarnedAbout.emplace(index);
+						UI_LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
+					}
+				} else {
+					UI_LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
 				}
-				const auto index = QGuiApplication::screens().indexOf(screen);
-				static auto WarnedAbout = base::flat_set<int>();
-				if (!WarnedAbout.contains(index)) {
-					WarnedAbout.emplace(index);
-					UI_LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
-				}
-			} else {
-				UI_LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
 			}
 		}
 	}
+
 	return false;
 }
 
@@ -193,7 +197,7 @@ bool WindowExtentsSupported() {
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
-	if (!::Platform::IsWayland()
+	if (::Platform::IsX11()
 		&& XCB::IsSupportedByWM(kXCBFrameExtentsAtomName.utf16())) {
 		return true;
 	}
@@ -210,13 +214,15 @@ bool SetWindowExtents(QWindow *window, const QMargins &extents) {
 #else // DESKTOP_APP_QT_PATCHED
 		return false;
 #endif // !DESKTOP_APP_QT_PATCHED
-	} else {
+	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return SetXCBFrameExtents(window, extents);
 #else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return false;
 #endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
+
+	return false;
 }
 
 bool UnsetWindowExtents(QWindow *window) {
@@ -227,13 +233,15 @@ bool UnsetWindowExtents(QWindow *window) {
 #else // DESKTOP_APP_QT_PATCHED
 		return false;
 #endif // !DESKTOP_APP_QT_PATCHED
-	} else {
+	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return UnsetXCBFrameExtents(window);
 #else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return false;
 #endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
+
+	return false;
 }
 
 bool ShowWindowMenu(QWindow *window) {
