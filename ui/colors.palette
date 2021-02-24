@@ -640,3 +640,5 @@ sideBarBadgeBgMuted: #8393a3; // filters side bar unimportant badge background
 sideBarBadgeFg: #ffffff; // filters side bar badge text
 
 songCoverOverlayFg: #00000066; // song cover overlay
+
+photoEditorItemBaseHandleFg: #3ccaef; // photo editor handle circle
