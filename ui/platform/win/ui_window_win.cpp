@@ -206,6 +206,7 @@ void WindowHelper::init() {
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
 		_shadow.setColor(st::windowShadowFg->c);
+		Ui::ForceFullRepaint(window());
 	}, window()->lifetime());
 
 	rpl::combine(
