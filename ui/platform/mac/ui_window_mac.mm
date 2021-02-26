@@ -385,6 +385,11 @@ void WindowHelper::close() {
 }
 
 void WindowHelper::init() {
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		Ui::ForceFullRepaint(window());
+	}, window()->lifetime());
+
 	rpl::combine(
 		window()->sizeValue(),
 		_title->heightValue(),
