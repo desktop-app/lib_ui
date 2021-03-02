@@ -247,7 +247,7 @@ bool UnsetWindowExtents(QWindow *window) {
 bool ShowWindowMenu(QWindow *window) {
 	if (const auto integration = WaylandIntegration::Instance()) {
 		return integration->showWindowMenu(window);
-	} else if (Platform::IsX11()) {
+	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return ShowXCBWindowMenu(window);
 #else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
