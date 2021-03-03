@@ -39,7 +39,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 
-private slots:
+private Q_SLOTS:
 	void onHidden() {
 		hideFinish();
 	}

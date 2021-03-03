@@ -56,7 +56,7 @@ public:
 
 	void paintEvent(QPaintEvent *e);
 
-public slots:
+public Q_SLOTS:
 	void changeVisibility(bool shown);
 
 private:
@@ -75,12 +75,12 @@ public:
 
 	void hideTimeout(crl::time dt);
 
-private slots:
+private Q_SLOTS:
 	void onValueChanged();
 	void onRangeChanged();
 	void onHideTimer();
 
-signals:
+Q_SIGNALS:
 	void topShadowVisibility(bool);
 	void bottomShadowVisibility(bool);
 
@@ -180,7 +180,7 @@ protected:
 	void enterEventHook(QEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 
-public slots:
+public Q_SLOTS:
 	void scrollToY(int toTop, int toBottom = -1);
 	void disableScroll(bool dis);
 	void onScrolled();
@@ -189,7 +189,7 @@ public slots:
 	void onTouchTimer();
 	void onTouchScrollTimer();
 
-signals:
+Q_SIGNALS:
 	void scrolled();
 	void innerResized();
 	void scrollStarted();

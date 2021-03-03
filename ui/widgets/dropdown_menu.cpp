@@ -95,7 +95,7 @@ void DropdownMenu::handleTriggered(const Menu::CallbackData &data) {
 	if (!popupSubmenuFromAction(data)) {
 		hideMenu();
 		_triggering = true;
-		emit data.action->trigger();
+		data.action->trigger();
 		_triggering = false;
 		if (_deleteLater) {
 			_deleteLater = false;

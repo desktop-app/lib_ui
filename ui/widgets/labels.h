@@ -166,7 +166,7 @@ protected:
 
 	int resizeGetHeight(int newWidth) override;
 
-private slots:
+private Q_SLOTS:
 	void onCopySelectedText();
 	void onCopyContextText();
 

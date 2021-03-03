@@ -351,7 +351,7 @@ bool WindowHelper::handleNativeEvent(
 				} else if (wParam == SIZE_MINIMIZED) {
 					state = Qt::WindowMinimized;
 				}
-				emit window()->windowHandle()->windowStateChanged(state);
+				window()->windowHandle()->windowStateChanged(state);
 			}
 			updateMargins();
 			const auto changes = (wParam == SIZE_MINIMIZED
