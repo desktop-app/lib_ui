@@ -1081,7 +1081,7 @@ void FlatInput::focusInEvent(QFocusEvent *e) {
 		update();
 	}
 	QLineEdit::focusInEvent(e);
-	emit focused();
+	focused();
 }
 
 void FlatInput::focusOutEvent(QFocusEvent *e) {
@@ -1095,7 +1095,7 @@ void FlatInput::focusOutEvent(QFocusEvent *e) {
 		update();
 	}
 	QLineEdit::focusOutEvent(e);
-	emit blurred();
+	blurred();
 }
 
 void FlatInput::resizeEvent(QResizeEvent *e) {
@@ -1183,13 +1183,13 @@ void FlatInput::keyPressEvent(QKeyEvent *e) {
 	if (wasText == newText) { // call correct manually
 		correctValue(wasText, newText);
 		_oldtext = newText;
-		if (wasText != _oldtext) emit changed();
+		if (wasText != _oldtext) changed();
 		updatePlaceholder();
 	}
 	if (e->key() == Qt::Key_Escape) {
-		emit cancelled();
+		cancelled();
 	} else if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) {
-		emit submitted(e->modifiers());
+		submitted(e->modifiers());
 #ifdef Q_OS_MAC
 	} else if (e->key() == Qt::Key_E && e->modifiers().testFlag(Qt::ControlModifier)) {
 		auto selected = selectedText();
@@ -1205,7 +1205,7 @@ void FlatInput::onTextEdited() {
 
 	correctValue(wasText, newText);
 	_oldtext = newText;
-	if (wasText != _oldtext) emit changed();
+	if (wasText != _oldtext) changed();
 	updatePlaceholder();
 
 	Integration::Instance().textActionsUpdated();
@@ -1585,7 +1585,7 @@ bool InputField::heightAutoupdated() {
 
 void InputField::checkContentHeight() {
 	if (heightAutoupdated()) {
-		emit resized();
+		resized();
 	}
 }
 
@@ -1771,13 +1771,13 @@ void InputField::focusInEventInner(QFocusEvent *e) {
 		: (width() / 2);
 	setFocused(true);
 	_inner->QTextEdit::focusInEvent(e);
-	emit focused();
+	focused();
 }
 
 void InputField::focusOutEventInner(QFocusEvent *e) {
 	setFocused(false);
 	_inner->QTextEdit::focusOutEvent(e);
-	emit blurred();
+	blurred();
 }
 
 void InputField::setFocused(bool focused) {
@@ -2306,7 +2306,7 @@ void InputField::handleContentsChanged() {
 	if (tagsChanged || (_lastTextWithTags.text != currentText)) {
 		_lastTextWithTags.text = currentText;
 		const auto weak = MakeWeak(this);
-		emit changed();
+		changed();
 		if (!weak) {
 			return;
 		}
@@ -2661,15 +2661,15 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		&& revertFormatReplace()) {
 		e->accept();
 	} else if (enter && enterSubmit) {
-		emit submitted(e->modifiers());
+		submitted(e->modifiers());
 	} else if (e->key() == Qt::Key_Escape) {
 		e->ignore();
-		emit cancelled();
+		cancelled();
 	} else if (e->key() == Qt::Key_Tab || e->key() == Qt::Key_Backtab) {
 		if (alt || ctrl) {
 			e->ignore();
 		} else if (_customTab) {
-			emit tabbed();
+			tabbed();
 		} else if (!focusNextPrevChild(e->key() == Qt::Key_Tab && !shift)) {
 			e->ignore();
 		}
@@ -3828,13 +3828,13 @@ void MaskedInputField::focusInEvent(QFocusEvent *e) {
 	_borderAnimationStart = (e->reason() == Qt::MouseFocusReason) ? mapFromGlobal(QCursor::pos()).x() : (width() / 2);
 	setFocused(true);
 	QLineEdit::focusInEvent(e);
-	emit focused();
+	focused();
 }
 
 void MaskedInputField::focusOutEvent(QFocusEvent *e) {
 	setFocused(false);
 	QLineEdit::focusOutEvent(e);
-	emit blurred();
+	blurred();
 }
 
 void MaskedInputField::setFocused(bool focused) {
@@ -3960,14 +3960,14 @@ void MaskedInputField::keyPressEvent(QKeyEvent *e) {
 		correctValue(wasText, wasCursor, newText, newCursor);
 		_oldtext = newText;
 		_oldcursor = newCursor;
-		if (wasText != _oldtext) emit changed();
+		if (wasText != _oldtext) changed();
 		startPlaceholderAnimation();
 	}
 	if (e->key() == Qt::Key_Escape) {
 		e->ignore();
-		emit cancelled();
+		cancelled();
 	} else if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) {
-		emit submitted(e->modifiers());
+		submitted(e->modifiers());
 #ifdef Q_OS_MAC
 	} else if (e->key() == Qt::Key_E && e->modifiers().testFlag(Qt::ControlModifier)) {
 		auto selected = selectedText();
@@ -3985,7 +3985,7 @@ void MaskedInputField::onTextEdited() {
 	correctValue(wasText, wasCursor, newText, newCursor);
 	_oldtext = newText;
 	_oldcursor = newCursor;
-	if (wasText != _oldtext) emit changed();
+	if (wasText != _oldtext) changed();
 	startPlaceholderAnimation();
 
 	Integration::Instance().textActionsUpdated();

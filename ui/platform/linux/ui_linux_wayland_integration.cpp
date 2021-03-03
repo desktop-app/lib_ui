@@ -11,6 +11,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QWindow>
 
+// private headers are using keywords :(
+#ifdef QT_NO_KEYWORDS
+#define signals Q_SIGNALS
+#define slots Q_SLOTS
+#endif // QT_NO_KEYWORDS
+
 #include <private/qwaylanddisplay_p.h>
 #include <private/qwaylandwindow_p.h>
 #include <private/qwaylandshellsurface_p.h>

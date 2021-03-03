@@ -81,7 +81,7 @@ protected:
 
 	int resizeGetHeight(int newWidth) override;
 
-private slots:
+private Q_SLOTS:
 	void onHideAnimated() {
 		hideAnimated();
 	}

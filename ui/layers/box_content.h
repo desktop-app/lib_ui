@@ -197,7 +197,7 @@ public:
 
 	void scrollByDraggingDelta(int delta);
 
-public slots:
+public Q_SLOTS:
 	void onScrollToY(int top, int bottom = -1);
 
 protected:
@@ -260,7 +260,7 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 	void keyPressEvent(QKeyEvent *e) override;
 
-private slots:
+private Q_SLOTS:
 	void onScroll();
 	void onInnerResize();
 
