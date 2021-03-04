@@ -267,7 +267,7 @@ TitleControls::Layout TitleControlsLayout() {
 
 		const auto decorationLayoutSetting = integration->getStringSetting(
 			"gtk-decoration-layout");
-		
+
 		if (!decorationLayoutSetting.has_value()) {
 			return std::nullopt;
 		}
