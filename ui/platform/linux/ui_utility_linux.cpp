@@ -32,10 +32,6 @@ namespace {
 
 constexpr auto kXCBFrameExtentsAtomName = "_GTK_FRAME_EXTENTS"_cs;
 
-constexpr auto kXDGDesktopPortalService = "org.freedesktop.portal.Desktop"_cs;
-constexpr auto kXDGDesktopPortalObjectPath = "/org/freedesktop/portal/desktop"_cs;
-constexpr auto kSettingsPortalInterface = "org.freedesktop.portal.Settings"_cs;
-
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 bool SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
