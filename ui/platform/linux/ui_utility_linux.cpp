@@ -259,6 +259,15 @@ bool ShowWindowMenu(QWindow *window) {
 }
 
 TitleControls::Layout TitleControlsLayout() {
+	if (static auto Once = false; !std::exchange(Once, true)) {
+		const auto integration = base::Platform::GtkIntegration::Instance();
+		if (integration && integration->checkVersion(3, 12, 0)) {
+			integration->connectToSetting(
+				"gtk-decoration-layout",
+				NotifyTitleControlsLayoutChanged);
+		}
+	}
+
 	const auto gtkResult = []() -> std::optional<TitleControls::Layout> {
 		const auto integration = base::Platform::GtkIntegration::Instance();
 		if (!integration || !integration->checkVersion(3, 12, 0)) {
