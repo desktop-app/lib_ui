@@ -170,6 +170,23 @@ void TitleControls::updateControlsPosition() {
 	const auto controlsLayout = TitleControlsLayout();
 	auto controlsLeft = controlsLayout.left;
 	auto controlsRight = controlsLayout.right;
+	const auto moveFromTo = [&](auto &from, auto &to) {
+		for (const auto control : from) {
+			if (!ranges::contains(to, control)) {
+				to.push_back(control);
+			}
+		}
+		from.clear();
+	};
+	if (ranges::contains(controlsLeft, Control::Close)) {
+		moveFromTo(controlsRight, controlsLeft);
+	} else if (ranges::contains(controlsRight, Control::Close)) {
+		moveFromTo(controlsLeft, controlsRight);
+	} else if (controlsLeft.size() > controlsRight.size()) {
+		moveFromTo(controlsRight, controlsLeft);
+	} else {
+		moveFromTo(controlsLeft, controlsRight);
+	}
 
 	const auto controlPresent = [&](Control control) {
 		return ranges::contains(controlsLeft, control)
