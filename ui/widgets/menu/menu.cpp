@@ -129,28 +129,29 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 	const auto raw = widget.get();
 	_actionWidgets.push_back(std::move(widget));
 
-	raw->minWidthValue(
+	rpl::combine(
+		raw->minWidthValue(),
+		raw->heightValue()
 	) | rpl::start_with_next([=] {
 		const auto newWidth = _forceWidth
 			? _forceWidth
 			: std::clamp(
 				_actionWidgets.empty()
-					? 0
-					: (*ranges::max_element(
-						_actionWidgets,
-						std::less<>(),
-						&ItemBase::minWidth))->minWidth(),
+				? 0
+				: (*ranges::max_element(
+					_actionWidgets,
+					std::less<>(),
+					&ItemBase::minWidth))->minWidth(),
 				_st.widthMin,
 				_st.widthMax);
-		resizeFromInner(newWidth, height());
+		const auto newHeight = ranges::accumulate(
+			_actionWidgets,
+			0,
+			ranges::plus(),
+			&ItemBase::height);
+		resizeFromInner(newWidth, newHeight);
 	}, raw->lifetime());
 
-	const auto newHeight = ranges::accumulate(
-		_actionWidgets,
-		0,
-		ranges::plus(),
-		&ItemBase::height);
-	resizeFromInner(width(), newHeight);
 	updateSelected(QCursor::pos());
 
 	return action;
