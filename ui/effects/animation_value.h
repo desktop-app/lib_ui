@@ -6,11 +6,11 @@
 //
 #pragma once
 
+#include "ui/style/style_core.h"
 #include "base/basic_types.h"
 
-#include "ui/style/style_core.h"
-
 #include <QtGui/QPainterPath>
+#include <crl/crl_time.h>
 
 namespace anim {
 

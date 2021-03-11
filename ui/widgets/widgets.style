@@ -1429,13 +1429,9 @@ callMuteMinorBlobMaxRadius: 74px;
 callMuteMajorBlobMinRadius: 67px;
 callMuteMajorBlobMaxRadius: 77px;
 
-callMuteButtonActiveIcon: icon {{ "calls/voice_unmuted_large", groupCallIconFg }};
 callMuteButtonActiveInner: IconButton {
 	width: 136px;
 	height: 165px;
-
-	iconPosition: point(-1px, 50px);
-	icon: callMuteButtonActiveIcon;
 }
 callMuteButtonLabel: FlatLabel(defaultFlatLabel) {
 	textFg: groupCallMembersFg;
@@ -1460,28 +1456,14 @@ callMuteButtonActive: CallButton {
 	label: callMuteButtonLabel;
 }
 callMuteButtonMuted: CallButton(callMuteButtonActive) {
-	button: IconButton(callMuteButtonActiveInner) {
-		icon: icon {{ "calls/voice_muted_large", groupCallIconFg }};
-	}
 	bg: groupCallMuted1;
 	label: callMuteButtonLabel;
 }
 callMuteButtonConnecting: CallButton(callMuteButtonMuted) {
-	button: IconButton(callMuteButtonActiveInner) {
-		icon: icon {{ "calls/voice_muted_large", groupCallIconFg }};
-	}
 	bg: callIconBg;
 	label: callMuteButtonLabel;
 }
 callMuteButtonLabelAdditional: 5px;
-
-callMuteCrossLine: CrossLineAnimation {
-	fg: groupCallIconFg;
-	icon: callMuteButtonActiveIcon;
-	startPosition: point(7px, 2px);
-	endPosition: point(34px, 30px);
-	stroke: 4px;
-}
 
 callConnectingRadial: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
 	color: lightButtonFg;
