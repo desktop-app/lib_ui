@@ -323,12 +323,12 @@ std::vector<QImage> LoadSprites(int id) {
 		? internal::SetDataPath(id) + '/'
 		: QStringLiteral(":/gui/emoji/");
 	const auto base = folder + "emoji_";
-	return ranges::view::ints(
+	return ranges::views::ints(
 		0,
 		SpritesCount
-	) | ranges::view::transform([&](int index) {
+	) | ranges::views::transform([&](int index) {
 		return base + QString::number(index + 1) + ".webp";
-	}) | ranges::view::transform([](const QString &path) {
+	}) | ranges::views::transform([](const QString &path) {
 		return QImage(path, "WEBP").convertToFormat(
 			QImage::Format_ARGB32_Premultiplied);
 	}) | ranges::to_vector;
@@ -343,15 +343,15 @@ std::vector<QImage> LoadAndValidateSprites(int id) {
 		return {};
 	}
 	auto result = LoadSprites(id);
-	const auto sizes = ranges::view::ints(
+	const auto sizes = ranges::views::ints(
 		0,
 		SpritesCount
-	) | ranges::view::transform([](int index) {
+	) | ranges::views::transform([](int index) {
 		return QSize(
 			kImagesPerRow * kUniversalSize,
 			RowsCount(index) * kUniversalSize);
 	});
-	const auto good = ranges::view::zip_with(
+	const auto good = ranges::views::zip_with(
 		[](const QImage &data, QSize size) { return data.size() == size; },
 		result,
 		sizes);
@@ -588,10 +588,10 @@ bool SetIsReady(int id) {
 		return true;
 	}
 	const auto folder = internal::SetDataPath(id) + '/';
-	auto names = ranges::view::ints(
+	auto names = ranges::views::ints(
 		0,
 		SpritesCount + 1
-	) | ranges::view::transform([](int index) {
+	) | ranges::views::transform([](int index) {
 		return index
 			? "emoji_" + QString::number(index) + ".webp"
 			: QString("config.json");
