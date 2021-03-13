@@ -147,7 +147,7 @@ float ArcsAnimation::width() const {
 	if (_arcs.empty()) {
 		return 0;
 	}
-	for (const auto &arc : ranges::view::reverse(_arcs)) {
+	for (const auto &arc : ranges::views::reverse(_arcs)) {
 		if ((arc.progress != 1.)) {
 			return arc.rect.x() + arc.rect.width();
 		}
@@ -159,7 +159,7 @@ float ArcsAnimation::finishedWidth() const {
 	if (_arcs.empty()) {
 		return 0;
 	}
-	for (const auto &arc : ranges::view::reverse(_arcs)) {
+	for (const auto &arc : ranges::views::reverse(_arcs)) {
 		if (arc.threshold <= _currentValue) {
 			return arc.rect.x() + arc.rect.width();
 		}

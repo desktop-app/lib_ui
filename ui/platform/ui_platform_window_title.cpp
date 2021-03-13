@@ -233,7 +233,7 @@ void TitleControls::updateControlsPositionBySide(
 		const std::vector<Control> &controls,
 		bool right) {
 	auto preparedControls = right
-		? (ranges::view::reverse(controls) | ranges::to_vector)
+		? (ranges::views::reverse(controls) | ranges::to_vector)
 		: controls;
 
 	RemoveDuplicates(preparedControls);
