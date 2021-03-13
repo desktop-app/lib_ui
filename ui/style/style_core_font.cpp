@@ -279,7 +279,7 @@ QString MonospaceFont() {
 }
 
 void destroyFonts() {
-	for (auto fontData : fontsMap) {
+	for (auto fontData : std::as_const(fontsMap)) {
 		delete fontData;
 	}
 	fontsMap.clear();
