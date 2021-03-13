@@ -49,7 +49,7 @@ bool ValidateFont(const QString &familyName, int flags = 0) {
 	checkFont.setUnderline(flags & style::internal::FontUnderline);
 	auto realFamily = QFontInfo(checkFont).family();
 	if (realFamily.trimmed().compare(familyName, Qt::CaseInsensitive)) {
-		UI_LOG(("Font Error: could not resolve '%1' font, got '%2'.").arg(familyName).arg(realFamily));
+		UI_LOG(("Font Error: could not resolve '%1' font, got '%2'.").arg(familyName, realFamily));
 		return false;
 	}
 
@@ -71,7 +71,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 
 	const auto found = [&] {
 		for (auto &family : QFontDatabase::applicationFontFamilies(regularId)) {
-			UI_LOG(("Font: from '%1' loaded '%2'").arg(filePath).arg(family));
+			UI_LOG(("Font: from '%1' loaded '%2'").arg(filePath, family));
 			if (!family.trimmed().compare(familyName, Qt::CaseInsensitive)) {
 				return true;
 			}
@@ -79,7 +79,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 		return false;
 	}();
 	if (!found) {
-		UI_LOG(("Font Error: could not locate '%1' font in '%2'.").arg(familyName).arg(filePath));
+		UI_LOG(("Font Error: could not locate '%1' font in '%2'.").arg(familyName, filePath));
 		return false;
 	}
 
