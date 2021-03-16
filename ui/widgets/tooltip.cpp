@@ -354,7 +354,6 @@ void ImportantTooltip::updateGeometry() {
 }
 
 void ImportantTooltip::resizeEvent(QResizeEvent *e) {
-	auto inner = countInner();
 	auto contentTop = _st.padding.top();
 	if (_useTransparency && (_side & RectPart::Bottom)) {
 		contentTop += _st.arrow;
