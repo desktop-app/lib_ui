@@ -19,7 +19,7 @@ uint32 colorKey(QColor c) {
 	return (((((uint32(c.red()) << 8) | uint32(c.green())) << 8) | uint32(c.blue())) << 8) | uint32(c.alpha());
 }
 
-QMap<const IconMask*, QImage> iconMasks;
+base::flat_map<const IconMask*, QImage> iconMasks;
 QMap<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
 OrderedSet<IconData*> iconData;
 
@@ -251,11 +251,11 @@ void MonoIcon::ensureLoaded() const {
 
 	_size = readGeneratedSize(_mask, Scale());
 	if (_size.isEmpty()) {
-		auto i = iconMasks.constFind(_mask);
+		auto i = iconMasks.find(_mask);
 		if (i == iconMasks.cend()) {
-			i = iconMasks.insert(_mask, createIconMask(_mask, Scale()));
+			i = iconMasks.emplace(_mask, createIconMask(_mask, Scale())).first;
 		}
-		_maskImage = i.value();
+		_maskImage = i->second;
 
 		createCachedPixmap();
 	}
