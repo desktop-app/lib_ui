@@ -122,27 +122,34 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 		updateControlsPosition();
 	}, _close->lifetime());
 
-	const auto winIdEventFilter = std::make_shared<QObject*>(nullptr);
-	*winIdEventFilter = base::install_event_filter(
-		window(),
-		[=](not_null<QEvent*> e) {
-			if (!*winIdEventFilter || e->type() != QEvent::WinIdChange) {
-				return base::EventFilterResult::Continue;
-			}
-
-			QObject::connect(
-				window()->windowHandle(),
-				&QWindow::windowStateChanged,
-				[=](Qt::WindowState state) {
-					handleWindowStateChanged(state);
-				});
-
-			base::take(*winIdEventFilter)->deleteLater();
-			return base::EventFilterResult::Continue;
-		});
+	subscribeToStateChanges();
 
 	_activeState = parent()->isActiveWindow();
 	updateButtonsState();
+}
+
+void TitleControls::subscribeToStateChanges() {
+	const auto subscribe = [=] {
+		QObject::connect(
+			window()->windowHandle(),
+			&QWindow::windowStateChanged,
+			[=](Qt::WindowState state) { handleWindowStateChanged(state); });
+	};
+	if (window()->windowHandle()) {
+		subscribe();
+	} else {
+		const auto winIdEventFilter = std::make_shared<QObject*>(nullptr);
+		*winIdEventFilter = base::install_event_filter(
+			window(),
+			[=](not_null<QEvent*> e) {
+				if (!*winIdEventFilter || e->type() != QEvent::WinIdChange) {
+					return base::EventFilterResult::Continue;
+				}
+				subscribe();
+				base::take(*winIdEventFilter)->deleteLater();
+				return base::EventFilterResult::Continue;
+			});
+	}
 }
 
 void TitleControls::setResizeEnabled(bool enabled) {
