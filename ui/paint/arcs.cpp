@@ -224,6 +224,7 @@ void ArcsAnimation::paint(Painter &p, std::optional<QColor> colorOverride) {
 			: InterpolatedRect(arc.rect, previousRect, progress);
 		p.drawArc(rect, _startAngle, _spanAngle);
 	}
+	p.setOpacity(1.);
 }
 
 void ArcsAnimation::setStrokeRatio(float ratio) {
