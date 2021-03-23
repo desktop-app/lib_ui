@@ -90,12 +90,16 @@ not_null<QWidget*> TitleControls::window() const {
 
 void TitleControls::init(Fn<void(bool maximized)> maximize) {
 	_minimize->setClickedCallback([=] {
+		const auto weak = MakeWeak(_minimize.data());
 		window()->setWindowState(
 			window()->windowState() | Qt::WindowMinimized);
-		_minimize->clearState();
+		if (weak) {
+			_minimize->clearState();
+		}
 	});
 	_minimize->setPointerCursor(false);
 	_maximizeRestore->setClickedCallback([=] {
+		const auto weak = MakeWeak(_maximizeRestore.data());
 		if (maximize) {
 			maximize(!_maximizedState);
 		} else {
@@ -103,12 +107,17 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 				? Qt::WindowNoState
 				: Qt::WindowMaximized);
 		}
-		_maximizeRestore->clearState();
+		if (weak) {
+			_maximizeRestore->clearState();
+		}
 	});
 	_maximizeRestore->setPointerCursor(false);
 	_close->setClickedCallback([=] {
+		const auto weak = MakeWeak(_close.data());
 		window()->close();
-		_close->clearState();
+		if (weak) {
+			_close->clearState();
+		}
 	});
 	_close->setPointerCursor(false);
 
