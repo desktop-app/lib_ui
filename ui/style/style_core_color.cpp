@@ -12,17 +12,27 @@ namespace style {
 namespace internal {
 
 Color::Proxy Color::operator[](const style::palette &paletteOverride) const {
-	auto index = main_palette::indexOfColor(*this);
-	return Proxy((index >= 0) ? paletteOverride.colorAtIndex(index) : (*this));
+	const auto index = main_palette::indexOfColor(*this);
+	return { (index >= 0) ? paletteOverride.colorAtIndex(index) : (*this) };
 }
 
-ColorData::ColorData(uchar r, uchar g, uchar b, uchar a) : c(int(r), int(g), int(b), int(a)), p(c), b(c) {
+ColorData::ColorData(uchar r, uchar g, uchar b, uchar a)
+: c(int(r), int(g), int(b), int(a))
+, p(c)
+, b(c) {
 }
 
 void ColorData::set(uchar r, uchar g, uchar b, uchar a) {
 	this->c = QColor(int(r), int(g), int(b), int(a));
 	this->p = QPen(c);
 	this->b = QBrush(c);
+}
+
+void ComplexColor::subscribeToPaletteChanges() {
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		_owned.update(_generator());
+	}, _lifetime);
 }
 
 } // namespace internal

@@ -10,6 +10,8 @@
 #include <QtGui/QPen>
 #include <QtGui/QBrush>
 
+#include <rpl/lifetime.h>
+
 namespace style {
 
 class palette;
@@ -17,13 +19,15 @@ class palette;
 namespace internal {
 
 class Color;
+class OwnedColor;
+
 class ColorData {
 public:
 	QColor c;
 	QPen p;
 	QBrush b;
 
-	QColor transparent() const {
+	[[nodiscard]] QColor transparent() const {
 		return QColor(c.red(), c.green(), c.blue(), 0);
 	}
 
@@ -35,6 +39,7 @@ private:
 	void set(uchar r, uchar g, uchar b, uchar a);
 
 	friend class Color;
+	friend class OwnedColor;
 	friend class style::palette;
 
 };
@@ -73,11 +78,77 @@ public:
 	Proxy operator[](const style::palette &paletteOverride) const;
 
 private:
+	friend class OwnedColor;
 	friend class style::palette;
+
 	Color(ColorData *data) : _data(data) {
 	}
 
 	ColorData *_data = nullptr;
+
+};
+
+class OwnedColor final {
+public:
+	explicit OwnedColor(const QColor &color)
+	: _data(color.red(), color.green(), color.blue(), color.alpha())
+	, _color(&_data) {
+	}
+
+	OwnedColor(const OwnedColor &other)
+	: _data(other._data)
+	, _color(&_data) {
+	}
+
+	OwnedColor &operator=(const OwnedColor &other) {
+		_data = other._data;
+		return *this;
+	}
+
+	void update(const QColor &color) {
+		_data.set(color.red(), color.green(), color.blue(), color.alpha());
+	}
+
+	[[nodiscard]] const Color &color() const {
+		return _color;
+	}
+
+private:
+	ColorData _data;
+	Color _color;
+
+};
+
+class ComplexColor final {
+public:
+	explicit ComplexColor(Fn<QColor()> generator)
+	: _owned(generator())
+	, _generator(std::move(generator)) {
+		subscribeToPaletteChanges();
+	}
+
+	ComplexColor(const ComplexColor &other)
+	: _owned(other._owned)
+	, _generator(other._generator) {
+		subscribeToPaletteChanges();
+	}
+
+	ComplexColor &operator=(const ComplexColor &other) {
+		_owned = other._owned;
+		_generator = other._generator;
+		return *this;
+	}
+
+	[[nodiscard]] const Color &color() const {
+		return _owned.color();
+	}
+
+private:
+	void subscribeToPaletteChanges();
+
+	OwnedColor _owned;
+	Fn<QColor()> _generator;
+	rpl::lifetime _lifetime;
 
 };
 

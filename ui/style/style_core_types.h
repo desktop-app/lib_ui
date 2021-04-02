@@ -28,6 +28,8 @@ using align = Qt::Alignment;
 using margins = QMargins;
 using font = internal::Font;
 using color = internal::Color;
+using owned_color = internal::OwnedColor;
+using complex_color = internal::ComplexColor;
 using icon = internal::Icon;
 
 static constexpr cursor cur_default = Qt::ArrowCursor;

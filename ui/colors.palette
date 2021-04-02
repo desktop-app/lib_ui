@@ -140,6 +140,8 @@ boxTitleCloseFgOver: cancelIconFgOver; // settings close icon and box search can
 //boxSearchCancelIconFg: cancelIconFg; // search cancel X button icon (like in contacts box) (not implemented yet)
 //boxSearchCancelIconFgOver: cancelIconFgOver; // search cancel X button icon with mouse over (not implemented yet)
 
+paymentsTipActive: #01ad0f; // tip button text in payments checkout form
+
 membersAboutLimitFg: windowSubTextFgOver; // text in channel members box about the limit (max 200 last members are shown)
 
 contactsBg: windowBg; // contacts (and some other) box row background
