@@ -184,6 +184,17 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 void IgnoreAllActivation(not_null<QWidget*> widget) {
 }
 
+void ClearTransientParent(not_null<QWidget*> widget) {
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	if (::Platform::IsX11()) {
+		xcb_delete_property(
+			base::Platform::XCB::GetConnectionFromQt(),
+			widget->windowHandle()->winId(),
+			XCB_ATOM_WM_TRANSIENT_FOR);
+	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+}
+
 bool WindowExtentsSupported() {
 #ifdef DESKTOP_APP_QT_PATCHED
 	if (::Platform::IsWayland()) {
