@@ -20,6 +20,9 @@ inline bool TranslucentWindowsSupported(QPoint globalPosition) {
 inline void UpdateOverlayed(not_null<QWidget*> widget) {
 }
 
+inline void ClearTransientParent(not_null<QWidget*> widget) {
+}
+
 inline constexpr bool UseMainQueueGeneric() {
 	return ::Platform::IsMacStoreBuild();
 }
