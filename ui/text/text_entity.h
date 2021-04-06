@@ -301,17 +301,22 @@ QStringList PrepareSearchWords(const QString &query, const QRegularExpression *S
 bool CutPart(TextWithEntities &sending, TextWithEntities &left, int limit);
 
 struct MentionNameFields {
-	MentionNameFields(int32 userId = 0, uint64 accessHash = 0) : userId(userId), accessHash(accessHash) {
+	MentionNameFields(uint64 userId = 0, uint64 accessHash = 0)
+	: userId(userId), accessHash(accessHash) {
 	}
-	int32 userId = 0;
+	uint64 userId = 0;
 	uint64 accessHash = 0;
 };
+
 inline MentionNameFields MentionNameDataToFields(const QString &data) {
 	auto components = data.split('.');
 	if (!components.isEmpty()) {
-		return { components.at(0).toInt(), (components.size() > 1) ? components.at(1).toULongLong() : 0 };
+		return {
+			components.at(0).toULongLong(),
+			(components.size() > 1) ? components.at(1).toULongLong() : 0
+		};
 	}
-	return MentionNameFields {};
+	return MentionNameFields{};
 }
 
 inline QString MentionNameDataFromFields(const MentionNameFields &fields) {
