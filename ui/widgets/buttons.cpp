@@ -296,6 +296,11 @@ void RoundButton::setWidthChangedCallback(Fn<void()> callback) {
 	_numbers->setWidthChangedCallback(std::move(callback));
 }
 
+void RoundButton::setBrushOverride(std::optional<QBrush> brush) {
+	_brushOverride = std::move(brush);
+	update();
+}
+
 void RoundButton::finishNumbersAnimation() {
 	if (_numbers) {
 		_numbers->finishAnimating();
@@ -367,8 +372,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 			const auto radius = rounded.height() / 2;
 			PainterHighQualityEnabler hq(p);
 			p.setPen(Qt::NoPen);
-			p.setBrush(rect.color());
+			p.setBrush(_brushOverride ? *_brushOverride : rect.color()->b);
 			p.drawRoundedRect(fill, radius, radius);
+		} else if (_brushOverride) {
+			p.setPen(Qt::NoPen);
+			p.setBrush(*_brushOverride);
+			p.drawRoundedRect(fill, st::buttonRadius, st::buttonRadius);
 		} else {
 			rect.paint(p, fill);
 		}
@@ -377,7 +386,7 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 
 	auto over = isOver();
 	auto down = isDown();
-	if (over || down) {
+	if (!_brushOverride && (over || down)) {
 		drawRect(_roundRectOver);
 	}
 
