@@ -79,10 +79,6 @@ const Emoji::One *Integration::defaultEmojiVariant(const Emoji::One *emoji) {
 	return emoji;
 }
 
-QWidget *Integration::modalWindowParent() {
-	return nullptr;
-}
-
 rpl::producer<> Integration::forcePopupMenuHideRequests() {
 	return rpl::never<rpl::empty_value>();
 }

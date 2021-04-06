@@ -56,8 +56,6 @@ public:
 	[[nodiscard]] virtual const Emoji::One *defaultEmojiVariant(
 		const Emoji::One *emoji);
 
-	[[nodiscard]] virtual QWidget *modalWindowParent();
-
 	[[nodiscard]] virtual rpl::producer<> forcePopupMenuHideRequests();
 
 	[[nodiscard]] virtual QString phraseContextCopyText();
