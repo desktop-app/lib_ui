@@ -16,7 +16,7 @@ namespace Ui {
 void GenericBox::prepare() {
 	_init(this);
 
-	auto wrap = object_ptr<Ui::OverrideMargins>(this, std::move(_content));
+	auto wrap = object_ptr<Ui::OverrideMargins>(this, std::move(_owned));
 	setDimensionsToContent(_width ? _width : st::boxWidth, wrap.data());
 	setInnerWidget(std::move(wrap));
 }
@@ -26,7 +26,7 @@ void GenericBox::addSkip(int height) {
 }
 
 not_null<Ui::VerticalLayout*> GenericBox::verticalLayout() {
-	return _content.data();
+	return _content;
 }
 
 } // namespace Ui

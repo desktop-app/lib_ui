@@ -120,7 +120,8 @@ private:
 	FnMut<void(not_null<GenericBox*>)> _init;
 	Fn<void()> _focus;
 	Fn<void()> _showFinished;
-	object_ptr<Ui::VerticalLayout> _content;
+	object_ptr<Ui::VerticalLayout> _owned;
+	not_null<Ui::VerticalLayout*> _content;
 	int _width = 0;
 
 };
@@ -166,7 +167,8 @@ inline GenericBox::GenericBox(
 	MakeIniter(
 		std::forward<InitMethod>(init),
 		std::forward<InitArgs>(args)...))
-, _content(this) {
+, _owned(this)
+, _content(_owned.data()) {
 }
 
 } // namespace Ui
