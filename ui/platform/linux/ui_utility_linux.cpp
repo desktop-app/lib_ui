@@ -33,6 +33,259 @@ namespace {
 constexpr auto kXCBFrameExtentsAtomName = "_GTK_FRAME_EXTENTS"_cs;
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+std::optional<bool> XCBWindowMapped(xcb_window_t window) {
+	const auto connection = base::Platform::XCB::GetConnectionFromQt();
+	if (!connection) {
+		return std::nullopt;
+	}
+
+	const auto cookie = xcb_get_window_attributes(connection, window);
+	const auto reply = xcb_get_window_attributes_reply(
+		connection,
+		cookie,
+		nullptr);
+
+	if (!reply) {
+		return std::nullopt;
+	}
+
+	const auto guard = gsl::finally([&] { free(reply); });
+	return reply->map_state == XCB_MAP_STATE_VIEWABLE;
+}
+
+std::optional<bool> XCBWindowHidden(xcb_window_t window) {
+	const auto connection = base::Platform::XCB::GetConnectionFromQt();
+	if (!connection) {
+		return std::nullopt;
+	}
+
+	const auto stateAtom = base::Platform::XCB::GetAtom(
+		connection,
+		"_NET_WM_STATE");
+
+	const auto stateHiddenAtom = base::Platform::XCB::GetAtom(
+		connection,
+		"_NET_WM_STATE_HIDDEN");
+
+	if (!stateAtom.has_value() || !stateHiddenAtom.has_value()) {
+		return std::nullopt;
+	}
+
+	const auto cookie = xcb_get_property(
+		connection,
+		false,
+		window,
+		*stateAtom,
+		XCB_ATOM_ATOM,
+		0,
+		1024);
+
+	const auto reply = xcb_get_property_reply(
+		connection,
+		cookie,
+		nullptr);
+
+	if (!reply) {
+		return std::nullopt;
+	}
+
+	const auto guard = gsl::finally([&] { free(reply); });
+	if (reply->type != XCB_ATOM_ATOM || reply->format != 32) {
+		return std::nullopt;
+	}
+
+	const auto atomsStart = reinterpret_cast<xcb_atom_t*>(
+		xcb_get_property_value(reply));
+
+	const auto states = std::vector<xcb_atom_t>(
+		atomsStart,
+		atomsStart + reply->length);
+
+	return ranges::contains(states, *stateHiddenAtom);
+}
+
+QRect XCBWindowGeometry(xcb_window_t window) {
+	const auto connection = base::Platform::XCB::GetConnectionFromQt();
+	if (!connection) {
+		return {};
+	}
+
+	const auto cookie = xcb_get_geometry(connection, window);
+	const auto reply = xcb_get_geometry_reply(
+		connection,
+		cookie,
+		nullptr);
+
+	if (!reply) {
+		return {};
+	}
+
+	const auto guard = gsl::finally([&] { free(reply); });
+	return QRect(reply->x, reply->y, reply->width, reply->height);
+}
+
+std::optional<uint> XCBCurrentWorkspace() {
+	const auto connection = base::Platform::XCB::GetConnectionFromQt();
+	if (!connection) {
+		return std::nullopt;
+	}
+
+	const auto root = base::Platform::XCB::GetRootWindowFromQt();
+	if (!root.has_value()) {
+		return std::nullopt;
+	}
+
+	const auto currentDesktopAtom = base::Platform::XCB::GetAtom(
+		connection,
+		"_NET_CURRENT_DESKTOP");
+
+	if (!currentDesktopAtom.has_value()) {
+		return std::nullopt;
+	}
+
+	const auto cookie = xcb_get_property(
+		connection,
+		false,
+		*root,
+		*currentDesktopAtom,
+		XCB_ATOM_CARDINAL,
+		0,
+		1024);
+
+	const auto reply = xcb_get_property_reply(
+		connection,
+		cookie,
+		nullptr);
+
+	if (!reply) {
+		return std::nullopt;
+	}
+
+	const auto guard = gsl::finally([&] { free(reply); });
+	return (reply->type == XCB_ATOM_CARDINAL)
+		? std::make_optional(
+			*reinterpret_cast<ulong*>(xcb_get_property_value(reply)))
+		: std::nullopt;
+}
+
+std::optional<uint> XCBWindowWorkspace(xcb_window_t window) {
+	const auto connection = base::Platform::XCB::GetConnectionFromQt();
+	if (!connection) {
+		return std::nullopt;
+	}
+
+	const auto desktopAtom = base::Platform::XCB::GetAtom(
+		connection,
+		"_NET_WM_DESKTOP");
+
+	if (!desktopAtom.has_value()) {
+		return std::nullopt;
+	}
+
+	const auto cookie = xcb_get_property(
+		connection,
+		false,
+		window,
+		*desktopAtom,
+		XCB_ATOM_CARDINAL,
+		0,
+		1024);
+
+	const auto reply = xcb_get_property_reply(
+		connection,
+		cookie,
+		nullptr);
+
+	if (!reply) {
+		return std::nullopt;
+	}
+
+	const auto guard = gsl::finally([&] { free(reply); });
+	return (reply->type == XCB_ATOM_CARDINAL)
+		? std::make_optional(
+			*reinterpret_cast<ulong*>(xcb_get_property_value(reply)))
+		: std::nullopt;
+}
+
+std::optional<bool> XCBIsOverlapped(
+		not_null<QWidget*> widget,
+		const QRect &rect) {
+	const auto window = widget->window()->winId();
+	Expects(window != XCB_WINDOW_NONE);
+
+	const auto connection = base::Platform::XCB::GetConnectionFromQt();
+	if (!connection) {
+		return std::nullopt;
+	}
+
+	const auto root = base::Platform::XCB::GetRootWindowFromQt();
+	if (!root.has_value()) {
+		return std::nullopt;
+	}
+
+	const auto windowWorkspace = XCBWindowWorkspace(
+		window);
+
+	const auto currentWorkspace = XCBCurrentWorkspace();
+
+	if (windowWorkspace.has_value()
+		&& currentWorkspace.has_value()
+		&& *windowWorkspace != *currentWorkspace
+		&& *windowWorkspace != 0xFFFFFFFF) {
+		return true;
+	}
+
+	const auto cookie = xcb_query_tree(connection, *root);
+	const auto reply = xcb_query_tree_reply(connection, cookie, nullptr);
+	if (!reply) {
+		return std::nullopt;
+	}
+
+	const auto guard = gsl::finally([&] { free(reply); });
+
+	const auto tree = xcb_query_tree_children(reply);
+	auto aboveTheWindow = false;
+
+	for (auto i = 0, l = xcb_query_tree_children_length(reply); i < l; ++i) {
+		if (window == tree[i]) {
+			aboveTheWindow = true;
+			continue;
+		}
+
+		if (!aboveTheWindow) {
+			continue;
+		}
+
+		const auto geometry = XCBWindowGeometry(tree[i]);
+		if (!rect.intersects(geometry)) {
+			continue;
+		}
+
+		const auto workspace = XCBWindowWorkspace(tree[i]);
+		if (workspace.has_value()
+			&& windowWorkspace.has_value()
+			&& *workspace != *windowWorkspace
+			&& *workspace != 0xFFFFFFFF) {
+			continue;
+		}
+
+		const auto mapped = XCBWindowMapped(tree[i]);
+		if (mapped.has_value() && !*mapped) {
+			continue;
+		}
+
+		const auto hidden = XCBWindowHidden(tree[i]);
+		if (hidden.has_value()
+			&& *hidden) {
+			continue;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 bool SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
 	if (!connection) {
@@ -189,10 +442,22 @@ void ClearTransientParent(not_null<QWidget*> widget) {
 	if (::Platform::IsX11()) {
 		xcb_delete_property(
 			base::Platform::XCB::GetConnectionFromQt(),
-			widget->windowHandle()->winId(),
+			widget->winId(),
 			XCB_ATOM_WM_TRANSIENT_FOR);
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+}
+
+std::optional<bool> IsOverlapped(
+		not_null<QWidget*> widget,
+		const QRect &rect) {
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	if (::Platform::IsX11()) {
+		return XCBIsOverlapped(widget, rect);
+	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+
+	return std::nullopt;
 }
 
 bool WindowExtentsSupported() {

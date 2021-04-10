@@ -6,11 +6,13 @@
 //
 #include "ui/ui_utility.h"
 
+#include "ui/platform/ui_platform_utility.h"
 #include "ui/style/style_core.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
+#include <private/qhighdpiscaling_p.h>
 
 #include <array>
 
@@ -177,6 +179,36 @@ void SendSynteticMouseEvent(QWidget *widget, QEvent::Type type, Qt::MouseButton 
 
 QPixmap PixmapFromImage(QImage &&image) {
 	return QPixmap::fromImage(std::move(image), Qt::ColorOnly);
+}
+
+bool IsContentVisible(
+		not_null<QWidget*> widget,
+		const QRect &rect) {
+	Expects(widget->window()->windowHandle());
+
+	const auto activeOrNotOverlapped = [&] {
+		if (const auto active = widget->isActiveWindow()) {
+			return active;
+		}
+
+		const auto mappedRect = QHighDpi::toNativePixels(
+			rect.isNull()
+				? QRect(
+					widget->mapToGlobal(QPoint()),
+					widget->mapToGlobal(
+						QPoint(widget->width(), widget->height())))
+				: QRect(
+					widget->mapToGlobal(rect.topLeft()),
+					widget->mapToGlobal(rect.bottomRight())),
+			widget->window()->windowHandle());
+
+		const auto overlapped = Platform::IsOverlapped(widget, mappedRect);
+		return overlapped.has_value() && !*overlapped;
+	}();
+
+	return activeOrNotOverlapped
+		&& widget->isVisible()
+		&& !widget->window()->isMinimized();
 }
 
 void DisableCustomScaling() {

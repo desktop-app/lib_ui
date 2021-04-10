@@ -11,6 +11,11 @@
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 
+#include <wrl/client.h>
+#include <Shobjidl.h>
+
+using namespace Microsoft::WRL;
+
 namespace Ui {
 namespace Platform {
 
@@ -43,6 +48,55 @@ void IgnoreAllActivation(not_null<QWidget*> widget) {
 		GWL_EXSTYLE,
 		style | WS_EX_NOACTIVATE | WS_EX_APPWINDOW);
 	ShowWindow(handle, SW_SHOW);
+}
+
+std::optional<bool> IsOverlapped(
+		not_null<QWidget*> widget,
+		const QRect &rect) {
+	const auto handle = reinterpret_cast<HWND>(widget->window()->winId());
+	Expects(handle != nullptr);
+
+	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
+	HRESULT hr = CoCreateInstance(
+		CLSID_VirtualDesktopManager,
+		nullptr,
+		CLSCTX_ALL,
+		IID_PPV_ARGS(&virtualDesktopManager));
+	
+	if (SUCCEEDED(hr)) {
+		BOOL isCurrent;
+		hr = virtualDesktopManager->IsWindowOnCurrentVirtualDesktop(
+			handle,
+			&isCurrent);
+		if (SUCCEEDED(hr) && !isCurrent) {
+			return true;
+		}
+	}
+
+	std::vector<HWND> visited;
+	const RECT nativeRect{
+		rect.left(),
+		rect.top(),
+		rect.right(),
+		rect.bottom(),
+	};
+
+	for (auto curHandle = handle;
+		curHandle != nullptr && !ranges::contains(visited, curHandle);
+		curHandle = GetWindow(curHandle, GW_HWNDPREV)) {
+		visited.push_back(curHandle);
+		if (curHandle == handle) {
+			continue;
+		}
+		RECT testRect, intersection;
+		if (IsWindowVisible(curHandle)
+			&& GetWindowRect(curHandle, &testRect)
+			&& IntersectRect(&intersection, &nativeRect, &testRect)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool ShowWindowMenu(QWindow *window) {
