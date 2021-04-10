@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/unique_qptr.h"
 #include "ui/rp_widget.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/text/text.h"
@@ -171,7 +172,6 @@ private Q_SLOTS:
 	void onCopyContextText();
 
 	void onTouchSelect();
-	void onContextMenuDestroy(QObject *obj);
 
 	void onExecuteDrag();
 
@@ -229,7 +229,7 @@ private:
 	QPoint _trippleClickPoint;
 	QTimer _trippleClickTimer;
 
-	PopupMenu *_contextMenu = nullptr;
+	base::unique_qptr<PopupMenu> _contextMenu;
 	QString _contextCopyText;
 
 	ClickHandlerFilter _clickHandlerFilter;

@@ -614,11 +614,6 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 }
 
 void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) {
-	if (_contextMenu) {
-		_contextMenu->deleteLater();
-		_contextMenu = nullptr;
-	}
-
 	if (e->reason() == QContextMenuEvent::Mouse) {
 		_lastMousePos = e->globalPos();
 	} else {
@@ -635,7 +630,7 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	const auto fullSelection = _selectable
 		&& _text.isFullSelection(_selection);
 
-	_contextMenu = new PopupMenu(this);
+	_contextMenu = base::make_unique_q<PopupMenu>(this);
 
 	if (fullSelection && !_contextCopyText.isEmpty()) {
 		_contextMenu->addAction(
@@ -662,11 +657,9 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 		}
 	}
 
-	if (_contextMenu->actions().empty()) {
-		delete _contextMenu;
+	if (_contextMenu->empty()) {
 		_contextMenu = nullptr;
 	} else {
-		connect(_contextMenu, SIGNAL(destroyed(QObject*)), this, SLOT(onContextMenuDestroy(QObject*)));
 		_contextMenu->popup(e->globalPos());
 		e->accept();
 	}
@@ -686,12 +679,6 @@ void FlatLabel::onCopyContextText() {
 void FlatLabel::onTouchSelect() {
 	_touchSelect = true;
 	dragActionStart(_touchPos, Qt::LeftButton);
-}
-
-void FlatLabel::onContextMenuDestroy(QObject *obj) {
-	if (obj == _contextMenu) {
-		_contextMenu = nullptr;
-	}
 }
 
 void FlatLabel::onExecuteDrag() {
