@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/labels.h"
 
+#include "base/invoke_queued.h"
 #include "ui/text/text_entity.h"
 #include "ui/effects/animation_value.h"
 #include "ui/widgets/popup_menu.h"
@@ -770,7 +771,7 @@ Text::StateResult FlatLabel::dragActionUpdate() {
 
 	if (_dragAction == PrepareDrag && (m - _dragStartPosition).manhattanLength() >= QApplication::startDragDistance()) {
 		_dragAction = Dragging;
-		QTimer::singleShot(1, this, SLOT(onExecuteDrag()));
+		InvokeQueued(this, [=] { onExecuteDrag(); });
 	}
 
 	return state;
