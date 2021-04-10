@@ -175,6 +175,9 @@ void Manager::schedule() {
 	_scheduled = true;
 	PostponeCall(delayedCallGuard(), [=] {
 		_scheduled = false;
+		if (_active.empty()) {
+			return;
+		}
 		if (_forceImmediateUpdate) {
 			_forceImmediateUpdate = false;
 			updateQueued();
