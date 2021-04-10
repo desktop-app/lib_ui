@@ -231,7 +231,7 @@ FlatLabel::FlatLabel(
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : QFIXED_MAX)
 , _st(st)
-, _touchSelectTimer([=] { onTouchSelect(); }) {
+, _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
 	std::move(
 		text
@@ -518,7 +518,7 @@ void FlatLabel::keyPressEvent(QKeyEvent *e) {
 	e->ignore();
 	if (e->key() == Qt::Key_Copy || (e->key() == Qt::Key_C && e->modifiers().testFlag(Qt::ControlModifier))) {
 		if (!_selection.empty()) {
-			onCopySelectedText();
+			copySelectedText();
 			e->accept();
 		}
 #ifdef Q_OS_MAC
@@ -631,15 +631,15 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	if (fullSelection && !_contextCopyText.isEmpty()) {
 		_contextMenu->addAction(
 			_contextCopyText,
-			[=] { onCopyContextText(); });
+			[=] { copyContextText(); });
 	} else if (uponSelection && !fullSelection) {
 		_contextMenu->addAction(
 			Integration::Instance().phraseContextCopySelected(),
-			[=] { onCopySelectedText(); });
+			[=] { copySelectedText(); });
 	} else if (_selectable && !hasSelection && !_contextCopyText.isEmpty()) {
 		_contextMenu->addAction(
 			_contextCopyText,
-			[=] { onCopyContextText(); });
+			[=] { copyContextText(); });
 	}
 
 	if (const auto link = ClickHandler::getActive()) {
@@ -661,23 +661,23 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	}
 }
 
-void FlatLabel::onCopySelectedText() {
+void FlatLabel::copySelectedText() {
 	const auto selection = _selection.empty() ? (_contextMenu ? _savedSelection : _selection) : _selection;
 	if (!selection.empty()) {
 		TextUtilities::SetClipboardText(_text.toTextForMimeData(selection));
 	}
 }
 
-void FlatLabel::onCopyContextText() {
+void FlatLabel::copyContextText() {
 	TextUtilities::SetClipboardText(_text.toTextForMimeData());
 }
 
-void FlatLabel::onTouchSelect() {
+void FlatLabel::touchSelect() {
 	_touchSelect = true;
 	dragActionStart(_touchPos, Qt::LeftButton);
 }
 
-void FlatLabel::onExecuteDrag() {
+void FlatLabel::executeDrag() {
 	if (_dragAction != Dragging) return;
 
 	auto state = getTextState(_dragStartPosition);
@@ -754,7 +754,7 @@ Text::StateResult FlatLabel::dragActionUpdate() {
 
 	if (_dragAction == PrepareDrag && (m - _dragStartPosition).manhattanLength() >= QApplication::startDragDistance()) {
 		_dragAction = Dragging;
-		InvokeQueued(this, [=] { onExecuteDrag(); });
+		InvokeQueued(this, [=] { executeDrag(); });
 	}
 
 	return state;

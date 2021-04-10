@@ -94,7 +94,6 @@ private:
 };
 
 class FlatLabel : public RpWidget, public ClickHandlerHost {
-	Q_OBJECT
 
 public:
 	FlatLabel(QWidget *parent, const style::FlatLabel &st = st::defaultFlatLabel);
@@ -166,13 +165,12 @@ protected:
 
 	int resizeGetHeight(int newWidth) override;
 
-private Q_SLOTS:
-	void onCopySelectedText();
-	void onCopyContextText();
+	void copySelectedText();
+	void copyContextText();
 
-	void onTouchSelect();
+	void touchSelect();
 
-	void onExecuteDrag();
+	void executeDrag();
 
 private:
 	void init();
