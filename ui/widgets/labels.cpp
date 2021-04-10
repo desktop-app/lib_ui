@@ -230,7 +230,8 @@ FlatLabel::FlatLabel(
 	const style::FlatLabel &st)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : QFIXED_MAX)
-, _st(st) {
+, _st(st)
+, _touchSelectTimer([=] { onTouchSelect(); }) {
 	textUpdated();
 	std::move(
 		text
@@ -242,11 +243,6 @@ FlatLabel::FlatLabel(
 
 void FlatLabel::init() {
 	_contextCopyText = Integration::Instance().phraseContextCopyText();
-
-	_trippleClickTimer.setSingleShot(true);
-
-	_touchSelectTimer.setSingleShot(true);
-	connect(&_touchSelectTimer, SIGNAL(timeout()), this, SLOT(onTouchSelect()));
 }
 
 void FlatLabel::textUpdated() {
@@ -406,7 +402,7 @@ Text::StateResult FlatLabel::dragActionStart(const QPoint &p, Qt::MouseButton bu
 			_dragAction = Selecting;
 			_selectionType = TextSelectType::Paragraphs;
 			updateHover(state);
-			_trippleClickTimer.start(QApplication::doubleClickInterval());
+			_trippleClickTimer.callOnce(QApplication::doubleClickInterval());
 			update();
 		}
 	}
@@ -486,7 +482,7 @@ void FlatLabel::mouseDoubleClickEvent(QMouseEvent *e) {
 			mouseMoveEvent(e);
 
 			_trippleClickPoint = e->globalPos();
-			_trippleClickTimer.start(QApplication::doubleClickInterval());
+			_trippleClickTimer.callOnce(QApplication::doubleClickInterval());
 		}
 	}
 }
@@ -559,7 +555,7 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 	if (e->type() == QEvent::TouchCancel) { // cancel
 		if (!_touchInProgress) return;
 		_touchInProgress = false;
-		_touchSelectTimer.stop();
+		_touchSelectTimer.cancel();
 		_touchSelect = false;
 		_dragAction = NoDrag;
 		return;
@@ -580,7 +576,7 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 		if (e->touchPoints().isEmpty()) return;
 
 		_touchInProgress = true;
-		_touchSelectTimer.start(QApplication::startDragTime());
+		_touchSelectTimer.callOnce(QApplication::startDragTime());
 		_touchSelect = false;
 		_touchStart = _touchPrevPos = _touchPos;
 	} break;
@@ -606,7 +602,7 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 			dragActionFinish(_touchPos, Qt::LeftButton);
 		}
 		if (weak) {
-			_touchSelectTimer.stop();
+			_touchSelectTimer.cancel();
 			_touchSelect = false;
 		}
 	} break;

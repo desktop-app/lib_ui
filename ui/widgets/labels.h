@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/timer.h"
 #include "base/unique_qptr.h"
 #include "ui/rp_widget.h"
 #include "ui/wrap/padding_wrap.h"
@@ -13,8 +14,6 @@
 #include "ui/click_handler.h"
 #include "ui/widgets/box_content_divider.h"
 #include "styles/style_widgets.h"
-
-#include <QtCore/QTimer>
 
 class QTouchEvent;
 
@@ -227,7 +226,7 @@ private:
 	QPoint _lastMousePos;
 
 	QPoint _trippleClickPoint;
-	QTimer _trippleClickTimer;
+	base::Timer _trippleClickTimer;
 
 	base::unique_qptr<PopupMenu> _contextMenu;
 	QString _contextCopyText;
@@ -238,7 +237,7 @@ private:
 	bool _touchSelect = false;
 	bool _touchInProgress = false;
 	QPoint _touchStart, _touchPrevPos, _touchPos;
-	QTimer _touchSelectTimer;
+	base::Timer _touchSelectTimer;
 
 };
 
