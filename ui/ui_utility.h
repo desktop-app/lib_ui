@@ -187,6 +187,10 @@ QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
 
 [[nodiscard]] QPixmap PixmapFromImage(QImage &&image);
 
+[[nodiscard]] bool IsContentVisible(
+    not_null<QWidget*> widget,
+    const QRect &rect = QRect());
+
 void DisableCustomScaling();
 
 } // namespace Ui
