@@ -6,9 +6,9 @@
 //
 #include "ui/platform/linux/ui_utility_linux.h"
 
-#include "ui/ui_log.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/linux/base_linux_gtk_integration.h"
+#include "base/debug_log.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 #include "base/const_string.h"
 #include "base/qt_adapters.h"
@@ -422,10 +422,10 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 					static auto WarnedAbout = base::flat_set<int>();
 					if (!WarnedAbout.contains(index)) {
 						WarnedAbout.emplace(index);
-						UI_LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
+						LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
 					}
 				} else {
-					UI_LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
+					LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
 				}
 			}
 		}

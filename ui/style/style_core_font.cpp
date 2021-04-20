@@ -6,9 +6,9 @@
 //
 #include "ui/style/style_core_font.h"
 
-#include "ui/style/style_core_custom_font.h"
-#include "ui/ui_log.h"
 #include "base/algorithm.h"
+#include "base/debug_log.h"
+#include "ui/style/style_core_custom_font.h"
 #include "ui/integration.h"
 
 #include <QtCore/QMap>
@@ -49,13 +49,13 @@ bool ValidateFont(const QString &familyName, int flags = 0) {
 	checkFont.setUnderline(flags & style::internal::FontUnderline);
 	auto realFamily = QFontInfo(checkFont).family();
 	if (realFamily.trimmed().compare(familyName, Qt::CaseInsensitive)) {
-		UI_LOG(("Font Error: could not resolve '%1' font, got '%2'.").arg(familyName, realFamily));
+		LOG(("Font Error: could not resolve '%1' font, got '%2'.").arg(familyName, realFamily));
 		return false;
 	}
 
 	auto metrics = QFontMetrics(checkFont);
 	if (!metrics.height()) {
-		UI_LOG(("Font Error: got a zero height in '%1'.").arg(familyName));
+		LOG(("Font Error: got a zero height in '%1'.").arg(familyName));
 		return false;
 	}
 
@@ -65,13 +65,13 @@ bool ValidateFont(const QString &familyName, int flags = 0) {
 bool LoadCustomFont(const QString &filePath, const QString &familyName, int flags = 0) {
 	auto regularId = QFontDatabase::addApplicationFont(filePath);
 	if (regularId < 0) {
-		UI_LOG(("Font Error: could not add '%1'.").arg(filePath));
+		LOG(("Font Error: could not add '%1'.").arg(filePath));
 		return false;
 	}
 
 	const auto found = [&] {
 		for (auto &family : QFontDatabase::applicationFontFamilies(regularId)) {
-			UI_LOG(("Font: from '%1' loaded '%2'").arg(filePath, family));
+			LOG(("Font: from '%1' loaded '%2'").arg(filePath, family));
 			if (!family.trimmed().compare(familyName, Qt::CaseInsensitive)) {
 				return true;
 			}
@@ -79,7 +79,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 		return false;
 	}();
 	if (!found) {
-		UI_LOG(("Font Error: could not locate '%1' font in '%2'.").arg(familyName, filePath));
+		LOG(("Font Error: could not locate '%1' font in '%2'.").arg(familyName, filePath));
 		return false;
 	}
 
@@ -200,7 +200,7 @@ void StartFonts() {
 		if (!areGood[i]) {
 			if (ValidateFont(fallback, flags)) {
 				Overrides[i] = fallback;
-				UI_LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback).arg(name));
+				LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback).arg(name));
 			}
 		}
 		// Disable default fallbacks to Segoe UI, see:

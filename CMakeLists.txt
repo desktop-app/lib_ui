@@ -211,8 +211,6 @@ PRIVATE
     ui/round_rect.h
     ui/rp_widget.cpp
     ui/rp_widget.h
-    ui/ui_log.cpp
-    ui/ui_log.h
     ui/ui_utility.cpp
     ui/ui_utility.h
 

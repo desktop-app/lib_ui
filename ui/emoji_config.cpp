@@ -10,10 +10,10 @@
 #include "base/bytes.h"
 #include "base/openssl_help.h"
 #include "base/parse_helper.h"
+#include "base/debug_log.h"
 #include "ui/style/style_core.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
-#include "ui/ui_log.h"
 #include "styles/style_basic.h"
 
 #include <QtCore/QJsonDocument>
@@ -218,7 +218,7 @@ void SaveToFile(int id, const QImage &image, int size, int index) {
 	if (!f.open(QIODevice::WriteOnly)) {
 		if (!QDir::current().mkpath(internal::CacheFileFolder())
 			|| !f.open(QIODevice::WriteOnly)) {
-			UI_LOG(("App Error: Could not open emoji cache '%1' for size %2_%3"
+			LOG(("App Error: Could not open emoji cache '%1' for size %2_%3"
 				).arg(f.fileName()
 				).arg(size
 				).arg(index));
@@ -244,7 +244,7 @@ void SaveToFile(int id, const QImage &image, int size, int index) {
 		|| !write(data)
 		|| !write(openssl::Sha256(bytes::make_span(header), data))
 		|| false) {
-		UI_LOG(("App Error: Could not write emoji cache '%1' for size %2"
+		LOG(("App Error: Could not write emoji cache '%1' for size %2"
 			).arg(f.fileName()
 			).arg(size));
 	}
