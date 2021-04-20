@@ -173,11 +173,6 @@ void StartFonts() {
 
 	style_InitFontsResource();
 
-	const auto integrationExists = Ui::Integration::Exists();
-	if (integrationExists) {
-		Ui::Integration::Instance().startFontsBegin();
-	}
-
 #ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 	bool areGood[FontTypesCount] = { false };
 	for (auto i = 0; i != FontTypesCount; ++i) {
@@ -227,10 +222,6 @@ void StartFonts() {
 	auto appFont = QApplication::font();
 	appFont.setStyleStrategy(QFont::PreferQuality);
 	QApplication::setFont(appFont);
-
-	if (integrationExists) {
-		Ui::Integration::Instance().startFontsEnd();
-	}
 }
 
 QString GetPossibleEmptyOverride(int32 flags) {

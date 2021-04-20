@@ -36,12 +36,6 @@ void Integration::textActionsUpdated() {
 void Integration::activationFromTopPanel() {
 }
 
-void Integration::startFontsBegin() {
-}
-
-void Integration::startFontsEnd() {
-}
-
 QString Integration::timeFormat() {
 	return u"hh:mm"_q;
 }

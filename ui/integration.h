@@ -40,9 +40,6 @@ public:
 	virtual void textActionsUpdated();
 	virtual void activationFromTopPanel();
 
-	virtual void startFontsBegin();
-	virtual void startFontsEnd();
-
 	[[nodiscard]] virtual QString timeFormat();
 
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(
