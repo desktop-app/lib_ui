@@ -27,7 +27,6 @@ Toggle::Toggle(
 , _toggleShift(st.itemToggleShift)
 , _itemToggle(st.itemToggle)
 , _itemToggleOver(st.itemToggleOver) {
-
 	const auto processAction = [=] {
 		if (!action()->isCheckable()) {
 			_toggle.reset();
@@ -52,8 +51,9 @@ Toggle::Toggle(
 		}
 		_toggle->setStyle(data.selected ? _itemToggleOver : _itemToggle);
 	}, lifetime());
-
 }
+
+Toggle::~Toggle() = default;
 
 void Toggle::paintEvent(QPaintEvent *e) {
 	Action::paintEvent(e);

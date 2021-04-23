@@ -682,6 +682,8 @@ SettingsButton::SettingsButton(
 	}, lifetime());
 }
 
+SettingsButton::~SettingsButton() = default;
+
 SettingsButton *SettingsButton::toggleOn(rpl::producer<bool> &&toggled) {
 	Expects(_toggle == nullptr);
 	_toggle = std::make_unique<Ui::ToggleView>(

@@ -254,6 +254,7 @@ public:
 		QWidget *parent,
 		rpl::producer<QString> &&text,
 		const style::SettingsButton &st);
+	~SettingsButton();
 
 	SettingsButton *toggleOn(rpl::producer<bool> &&toggled);
 	bool toggled() const;

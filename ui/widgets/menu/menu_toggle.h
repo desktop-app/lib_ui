@@ -24,6 +24,7 @@ public:
 		Fn<void()> &&callback,
 		const style::icon *icon,
 		const style::icon *iconOver);
+	~Toggle();
 
 	void finishAnimating() override;
 
