@@ -694,8 +694,8 @@ defaultScrollArea: ScrollArea {
 	deltat: 3px;
 	deltab: 3px;
 
-	topsh: 2px;
-	bottomsh: 2px;
+	topsh: 0px;
+	bottomsh: 0px;
 	shColor: shadowFg;
 
 	duration: 150;
@@ -707,9 +707,6 @@ defaultSolidScroll: ScrollArea(defaultScrollArea) {
 	width: 14px;
 	deltat: 6px;
 	deltab: 6px;
-
-	topsh: 0px;
-	bottomsh: 0px;
 
 	hiding: 0;
 }
