@@ -86,12 +86,12 @@ void RadialBlob::paint(Painter &p, const QBrush &brush, float outerScale) {
 	auto path = QPainterPath();
 	auto m = QMatrix();
 
-	p.save();
 	const auto scale = (_minScale + (1. - _minScale) * _scale) * outerScale;
 	if (scale == 0.) {
-		p.restore();
 		return;
-	} else if (scale != 1.) {
+	}
+	p.save();
+	if (scale != 1.) {
 		p.scale(scale, scale);
 	}
 
