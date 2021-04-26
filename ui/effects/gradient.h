@@ -41,8 +41,9 @@ namespace details {
 template <typename T, typename Derived>
 class gradients {
 public:
+	gradients() = default;
 	gradients(base::flat_map<T, std::vector<QColor>> colors) {
-		Expects(colors.size() > 0);
+		Expects(!colors.empty());
 
 		for (const auto &[key, value] : colors) {
 			auto c = gradient_colors(std::move(value));
@@ -50,7 +51,7 @@ public:
 		}
 	}
 	gradients(base::flat_map<T, gradient_colors> colors) {
-		Expects(colors.size() > 0);
+		Expects(!colors.empty());
 
 		for (const auto &[key, c] : colors) {
 			_gradients.emplace(key, gradient_with_stops(std::move(c.stops)));
@@ -58,6 +59,8 @@ public:
 	}
 
 	QGradient gradient(T state1, T state2, float64 b_ratio) const {
+		Expects(!_gradients.empty());
+
 		if (b_ratio == 0.) {
 			return _gradients.find(state1)->second;
 		} else if (b_ratio == 1.) {
@@ -163,6 +166,7 @@ class linear_gradients final
 	using parent = details::gradients<T, linear_gradients<T>>;
 
 public:
+	linear_gradients() = default;
 	linear_gradients(
 		base::flat_map<T, std::vector<QColor>> colors,
 		QPointF point1,
@@ -205,6 +209,7 @@ class radial_gradients final
 	using parent = details::gradients<T, radial_gradients<T>>;
 
 public:
+	radial_gradients() = default;
 	radial_gradients(
 		base::flat_map<T, std::vector<QColor>> colors,
 		QPointF center,
