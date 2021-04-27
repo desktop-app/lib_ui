@@ -26,6 +26,10 @@ CallButton::CallButton(
 : RippleButton(parent, stFrom.button.ripple)
 , _stFrom(&stFrom)
 , _stTo(stTo) {
+	init();
+}
+
+void CallButton::init() {
 	resize(_stFrom->button.width, _stFrom->button.height);
 
 	_bgMask = RippleAnimation::ellipseMask(QSize(_stFrom->bgSize, _stFrom->bgSize));
@@ -219,6 +223,18 @@ void CallButton::setColorOverrides(rpl::producer<CallButtonColors> &&colors) {
 		_rippleOverride = c.ripple;
 		update();
 	}, lifetime());
+}
+
+void CallButton::setStyle(
+		const style::CallButton &stFrom,
+		const style::CallButton *stTo) {
+	if (_stFrom == &stFrom && _stTo == stTo) {
+		return;
+	}
+	_stFrom = &stFrom;
+	_stTo = stTo;
+	init();
+	update();
 }
 
 QPoint CallButton::prepareRippleStartPosition() const {

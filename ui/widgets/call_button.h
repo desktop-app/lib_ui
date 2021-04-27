@@ -31,6 +31,10 @@ public:
 	void setText(rpl::producer<QString> text);
 	void setColorOverrides(rpl::producer<CallButtonColors> &&colors);
 
+	void setStyle(
+		const style::CallButton &stFrom,
+		const style::CallButton *stTo = nullptr);
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
@@ -40,6 +44,7 @@ protected:
 	QPoint prepareRippleStartPosition() const override;
 
 private:
+	void init();
 	QPoint iconPosition(not_null<const style::CallButton*> st) const;
 	void mixIconMasks();
 
