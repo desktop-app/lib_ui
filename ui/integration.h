@@ -40,6 +40,7 @@ public:
 	virtual void textActionsUpdated();
 	virtual void activationFromTopPanel();
 
+	[[nodiscard]] virtual bool screenIsLocked();
 	[[nodiscard]] virtual QString timeFormat();
 
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(

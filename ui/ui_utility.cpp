@@ -189,6 +189,8 @@ bool IsContentVisible(
 	const auto activeOrNotOverlapped = [&] {
 		if (const auto active = widget->isActiveWindow()) {
 			return active;
+		} else if (Integration::Instance().screenIsLocked()) {
+			return false;
 		}
 
 		const auto mappedRect = QHighDpi::toNativePixels(

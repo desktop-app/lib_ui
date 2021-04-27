@@ -36,6 +36,10 @@ void Integration::textActionsUpdated() {
 void Integration::activationFromTopPanel() {
 }
 
+bool Integration::screenIsLocked() {
+	return false;
+}
+
 QString Integration::timeFormat() {
 	return u"hh:mm"_q;
 }
