@@ -641,4 +641,5 @@ sideBarBadgeFg: #ffffff; // filters side bar badge text
 
 songCoverOverlayFg: #00000066; // song cover overlay
 
+photoEditorBg: boxTitleAdditionalFg; // photo editor background
 photoEditorItemBaseHandleFg: #3ccaef; // photo editor handle circle
