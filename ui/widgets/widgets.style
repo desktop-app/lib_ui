@@ -88,6 +88,7 @@ RoundButton {
 
 	width: pixels;
 	height: pixels;
+	radius: pixels;
 	padding: margins;
 
 	textTop: pixels;

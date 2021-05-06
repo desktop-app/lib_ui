@@ -256,8 +256,8 @@ RoundButton::RoundButton(
 : RippleButton(parent, st.ripple)
 , _textFull(std::move(text))
 , _st(st)
-, _roundRect(st::buttonRadius, _st.textBg)
-, _roundRectOver(st::buttonRadius, _st.textBgOver) {
+, _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
+, _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
 	_textFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
 		resizeToText(text);
@@ -377,7 +377,8 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		} else if (_brushOverride) {
 			p.setPen(Qt::NoPen);
 			p.setBrush(*_brushOverride);
-			p.drawRoundedRect(fill, st::buttonRadius, st::buttonRadius);
+			const auto radius = _st.radius ? _st.radius : st::buttonRadius;
+			p.drawRoundedRect(fill, radius, radius);
 		} else {
 			rect.paint(p, fill);
 		}
@@ -436,7 +437,11 @@ QImage RoundButton::prepareRippleMask() const {
 	}
 	return RippleAnimation::roundRectMask(
 		rounded.size(),
-		_fullRadius ? (rounded.height() / 2) : st::buttonRadius);
+		(_fullRadius
+			? (rounded.height() / 2)
+			: _st.radius
+			? _st.radius
+			: st::buttonRadius));
 }
 
 QPoint RoundButton::prepareRippleStartPosition() const {
