@@ -409,6 +409,7 @@ CrossLineAnimation {
 	startPosition: point;
 	endPosition: point;
 	stroke: pixels;
+	strokeDenominator: int;
 }
 
 ArcsAnimation {

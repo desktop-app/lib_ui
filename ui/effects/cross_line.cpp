@@ -9,6 +9,15 @@
 #include "ui/painter.h"
 
 namespace Ui {
+namespace {
+
+[[nodiscard]] float64 StrokeWidth(
+		const style::CrossLineAnimation &st) noexcept {
+	return float64(st.stroke)
+		/ (st.strokeDenominator ? st.strokeDenominator : 1);
+}
+
+} // namespace
 
 CrossLineAnimation::CrossLineAnimation(
 	const style::CrossLineAnimation &st,
@@ -16,8 +25,12 @@ CrossLineAnimation::CrossLineAnimation(
 	float angle)
 : _st(st)
 , _reversed(reversed)
-, _transparentPen(Qt::transparent, st.stroke, Qt::SolidLine, Qt::RoundCap)
-, _strokePen(st.fg, st.stroke, Qt::SolidLine, Qt::RoundCap)
+, _transparentPen(
+	Qt::transparent,
+	StrokeWidth(st),
+	Qt::SolidLine,
+	Qt::RoundCap)
+, _strokePen(st.fg, StrokeWidth(st), Qt::SolidLine, Qt::RoundCap)
 , _line(st.startPosition, st.endPosition) {
 	_line.setAngle(angle);
 }
@@ -98,7 +111,7 @@ void CrossLineAnimation::fillFrame(
 void CrossLineAnimation::invalidate() {
 	_completeCross = QImage();
 	_completeCrossOverride = QImage();
-	_strokePen = QPen(_st.fg, _st.stroke, Qt::SolidLine, Qt::RoundCap);
+	_strokePen = QPen(_st.fg, StrokeWidth(_st), Qt::SolidLine, Qt::RoundCap);
 }
 
 } // namespace Ui
