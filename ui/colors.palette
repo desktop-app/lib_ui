@@ -584,6 +584,8 @@ groupCallMenuBgOver: #343940; // group call popup menu with mouse over
 groupCallMenuBgRipple: #3a4047; // group call popup menu ripple effect
 groupCallLeaveBg: #f75c5c7f; // group call leave button background
 groupCallLeaveBgRipple: #f75c5c9e; // group call leave button ripple effect
+groupCallVideoTextFg: #ffffffe0; // group call text over video
+groupCallVideoSubTextFg: #ffffffa0; // group call additional text over video
 
 callBarBg: dialogsBgActive; // active phone call bar background
 callBarMuteRipple: dialogsRippleBgActive; // active phone call bar mute and hangup button ripple effect
