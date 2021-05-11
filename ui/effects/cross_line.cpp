@@ -88,15 +88,20 @@ void CrossLineAnimation::fillFrame(
 
 	Painter q(&_frame);
 	PainterHighQualityEnabler hq(q);
-	if (colorOverride) {
-		_st.icon.paint(q, 0, 0, _st.icon.width(), *colorOverride);
+	const auto colorize = ((colorOverride && colorOverride->alpha() != 255)
+		|| (!colorOverride && _st.fg->c.alpha() != 255));
+	const auto color = colorize
+		? QColor(255, 255, 255)
+		: colorOverride;
+	if (color) {
+		_st.icon.paint(q, 0, 0, _st.icon.width(), *color);
 	} else {
 		_st.icon.paint(q, 0, 0, _st.icon.width());
 	}
 
-	if (colorOverride) {
+	if (color) {
 		auto pen = _strokePen;
-		pen.setColor(*colorOverride);
+		pen.setColor(*color);
 		q.setPen(pen);
 	} else {
 		q.setPen(_strokePen);
@@ -106,6 +111,14 @@ void CrossLineAnimation::fillFrame(
 	q.setCompositionMode(QPainter::CompositionMode_Source);
 	q.setPen(_transparentPen);
 	q.drawLine(_reversed ? bottomLine : topLine);
+	q.end();
+
+	if (colorize) {
+		style::colorizeImage(
+			_frame,
+			colorOverride.value_or(_st.fg->c),
+			&_frame);
+	}
 }
 
 void CrossLineAnimation::invalidate() {
