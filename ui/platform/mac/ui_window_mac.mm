@@ -202,7 +202,12 @@ void WindowHelper::Private::activateBeforeNativeMove() {
 }
 
 void WindowHelper::Private::close() {
-	[_nativeWindow close];
+	const auto weak = Ui::MakeWeak(_owner->window());
+	QCloseEvent e;
+	qApp->sendEvent(_owner->window(), &e);
+	if (e.isAccepted() && weak && _nativeWindow) {
+		[_nativeWindow close];
+	}
 }
 
 Fn<void(bool)> WindowHelper::Private::toggleCustomTitleCallback() {
