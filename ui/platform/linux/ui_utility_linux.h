@@ -14,9 +14,6 @@ class QPaintEvent;
 namespace Ui {
 namespace Platform {
 
-inline void StartTranslucentPaint(QPainter &p, const QRegion &region) {
-}
-
 inline void InitOnTopPanel(not_null<QWidget*> panel) {
 }
 

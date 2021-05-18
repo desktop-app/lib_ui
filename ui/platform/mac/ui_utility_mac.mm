@@ -69,14 +69,6 @@ void ReInitOnTopPanel(not_null<QWidget*> panel) {
 	[platformPanel setCollectionBehavior:newBehavior];
 }
 
-void StartTranslucentPaint(QPainter &p, const QRegion &region) {
-	p.setCompositionMode(QPainter::CompositionMode_Source);
-	for (const auto rect : region) {
-		p.fillRect(rect, Qt::transparent);
-	}
-	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-}
-
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 	NSWindow *wnd = [reinterpret_cast<NSView*>(widget->winId()) window];
 	[wnd setLevel:NSPopUpMenuWindowLevel];

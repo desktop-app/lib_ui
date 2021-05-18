@@ -29,9 +29,6 @@ inline void DeInitOnTopPanel(not_null<QWidget*> panel) {
 inline void ReInitOnTopPanel(not_null<QWidget*> panel) {
 }
 
-inline void StartTranslucentPaint(QPainter &p, const QRegion &region) {
-}
-
 inline void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 }
 
