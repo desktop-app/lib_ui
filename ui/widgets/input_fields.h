@@ -54,11 +54,11 @@ enum class InputSubmitSettings {
 	None,
 };
 
-class FlatInput : public RpWidgetWrap<QLineEdit> {
+class FlatInput : public RpWidgetBase<QLineEdit> {
 	// The Q_OBJECT meta info is used for qobject_cast!
 	Q_OBJECT
 
-	using Parent = RpWidgetWrap<QLineEdit>;
+	using Parent = RpWidgetBase<QLineEdit>;
 public:
 	FlatInput(
 		QWidget *parent,
@@ -545,11 +545,11 @@ private:
 
 };
 
-class MaskedInputField : public RpWidgetWrap<QLineEdit> {
+class MaskedInputField : public RpWidgetBase<QLineEdit> {
 	// The Q_OBJECT meta info is used for qobject_cast!
 	Q_OBJECT
 
-	using Parent = RpWidgetWrap<QLineEdit>;
+	using Parent = RpWidgetBase<QLineEdit>;
 public:
 	MaskedInputField(
 		QWidget *parent,

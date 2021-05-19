@@ -125,9 +125,10 @@ private:
 	QRect _bar;
 };
 
-class ScrollArea : public RpWidgetWrap<QScrollArea> {
+class ScrollArea : public RpWidgetBase<QScrollArea> {
 	Q_OBJECT
 
+	using Parent = RpWidgetBase<QScrollArea>;
 public:
 	ScrollArea(QWidget *parent, const style::ScrollArea &st = st::defaultScrollArea, bool handleTouch = true);
 

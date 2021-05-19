@@ -244,10 +244,13 @@ using RpWidgetParent = std::conditional_t<
 	TWidgetHelper<Widget>>;
 
 template <typename Widget, typename Traits>
-class RpWidgetWrap;
+class RpWidgetBase;
 
-class RpWidgetMethods {
+class RpWidgetWrap {
 public:
+	virtual QWidget *rpWidget() = 0;
+	virtual const QWidget *rpWidget() const = 0;
+
 	rpl::producer<not_null<QEvent*>> events() const;
 	rpl::producer<QRect> geometryValue() const;
 	rpl::producer<QSize> sizeValue() const;
@@ -274,7 +277,7 @@ public:
 
 	rpl::lifetime &lifetime();
 
-	virtual ~RpWidgetMethods() = default;
+	virtual ~RpWidgetWrap() = default;
 
 protected:
 	bool handleEvent(QEvent *event);
@@ -282,7 +285,7 @@ protected:
 
 private:
 	template <typename Widget, typename Traits>
-	friend class RpWidgetWrap;
+	friend class RpWidgetBase;
 
 	struct EventStreams {
 		rpl::event_stream<not_null<QEvent*>> events;
@@ -296,11 +299,6 @@ private:
 	};
 
 	virtual void callSetVisible(bool visible) = 0;
-	virtual QWidget *callGetWidget() = 0;
-	virtual const QWidget *callGetWidget() const = 0;
-	virtual QPointer<QObject> callCreateWeak() = 0;
-	virtual QRect callGetGeometry() const = 0;
-	virtual bool callIsHidden() const = 0;
 
 	void visibilityChangedHook(bool wasVisible, bool nowVisible);
 	EventStreams &eventStreams() const;
@@ -315,22 +313,28 @@ struct RpWidgetDefaultTraits {
 };
 
 template <typename Widget, typename Traits = RpWidgetDefaultTraits>
-class RpWidgetWrap
+class RpWidgetBase
 	: public RpWidgetParent<Widget>
-	, public RpWidgetMethods {
-	using Self = RpWidgetWrap<Widget, Traits>;
+	, public RpWidgetWrap {
+	using Self = RpWidgetBase<Widget, Traits>;
 	using Parent = RpWidgetParent<Widget>;
 
 public:
 	using Parent::Parent;
 
+	QWidget *rpWidget() final override {
+		return this;
+	}
+	const QWidget *rpWidget() const final override {
+		return this;
+	}
 	void setVisible(bool visible) final override {
 		auto wasVisible = !this->isHidden();
 		setVisibleHook(visible);
 		visibilityChangedHook(wasVisible, !this->isHidden());
 	}
 
-	~RpWidgetWrap() {
+	~RpWidgetBase() {
 		base::take(_lifetime);
 		base::take(_eventStreams);
 	}
@@ -347,32 +351,17 @@ protected:
 	}
 
 private:
-	void callSetVisible(bool visible) override {
-		Self::setVisible(visible);
-	}
-	QWidget *callGetWidget() override {
-		return this;
-	}
-	const QWidget *callGetWidget() const override {
-		return this;
-	}
-	QPointer<QObject> callCreateWeak() override {
-		return QPointer<QObject>((QObject*)this);
-	}
-	QRect callGetGeometry() const override {
-		return this->geometry();
-	}
-	bool callIsHidden() const override {
-		return this->isHidden();
+	void callSetVisible(bool visible) final override {
+		Self::setVisible(visible); // Save one virtual method invocation.
 	}
 
 	Initer _initer = { this, Traits::kSetZeroGeometry };
 
 };
 
-class RpWidget : public RpWidgetWrap<QWidget> {
+class RpWidget : public RpWidgetBase<QWidget> {
 public:
-	using RpWidgetWrap<QWidget>::RpWidgetWrap;
+	using RpWidgetBase<QWidget>::RpWidgetBase;
 
 };
 

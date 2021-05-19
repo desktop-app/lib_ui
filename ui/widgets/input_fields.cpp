@@ -910,7 +910,7 @@ FlatInput::FlatInput(
 	const style::FlatInput &st,
 	rpl::producer<QString> placeholder,
 	const QString &v)
-: RpWidgetWrap<QLineEdit>(v, parent)
+: Parent(v, parent)
 , _oldtext(v)
 , _placeholderFull(std::move(placeholder))
 , _placeholderVisible(!v.length())

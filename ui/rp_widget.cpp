@@ -27,71 +27,71 @@ void ResizeFitChild(
 	}, child->lifetime());
 }
 
-rpl::producer<not_null<QEvent*>> RpWidgetMethods::events() const {
+rpl::producer<not_null<QEvent*>> RpWidgetWrap::events() const {
 	auto &stream = eventStreams().events;
 	return stream.events();
 }
 
-rpl::producer<QRect> RpWidgetMethods::geometryValue() const {
+rpl::producer<QRect> RpWidgetWrap::geometryValue() const {
 	auto &stream = eventStreams().geometry;
-	return stream.events_starting_with_copy(callGetGeometry());
+	return stream.events_starting_with_copy(rpWidget()->geometry());
 }
 
-rpl::producer<QSize> RpWidgetMethods::sizeValue() const {
+rpl::producer<QSize> RpWidgetWrap::sizeValue() const {
 	return geometryValue()
 		| rpl::map([](QRect &&value) { return value.size(); })
 		| rpl::distinct_until_changed();
 }
 
-rpl::producer<int> RpWidgetMethods::heightValue() const {
+rpl::producer<int> RpWidgetWrap::heightValue() const {
 	return geometryValue()
 		| rpl::map([](QRect &&value) { return value.height(); })
 		| rpl::distinct_until_changed();
 }
 
-rpl::producer<int> RpWidgetMethods::widthValue() const {
+rpl::producer<int> RpWidgetWrap::widthValue() const {
 	return geometryValue()
 		| rpl::map([](QRect &&value) { return value.width(); })
 		| rpl::distinct_until_changed();
 }
 
-rpl::producer<QPoint> RpWidgetMethods::positionValue() const {
+rpl::producer<QPoint> RpWidgetWrap::positionValue() const {
 	return geometryValue()
 		| rpl::map([](QRect &&value) { return value.topLeft(); })
 		| rpl::distinct_until_changed();
 }
 
-rpl::producer<int> RpWidgetMethods::leftValue() const {
+rpl::producer<int> RpWidgetWrap::leftValue() const {
 	return geometryValue()
 		| rpl::map([](QRect &&value) { return value.left(); })
 		| rpl::distinct_until_changed();
 }
 
-rpl::producer<int> RpWidgetMethods::topValue() const {
+rpl::producer<int> RpWidgetWrap::topValue() const {
 	return geometryValue()
 		| rpl::map([](QRect &&value) { return value.top(); })
 		| rpl::distinct_until_changed();
 }
 
-rpl::producer<int> RpWidgetMethods::desiredHeightValue() const {
+rpl::producer<int> RpWidgetWrap::desiredHeightValue() const {
 	return heightValue();
 }
 
-rpl::producer<bool> RpWidgetMethods::shownValue() const {
+rpl::producer<bool> RpWidgetWrap::shownValue() const {
 	auto &stream = eventStreams().shown;
-	return stream.events_starting_with(!callIsHidden());
+	return stream.events_starting_with(!rpWidget()->isHidden());
 }
 
-rpl::producer<QRect> RpWidgetMethods::paintRequest() const {
+rpl::producer<QRect> RpWidgetWrap::paintRequest() const {
 	return eventStreams().paint.events();
 }
 
-rpl::producer<> RpWidgetMethods::alive() const {
+rpl::producer<> RpWidgetWrap::alive() const {
 	return eventStreams().alive.events();
 }
 
-rpl::producer<> RpWidgetMethods::windowDeactivateEvents() const {
-	const auto window = callGetWidget()->window()->windowHandle();
+rpl::producer<> RpWidgetWrap::windowDeactivateEvents() const {
+	const auto window = rpWidget()->window()->windowHandle();
 	Assert(window != nullptr);
 
 	return base::qt_signal_producer(
@@ -102,7 +102,7 @@ rpl::producer<> RpWidgetMethods::windowDeactivateEvents() const {
 	});
 }
 
-rpl::producer<> RpWidgetMethods::macWindowDeactivateEvents() const {
+rpl::producer<> RpWidgetWrap::macWindowDeactivateEvents() const {
 #ifdef Q_OS_MAC
 	return windowDeactivateEvents();
 #else // Q_OS_MAC
@@ -110,20 +110,21 @@ rpl::producer<> RpWidgetMethods::macWindowDeactivateEvents() const {
 #endif // Q_OS_MAC
 }
 
-rpl::lifetime &RpWidgetMethods::lifetime() {
+rpl::lifetime &RpWidgetWrap::lifetime() {
 	return _lifetime;
 }
 
-bool RpWidgetMethods::handleEvent(QEvent *event) {
+bool RpWidgetWrap::handleEvent(QEvent *event) {
 	Expects(event != nullptr);
 
 	auto streams = _eventStreams.get();
 	if (!streams) {
 		return eventHook(event);
 	}
-	auto that = QPointer<QObject>();
-	if (streams->events.has_consumers()) {
-		that = callCreateWeak();
+	auto that = QPointer<QWidget>();
+	const auto allAreObserved = streams->events.has_consumers();
+	if (allAreObserved) {
+		that = rpWidget();
 		streams->events.fire_copy(event);
 		if (!that) {
 			return true;
@@ -133,10 +134,10 @@ bool RpWidgetMethods::handleEvent(QEvent *event) {
 	case QEvent::Move:
 	case QEvent::Resize:
 		if (streams->geometry.has_consumers()) {
-			if (!that) {
-				that = callCreateWeak();
+			if (!allAreObserved) {
+				that = rpWidget();
 			}
-			streams->geometry.fire_copy(callGetGeometry());
+			streams->geometry.fire_copy(rpWidget()->geometry());
 			if (!that) {
 				return true;
 			}
@@ -145,8 +146,8 @@ bool RpWidgetMethods::handleEvent(QEvent *event) {
 
 	case QEvent::Paint:
 		if (streams->paint.has_consumers()) {
-			if (!that) {
-				that = callCreateWeak();
+			if (!allAreObserved) {
+				that = rpWidget();
 			}
 			const auto rect = static_cast<QPaintEvent*>(event)->rect();
 			streams->paint.fire_copy(rect);
@@ -160,13 +161,13 @@ bool RpWidgetMethods::handleEvent(QEvent *event) {
 	return eventHook(event);
 }
 
-RpWidgetMethods::Initer::Initer(QWidget *parent, bool setZeroGeometry) {
+RpWidgetWrap::Initer::Initer(QWidget *parent, bool setZeroGeometry) {
 	if (setZeroGeometry) {
 		parent->setGeometry(0, 0, 0, 0);
 	}
 }
 
-void RpWidgetMethods::visibilityChangedHook(bool wasVisible, bool nowVisible) {
+void RpWidgetWrap::visibilityChangedHook(bool wasVisible, bool nowVisible) {
 	if (nowVisible != wasVisible) {
 		if (auto streams = _eventStreams.get()) {
 			streams->shown.fire_copy(nowVisible);
@@ -174,7 +175,7 @@ void RpWidgetMethods::visibilityChangedHook(bool wasVisible, bool nowVisible) {
 	}
 }
 
-auto RpWidgetMethods::eventStreams() const -> EventStreams& {
+auto RpWidgetWrap::eventStreams() const -> EventStreams& {
 	if (!_eventStreams) {
 		_eventStreams = std::make_unique<EventStreams>();
 	}
