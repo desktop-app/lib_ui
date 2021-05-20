@@ -17,4 +17,6 @@ struct Capabilities {
 
 [[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
 
+void ForceDisable(bool disable);
+
 } // namespace Ui::GL

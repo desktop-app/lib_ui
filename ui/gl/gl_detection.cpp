@@ -16,8 +16,17 @@
 #define LOG_ONCE(x) static auto logged = [&] { LOG(x); return true; };
 
 namespace Ui::GL {
+namespace {
+
+bool ForceDisabled/* = false*/;
+
+} // namespace
 
 Capabilities CheckCapabilities(QWidget *widget) {
+	if (ForceDisabled) {
+		LOG_ONCE(("OpenGL: Force-disabled."));
+		return {};
+	}
 	auto format = QSurfaceFormat();
 	format.setAlphaBufferSize(8);
 	if (widget) {
@@ -71,6 +80,10 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			).arg(version));
 	}
 	return result;
+}
+
+void ForceDisable(bool disable) {
+	ForceDisabled = disable;
 }
 
 } // namespace Ui::GL
