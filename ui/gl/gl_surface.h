@@ -8,7 +8,7 @@
 
 #include "ui/gl/gl_detection.h"
 
-class QPainter;
+class Painter;
 class QOpenGLWidget;
 class QOpenGLFunctions;
 
@@ -42,7 +42,7 @@ public:
         not_null<QOpenGLFunctions*> f);
 
     virtual void paintFallback(
-        QPainter &&p,
+        Painter &&p,
         const QRegion &clip,
         Backend backend) {
     }

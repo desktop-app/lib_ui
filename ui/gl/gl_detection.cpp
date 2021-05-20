@@ -18,7 +18,6 @@
 namespace Ui::GL {
 
 Capabilities CheckCapabilities(QWidget *widget) {
-	auto created = QOpenGLContext();
 	auto format = QSurfaceFormat();
 	format.setAlphaBufferSize(8);
 	if (widget) {
@@ -33,19 +32,11 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			LOG_ONCE(("OpenGL: Not supported for window."));
 			return {};
 		}
-	} else {
-		created.setFormat(format);
-		if (!created.create()) {
-			LOG_ONCE(("OpenGL: Could not create context with alpha."));
-			return {};
-		}
 	}
 	auto tester = QOpenGLWidget(widget);
-	if (widget) {
-		tester.setFormat(format);
-		tester.grabFramebuffer(); // Force initialize().
-	}
-	const auto context = (widget ? tester.context() : &created);
+	tester.setFormat(format);
+	tester.grabFramebuffer(); // Force initialize().
+	const auto context = tester.context();
 	if (!context) {
 		LOG_ONCE(("OpenGL: Could not create widget in a window."));
 		return {};

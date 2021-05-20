@@ -7,8 +7,8 @@
 #include "ui/gl/gl_surface.h"
 
 #include "ui/rp_widget.h"
+#include "ui/painter.h"
 
-#include <QtGui/QPainter>
 #include <QtGui/QtEvents>
 #include <QtGui/QOpenGLContext>
 #include <QtWidgets/QOpenGLWidget>
@@ -72,7 +72,7 @@ SurfaceRaster::SurfaceRaster(
 }
 
 void SurfaceRaster::paintEvent(QPaintEvent *e) {
-	_renderer->paintFallback(QPainter(this), e->region(), Backend::Raster);
+	_renderer->paintFallback(Painter(this), e->region(), Backend::Raster);
 }
 
 } // namespace
@@ -80,7 +80,7 @@ void SurfaceRaster::paintEvent(QPaintEvent *e) {
 void Renderer::paint(
 		not_null<QOpenGLWidget*> widget,
 		not_null<QOpenGLFunctions*> f) {
-	paintFallback(QPainter(widget.get()), widget->rect(), Backend::OpenGL);
+	paintFallback(Painter(widget.get()), widget->rect(), Backend::OpenGL);
 }
 
 std::unique_ptr<RpWidgetWrap> CreateSurface(
