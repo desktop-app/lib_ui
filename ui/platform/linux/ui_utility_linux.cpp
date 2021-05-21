@@ -40,16 +40,16 @@ std::optional<bool> XCBWindowMapped(xcb_window_t window) {
 	}
 
 	const auto cookie = xcb_get_window_attributes(connection, window);
-	const auto reply = xcb_get_window_attributes_reply(
-		connection,
-		cookie,
-		nullptr);
+	const auto reply = base::Platform::XCB::MakeReplyPointer(
+		xcb_get_window_attributes_reply(
+			connection,
+			cookie,
+			nullptr));
 
 	if (!reply) {
 		return std::nullopt;
 	}
 
-	const auto guard = gsl::finally([&] { free(reply); });
 	return reply->map_state == XCB_MAP_STATE_VIEWABLE;
 }
 
@@ -80,22 +80,22 @@ std::optional<bool> XCBWindowHidden(xcb_window_t window) {
 		0,
 		1024);
 
-	const auto reply = xcb_get_property_reply(
-		connection,
-		cookie,
-		nullptr);
+	const auto reply = base::Platform::XCB::MakeReplyPointer(
+		xcb_get_property_reply(
+			connection,
+			cookie,
+			nullptr));
 
 	if (!reply) {
 		return std::nullopt;
 	}
 
-	const auto guard = gsl::finally([&] { free(reply); });
 	if (reply->type != XCB_ATOM_ATOM || reply->format != 32) {
 		return std::nullopt;
 	}
 
 	const auto atomsStart = reinterpret_cast<xcb_atom_t*>(
-		xcb_get_property_value(reply));
+		xcb_get_property_value(reply.get()));
 
 	const auto states = std::vector<xcb_atom_t>(
 		atomsStart,
@@ -111,16 +111,16 @@ QRect XCBWindowGeometry(xcb_window_t window) {
 	}
 
 	const auto cookie = xcb_get_geometry(connection, window);
-	const auto reply = xcb_get_geometry_reply(
-		connection,
-		cookie,
-		nullptr);
+	const auto reply = base::Platform::XCB::MakeReplyPointer(
+		xcb_get_geometry_reply(
+			connection,
+			cookie,
+			nullptr));
 
 	if (!reply) {
 		return {};
 	}
 
-	const auto guard = gsl::finally([&] { free(reply); });
 	return QRect(reply->x, reply->y, reply->width, reply->height);
 }
 
@@ -152,19 +152,19 @@ std::optional<uint> XCBCurrentWorkspace() {
 		0,
 		1024);
 
-	const auto reply = xcb_get_property_reply(
-		connection,
-		cookie,
-		nullptr);
+	const auto reply = base::Platform::XCB::MakeReplyPointer(
+		xcb_get_property_reply(
+			connection,
+			cookie,
+			nullptr));
 
 	if (!reply) {
 		return std::nullopt;
 	}
 
-	const auto guard = gsl::finally([&] { free(reply); });
 	return (reply->type == XCB_ATOM_CARDINAL)
 		? std::make_optional(
-			*reinterpret_cast<ulong*>(xcb_get_property_value(reply)))
+			*reinterpret_cast<ulong*>(xcb_get_property_value(reply.get())))
 		: std::nullopt;
 }
 
@@ -191,19 +191,19 @@ std::optional<uint> XCBWindowWorkspace(xcb_window_t window) {
 		0,
 		1024);
 
-	const auto reply = xcb_get_property_reply(
-		connection,
-		cookie,
-		nullptr);
+	const auto reply = base::Platform::XCB::MakeReplyPointer(
+		xcb_get_property_reply(
+			connection,
+			cookie,
+			nullptr));
 
 	if (!reply) {
 		return std::nullopt;
 	}
 
-	const auto guard = gsl::finally([&] { free(reply); });
 	return (reply->type == XCB_ATOM_CARDINAL)
 		? std::make_optional(
-			*reinterpret_cast<ulong*>(xcb_get_property_value(reply)))
+			*reinterpret_cast<ulong*>(xcb_get_property_value(reply.get())))
 		: std::nullopt;
 }
 
@@ -236,17 +236,17 @@ std::optional<bool> XCBIsOverlapped(
 	}
 
 	const auto cookie = xcb_query_tree(connection, *root);
-	const auto reply = xcb_query_tree_reply(connection, cookie, nullptr);
+	const auto reply = base::Platform::XCB::MakeReplyPointer(
+		xcb_query_tree_reply(connection, cookie, nullptr));
+
 	if (!reply) {
 		return std::nullopt;
 	}
 
-	const auto guard = gsl::finally([&] { free(reply); });
-
-	const auto tree = xcb_query_tree_children(reply);
+	const auto tree = xcb_query_tree_children(reply.get());
 	auto aboveTheWindow = false;
 
-	for (auto i = 0, l = xcb_query_tree_children_length(reply); i < l; ++i) {
+	for (auto i = 0, l = xcb_query_tree_children_length(reply.get()); i < l; ++i) {
 		if (window == tree[i]) {
 			aboveTheWindow = true;
 			continue;
@@ -275,8 +275,7 @@ std::optional<bool> XCBIsOverlapped(
 		}
 
 		const auto hidden = XCBWindowHidden(tree[i]);
-		if (hidden.has_value()
-			&& *hidden) {
+		if (hidden.has_value() && *hidden) {
 			continue;
 		}
 
