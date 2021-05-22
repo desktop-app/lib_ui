@@ -11,6 +11,7 @@
 
 #include <QtGui/QtEvents>
 #include <QtGui/QOpenGLContext>
+#include <QtGui/QWindow>
 #include <QtWidgets/QOpenGLWidget>
 
 namespace Ui::GL {
@@ -24,13 +25,16 @@ class SurfaceOpenGL final
 	: public RpWidgetBase<QOpenGLWidget, SurfaceTraits> {
 public:
 	SurfaceOpenGL(QWidget *parent, std::unique_ptr<Renderer> renderer);
+	~SurfaceOpenGL();
 
 private:
 	void initializeGL() override;
 	void resizeGL(int w, int h) override;
 	void paintGL() override;
+	void callDeInit();
 
 	const std::unique_ptr<Renderer> _renderer;
+	QMetaObject::Connection _connection;
 
 };
 
@@ -52,8 +56,22 @@ SurfaceOpenGL::SurfaceOpenGL(
 , _renderer(std::move(renderer)) {
 }
 
+SurfaceOpenGL::~SurfaceOpenGL() {
+	callDeInit();
+}
+
 void SurfaceOpenGL::initializeGL() {
-	_renderer->init(this, context()->functions());
+	Expects(window()->windowHandle() != nullptr);
+
+	if (_connection) {
+		QObject::disconnect(base::take(_connection));
+	}
+	const auto context = this->context();
+	_connection = QObject::connect(
+		context,
+		&QOpenGLContext::aboutToBeDestroyed,
+		[=] { callDeInit(); });
+	_renderer->init(this, context->functions());
 }
 
 void SurfaceOpenGL::resizeGL(int w, int h) {
@@ -62,6 +80,18 @@ void SurfaceOpenGL::resizeGL(int w, int h) {
 
 void SurfaceOpenGL::paintGL() {
 	_renderer->paint(this, context()->functions());
+}
+
+void SurfaceOpenGL::callDeInit() {
+	if (!_connection) {
+		return;
+	}
+	QObject::disconnect(base::take(_connection));
+	const auto surface = window()->windowHandle();
+	Assert(surface != nullptr);
+	const auto context = this->context();
+	context->makeCurrent(surface);
+	_renderer->deinit(this, context->functions());
 }
 
 SurfaceRaster::SurfaceRaster(

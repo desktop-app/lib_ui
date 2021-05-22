@@ -8,6 +8,7 @@
 
 #include "base/debug_log.h"
 
+#include <QtCore/QSet>
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
@@ -67,6 +68,14 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		LOG_ONCE(("OpenGL: NoProfile received in final format."));
 		return {};
 	}
+	static const auto extensionsLogged = [&] {
+		auto list = QStringList();
+		for (const auto extension : context->extensions()) {
+			list.append(QString::fromLatin1(extension));
+		}
+		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
+		return true;
+	}();
 	const auto version = u"%1.%2"_q
 		.arg(supported.majorVersion())
 		.arg(supported.majorVersion());

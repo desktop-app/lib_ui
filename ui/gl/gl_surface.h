@@ -8,9 +8,10 @@
 
 #include "ui/gl/gl_detection.h"
 
+#include <QtGui/QOpenGLFunctions>
+
 class Painter;
 class QOpenGLWidget;
-class QOpenGLFunctions;
 
 namespace Ui {
 class RpWidgetWrap;
@@ -26,6 +27,11 @@ enum class Backend {
 class Renderer {
 public:
     virtual void init(
+        not_null<QOpenGLWidget*> widget,
+        not_null<QOpenGLFunctions*> f) {
+    }
+
+    virtual void deinit(
         not_null<QOpenGLWidget*> widget,
         not_null<QOpenGLFunctions*> f) {
     }
