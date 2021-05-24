@@ -14,7 +14,7 @@
 #include <QtGui/QOpenGLFunctions>
 #include <QtWidgets/QOpenGLWidget>
 
-#define LOG_ONCE(x) static auto logged = [&] { LOG(x); return true; };
+#define LOG_ONCE(x) static auto logged = [&] { LOG(x); return true; }();
 
 namespace Ui::GL {
 namespace {
@@ -64,11 +64,28 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		return {};
 	}
 	const auto supported = context->format();
-	if (supported.profile() == QSurfaceFormat::NoProfile) {
-		LOG_ONCE(("OpenGL: NoProfile received in final format."));
+	switch (supported.profile()) {
+	case QSurfaceFormat::NoProfile: {
+		LOG_ONCE(("OpenGL Profile: None."));
 		return {};
+	} break;
+	case QSurfaceFormat::CoreProfile: {
+		LOG_ONCE(("OpenGL Profile: Core."));
+	} break;
+	case QSurfaceFormat::CompatibilityProfile: {
+		LOG_ONCE(("OpenGL Profile: Compatibility."));
+	} break;
 	}
 	static const auto extensionsLogged = [&] {
+		const auto renderer = reinterpret_cast<const char*>(
+			functions->glGetString(GL_RENDERER));
+		LOG(("OpenGL Renderer: %1").arg(renderer ? renderer : "[nullptr]"));
+		const auto vendor = reinterpret_cast<const char*>(
+			functions->glGetString(GL_VENDOR));
+		LOG(("OpenGL Vendor: %1").arg(vendor ? vendor : "[nullptr]"));
+		const auto version = reinterpret_cast<const char*>(
+			functions->glGetString(GL_VERSION));
+		LOG(("OpenGL Version: %1").arg(version ? version : "[nullptr]"));
 		auto list = QStringList();
 		for (const auto extension : context->extensions()) {
 			list.append(QString::fromLatin1(extension));
