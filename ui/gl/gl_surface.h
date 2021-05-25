@@ -28,24 +28,24 @@ class Renderer {
 public:
     virtual void init(
         not_null<QOpenGLWidget*> widget,
-        not_null<QOpenGLFunctions*> f) {
+        QOpenGLFunctions &f) {
     }
 
     virtual void deinit(
         not_null<QOpenGLWidget*> widget,
-        not_null<QOpenGLFunctions*> f) {
+        QOpenGLFunctions &f) {
     }
 
     virtual void resize(
         not_null<QOpenGLWidget*> widget,
-        not_null<QOpenGLFunctions*> f,
+        QOpenGLFunctions &f,
         int w,
         int h) {
     }
 
     virtual void paint(
         not_null<QOpenGLWidget*> widget,
-        not_null<QOpenGLFunctions*> f);
+        QOpenGLFunctions &f);
 
     virtual void paintFallback(
         Painter &&p,

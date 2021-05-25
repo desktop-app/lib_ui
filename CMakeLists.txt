@@ -59,6 +59,8 @@ PRIVATE
     ui/effects/slide_animation.h
     ui/gl/gl_detection.cpp
     ui/gl/gl_detection.h
+    ui/gl/gl_image.cpp
+    ui/gl/gl_image.h
     ui/gl/gl_surface.cpp
     ui/gl/gl_surface.h
     ui/image/image_prepare.cpp

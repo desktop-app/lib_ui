@@ -71,15 +71,15 @@ void SurfaceOpenGL::initializeGL() {
 		context,
 		&QOpenGLContext::aboutToBeDestroyed,
 		[=] { callDeInit(); });
-	_renderer->init(this, context->functions());
+	_renderer->init(this, *context->functions());
 }
 
 void SurfaceOpenGL::resizeGL(int w, int h) {
-	_renderer->resize(this, context()->functions(), w, h);
+	_renderer->resize(this, *context()->functions(), w, h);
 }
 
 void SurfaceOpenGL::paintGL() {
-	_renderer->paint(this, context()->functions());
+	_renderer->paint(this, *context()->functions());
 }
 
 void SurfaceOpenGL::callDeInit() {
@@ -91,7 +91,7 @@ void SurfaceOpenGL::callDeInit() {
 	Assert(surface != nullptr);
 	const auto context = this->context();
 	context->makeCurrent(surface);
-	_renderer->deinit(this, context->functions());
+	_renderer->deinit(this, *context->functions());
 }
 
 SurfaceRaster::SurfaceRaster(
@@ -109,7 +109,7 @@ void SurfaceRaster::paintEvent(QPaintEvent *e) {
 
 void Renderer::paint(
 		not_null<QOpenGLWidget*> widget,
-		not_null<QOpenGLFunctions*> f) {
+		QOpenGLFunctions &f) {
 	paintFallback(Painter(widget.get()), widget->rect(), Backend::OpenGL);
 }
 
