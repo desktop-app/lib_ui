@@ -34,7 +34,7 @@ public:
 		}
 	}
 
-	[[nodiscard]] void bind(QOpenGLFunctions &f, int index) const {
+	void bind(QOpenGLFunctions &f, int index) const {
 		Expects(index >= 0 && index < Count);
 
 		f.glBindTexture(GL_TEXTURE_2D, _values[index]);
