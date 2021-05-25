@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/gl/gl_math.h"
+
 #include <QtGui/QOpenGLFunctions>
 
 namespace Ui::GL {
@@ -47,6 +49,11 @@ private:
 
 };
 
+struct TexturedRect {
+	Rect geometry;
+	Rect texture;
+};
+
 class Image final {
 public:
 	void setImage(QImage image);
@@ -56,6 +63,11 @@ public:
 
 	void bind(QOpenGLFunctions &f);
 	void destroy(QOpenGLFunctions &f);
+
+	[[nodiscard]] TexturedRect texturedRect(
+		const QRect &geometry,
+		const QRect &texture,
+		const QRect &clip = QRect());
 
 	explicit operator bool() const {
 		return !_image.isNull();

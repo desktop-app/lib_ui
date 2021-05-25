@@ -61,6 +61,10 @@ PRIVATE
     ui/gl/gl_detection.h
     ui/gl/gl_image.cpp
     ui/gl/gl_image.h
+    ui/gl/gl_math.cpp
+    ui/gl/gl_math.h
+    ui/gl/gl_shader.cpp
+    ui/gl/gl_shader.h
     ui/gl/gl_surface.cpp
     ui/gl/gl_surface.h
     ui/image/image_prepare.cpp

@@ -82,4 +82,31 @@ void Image::destroy(QOpenGLFunctions &f) {
 	_cacheKey = 0;
 }
 
+TexturedRect Image::texturedRect(
+		const QRect &geometry,
+		const QRect &texture,
+		const QRect &clip) {
+	Expects(!_image.isNull());
+
+	const auto visible = clip.isNull()
+		? geometry
+		: clip.intersected(geometry);
+	const auto xFactor = texture.width() / geometry.width();
+	const auto yFactor = texture.height() / geometry.height();
+	const auto usedTexture = QRect(
+		texture.x() + (visible.x() - geometry.x()) * xFactor,
+		texture.y() + (visible.y() - geometry.y()) * yFactor,
+		visible.width() * xFactor,
+		visible.height() * yFactor);
+	const auto dimensions = QSizeF(_image.size());
+	return {
+		.geometry = Rect(visible),
+		.texture = Rect(QRectF(
+			usedTexture.x() / dimensions.width(),
+			usedTexture.y() / dimensions.height(),
+			usedTexture.width() / dimensions.width(),
+			usedTexture.height() / dimensions.height())),
+	};
+}
+
 } // namespace Ui::GL
