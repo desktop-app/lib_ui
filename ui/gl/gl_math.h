@@ -59,6 +59,10 @@ public:
 		return _y + _height;
 	}
 
+	[[nodiscard]] bool empty() const {
+		return (_width <= 0) || (_height <= 0);
+	}
+
 private:
 	float _x = 0;
 	float _y = 0;
