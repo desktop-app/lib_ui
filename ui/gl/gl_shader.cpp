@@ -104,23 +104,30 @@ ShaderPart FragmentRoundCorners() {
 	return {
 		.header = R"(
 uniform vec4 roundRect;
+uniform vec2 radiusOutline;
 uniform vec4 roundBg;
-uniform float roundRadius;
-float roundedCorner() {
+uniform vec4 outlineFg;
+vec2 roundedCorner() {
 	vec2 rectHalf = roundRect.zw / 2;
 	vec2 rectCenter = roundRect.xy + rectHalf;
 	vec2 fromRectCenter = abs(gl_FragCoord.xy - rectCenter);
-	vec2 vectorRadius = vec2(roundRadius + 0.5, roundRadius + 0.5);
+	vec2 vectorRadius = radiusOutline.xx + vec2(0.5, 0.5);
 	vec2 fromCenterWithRadius = fromRectCenter + vectorRadius;
 	vec2 fromRoundingCenter = max(fromCenterWithRadius, rectHalf)
 		- rectHalf;
-	float d = length(fromRoundingCenter) - roundRadius;
-	return 1. - smoothstep(0., 1., d);
+	float rounded = length(fromRoundingCenter) - radiusOutline.x;
+	float outline = rounded + radiusOutline.y;
+
+	return vec2(
+		1. - smoothstep(0., 1., rounded),
+		1. - (smoothstep(0., 1., outline) * outlineFg.a));
 }
 )",
 		.body = R"(
-	float rounded = roundedCorner();
-	result = result * rounded + roundBg * (1. - rounded);
+	vec2 roundOutline = roundedCorner();
+	result = result * roundOutline.y
+		+ vec4(outlineFg.rgb, 1) * (1. - roundOutline.y);
+	result = result * roundOutline.x + roundBg * (1. - roundOutline.x);
 )",
 	};
 }
