@@ -185,51 +185,54 @@ void Tooltip::Hide() {
 	}
 }
 
-ImportantTooltip::ImportantTooltip(QWidget *parent, object_ptr<TWidget> content, const style::ImportantTooltip &st) : TWidget(parent)
+ImportantTooltip::ImportantTooltip(
+	QWidget *parent,
+	object_ptr<RpWidget> content,
+	const style::ImportantTooltip &st)
+: RpWidget(parent)
 , _st(st)
 , _content(std::move(content)) {
 	_content->setParent(this);
 	_hideTimer.setCallback([this] { toggleAnimated(false); });
 	hide();
+
+	_content->widthValue(
+	) | rpl::start_with_next([=] {
+		resizeToContent();
+	}, lifetime());
 }
 
-void ImportantTooltip::pointAt(QRect area, RectParts side) {
-	if (_area == area && _side == side) {
+void ImportantTooltip::pointAt(
+		QRect area,
+		RectParts side,
+		Fn<QPoint(QSize)> countPosition) {
+	if (_area == area
+		&& _side == side
+		&& !_countPosition
+		&& !countPosition) {
 		return;
 	}
-	setArea(area);
+	_countPosition = std::move(countPosition);
+	_area = area;
 	countApproachSide(side);
-	updateGeometry();
+	resizeToContent();
 	update();
 }
 
-void ImportantTooltip::setArea(QRect area) {
-	Expects(parentWidget() != nullptr);
-	_area = area;
-	auto point = parentWidget()->mapToGlobal(_area.center());
-	_useTransparency = Platform::TranslucentWindowsSupported(point);
-	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
-
-	auto contentWidth = parentWidget()->rect().marginsRemoved(_st.padding).width();
-	accumulate_min(contentWidth, _content->naturalWidth());
-	_content->resizeToWidth(contentWidth);
-
+void ImportantTooltip::resizeToContent() {
 	auto size = _content->rect().marginsAdded(_st.padding).size();
-	if (_useTransparency) {
-		size.setHeight(size.height() + _st.arrow);
-	}
+	size.setHeight(size.height() + _st.arrow);
 	if (size.width() < 2 * (_st.arrowSkipMin + _st.arrow)) {
 		size.setWidth(2 * (_st.arrowSkipMin + _st.arrow));
 	}
 	resize(size);
+	updateGeometry();
 }
 
 void ImportantTooltip::countApproachSide(RectParts preferSide) {
 	Expects(parentWidget() != nullptr);
-	auto requiredSpace = countInner().height() + _st.shift;
-	if (_useTransparency) {
-		requiredSpace += _st.arrow;
-	}
+
+	auto requiredSpace = countInner().height() + _st.shift + _st.arrow;
 	auto available = parentWidget()->rect();
 	auto availableAbove = _area.y() - available.y();
 	auto availableBelow = (available.y() + available.height()) - (_area.y() + _area.height());
@@ -241,28 +244,26 @@ void ImportantTooltip::countApproachSide(RectParts preferSide) {
 		_side = (allowedAbove ? RectPart::Top : RectPart::Bottom)
 			| (preferSide & (RectPart::Left | RectPart::Center | RectPart::Right));
 	}
-	if (_useTransparency) {
-		auto arrow = QImage(
-			QSize(_st.arrow * 2, _st.arrow) * style::DevicePixelRatio(),
-			QImage::Format_ARGB32_Premultiplied);
-		arrow.fill(Qt::transparent);
-		arrow.setDevicePixelRatio(style::DevicePixelRatio());
-		{
-			Painter p(&arrow);
-			PainterHighQualityEnabler hq(p);
+	auto arrow = QImage(
+		QSize(_st.arrow * 2, _st.arrow) * style::DevicePixelRatio(),
+		QImage::Format_ARGB32_Premultiplied);
+	arrow.fill(Qt::transparent);
+	arrow.setDevicePixelRatio(style::DevicePixelRatio());
+	{
+		Painter p(&arrow);
+		PainterHighQualityEnabler hq(p);
 
-			QPainterPath path;
-			path.moveTo(0, 0);
-			path.lineTo(2 * _st.arrow, 0);
-			path.lineTo(_st.arrow, _st.arrow);
-			path.lineTo(0, 0);
-			p.fillPath(path, _st.bg);
-		}
-		if (_side & RectPart::Bottom) {
-			arrow = std::move(arrow).transformed(QTransform(1, 0, 0, -1, 0, 0));
-		}
-		_arrow = PixmapFromImage(std::move(arrow));
+		QPainterPath path;
+		path.moveTo(0, 0);
+		path.lineTo(2 * _st.arrow, 0);
+		path.lineTo(_st.arrow, _st.arrow);
+		path.lineTo(0, 0);
+		p.fillPath(path, _st.bg);
 	}
+	if (_side & RectPart::Bottom) {
+		arrow = std::move(arrow).transformed(QTransform(1, 0, 0, -1, 0, 0));
+	}
+	_arrow = PixmapFromImage(std::move(arrow));
 }
 
 void ImportantTooltip::toggleAnimated(bool visible) {
@@ -294,14 +295,15 @@ void ImportantTooltip::animationCallback() {
 }
 
 void ImportantTooltip::refreshAnimationCache() {
-	if (_cache.isNull() && _useTransparency) {
-		auto animation = base::take(_visibleAnimation);
-		auto visible = std::exchange(_visible, true);
-		showChildren();
-		_cache = GrabWidget(this);
-		_visible = base::take(visible);
-		_visibleAnimation = base::take(animation);
+	if (!_cache.isNull()) {
+		return;
 	}
+	auto animation = base::take(_visibleAnimation);
+	auto visible = std::exchange(_visible, true);
+	showChildren();
+	_cache = GrabWidget(this);
+	_visible = base::take(visible);
+	_visibleAnimation = base::take(animation);
 }
 
 void ImportantTooltip::toggleFast(bool visible) {
@@ -328,8 +330,9 @@ void ImportantTooltip::checkAnimationFinish() {
 	}
 }
 
-void ImportantTooltip::updateGeometry() {
+QPoint ImportantTooltip::countPosition() const {
 	Expects(parentWidget() != nullptr);
+
 	auto parent = parentWidget();
 	auto areaMiddle = _area.x() + (_area.width() / 2);
 	auto left = areaMiddle - (width() / 2);
@@ -343,19 +346,26 @@ void ImportantTooltip::updateGeometry() {
 	accumulate_max(left, areaMiddle + _st.arrow + _st.arrowSkipMin - width());
 	accumulate_min(left, areaMiddle - _st.arrow - _st.arrowSkipMin);
 
-	auto countTop = [this] {
-		auto shift = anim::interpolate(_st.shift, 0, _visibleAnimation.value(_visible ? 1. : 0.));
-		if (_side & RectPart::Top) {
-			return _area.y() - height() - shift;
-		}
-		return _area.y() + _area.height() + shift;
-	};
-	move(left, countTop());
+	const auto top = (_side & RectPart::Top)
+		? (_area.y() - height())
+		: (_area.y() + _area.height());
+	return { left, top };
+}
+
+void ImportantTooltip::updateGeometry() {
+	const auto position = _countPosition
+		? _countPosition(size())
+		: countPosition();
+	const auto shift = anim::interpolate(
+		(_side & RectPart::Top) ? -_st.shift : _st.shift,
+		0,
+		_visibleAnimation.value(_visible ? 1. : 0.));
+	move(position.x(), position.y() + shift);
 }
 
 void ImportantTooltip::resizeEvent(QResizeEvent *e) {
 	auto contentTop = _st.padding.top();
-	if (_useTransparency && (_side & RectPart::Bottom)) {
+	if (_side & RectPart::Bottom) {
 		contentTop += _st.arrow;
 	}
 	_content->moveToLeft(_st.padding.left(), contentTop);
@@ -369,31 +379,27 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	auto inner = countInner();
-	if (_useTransparency) {
-		if (!_cache.isNull()) {
-			auto opacity = _visibleAnimation.value(_visible ? 1. : 0.);
-			p.setOpacity(opacity);
-			p.drawPixmap(0, 0, _cache);
-		} else {
-			if (!_visible) {
-				return;
-			}
-			p.setBrush(_st.bg);
-			p.setPen(Qt::NoPen);
-			{
-				PainterHighQualityEnabler hq(p);
-				p.drawRoundedRect(inner, _st.radius, _st.radius);
-			}
-			auto areaMiddle = _area.x() + (_area.width() / 2) - x();
-			auto arrowLeft = areaMiddle - _st.arrow;
-			if (_side & RectPart::Top) {
-				p.drawPixmapLeft(arrowLeft, inner.y() + inner.height(), width(), _arrow);
-			} else {
-				p.drawPixmapLeft(arrowLeft, inner.y() - _st.arrow, width(), _arrow);
-			}
-		}
+	if (!_cache.isNull()) {
+		auto opacity = _visibleAnimation.value(_visible ? 1. : 0.);
+		p.setOpacity(opacity);
+		p.drawPixmap(0, 0, _cache);
 	} else {
-		p.fillRect(inner, QColor(_st.bg->c.red(), _st.bg->c.green(), _st.bg->c.blue()));
+		if (!_visible) {
+			return;
+		}
+		p.setBrush(_st.bg);
+		p.setPen(Qt::NoPen);
+		{
+			PainterHighQualityEnabler hq(p);
+			p.drawRoundedRect(inner, _st.radius, _st.radius);
+		}
+		auto areaMiddle = _area.x() + (_area.width() / 2) - x();
+		auto arrowLeft = areaMiddle - _st.arrow;
+		if (_side & RectPart::Top) {
+			p.drawPixmapLeft(arrowLeft, inner.y() + inner.height(), width(), _arrow);
+		} else {
+			p.drawPixmapLeft(arrowLeft, inner.y() - _st.arrow, width(), _arrow);
+		}
 	}
 }
 

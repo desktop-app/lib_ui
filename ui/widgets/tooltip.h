@@ -64,11 +64,17 @@ private:
 
 };
 
-class ImportantTooltip : public TWidget {
+class ImportantTooltip : public RpWidget {
 public:
-	ImportantTooltip(QWidget *parent, object_ptr<TWidget> content, const style::ImportantTooltip &st);
+	ImportantTooltip(
+		QWidget *parent,
+		object_ptr<RpWidget> content,
+		const style::ImportantTooltip &st);
 
-	void pointAt(QRect area, RectParts preferSide = RectPart::Top | RectPart::Left);
+	void pointAt(
+		QRect area,
+		RectParts preferSide = RectPart::Top | RectPart::Left,
+		Fn<QPoint(QSize)> countPosition = nullptr);
 
 	void toggleAnimated(bool visible);
 	void toggleFast(bool visible);
@@ -84,24 +90,25 @@ protected:
 
 private:
 	void animationCallback();
-	QRect countInner() const;
-	void setArea(QRect area);
+	[[nodiscard]] QRect countInner() const;
 	void countApproachSide(RectParts preferSide);
+	void resizeToContent();
 	void updateGeometry();
 	void checkAnimationFinish();
 	void refreshAnimationCache();
+	[[nodiscard]] QPoint countPosition() const;
 
 	base::Timer _hideTimer;
 	const style::ImportantTooltip &_st;
-	object_ptr<TWidget> _content;
+	object_ptr<RpWidget> _content;
 	QRect _area;
 	RectParts _side = RectPart::Top | RectPart::Left;
 	QPixmap _arrow;
 
 	Ui::Animations::Simple _visibleAnimation;
+	Fn<QPoint(QSize)> _countPosition;
 	bool _visible = false;
 	Fn<void()> _hiddenCallback;
-	bool _useTransparency = true;
 	QPixmap _cache;
 
 };
