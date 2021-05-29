@@ -119,7 +119,6 @@ PRIVATE
     ui/style/style_core_scale.h
     ui/style/style_core_types.cpp
     ui/style/style_core_types.h
-    ui/text/qtextitemint.cpp
     ui/text/text.cpp
     ui/text/text.h
     ui/text/text_block.cpp
@@ -221,7 +220,9 @@ PRIVATE
     emoji_suggestions/emoji_suggestions_helper.h
 )
 
-if (NOT DESKTOP_APP_USE_PACKAGED)
+if (DESKTOP_APP_USE_PACKAGED)
+    nice_target_sources(lib_ui ${src_loc} PRIVATE ui/text/qtextitemint.cpp)
+else()
     nice_target_sources(lib_ui ${src_loc} PRIVATE qt_conf/linux.qrc)
 endif()
 
