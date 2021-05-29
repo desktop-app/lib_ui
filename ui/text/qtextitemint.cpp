@@ -4,7 +4,6 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#ifdef DESKTOP_APP_USE_PACKAGED
 #include <private/qtextengine_p.h>
 
 QTextItemInt::QTextItemInt(
@@ -47,4 +46,3 @@ void QTextItemInt::initWithScriptItem(const QScriptItem &si) {
 	if (f->d->strikeOut || charFormat.fontStrikeOut())
 		flags |= QTextItem::StrikeOut;
 }
-#endif // !DESKTOP_APP_USE_PACKAGED
