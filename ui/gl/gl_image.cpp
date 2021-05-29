@@ -32,7 +32,21 @@ void DestroyTextures(QOpenGLFunctions &f, gsl::span<GLuint> values) {
 	ranges::fill(values, 0);
 }
 
+void GenerateFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values) {
+	Expects(!values.empty());
+
+	f.glGenFramebuffers(values.size(), values.data());
+}
+
+void DestroyFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values) {
+	Expects(!values.empty());
+
+	f.glDeleteTextures(values.size(), values.data());
+	ranges::fill(values, 0);
+}
+
 } // namespace details
+
 void Image::setImage(QImage image) {
 	_image = std::move(image);
 }

@@ -16,6 +16,9 @@ namespace details {
 void GenerateTextures(QOpenGLFunctions &f, gsl::span<GLuint> values);
 void DestroyTextures(QOpenGLFunctions &f, gsl::span<GLuint> values);
 
+void GenerateFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values);
+void DestroyFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values);
+
 } // namespace details
 
 template <size_t Count>
@@ -38,6 +41,43 @@ public:
 		Expects(index >= 0 && index < Count);
 
 		f.glBindTexture(GL_TEXTURE_2D, _values[index]);
+	}
+
+	[[nodiscard]] GLuint id(int index) const {
+		Expects(index >= 0 && index < Count);
+
+		return _values[index];
+	}
+
+	[[nodiscard]] bool created() const {
+		return (_values[0] != 0);
+	}
+
+private:
+	std::array<GLuint, Count> _values = { { 0 } };
+
+};
+
+template <size_t Count>
+class Framebuffers final {
+public:
+	static_assert(Count > 0);
+
+	void ensureCreated(QOpenGLFunctions &f) {
+		if (!created()) {
+			details::GenerateFramebuffers(f, gsl::make_span(_values));
+		}
+	}
+	void destroy(QOpenGLFunctions &f) {
+		if (created()) {
+			details::DestroyFramebuffers(f, gsl::make_span(_values));
+		}
+	}
+
+	void bind(QOpenGLFunctions &f, int index) const {
+		Expects(index >= 0 && index < Count);
+
+		f.glBindFramebuffer(GL_FRAMEBUFFER, _values[index]);
 	}
 
 	[[nodiscard]] bool created() const {
