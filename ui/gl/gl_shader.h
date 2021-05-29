@@ -21,7 +21,7 @@ struct ShaderPart {
 [[nodiscard]] QString VertexShader(const std::vector<ShaderPart> &parts);
 [[nodiscard]] QString FragmentShader(const std::vector<ShaderPart> &parts);
 
-[[nodiscard]] ShaderPart VertexPassTextureCoord();
+[[nodiscard]] ShaderPart VertexPassTextureCoord(char prefix = 'v');
 [[nodiscard]] ShaderPart FragmentSampleARGB32Texture();
 [[nodiscard]] ShaderPart FragmentSampleYUV420Texture();
 [[nodiscard]] ShaderPart VertexViewportTransform();

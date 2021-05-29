@@ -41,15 +41,14 @@ void main() {
 )";
 }
 
-ShaderPart VertexPassTextureCoord() {
+ShaderPart VertexPassTextureCoord(char prefix) {
+	const auto name = prefix + QString("_texcoord");
 	return {
 		.header = R"(
-attribute vec2 texcoord;
-varying vec2 v_texcoord;
-)",
+attribute vec2 )" + name + R"(In;
+varying vec2 )" + name + ";\n",
 		.body = R"(
-	v_texcoord = texcoord;
-)",
+	)" + name + " = " + name + "In;\n",
 	};
 }
 
