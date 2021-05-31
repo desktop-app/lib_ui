@@ -281,3 +281,7 @@ emojiSuggestionsFadeLeft: icon {{ "fade_horizontal-flip_horizontal", boxBg }};
 emojiSuggestionsFadeRight: icon {{ "fade_horizontal", boxBg }};
 
 transparentPlaceholderSize: 4px;
+
+// floating badge colors
+roundedFg: radialFg;
+roundedBg: radialBg; // closest to #00000066

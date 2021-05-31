@@ -542,7 +542,6 @@ callBg: #26282cf2; // old phone call popup background
 callBgOpaque: #1b1f23; // phone call popup background
 callBgButton: #1b1f237f; // phone call window control buttons bg
 callNameFg: #ffffff; // phone call popup name text
-callFingerprintBg: #00000066; // phone call popup emoji fingerprint background
 callStatusFg: #aaabac; // phone call popup status text
 callIconBg: #ffffff1f; // phone call mute mic and camera button background
 callIconFg: #ffffff; // phone call popup answer, hangup, mute mic and camera icon
