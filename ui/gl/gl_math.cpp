@@ -32,4 +32,13 @@ QSizeF Uniform(QSize size) {
 	return size;
 }
 
+Rect TransformRect(const Rect &raster, QSize viewport, float factor) {
+	return {
+		raster.left() * factor,
+		float(viewport.height() - raster.bottom()) * factor,
+		raster.width() * factor,
+		raster.height() * factor,
+	};
+}
+
 } // namespace Ui::GL

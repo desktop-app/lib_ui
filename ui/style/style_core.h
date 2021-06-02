@@ -58,7 +58,7 @@ inline QImage colorizeImage(const QImage &src, const color &c, QRect srcRect = Q
 	return colorizeImage(src, c->c, srcRect);
 }
 
-QBrush transparentPlaceholderBrush();
+[[nodiscard]] QImage TransparentPlaceholder();
 
 namespace internal {
 

@@ -126,18 +126,19 @@ void colorizeImage(const QImage &src, QColor c, QImage *outResult, QRect srcRect
 	outResult->setDevicePixelRatio(src.devicePixelRatio());
 }
 
-QBrush transparentPlaceholderBrush() {
-	auto size = st::transparentPlaceholderSize * DevicePixelRatio();
-	auto transparent = QImage(2 * size, 2 * size, QImage::Format_ARGB32_Premultiplied);
-	transparent.fill(st::mediaviewTransparentBg->c);
+QImage TransparentPlaceholder() {
+	const auto size = st::transparentPlaceholderSize * DevicePixelRatio();
+	auto result = QImage(
+		2 * size, 2 * size,
+		QImage::Format_ARGB32_Premultiplied);
+	result.fill(st::mediaviewTransparentBg->c);
 	{
-		QPainter p(&transparent);
+		QPainter p(&result);
 		p.fillRect(0, size, size, size, st::mediaviewTransparentFg);
 		p.fillRect(size, 0, size, size, st::mediaviewTransparentFg);
 	}
-	transparent.setDevicePixelRatio(DevicePixelRatio());
-	return QBrush(transparent);
-
+	result.setDevicePixelRatio(DevicePixelRatio());
+	return result;
 }
 
 namespace internal {

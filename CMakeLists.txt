@@ -63,6 +63,8 @@ PRIVATE
     ui/gl/gl_image.h
     ui/gl/gl_math.cpp
     ui/gl/gl_math.h
+    ui/gl/gl_primitives.cpp
+    ui/gl/gl_primitives.h
     ui/gl/gl_shader.cpp
     ui/gl/gl_shader.h
     ui/gl/gl_surface.cpp

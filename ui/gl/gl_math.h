@@ -76,4 +76,9 @@ private:
 [[nodiscard]] QVector4D Uniform(const QColor &color);
 [[nodiscard]] QSizeF Uniform(QSize size);
 
+[[nodiscard]] Rect TransformRect(
+	const Rect &raster,
+	QSize viewport,
+	float factor);
+
 } // namespace Ui::GL
