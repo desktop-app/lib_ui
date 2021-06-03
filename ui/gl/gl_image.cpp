@@ -69,7 +69,7 @@ void Image::bind(QOpenGLFunctions &f, QSize subimage) {
 		&& subimage.height() <= _image.height());
 
 	_textures.ensureCreated(f);
-	if (subimage.isNull()) {
+	if (!subimage.isValid()) {
 		subimage = _image.size();
 	}
 	if (subimage.isEmpty()) {
@@ -127,6 +127,12 @@ TexturedRect Image::texturedRect(
 	const auto visible = clip.isNull()
 		? geometry
 		: clip.intersected(geometry);
+	if (visible.isEmpty()) {
+		return TexturedRect{
+			.geometry = Rect(visible),
+			.texture = Rect(0., 0., 0., 0.),
+		};
+	}
 	const auto xFactor = texture.width() / geometry.width();
 	const auto yFactor = texture.height() / geometry.height();
 	const auto usedTexture = QRect(
