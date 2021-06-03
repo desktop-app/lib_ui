@@ -101,7 +101,7 @@ public:
 	[[nodiscard]] QImage takeImage();
 	void invalidate();
 
-	void bind(QOpenGLFunctions &f);
+	void bind(QOpenGLFunctions &f, QSize subimage = QSize());
 	void destroy(QOpenGLFunctions &f);
 
 	[[nodiscard]] TexturedRect texturedRect(
@@ -116,9 +116,9 @@ public:
 private:
 	QImage _image;
 	QImage _storage;
-	Textures<2> _textures;
+	Textures<1> _textures;
 	qint64 _cacheKey = 0;
-	int _index = 0;
+	QSize _textureSize;
 
 };
 

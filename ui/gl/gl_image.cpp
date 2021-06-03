@@ -63,30 +63,52 @@ void Image::invalidate() {
 	_storage = base::take(_image);
 }
 
-void Image::bind(QOpenGLFunctions &f) {
+void Image::bind(QOpenGLFunctions &f, QSize subimage) {
 	Expects(!_image.isNull());
+	Expects(subimage.width() <= _image.width()
+		&& subimage.height() <= _image.height());
 
 	_textures.ensureCreated(f);
+	if (subimage.isNull()) {
+		subimage = _image.size();
+	}
+	if (subimage.isEmpty()) {
+		_textureSize = subimage;
+		return;
+	}
 	const auto cacheKey = _image.cacheKey();
 	const auto upload = (_cacheKey != cacheKey);
 	if (upload) {
 		_cacheKey = cacheKey;
-		_index = 1 - _index;
 	}
-	_textures.bind(f, _index);
-	const auto error = f.glGetError();
+	_textures.bind(f, 0);
 	if (upload) {
 		f.glPixelStorei(GL_UNPACK_ROW_LENGTH, _image.bytesPerLine() / 4);
-		f.glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA,
-			_image.width(),
-			_image.height(),
-			0,
-			GL_RGBA,
-			GL_UNSIGNED_BYTE,
-			_image.constBits());
+		if (_textureSize.width() < subimage.width()
+			|| _textureSize.height() < subimage.height()) {
+			_textureSize = subimage;
+			f.glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				GL_RGBA,
+				subimage.width(),
+				subimage.height(),
+				0,
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				_image.constBits());
+		} else {
+			f.glTexSubImage2D(
+				GL_TEXTURE_2D,
+				0,
+				0,
+				0,
+				subimage.width(),
+				subimage.height(),
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				_image.constBits());
+		}
 		f.glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 	}
 }
@@ -112,7 +134,7 @@ TexturedRect Image::texturedRect(
 		texture.y() + (visible.y() - geometry.y()) * yFactor,
 		visible.width() * xFactor,
 		visible.height() * yFactor);
-	const auto dimensions = QSizeF(_image.size());
+	const auto dimensions = QSizeF(_textureSize);
 	return {
 		.geometry = Rect(visible),
 		.texture = Rect(QRectF(
