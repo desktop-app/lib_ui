@@ -16,16 +16,21 @@ class QOpenGLFunctions;
 
 namespace Ui::GL {
 
-void FillRectVertices(float *coords, Rect rect);
-
+void FillRectTriangleVertices(float *coords, Rect rect);
 void FillTriangles(
 	QOpenGLFunctions &f,
 	gsl::span<const float> coords,
 	not_null<QOpenGLBuffer*> buffer,
 	not_null<QOpenGLShaderProgram*> program,
-	QSize viewportWithFactor,
 	const QColor &color,
 	Fn<void()> additional = nullptr);
+
+
+void FillRectangle(
+	QOpenGLFunctions &f,
+	not_null<QOpenGLShaderProgram*> program,
+	int skipVertices,
+	const QColor &color);
 
 void FillTexturedRectangle(
 	QOpenGLFunctions &f,
@@ -42,7 +47,16 @@ public:
 		const QRegion &region,
 		QSize viewport,
 		float factor,
-		const style::color &color);
+		const QColor &color);
+
+	void fill(
+			QOpenGLFunctions &f,
+			const QRegion &region,
+			QSize viewport,
+			float factor,
+			const style::color &color) {
+		return fill(f, region, viewport, factor, color->c);
+	}
 
 private:
 	std::optional<QOpenGLBuffer> _bgBuffer;

@@ -88,6 +88,17 @@ uniform sampler2D v_texture;
 	};
 }
 
+ShaderPart FragmentGlobalOpacity() {
+	return {
+		.header = R"(
+uniform float g_opacity;
+)",
+		.body = R"(
+	result *= g_opacity;
+)",
+	};
+}
+
 ShaderPart VertexViewportTransform() {
 	return {
 		.header = R"(

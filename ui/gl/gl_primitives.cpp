@@ -15,7 +15,7 @@ namespace Ui::GL {
 
 static_assert(std::is_same_v<float, GLfloat>);
 
-void FillRectVertices(float *coords, Rect rect) {
+void FillRectTriangleVertices(float *coords, Rect rect) {
 	coords[0] = coords[10] = rect.left();
 	coords[1] = coords[11] = rect.top();
 	coords[2] = rect.right();
@@ -31,7 +31,6 @@ void FillTriangles(
 		gsl::span<const float> coords,
 		not_null<QOpenGLBuffer*> buffer,
 		not_null<QOpenGLShaderProgram*> program,
-		QSize viewportWithFactor,
 		const QColor &color,
 		Fn<void()> additional) {
 	Expects(coords.size() % 6 == 0);
@@ -42,8 +41,6 @@ void FillTriangles(
 	buffer->bind();
 	buffer->allocate(coords.data(), coords.size() * sizeof(GLfloat));
 
-	f.glUseProgram(program->programId());
-	program->setUniformValue("viewport", QSizeF(viewportWithFactor));
 	program->setUniformValue("s_color", Uniform(color));
 
 	GLint position = program->attributeLocation("position");
@@ -61,6 +58,32 @@ void FillTriangles(
 	}
 
 	f.glDrawArrays(GL_TRIANGLES, 0, coords.size() / 2);
+
+	f.glDisableVertexAttribArray(position);
+}
+
+void FillRectangle(
+		QOpenGLFunctions &f,
+		not_null<QOpenGLShaderProgram*> program,
+		int skipVertices,
+		const QColor &color) {
+	const auto shift = [&](int elements) {
+		return reinterpret_cast<const void*>(
+			(skipVertices * 4 + elements) * sizeof(GLfloat));
+	};
+	program->setUniformValue("s_color", Uniform(color));
+
+	GLint position = program->attributeLocation("position");
+	f.glVertexAttribPointer(
+		position,
+		2,
+		GL_FLOAT,
+		GL_FALSE,
+		2 * sizeof(GLfloat),
+		shift(0));
+	f.glEnableVertexAttribArray(position);
+
+	f.glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	f.glDisableVertexAttribArray(position);
 }
@@ -120,8 +143,8 @@ void BackgroundFiller::fill(
 		const QRegion &region,
 		QSize viewport,
 		float factor,
-		const style::color &color) {
-	const auto &rgb = color->c.toRgb();
+		const QColor &color) {
+	const auto rgb = color.toRgb();
 	if (region.isEmpty()) {
 		return;
 	} else if (region.end() - region.begin() == 1
@@ -133,15 +156,18 @@ void BackgroundFiller::fill(
 	_bgTriangles.resize((region.end() - region.begin()) * 12);
 	auto coords = _bgTriangles.data();
 	for (const auto rect : region) {
-		FillRectVertices(coords, TransformRect(rect, viewport, factor));
+		FillRectTriangleVertices(
+			coords,
+			TransformRect(rect, viewport, factor));
 		coords += 12;
 	}
+	f.glUseProgram(_bgProgram->programId());
+	_bgProgram->setUniformValue("viewport", QSizeF(viewport * factor));
 	FillTriangles(
 		f,
 		_bgTriangles,
 		&*_bgBuffer,
 		&*_bgProgram,
-		viewport * factor,
 		rgb);
 }
 
