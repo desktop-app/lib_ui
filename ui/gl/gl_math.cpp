@@ -20,14 +20,6 @@ QVector4D Uniform(const Rect &rect) {
 	return QVector4D(rect.x(), rect.y(), rect.width(), rect.height());
 }
 
-QVector4D Uniform(const QColor &color) {
-	return QVector4D(
-		color.redF(),
-		color.greenF(),
-		color.blueF(),
-		color.alphaF());
-}
-
 QSizeF Uniform(QSize size) {
 	return size;
 }

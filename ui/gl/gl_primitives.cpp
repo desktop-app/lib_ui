@@ -41,7 +41,7 @@ void FillTriangles(
 	buffer->bind();
 	buffer->allocate(coords.data(), coords.size() * sizeof(GLfloat));
 
-	program->setUniformValue("s_color", Uniform(color));
+	program->setUniformValue("s_color", color);
 
 	GLint position = program->attributeLocation("position");
 	f.glVertexAttribPointer(
@@ -71,7 +71,7 @@ void FillRectangle(
 		return reinterpret_cast<const void*>(
 			(skipVertices * 4 + elements) * sizeof(GLfloat));
 	};
-	program->setUniformValue("s_color", Uniform(color));
+	program->setUniformValue("s_color", color);
 
 	GLint position = program->attributeLocation("position");
 	f.glVertexAttribPointer(
