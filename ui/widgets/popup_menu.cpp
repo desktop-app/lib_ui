@@ -304,6 +304,7 @@ void PopupMenu::childHiding(PopupMenu *child) {
 		_activeSubmenu = SubmenuPointer();
 	}
 	if (!_hiding && !isHidden()) {
+		raise();
 		activateWindow();
 	}
 }
@@ -538,6 +539,7 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 	Platform::UpdateOverlayed(this);
 	show();
 	Platform::ShowOverAll(this);
+	raise();
 	activateWindow();
 }
 

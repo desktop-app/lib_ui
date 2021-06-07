@@ -3469,6 +3469,7 @@ void InputField::dropEventInner(QDropEvent *e) {
 	_inDrop = false;
 	_insertedTags.clear();
 	_realInsertPosition = -1;
+	window()->raise();
 	window()->activateWindow();
 }
 
