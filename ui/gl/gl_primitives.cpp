@@ -161,7 +161,7 @@ void BackgroundFiller::fill(
 			TransformRect(rect, viewport, factor));
 		coords += 12;
 	}
-	f.glUseProgram(_bgProgram->programId());
+	_bgProgram->bind();
 	_bgProgram->setUniformValue("viewport", QSizeF(viewport * factor));
 	FillTriangles(
 		f,
