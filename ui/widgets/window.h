@@ -41,6 +41,7 @@ public:
 	void setTitleStyle(const style::WindowTitle &st);
 	void setMinimumSize(QSize size);
 	void setFixedSize(QSize size);
+	void setStaysOnTop(bool enabled);
 	void setGeometry(QRect rect);
 	void showFullScreen();
 	void showNormal();

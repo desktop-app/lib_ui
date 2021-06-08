@@ -52,6 +52,10 @@ void BasicWindowHelper::setFixedSize(QSize size) {
 	_window->setFixedSize(size);
 }
 
+void BasicWindowHelper::setStaysOnTop(bool enabled) {
+	_window->setWindowFlag(Qt::WindowStaysOnTopHint, enabled);
+}
+
 void BasicWindowHelper::setGeometry(QRect rect) {
 	_window->setGeometry(rect);
 }

@@ -117,6 +117,7 @@ public:
 	[[nodiscard]] QRect controlsRect() const;
 	[[nodiscard]] bool checkNativeMove(void *nswindow) const;
 	void activateBeforeNativeMove();
+	void setStaysOnTop(bool enabled);
 	void close();
 
 private:
@@ -127,6 +128,7 @@ private:
 
 	[[nodiscard]] Fn<void(bool)> toggleCustomTitleCallback();
 	[[nodiscard]] Fn<void()> enforceStyleCallback();
+	void enforceStyle();
 
 	const not_null<WindowHelper*> _owner;
 	const WindowObserver *_observer = nullptr;
@@ -141,13 +143,14 @@ private:
 };
 
 WindowHelper::Private::Private(not_null<WindowHelper*> owner)
-: _owner(owner)
-, _observer([[WindowObserver alloc] initWithToggle:toggleCustomTitleCallback() enforce:enforceStyleCallback()]) {
+: _owner(owner) {
 	init();
 }
 
 WindowHelper::Private::~Private() {
-	[_observer release];
+	if (_observer) {
+		[_observer release];
+	}
 }
 
 int WindowHelper::Private::customTitleHeight() const {
@@ -201,6 +204,12 @@ void WindowHelper::Private::activateBeforeNativeMove() {
 	[_nativeWindow makeKeyAndOrderFront:_nativeWindow];
 }
 
+void WindowHelper::Private::setStaysOnTop(bool enabled) {
+	_owner->BasicWindowHelper::setStaysOnTop(enabled);
+	resolveWeakPointers();
+	initCustomTitle();
+}
+
 void WindowHelper::Private::close() {
 	const auto weak = Ui::MakeWeak(_owner->window());
 	QCloseEvent e;
@@ -218,11 +227,13 @@ Fn<void(bool)> WindowHelper::Private::toggleCustomTitleCallback() {
 }
 
 Fn<void()> WindowHelper::Private::enforceStyleCallback() {
-	return crl::guard(_owner->window(), [=] {
-		if (_nativeWindow && _customTitleHeight > 0) {
-			[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSFullSizeContentViewWindowMask];
-		}
-	});
+	return crl::guard(_owner->window(), [=] { enforceStyle(); });
+}
+
+void WindowHelper::Private::enforceStyle() {
+	if (_nativeWindow && _customTitleHeight > 0) {
+		[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSFullSizeContentViewWindowMask];
+	}
 }
 
 void WindowHelper::Private::initOpenGL() {
@@ -246,6 +257,10 @@ void WindowHelper::Private::initCustomTitle() {
 
 	[_nativeWindow setTitlebarAppearsTransparent:YES];
 
+	if (_observer) {
+		[_observer release];
+	}
+	_observer = [[WindowObserver alloc] initWithToggle:toggleCustomTitleCallback() enforce:enforceStyleCallback()];
 	[[NSNotificationCenter defaultCenter] addObserver:_observer selector:@selector(windowWillEnterFullScreen:) name:NSWindowWillEnterFullScreenNotification object:_nativeWindow];
 	[[NSNotificationCenter defaultCenter] addObserver:_observer selector:@selector(windowWillExitFullScreen:) name:NSWindowWillExitFullScreenNotification object:_nativeWindow];
 	[[NSNotificationCenter defaultCenter] addObserver:_observer selector:@selector(windowDidExitFullScreen:) name:NSWindowDidExitFullScreenNotification object:_nativeWindow];
@@ -340,6 +355,10 @@ void WindowHelper::setFixedSize(QSize size) {
 	window()->setFixedSize(
 		size.width(),
 		(_title ? _title->height() : 0) + size.height());
+}
+
+void WindowHelper::setStaysOnTop(bool enabled) {
+	_private->setStaysOnTop(enabled);
 }
 
 void WindowHelper::setGeometry(QRect rect) {

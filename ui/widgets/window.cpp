@@ -44,6 +44,10 @@ void Window::setFixedSize(QSize size) {
 	_helper->setFixedSize(size);
 }
 
+void Window::setStaysOnTop(bool enabled) {
+	_helper->setStaysOnTop(enabled);
+}
+
 void Window::setGeometry(QRect rect) {
 	_helper->setGeometry(rect);
 }
