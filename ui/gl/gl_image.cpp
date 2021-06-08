@@ -11,17 +11,21 @@
 namespace Ui::GL {
 namespace details {
 
-void GenerateTextures(QOpenGLFunctions &f, gsl::span<GLuint> values) {
+void GenerateTextures(
+		QOpenGLFunctions &f,
+		gsl::span<GLuint> values,
+		GLint filter,
+		GLint clamp) {
 	Expects(!values.empty());
 
 	f.glGenTextures(values.size(), values.data());
+
 	for (const auto texture : values) {
 		f.glBindTexture(GL_TEXTURE_2D, texture);
-		const auto clamp = GL_CLAMP_TO_EDGE;
 		f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp);
 		f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp);
-		f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+		f.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 	}
 }
 
@@ -68,7 +72,7 @@ void Image::bind(QOpenGLFunctions &f, QSize subimage) {
 	Expects(subimage.width() <= _image.width()
 		&& subimage.height() <= _image.height());
 
-	_textures.ensureCreated(f);
+	_textures.ensureCreated(f, GL_NEAREST);
 	if (!subimage.isValid()) {
 		subimage = _image.size();
 	}
