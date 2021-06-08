@@ -46,8 +46,13 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	auto tester = QOpenGLWidget(widget);
 	tester.setFormat(format);
 	tester.grabFramebuffer(); // Force initialize().
+	if (!tester.window()->windowHandle()) {
+		tester.window()->createWinId();
+	}
 	const auto context = tester.context();
-	if (!context) {
+	if (!context
+		|| !context->isValid()
+		|| !context->makeCurrent(tester.window()->windowHandle())) {
 		LOG_ONCE(("OpenGL: Could not create widget in a window."));
 		return {};
 	}

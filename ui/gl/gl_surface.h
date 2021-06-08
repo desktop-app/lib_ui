@@ -19,11 +19,6 @@ class RpWidgetWrap;
 
 namespace Ui::GL {
 
-enum class Backend {
-    OpenGL,
-    Raster,
-};
-
 class Renderer {
 public:
     virtual void init(
@@ -62,7 +57,10 @@ struct ChosenRenderer {
 };
 
 [[nodiscard]] std::unique_ptr<RpWidgetWrap> CreateSurface(
-    QWidget *parent,
     Fn<ChosenRenderer(Capabilities)> chooseRenderer);
+
+[[nodiscard]] std::unique_ptr<RpWidgetWrap> CreateSurface(
+	QWidget *parent,
+	ChosenRenderer chosen);
 
 } // namespace Ui::GL

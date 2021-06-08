@@ -114,9 +114,24 @@ void Renderer::paint(
 }
 
 std::unique_ptr<RpWidgetWrap> CreateSurface(
-		QWidget *parent,
 		Fn<ChosenRenderer(Capabilities)> chooseRenderer) {
-	auto chosen = chooseRenderer(CheckCapabilities(parent));
+	auto chosen = chooseRenderer(CheckCapabilities(nullptr));
+	switch (chosen.backend) {
+	case Backend::OpenGL:
+		return std::make_unique<SurfaceOpenGL>(
+			nullptr,
+			std::move(chosen.renderer));
+	case Backend::Raster:
+		return std::make_unique<SurfaceRaster>(
+			nullptr,
+			std::move(chosen.renderer));
+	}
+	Unexpected("Backend value in Ui::GL::CreateSurface.");
+}
+
+std::unique_ptr<RpWidgetWrap> CreateSurface(
+		QWidget *parent,
+		ChosenRenderer chosen) {
 	switch (chosen.backend) {
 	case Backend::OpenGL:
 		return std::make_unique<SurfaceOpenGL>(

@@ -10,6 +10,11 @@
 
 namespace Ui::GL {
 
+enum class Backend {
+	Raster,
+	OpenGL,
+};
+
 struct Capabilities {
 	bool supported = false;
 	bool transparency = false;
