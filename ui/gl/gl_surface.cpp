@@ -30,7 +30,7 @@ public:
 private:
 	void initializeGL() override;
 	void resizeGL(int w, int h) override;
-	void paintGL() override;
+	void paintEvent(QPaintEvent *e) override;
 	void callDeInit();
 
 	const std::unique_ptr<Renderer> _renderer;
@@ -78,8 +78,22 @@ void SurfaceOpenGL::resizeGL(int w, int h) {
 	_renderer->resize(this, *context()->functions(), w, h);
 }
 
-void SurfaceOpenGL::paintGL() {
-	_renderer->paint(this, *context()->functions());
+void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
+	if (!updatesEnabled() || size().isEmpty() || !isValid()) {
+		return;
+	}
+	makeCurrent();
+	const auto f = context()->functions();
+	if (const auto bg = _renderer->clearColor()) {
+		f->glClearColor(bg->redF(), bg->greenF(), bg->blueF(), bg->alphaF());
+		f->glClear(GL_COLOR_BUFFER_BIT);
+	}
+	f->glViewport(
+		0,
+		0,
+		width() * devicePixelRatio(),
+		height() * devicePixelRatio());
+	_renderer->paint(this, *f);
 }
 
 void SurfaceOpenGL::callDeInit() {

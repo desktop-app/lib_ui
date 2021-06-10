@@ -37,32 +37,4 @@ void FillTexturedRectangle(
 	not_null<QOpenGLShaderProgram*> program,
 	int skipVertices = 0);
 
-class BackgroundFiller final {
-public:
-	void init(QOpenGLFunctions &f);
-	void deinit(QOpenGLFunctions &);
-
-	void fill(
-		QOpenGLFunctions &f,
-		const QRegion &region,
-		QSize viewport,
-		float factor,
-		const QColor &color);
-
-	void fill(
-			QOpenGLFunctions &f,
-			const QRegion &region,
-			QSize viewport,
-			float factor,
-			const style::color &color) {
-		return fill(f, region, viewport, factor, color->c);
-	}
-
-private:
-	std::optional<QOpenGLBuffer> _bgBuffer;
-	std::optional<QOpenGLShaderProgram> _bgProgram;
-	std::vector<float> _bgTriangles;
-
-};
-
 } // namespace Ui::GL

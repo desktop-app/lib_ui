@@ -42,6 +42,10 @@ public:
         not_null<QOpenGLWidget*> widget,
         QOpenGLFunctions &f);
 
+	[[nodiscard]] virtual std::optional<QColor> clearColor() {
+		return std::nullopt;
+	}
+
     virtual void paintFallback(
         Painter &&p,
         const QRegion &clip,
