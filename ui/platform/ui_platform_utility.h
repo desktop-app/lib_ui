@@ -37,8 +37,8 @@ void ClearTransientParent(not_null<QWidget*> widget);
 void DrainMainQueue(); // Needed only if UseMainQueueGeneric() is false.
 
 [[nodiscard]] bool WindowExtentsSupported();
-bool SetWindowExtents(QWindow *window, const QMargins &extents);
-bool UnsetWindowExtents(QWindow *window);
+void SetWindowExtents(QWindow *window, const QMargins &extents);
+void UnsetWindowExtents(QWindow *window);
 bool ShowWindowMenu(QWindow *window);
 
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();

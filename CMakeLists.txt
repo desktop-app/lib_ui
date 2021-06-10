@@ -245,6 +245,11 @@ endif()
 if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
     remove_target_sources(Telegram ${src_loc} ui/platform/linux/ui_linux_wayland_integration.cpp)
     nice_target_sources(Telegram ${src_loc} PRIVATE ui/platform/linux/ui_linux_wayland_integration_dummy.cpp)
+elseif(LINUX)
+    target_link_libraries(lib_ui
+    PUBLIC
+        desktop-app::lib_waylandshells
+    )
 endif()
 
 target_include_directories(lib_ui

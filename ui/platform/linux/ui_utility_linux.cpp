@@ -18,11 +18,21 @@
 #include "base/platform/linux/base_linux_xcb_utilities.h"
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
+#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+#include "waylandshells/xdg_shell.h"
+#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+
 #include <QtCore/QPoint>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <private/qguiapplication_p.h>
 #include <qpa/qplatformnativeinterface.h>
+#include <qpa/qplatformintegration.h>
+
+#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+#include <private/qwaylandintegration_p.h>
+#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 
 Q_DECLARE_METATYPE(QMargins);
 
@@ -285,10 +295,10 @@ std::optional<bool> XCBIsOverlapped(
 	return false;
 }
 
-bool SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
+void SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
 	if (!connection) {
-		return false;
+		return;
 	}
 
 	const auto frameExtentsAtom = base::Platform::XCB::GetAtom(
@@ -296,7 +306,7 @@ bool SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
 		kXCBFrameExtentsAtomName.utf16());
 
 	if (!frameExtentsAtom.has_value()) {
-		return false;
+		return;
 	}
 
 	const auto extentsVector = std::vector<uint>{
@@ -315,14 +325,12 @@ bool SetXCBFrameExtents(QWindow *window, const QMargins &extents) {
 		32,
 		extentsVector.size(),
 		extentsVector.data());
-
-	return true;
 }
 
-bool UnsetXCBFrameExtents(QWindow *window) {
+void UnsetXCBFrameExtents(QWindow *window) {
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
 	if (!connection) {
-		return false;
+		return;
 	}
 
 	const auto frameExtentsAtom = base::Platform::XCB::GetAtom(
@@ -330,15 +338,13 @@ bool UnsetXCBFrameExtents(QWindow *window) {
 		kXCBFrameExtentsAtomName.utf16());
 
 	if (!frameExtentsAtom.has_value()) {
-		return false;
+		return;
 	}
 
 	xcb_delete_property(
 		connection,
 		window->winId(),
 		*frameExtentsAtom);
-
-	return true;
 }
 
 bool ShowXCBWindowMenu(QWindow *window) {
@@ -460,11 +466,16 @@ std::optional<bool> IsOverlapped(
 }
 
 bool WindowExtentsSupported() {
-#ifdef DESKTOP_APP_QT_PATCHED
+#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 	if (::Platform::IsWayland()) {
-		return true;
+		// initialize shell integration before querying
+		using QtWaylandClient::QWaylandIntegration;
+		const auto integration = static_cast<QWaylandIntegration*>(
+			QGuiApplicationPrivate::platformIntegration());
+		integration->shellIntegration();
+		return WaylandShells::XdgShell();
 	}
-#endif // DESKTOP_APP_QT_PATCHED
+#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
@@ -477,42 +488,32 @@ bool WindowExtentsSupported() {
 	return false;
 }
 
-bool SetWindowExtents(QWindow *window, const QMargins &extents) {
+void SetWindowExtents(QWindow *window, const QMargins &extents) {
 	if (::Platform::IsWayland()) {
-#ifdef DESKTOP_APP_QT_PATCHED
-		window->setProperty("WaylandCustomMargins", QVariant::fromValue<QMargins>(extents));
-		return true;
-#else // DESKTOP_APP_QT_PATCHED
-		return false;
-#endif // !DESKTOP_APP_QT_PATCHED
+#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+		window->setProperty(
+			"_desktopApp_waylandCustomMargins",
+			QVariant::fromValue<QMargins>(extents));
+#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		return SetXCBFrameExtents(window, extents);
-#else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-		return false;
-#endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
+		SetXCBFrameExtents(window, extents);
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
-
-	return false;
 }
 
-bool UnsetWindowExtents(QWindow *window) {
+void UnsetWindowExtents(QWindow *window) {
 	if (::Platform::IsWayland()) {
-#ifdef DESKTOP_APP_QT_PATCHED
-		window->setProperty("WaylandCustomMargins", QVariant());
-		return true;
-#else // DESKTOP_APP_QT_PATCHED
-		return false;
-#endif // !DESKTOP_APP_QT_PATCHED
+#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+		window->setProperty(
+			"_desktopApp_waylandCustomMargins",
+			QVariant());
+#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		return UnsetXCBFrameExtents(window);
-#else // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-		return false;
-#endif // DESKTOP_APP_DISABLE_X11_INTEGRATION
+		UnsetXCBFrameExtents(window);
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
-
-	return false;
 }
 
 bool ShowWindowMenu(QWindow *window) {

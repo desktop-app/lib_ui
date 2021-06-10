@@ -31,12 +31,10 @@ inline bool WindowExtentsSupported() {
 	return false;
 }
 
-inline bool SetWindowExtents(QWindow *window, const QMargins &extents) {
-	return false;
+inline void SetWindowExtents(QWindow *window, const QMargins &extents) {
 }
 
-inline bool UnsetWindowExtents(QWindow *window) {
-	return false;
+inline void UnsetWindowExtents(QWindow *window) {
 }
 
 inline bool ShowWindowMenu(QWindow *window) {
