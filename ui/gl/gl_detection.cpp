@@ -6,6 +6,7 @@
 //
 #include "ui/gl/gl_detection.h"
 
+#include "ui/integration.h"
 #include "base/debug_log.h"
 
 #include <QtCore/QSet>
@@ -45,7 +46,11 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	}
 	auto tester = QOpenGLWidget(widget);
 	tester.setFormat(format);
+
+	Ui::Integration::Instance().openglCheckStart();
 	tester.grabFramebuffer(); // Force initialize().
+	Ui::Integration::Instance().openglCheckFinish();
+
 	if (!tester.window()->windowHandle()) {
 		tester.window()->createWinId();
 	}

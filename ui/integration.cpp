@@ -30,6 +30,16 @@ bool Integration::Exists() {
 	return (IntegrationInstance != nullptr);
 }
 
+void Integration::openglCheckStart() {
+}
+
+void Integration::openglCheckFinish() {
+}
+
+bool Integration::openglLastCheckFailed() {
+	return false;
+}
+
 void Integration::textActionsUpdated() {
 }
 
