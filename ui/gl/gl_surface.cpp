@@ -12,6 +12,7 @@
 #include <QtGui/QtEvents>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QWindow>
+#include <QtGui/QPaintEngine>
 #include <QtWidgets/QOpenGLWidget>
 
 namespace Ui::GL {
@@ -82,7 +83,14 @@ void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
 	if (!updatesEnabled() || size().isEmpty() || !isValid()) {
 		return;
 	}
-	makeCurrent();
+	auto redirectOffset = QPoint();
+	const auto rpd = redirected(&redirectOffset);
+	const auto device = rpd ? rpd : static_cast<QPaintDevice*>(this);
+	const auto engine = device->paintEngine();
+	if (!engine) {
+		return;
+	}
+	engine->begin(device);
 	const auto f = context()->functions();
 	if (const auto bg = _renderer->clearColor()) {
 		f->glClearColor(bg->redF(), bg->greenF(), bg->blueF(), bg->alphaF());
@@ -94,6 +102,7 @@ void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
 		width() * devicePixelRatio(),
 		height() * devicePixelRatio());
 	_renderer->paint(this, *f);
+	engine->end();
 }
 
 void SurfaceOpenGL::callDeInit() {
