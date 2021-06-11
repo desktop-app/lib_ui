@@ -96,6 +96,7 @@ void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
 		f->glClearColor(bg->redF(), bg->greenF(), bg->blueF(), bg->alphaF());
 		f->glClear(GL_COLOR_BUFFER_BIT);
 	}
+	f->glDisable(GL_BLEND);
 	f->glViewport(
 		0,
 		0,
