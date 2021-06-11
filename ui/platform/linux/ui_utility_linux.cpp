@@ -18,23 +18,11 @@
 #include "base/platform/linux/base_linux_xcb_utilities.h"
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-#include "waylandshells/xdg_shell.h"
-#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-
 #include <QtCore/QPoint>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
-#include <private/qguiapplication_p.h>
 #include <qpa/qplatformnativeinterface.h>
-#include <qpa/qplatformintegration.h>
-
-#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-#include <private/qwaylandintegration_p.h>
-#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-
-Q_DECLARE_METATYPE(QMargins);
 
 namespace Ui {
 namespace Platform {
@@ -466,16 +454,9 @@ std::optional<bool> IsOverlapped(
 }
 
 bool WindowExtentsSupported() {
-#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-	if (::Platform::IsWayland()) {
-		// initialize shell integration before querying
-		using QtWaylandClient::QWaylandIntegration;
-		const auto integration = static_cast<QWaylandIntegration*>(
-			QGuiApplicationPrivate::platformIntegration());
-		integration->shellIntegration();
-		return WaylandShells::XdgShell();
+	if (const auto integration = WaylandIntegration::Instance()) {
+		return integration->windowExtentsSupported();
 	}
-#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
@@ -489,12 +470,8 @@ bool WindowExtentsSupported() {
 }
 
 void SetWindowExtents(QWindow *window, const QMargins &extents) {
-	if (::Platform::IsWayland()) {
-#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-		window->setProperty(
-			"_desktopApp_waylandCustomMargins",
-			QVariant::fromValue<QMargins>(extents));
-#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+	if (const auto integration = WaylandIntegration::Instance()) {
+		integration->setWindowExtents(window, extents);
 	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		SetXCBFrameExtents(window, extents);
@@ -503,12 +480,8 @@ void SetWindowExtents(QWindow *window, const QMargins &extents) {
 }
 
 void UnsetWindowExtents(QWindow *window) {
-	if (::Platform::IsWayland()) {
-#ifndef DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
-		window->setProperty(
-			"_desktopApp_waylandCustomMargins",
-			QVariant());
-#endif // !DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
+	if (const auto integration = WaylandIntegration::Instance()) {
+		integration->unsetWindowExtents(window);
 	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		UnsetXCBFrameExtents(window);

@@ -15,6 +15,10 @@ namespace Platform {
 class WaylandIntegration {
 public:
 	static WaylandIntegration *Instance();
+
+	bool windowExtentsSupported();
+	void setWindowExtents(QWindow *window, const QMargins &extents);
+	void unsetWindowExtents(QWindow *window);
 	bool showWindowMenu(QWindow *window);
 
 private:
