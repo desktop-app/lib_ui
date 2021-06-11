@@ -21,6 +21,18 @@ WaylandIntegration *WaylandIntegration::Instance() {
 	return &instance;
 }
 
+bool WaylandIntegration::windowExtentsSupported() {
+	return false;
+}
+
+void WaylandIntegration::setWindowExtents(
+		QWindow *window,
+		const QMargins &extents) {
+}
+
+void WaylandIntegration::unsetWindowExtents(QWindow *window) {
+}
+
 bool WaylandIntegration::showWindowMenu(QWindow *window) {
 	return false;
 }
