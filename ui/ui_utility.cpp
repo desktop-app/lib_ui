@@ -9,6 +9,7 @@
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/style/style_core.h"
 
+#include <QtCore/QCoreApplication>
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
@@ -214,10 +215,9 @@ bool IsContentVisible(
 }
 
 void DisableCustomScaling() {
-	qunsetenv("QT_DEVICE_PIXEL_RATIO");
-	qunsetenv("QT_SCALE_FACTOR");
-	qunsetenv("QT_AUTO_SCREEN_SCALE_FACTOR");
-	qunsetenv("QT_SCREEN_SCALE_FACTORS");
+	if (QCoreApplication::testAttribute(Qt::AA_DisableHighDpiScaling)) {
+		QHighDpiScaling::setGlobalFactor(1);
+	}
 }
 
 } // namespace Ui
