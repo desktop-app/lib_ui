@@ -8,14 +8,25 @@
 
 #include "base/debug_log.h"
 
+#include <QtGui/QOpenGLContext>
+
 namespace Ui::GL {
 
+[[nodiscard]] bool IsOpenGLES() {
+	const auto current = QOpenGLContext::currentContext();
+	Assert(current != nullptr);
+
+	return (current->format().renderableType() == QSurfaceFormat::OpenGLES);
+}
+
 QString VertexShader(const std::vector<ShaderPart> &parts) {
+	const auto version = IsOpenGLES()
+		? QString("#version 100\nprecision highp float;\n")
+		: QString("#version 120\n");
 	const auto accumulate = [&](auto proj) {
 		return ranges::accumulate(parts, QString(), std::plus<>(), proj);
 	};
-	return R"(
-#version 120
+	return version + R"(
 attribute vec2 position;
 )" + accumulate(&ShaderPart::header) + R"(
 void main() {
@@ -27,12 +38,13 @@ void main() {
 }
 
 QString FragmentShader(const std::vector<ShaderPart> &parts) {
+	const auto version = IsOpenGLES()
+		? QString("#version 100\nprecision highp float;\n")
+		: QString("#version 120\n");
 	const auto accumulate = [&](auto proj) {
 		return ranges::accumulate(parts, QString(), std::plus<>(), proj);
 	};
-	return R"(
-#version 120
-)" + accumulate(&ShaderPart::header) + R"(
+	return version + accumulate(&ShaderPart::header) + R"(
 void main() {
 	vec4 result = vec4(0., 0., 0., 0.);
 )" + accumulate(&ShaderPart::body) + R"(
@@ -103,7 +115,7 @@ ShaderPart VertexViewportTransform() {
 uniform vec2 viewport;
 vec4 transform(vec4 position) {
 	return vec4(
-		vec2(-1, -1) + 2 * position.xy / viewport,
+		vec2(-1, -1) + 2. * position.xy / viewport,
 		position.z,
 		position.w);
 }
@@ -122,7 +134,7 @@ uniform vec2 radiusOutline;
 uniform vec4 roundBg;
 uniform vec4 outlineFg;
 vec2 roundedCorner() {
-	vec2 rectHalf = roundRect.zw / 2;
+	vec2 rectHalf = roundRect.zw / 2.;
 	vec2 rectCenter = roundRect.xy + rectHalf;
 	vec2 fromRectCenter = abs(gl_FragCoord.xy - rectCenter);
 	vec2 vectorRadius = radiusOutline.xx + vec2(0.5, 0.5);

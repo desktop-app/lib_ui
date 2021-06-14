@@ -76,8 +76,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	const auto supported = context->format();
 	switch (supported.profile()) {
 	case QSurfaceFormat::NoProfile: {
-		LOG_ONCE(("OpenGL Profile: None."));
-		return {};
+		if (supported.renderableType() == QSurfaceFormat::OpenGLES) {
+			LOG_ONCE(("OpenGL Profile: OpenGLES."));
+		} else {
+			LOG_ONCE(("OpenGL Profile: None."));
+			return {};
+		}
 	} break;
 	case QSurfaceFormat::CoreProfile: {
 		LOG_ONCE(("OpenGL Profile: Core."));
