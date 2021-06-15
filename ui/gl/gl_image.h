@@ -107,12 +107,12 @@ struct TexturedRect {
 
 class Image final {
 public:
-	void setImage(QImage image);
+	void setImage(QImage image, QSize subimage = QSize());
 	[[nodiscard]] const QImage &image() const;
 	[[nodiscard]] QImage takeImage();
 	void invalidate();
 
-	void bind(QOpenGLFunctions &f, QSize subimage = QSize());
+	void bind(QOpenGLFunctions &f);
 	void destroy(QOpenGLFunctions &f);
 
 	[[nodiscard]] TexturedRect texturedRect(
@@ -129,6 +129,7 @@ private:
 	QImage _storage;
 	Textures<1> _textures;
 	qint64 _cacheKey = 0;
+	QSize _subimage;
 	QSize _textureSize;
 
 };

@@ -51,8 +51,12 @@ void DestroyFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values) {
 
 } // namespace details
 
-void Image::setImage(QImage image) {
+void Image::setImage(QImage image, QSize subimage) {
+	Expects(subimage.width() <= image.width()
+		&& subimage.height() <= image.height());
+
 	_image = std::move(image);
+	_subimage = subimage.isValid() ? subimage : _image.size();
 }
 
 const QImage &Image::image() const {
@@ -67,17 +71,10 @@ void Image::invalidate() {
 	_storage = base::take(_image);
 }
 
-void Image::bind(QOpenGLFunctions &f, QSize subimage) {
-	Expects(!_image.isNull());
-	Expects(subimage.width() <= _image.width()
-		&& subimage.height() <= _image.height());
-
+void Image::bind(QOpenGLFunctions &f) {
 	_textures.ensureCreated(f, GL_NEAREST);
-	if (!subimage.isValid()) {
-		subimage = _image.size();
-	}
-	if (subimage.isEmpty()) {
-		_textureSize = subimage;
+	if (_subimage.isEmpty()) {
+		_textureSize = _subimage;
 		return;
 	}
 	const auto cacheKey = _image.cacheKey();
@@ -88,15 +85,15 @@ void Image::bind(QOpenGLFunctions &f, QSize subimage) {
 	_textures.bind(f, 0);
 	if (upload) {
 		f.glPixelStorei(GL_UNPACK_ROW_LENGTH, _image.bytesPerLine() / 4);
-		if (_textureSize.width() < subimage.width()
-			|| _textureSize.height() < subimage.height()) {
-			_textureSize = subimage;
+		if (_textureSize.width() < _subimage.width()
+			|| _textureSize.height() < _subimage.height()) {
+			_textureSize = _subimage;
 			f.glTexImage2D(
 				GL_TEXTURE_2D,
 				0,
 				GL_RGBA,
-				subimage.width(),
-				subimage.height(),
+				_subimage.width(),
+				_subimage.height(),
 				0,
 				GL_RGBA,
 				GL_UNSIGNED_BYTE,
@@ -107,8 +104,8 @@ void Image::bind(QOpenGLFunctions &f, QSize subimage) {
 				0,
 				0,
 				0,
-				subimage.width(),
-				subimage.height(),
+				_subimage.width(),
+				_subimage.height(),
 				GL_RGBA,
 				GL_UNSIGNED_BYTE,
 				_image.constBits());
@@ -144,7 +141,10 @@ TexturedRect Image::texturedRect(
 		texture.y() + (visible.y() - geometry.y()) * yFactor,
 		visible.width() * xFactor,
 		visible.height() * yFactor);
-	const auto dimensions = QSizeF(_textureSize);
+	const auto dimensions = QSizeF((_textureSize.width() < _subimage.width()
+		|| _textureSize.height() < _subimage.height())
+		? _subimage
+		: _textureSize);
 	return {
 		.geometry = Rect(visible),
 		.texture = Rect(QRectF(
