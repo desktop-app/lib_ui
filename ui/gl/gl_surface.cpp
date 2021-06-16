@@ -97,11 +97,7 @@ void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
 		f->glClear(GL_COLOR_BUFFER_BIT);
 	}
 	f->glDisable(GL_BLEND);
-	f->glViewport(
-		0,
-		0,
-		width() * devicePixelRatio(),
-		height() * devicePixelRatio());
+	f->glViewport(0, 0, device->width(), device->height());
 	_renderer->paint(this, *f);
 	engine->end();
 }
