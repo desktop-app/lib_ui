@@ -79,6 +79,7 @@ public:
 	void toggleAnimated(bool visible);
 	void toggleFast(bool visible);
 	void hideAfter(crl::time timeout);
+	void updateGeometry();
 
 	void setHiddenCallback(Fn<void()> callback) {
 		_hiddenCallback = std::move(callback);
@@ -93,7 +94,6 @@ private:
 	[[nodiscard]] QRect countInner() const;
 	void countApproachSide(RectParts preferSide);
 	void resizeToContent();
-	void updateGeometry();
 	void checkAnimationFinish();
 	void refreshAnimationCache();
 	[[nodiscard]] QPoint countPosition() const;
