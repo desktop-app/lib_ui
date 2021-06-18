@@ -56,8 +56,9 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	}
 	const auto context = tester.context();
 	if (!context
-		|| !context->isValid()
-		|| !context->makeCurrent(tester.window()->windowHandle())) {
+		|| !context->isValid()/*
+		// This check doesn't work for a widget with WA_NativeWindow.
+		|| !context->makeCurrent(tester.window()->windowHandle())*/) {
 		LOG_ONCE(("OpenGL: Could not create widget in a window."));
 		return {};
 	}
