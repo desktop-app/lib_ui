@@ -11,6 +11,8 @@
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
 
+#include <QtGui/QScreen>
+
 namespace Ui::GL {
 namespace {
 
@@ -95,9 +97,19 @@ std::unique_ptr<Ui::RpWidget> Window::createNativeBodyWrap() {
 	raw->setParent(nativeParent);
 	raw->show();
 	raw->update();
+
 	_window->sizeValue(
 	) | rpl::start_with_next([=](QSize size) {
-		raw->setGeometry(QRect(QPoint(), size));
+		auto geometry = QRect(QPoint(), size);
+		if constexpr (::Platform::IsWindows()) {
+			if (const auto screen = _window->screen()) {
+				if (screen->size() == size) {
+					// Fix flicker in FullScreen OpenGL window on Windows.
+					geometry = geometry.marginsAdded({ 0, 0, 0, 1 });
+				}
+			}
+		}
+		raw->setGeometry(geometry);
 	}, raw->lifetime());
 
 	return result;

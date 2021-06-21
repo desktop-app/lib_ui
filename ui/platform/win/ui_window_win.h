@@ -58,7 +58,8 @@ private:
 
 };
 
-[[nodiscard]] HWND GetWindowHandle(not_null<RpWidget*> widget);
+[[nodiscard]] HWND GetWindowHandle(not_null<QWidget*> widget);
+[[nodiscard]] HWND GetWindowHandle(not_null<QWindow*> window);
 
 } // namespace Platform
 } // namespace Ui

@@ -585,12 +585,18 @@ not_null<WindowHelper::NativeFilter*> WindowHelper::GetNativeFilter() {
 	return GlobalFilter;
 }
 
-HWND GetWindowHandle(not_null<RpWidget*> widget) {
-	widget->window()->createWinId();
+HWND GetWindowHandle(not_null<QWidget*> widget) {
+	const auto toplevel = widget->window();
+	toplevel->createWinId();
+	return GetWindowHandle(toplevel->windowHandle());
+}
 
-	const auto window = widget->window()->windowHandle();
+HWND GetWindowHandle(not_null<QWindow*> window) {
+	if (!window->winId()) {
+		window->create();
+	}
+
 	const auto native = QGuiApplication::platformNativeInterface();
-	Assert(window != nullptr);
 	Assert(native != nullptr);
 
 	return static_cast<HWND>(native->nativeResourceForWindow(
