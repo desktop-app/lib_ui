@@ -69,6 +69,8 @@ PRIVATE
     ui/gl/gl_shader.h
     ui/gl/gl_surface.cpp
     ui/gl/gl_surface.h
+    ui/gl/gl_window.cpp
+    ui/gl/gl_window.h
     ui/image/image_prepare.cpp
     ui/image/image_prepare.h
     ui/layers/box_content.cpp
