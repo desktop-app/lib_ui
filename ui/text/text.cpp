@@ -3326,7 +3326,13 @@ TextForMimeData String::toText(
 				|| (type == EntityType::Cashtag);
 			return std::pair{ entity.offset(), isUrl ? 0 : 1 };
 		};
-		ranges::sort(result.rich.entities, std::less<>(), proj);
+		const auto pred = [&](const EntityInText &a, const EntityInText &b) {
+			return proj(a) < proj(b);
+		};
+		std::sort(
+			result.rich.entities.begin(),
+			result.rich.entities.end(),
+			pred);
 	}
 
 	return result;
