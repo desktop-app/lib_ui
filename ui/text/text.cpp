@@ -3167,7 +3167,8 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 				if (rangeTo > rangeFrom) { // handle click handler
 					QStringRef r = _text.midRef(rangeFrom, rangeTo - rangeFrom);
 					if (lnkFrom != rangeFrom || blockFrom != rangeTo) {
-						appendPartCallback(r);
+						// Ignore links that are partially copied.
+						clickHandlerFinishCallback(r, nullptr);
 					} else {
 						clickHandlerFinishCallback(r, _links.at(lnkIndex - 1));
 					}
@@ -3192,12 +3193,10 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 
 		if ((*i)->type() == TextBlockTSkip) continue;
 
-		if (!blockLnkIndex) {
-			auto rangeFrom = qMax(selection.from, blockFrom);
-			auto rangeTo = qMin(selection.to, uint16(blockFrom + countBlockLength(i, e)));
-			if (rangeTo > rangeFrom) {
-				appendPartCallback(_text.midRef(rangeFrom, rangeTo - rangeFrom));
-			}
+		auto rangeFrom = qMax(selection.from, blockFrom);
+		auto rangeTo = qMin(selection.to, uint16(blockFrom + countBlockLength(i, e)));
+		if (rangeTo > rangeFrom) {
+			appendPartCallback(_text.midRef(rangeFrom, rangeTo - rangeFrom));
 		}
 	}
 }
@@ -3270,23 +3269,21 @@ TextForMimeData String::toText(
 		linkStart = result.rich.text.size();
 	};
 	const auto clickHandlerFinishCallback = [&](
-			const QStringRef &part,
+			const QStringRef &inText,
 			const ClickHandlerPtr &handler) {
+		if (!handler || (!composeExpanded && !composeEntities)) {
+			return;
+		}
 		const auto entity = handler->getTextEntity();
 		const auto plainUrl = (entity.type == EntityType::Url)
 			|| (entity.type == EntityType::Email);
 		const auto full = plainUrl
 			? entity.data.midRef(0, entity.data.size())
-			: part;
-		result.rich.text.append(full);
-		if (!composeExpanded && !composeEntities) {
-			return;
-		}
+			: inText;
 		const auto customTextLink = (entity.type == EntityType::CustomUrl);
 		const auto internalLink = customTextLink
 			&& entity.data.startsWith(qstr("internal:"));
 		if (composeExpanded) {
-			result.expanded.append(full);
 			const auto sameAsTextLink = customTextLink
 				&& (entity.data
 					== UrlClickHandler::EncodeForOpening(full.toString()));
@@ -3299,7 +3296,7 @@ TextForMimeData String::toText(
 			insertEntity({
 				entity.type,
 				linkStart,
-				full.size(),
+				(result.rich.text.size() - linkStart),
 				plainUrl ? QString() : entity.data });
 		}
 	};
@@ -3316,6 +3313,21 @@ TextForMimeData String::toText(
 		clickHandlerStartCallback,
 		clickHandlerFinishCallback,
 		flagsChangeCallback);
+
+	if (composeEntities) {
+		const auto proj = [](const EntityInText &entity) {
+			const auto type = entity.type();
+			const auto isUrl = (type == EntityType::Url)
+				|| (type == EntityType::CustomUrl)
+				|| (type == EntityType::BotCommand)
+				|| (type == EntityType::Mention)
+				|| (type == EntityType::MentionName)
+				|| (type == EntityType::Hashtag)
+				|| (type == EntityType::Cashtag);
+			return std::pair{ entity.offset(), isUrl ? 0 : 1 };
+		};
+		ranges::sort(result.rich.entities, std::less<>(), proj);
+	}
 
 	return result;
 }
