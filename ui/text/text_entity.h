@@ -359,7 +359,10 @@ void ApplyServerCleaning(TextWithEntities &result);
 
 inline const auto kMentionTagStart = qstr("mention://user.");
 
-[[nodiscard]] bool IsMentionLink(const QString &link);
+[[nodiscard]] bool IsMentionLink(const QStringRef &link);
+[[nodiscard]] inline bool IsMentionLink(const QString &link) {
+	return IsMentionLink(link.midRef(0));
+}
 EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags);
 TextWithTags::Tags ConvertEntitiesToTextTags(
 	const EntitiesInText &entities);

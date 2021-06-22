@@ -2022,7 +2022,7 @@ QString TagsTextMimeType() {
 	return QString::fromLatin1("application/x-td-field-text");
 }
 
-bool IsMentionLink(const QString &link) {
+bool IsMentionLink(const QStringRef &link) {
 	return link.startsWith(kMentionTagStart);
 }
 
