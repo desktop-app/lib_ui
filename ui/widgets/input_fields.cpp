@@ -760,9 +760,9 @@ bool WasInsertTillTheEndOfTag(
 				return false;
 			}
 		}
+		block = block.next();
 		if (block.isValid()) {
 			fragmentIt = block.begin();
-			block = block.next();
 		} else {
 			break;
 		}
@@ -1991,6 +1991,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 	while (true) {
 		FormattingAction action;
 
+		auto checkedTill = insertPosition;
 		auto fromBlock = document->findBlock(insertPosition);
 		auto tillBlock = document->findBlock(insertEnd);
 		if (tillBlock.isValid()) tillBlock = tillBlock.next();
@@ -2000,8 +2001,13 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				auto fragment = fragmentIt.fragment();
 				Assert(fragment.isValid());
 
-				int fragmentPosition = fragment.position();
-				if (insertPosition >= fragmentPosition + fragment.length()) {
+				const auto fragmentPosition = fragment.position();
+				const auto fragmentEnd = fragmentPosition + fragment.length();
+				if (insertPosition > fragmentEnd) {
+					// In case insertPosition == fragmentEnd we still
+					// need to fill startTagFound / breakTagOnNotLetter.
+					// This can happen if we inserted a newline after
+					// a text fragment with some formatting tag, like Bold.
 					continue;
 				}
 				int changedPositionInFragment = insertPosition - fragmentPosition; // Can be negative.
@@ -2121,6 +2127,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				if (action.type != ActionType::Invalid) {
 					break;
 				}
+				checkedTill = fragmentEnd;
 			}
 			if (action.type != ActionType::Invalid) {
 				break;
@@ -2130,6 +2137,16 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				action.intervalStart = block.next().position() - 1;
 				action.intervalEnd = action.intervalStart + 1;
 				break;
+			} else if (breakTagOnNotLetter) {
+				// In case we need to break on not letter and we didn't
+				// find any non letter symbol, we found it here - a newline.
+				breakTagOnNotLetter = false;
+				if (checkedTill < breakTagOnNotLetterTill) {
+					action.type = ActionType::RemoveTag;
+					action.intervalStart = checkedTill;
+					action.intervalEnd = breakTagOnNotLetterTill;
+					break;
+				}
 			}
 		}
 		if (action.type != ActionType::Invalid) {
