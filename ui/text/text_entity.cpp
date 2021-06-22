@@ -2026,59 +2026,233 @@ bool IsMentionLink(const QStringRef &link) {
 	return link.startsWith(kMentionTagStart);
 }
 
-EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
-	EntitiesInText result;
-	if (tags.isEmpty()) {
-		return result;
-	}
+[[nodiscard]] bool IsSeparateTag(const QStringRef &tag) {
+	return (tag == Ui::InputField::kTagCode)
+		|| (tag == Ui::InputField::kTagPre);
+}
 
-	result.reserve(tags.size());
-	for (const auto &tag : tags) {
-		const auto push = [&](
-				EntityType type,
-				const QString &data = QString()) {
-			result.push_back(
-				EntityInText(type, tag.offset, tag.length, data));
-		};
-		if (IsMentionLink(tag.id)) {
-			if (auto match = qthelp::regex_match("^(\\d+\\.\\d+)(/|$)", tag.id.midRef(kMentionTagStart.size()))) {
-				push(EntityType::MentionName, match->captured(1));
-			}
-		} else if (tag.id == Ui::InputField::kTagBold) {
-			push(EntityType::Bold);
-		//} else if (tag.id == Ui::InputField::kTagSemibold) {
-		//	push(EntityType::Semibold); // Semibold is for UI parts only.
-		} else if (tag.id == Ui::InputField::kTagItalic) {
-			push(EntityType::Italic);
-		} else if (tag.id == Ui::InputField::kTagUnderline) {
-			push(EntityType::Underline);
-		} else if (tag.id == Ui::InputField::kTagStrikeOut) {
-			push(EntityType::StrikeOut);
-		} else if (tag.id == Ui::InputField::kTagCode) {
-			push(EntityType::Code);
-		} else if (tag.id == Ui::InputField::kTagPre) { // #TODO entities
-			push(EntityType::Pre);
-		} else /*if (ValidateUrl(tag.id)) */{ // We validate when we insert.
-			push(EntityType::CustomUrl, tag.id);
+QString JoinTag(const QVector<QStringRef> &list) {
+	if (list.isEmpty()) {
+		return QString();
+	}
+	auto length = (list.size() - 1);
+	for (const auto &entry : list) {
+		length += entry.size();
+	}
+	auto result = QString();
+	result.reserve(length);
+	result.append(list.front());
+	for (auto i = 1, count = list.size(); i != count; ++i) {
+		if (!IsSeparateTag(list[i])) {
+			result.append('|').append(list[i]);
 		}
 	}
 	return result;
 }
 
-TextWithTags::Tags ConvertEntitiesToTextTags(const EntitiesInText &entities) {
-	TextWithTags::Tags result;
+QString TagWithRemoved(const QString &tag, const QString &removed) {
+	if (tag == removed) {
+		return QString();
+	}
+	auto list = tag.splitRef('|');
+	list.erase(ranges::remove(list, removed.midRef(0)), list.end());
+	return JoinTag(list);
+}
+
+QString TagWithAdded(const QString &tag, const QString &added) {
+	if (tag == added) {
+		return tag;
+	}
+	auto list = tag.splitRef('|');
+	const auto ref = added.midRef(0);
+	if (list.contains(ref)) {
+		return tag;
+	}
+	list.push_back(ref);
+	ranges::sort(list);
+	return JoinTag(list);
+}
+
+EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+	auto result = EntitiesInText();
+	if (tags.isEmpty()) {
+		return result;
+	}
+
+	constexpr auto kInMaskTypes = std::array{
+		EntityType::Bold,
+		EntityType::Italic,
+		EntityType::Underline,
+		EntityType::StrikeOut,
+		EntityType::Code,
+		EntityType::Pre,
+	};
+	struct State {
+		QString link;
+		uint32 mask = 0;
+
+		void set(EntityType type) {
+			mask |= (1 << int(type));
+		}
+		void remove(EntityType type) {
+			mask &= ~(1 << int(type));
+		}
+		[[nodiscard]] bool has(EntityType type) const {
+			return (mask & (1 << int(type)));
+		}
+	};
+
+	auto offset = 0;
+	auto state = State();
+	auto notClosedEntities = QVector<int>(); // Stack of indices.
+	const auto closeOne = [&] {
+		Expects(!notClosedEntities.isEmpty());
+
+		auto &entity = result[notClosedEntities.back()];
+		entity = {
+			entity.type(),
+			entity.offset(),
+			offset - entity.offset(),
+			entity.data(),
+		};
+		if (ranges::contains(kInMaskTypes, entity.type())) {
+			state.remove(entity.type());
+		} else {
+			state.link = QString();
+		}
+		notClosedEntities.pop_back();
+	};
+	const auto closeType = [&](EntityType type) {
+		auto closeCount = 0;
+		const auto notClosedCount = notClosedEntities.size();
+		while (closeCount < notClosedCount) {
+			const auto index = notClosedCount - closeCount - 1;
+			if (result[notClosedEntities[index]].type() == type) {
+				for (auto i = 0; i != closeCount + 1; ++i) {
+					closeOne();
+				}
+				break;
+			}
+			++closeCount;
+		}
+	};
+	const auto openType = [&](EntityType type, const QString &data = {}) {
+		notClosedEntities.push_back(result.size());
+		result.push_back({ type, offset, -1, data });
+	};
+
+	const auto processState = [&](State nextState) {
+		const auto linkChanged = (nextState.link != state.link);
+		if (linkChanged) {
+			if (IsMentionLink(state.link)) {
+				closeType(EntityType::MentionName);
+			} else {
+				closeType(EntityType::CustomUrl);
+			}
+		}
+		for (const auto type : kInMaskTypes) {
+			if (state.has(type) && !nextState.has(type)) {
+				closeType(type);
+			}
+		}
+		if (linkChanged && !nextState.link.isEmpty()) {
+			if (IsMentionLink(nextState.link)) {
+				const auto match = qthelp::regex_match(
+					"^(\\d+\\.\\d+)(/|$)",
+					nextState.link.midRef(kMentionTagStart.size()));
+				if (match) {
+					openType(EntityType::MentionName, match->captured(1));
+				}
+			} else {
+				openType(EntityType::CustomUrl, nextState.link);
+			}
+		}
+		for (const auto type : kInMaskTypes) {
+			if (nextState.has(type) && !state.has(type)) {
+				openType(type);
+			}
+		}
+		state = nextState;
+	};
+	const auto stateForTag = [&](const QString &tag) {
+		auto result = State();
+		const auto list = tag.splitRef('|');
+		for (const auto &single : list) {
+			if (single == Ui::InputField::kTagBold) {
+				result.set(EntityType::Bold);
+			} else if (single == Ui::InputField::kTagItalic) {
+				result.set(EntityType::Italic);
+			} else if (single == Ui::InputField::kTagUnderline) {
+				result.set(EntityType::Underline);
+			} else if (single == Ui::InputField::kTagStrikeOut) {
+				result.set(EntityType::StrikeOut);
+			} else if (single == Ui::InputField::kTagCode) {
+				result.set(EntityType::Code);
+			} else if (single == Ui::InputField::kTagPre) {
+				result.set(EntityType::Pre);
+			} else {
+				result.link = single.toString();
+			}
+		}
+		return result;
+	};
+	auto till = offset;
+	for (const auto &tag : tags) {
+		if (tag.offset > offset) {
+			processState(State());
+		}
+		offset = tag.offset;
+		processState(stateForTag(tag.id));
+		offset += tag.length;
+	}
+	processState(State());
+
+	result.erase(ranges::remove_if(result, [](const EntityInText &entity) {
+		return (entity.length() <= 0);
+	}), result.end());
+
+	return result;
+}
+
+TextWithTags::Tags ConvertEntitiesToTextTags(
+		const EntitiesInText &entities) {
+	auto result = TextWithTags::Tags();
 	if (entities.isEmpty()) {
 		return result;
 	}
 
-	result.reserve(entities.size());
+	auto offset = 0;
+	auto current = QString();
+	const auto updateCurrent = [&](int nextOffset, const QString &next) {
+		if (next == current) {
+			return;
+		} else if (nextOffset > offset) {
+			result.push_back({ offset, nextOffset - offset, current });
+			offset = nextOffset;
+		}
+		current = next;
+	};
+	auto toRemove = std::vector<std::pair<int, QString>>();
+	const auto removeTill = [&](int nextOffset) {
+		while (!toRemove.empty() && toRemove.front().first <= nextOffset) {
+			updateCurrent(
+				toRemove.front().first,
+				TagWithRemoved(current, toRemove.front().second));
+			toRemove.erase(toRemove.begin());
+		}
+	};
 	for (const auto &entity : entities) {
 		const auto push = [&](const QString &tag) {
-			result.push_back({ entity.offset(), entity.length(), tag });
+			removeTill(entity.offset());
+			updateCurrent(entity.offset(), TagWithAdded(current, tag));
+			toRemove.push_back({ offset + entity.length(), tag });
+			ranges::sort(toRemove);
 		};
 		switch (entity.type()) {
 		case EntityType::MentionName: {
-			auto match = QRegularExpression(R"(^(\d+\.\d+)$)").match(entity.data());
+			auto match = QRegularExpression(
+				R"(^(\d+\.\d+)$)"
+			).match(entity.data());
 			if (match.hasMatch()) {
 				push(kMentionTagStart + entity.data());
 			}
@@ -2104,6 +2278,9 @@ TextWithTags::Tags ConvertEntitiesToTextTags(const EntitiesInText &entities) {
 		case EntityType::Code: push(Ui::InputField::kTagCode); break; // #TODO entities
 		case EntityType::Pre: push(Ui::InputField::kTagPre); break;
 		}
+	}
+	if (!toRemove.empty()) {
+		removeTill(toRemove.back().first);
 	}
 	return result;
 }

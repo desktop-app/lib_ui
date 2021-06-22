@@ -98,60 +98,6 @@ bool IsNewline(QChar ch) {
 	return (kNewlineChars.indexOf(ch) >= 0);
 }
 
-[[nodiscard]] bool IsSeparateTag(const QStringRef &tag) {
-	return (tag == kTagCode.midRef(0)) || (tag == kTagPre.midRef(0));
-}
-
-[[nodiscard]] bool IsSeparateTag(const QString &tag) {
-	return IsSeparateTag(tag.midRef(0));
-}
-
-[[nodiscard]] QString JoinTag(const QVector<QStringRef> &list) {
-	if (list.isEmpty()) {
-		return QString();
-	}
-	auto length = (list.size() - 1);
-	for (const auto &entry : list) {
-		length += entry.size();
-	}
-	auto result = QString();
-	result.reserve(length);
-	result.append(list.front());
-	for (auto i = 1, count = list.size(); i != count; ++i) {
-		if (!IsSeparateTag(list[i])) {
-			result.append('|').append(list[i]);
-		}
-	}
-	return result;
-}
-
-[[nodiscard]] QString TagWithRemoved(
-		const QString &tag,
-		const QString &removed) {
-	if (tag == removed) {
-		return QString();
-	}
-	auto list = tag.splitRef('|');
-	list.erase(ranges::remove(list, removed.midRef(0)), list.end());
-	return JoinTag(list);
-}
-
-[[nodiscard]] QString TagWithAdded(
-		const QString &tag,
-		const QString &added) {
-	if (tag == added) {
-		return tag;
-	}
-	auto list = tag.splitRef('|');
-	const auto ref = added.midRef(0);
-	if (list.contains(ref)) {
-		return tag;
-	}
-	list.push_back(ref);
-	ranges::sort(list);
-	return JoinTag(list);
-}
-
 [[nodiscard]] bool IsValidMarkdownLink(const QStringRef &link) {
 	return (link.indexOf('.') >= 0) || (link.indexOf(':') >= 0);
 }
@@ -3342,7 +3288,7 @@ void InputField::addMarkdownTag(
 	auto tags = TagList();
 	auto filled = 0;
 	const auto add = [&](const TextWithTags::Tag &existing) {
-		const auto id = TagWithAdded(existing.id, tag);
+		const auto id = TextUtilities::TagWithAdded(existing.id, tag);
 		tags.push_back({ existing.offset, existing.length, id });
 		filled = std::clamp(
 			existing.offset + existing.length,
@@ -3357,7 +3303,7 @@ void InputField::addMarkdownTag(
 			id,
 		});
 	};
-	if (!IsSeparateTag(tag)) {
+	if (!TextUtilities::IsSeparateTag(tag)) {
 		for (const auto &existing : current.tags) {
 			if (existing.offset >= till) {
 				break;
@@ -3388,7 +3334,7 @@ void InputField::removeMarkdownTag(
 
 	auto tags = TagList();
 	for (const auto &existing : current.tags) {
-		const auto id = TagWithRemoved(existing.id, tag);
+		const auto id = TextUtilities::TagWithRemoved(existing.id, tag);
 		if (!id.isEmpty()) {
 			tags.push_back({ existing.offset, existing.length, id });
 		}

@@ -363,6 +363,18 @@ inline const auto kMentionTagStart = qstr("mention://user.");
 [[nodiscard]] inline bool IsMentionLink(const QString &link) {
 	return IsMentionLink(link.midRef(0));
 }
+
+[[nodiscard]] bool IsSeparateTag(const QStringRef &tag);
+[[nodiscard]] inline bool IsSeparateTag(const QString &tag) {
+	return IsSeparateTag(tag.midRef(0));
+}
+
+[[nodiscard]] QString JoinTag(const QVector<QStringRef> &list);
+[[nodiscard]] QString TagWithRemoved(
+	const QString &tag,
+	const QString &removed);
+[[nodiscard]] QString TagWithAdded(const QString &tag, const QString &added);
+
 EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags);
 TextWithTags::Tags ConvertEntitiesToTextTags(
 	const EntitiesInText &entities);
