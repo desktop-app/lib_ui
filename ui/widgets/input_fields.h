@@ -453,7 +453,12 @@ private:
 		int till,
 		const QString &tag,
 		const QString &edge = QString());
-	void addMarkdownReplacement(int from, int till, const QString &tag);
+	void addMarkdownTag(int from, int till, const QString &tag);
+	void removeMarkdownTag(int from, int till, const QString &tag);
+	void finishMarkdownTagChange(
+		int from,
+		int till,
+		const TextWithTags &textWithTags);
 	void toggleSelectionMarkdown(const QString &tag);
 	void clearSelectionMarkdown();
 
