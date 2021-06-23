@@ -27,7 +27,7 @@ constexpr auto kUseNativeChild = ::Platform::IsWindows();
 } // namespace
 
 Window::Window()
-: _window(std::make_unique<Ui::Window>())
+: _window(createWindow())
 , _bodyNativeWrap(createNativeBodyWrap())
 , _body(_bodyNativeWrap ? _bodyNativeWrap.get() : _window->body().get()) {
 }
