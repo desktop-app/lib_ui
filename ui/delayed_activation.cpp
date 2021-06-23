@@ -26,9 +26,11 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	}
 	crl::on_main(Window, [=] {
 		if (const auto widget = base::take(Window)) {
-			if (!widget->isHidden()) {
-				widget->raise();
-				widget->activateWindow();
+			if (const auto window = widget->window()) {
+				if (!window->isHidden()) {
+					window->raise();
+					window->activateWindow();
+				}
 			}
 		}
 	});
