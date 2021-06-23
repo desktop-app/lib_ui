@@ -2060,8 +2060,8 @@ QString TagWithRemoved(const QString &tag, const QString &removed) {
 }
 
 QString TagWithAdded(const QString &tag, const QString &added) {
-	if (tag == added) {
-		return tag;
+	if (tag.isEmpty() || tag == added) {
+		return added;
 	}
 	auto list = tag.splitRef('|');
 	const auto ref = added.midRef(0);
@@ -2227,7 +2227,9 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 		if (next == current) {
 			return;
 		} else if (nextOffset > offset) {
-			result.push_back({ offset, nextOffset - offset, current });
+			if (!current.isEmpty()) {
+				result.push_back({ offset, nextOffset - offset, current });
+			}
 			offset = nextOffset;
 		}
 		current = next;
