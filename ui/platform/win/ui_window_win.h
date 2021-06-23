@@ -61,5 +61,8 @@ private:
 [[nodiscard]] HWND GetWindowHandle(not_null<QWidget*> widget);
 [[nodiscard]] HWND GetWindowHandle(not_null<QWindow*> window);
 
+void SendWMPaintForce(not_null<QWidget*> widget);
+void SendWMPaintForce(not_null<QWindow*> window);
+
 } // namespace Platform
 } // namespace Ui

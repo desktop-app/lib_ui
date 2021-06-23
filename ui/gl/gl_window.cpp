@@ -8,9 +8,15 @@
 
 #include "ui/gl/gl_detection.h"
 #include "ui/widgets/window.h"
+#include "base/event_filter.h"
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
 
+#ifdef Q_OS_WIN
+#include "ui/platform/win/ui_window_win.h"
+#endif // Q_OS_WIN
+
+#include <QtGui/QWindow>
 #include <QtGui/QScreen>
 
 namespace Ui::GL {
@@ -98,6 +104,24 @@ std::unique_ptr<Ui::RpWidget> Window::createNativeBodyWrap() {
 	raw->show();
 	raw->update();
 
+#ifdef Q_OS_WIN
+	// In case a child native window fully covers the parent window,
+	// the system never sends a WM_PAINT message to the parent window.
+	//
+	// In this case if you minimize / hide the parent window, it receives
+	// QExposeEvent with isExposed() == false in window state change handler.
+	//
+	// But it never receives QExposeEvent with isExposed() == true, because
+	// window state change handler doesn't send it, instead the WM_PAINT is
+	// supposed to send it. No WM_PAINT -> no expose -> broken UI updating.
+	const auto childWindow = raw->windowHandle();
+	base::install_event_filter(childWindow, [=](not_null<QEvent*> event) {
+		if (event->type() == QEvent::Expose && childWindow->isExposed()) {
+			Ui::Platform::SendWMPaintForce(_window.get());
+		}
+		return base::EventFilterResult::Continue;
+	});
+
 	_window->sizeValue(
 	) | rpl::start_with_next([=](QSize size) {
 		auto geometry = QRect(QPoint(), size);
@@ -111,6 +135,7 @@ std::unique_ptr<Ui::RpWidget> Window::createNativeBodyWrap() {
 		}
 		raw->setGeometry(geometry);
 	}, raw->lifetime());
+#endif // Q_OS_WIN
 
 	return result;
 }

@@ -604,6 +604,16 @@ HWND GetWindowHandle(not_null<QWindow*> window) {
 		window));
 }
 
+void SendWMPaintForce(not_null<QWidget*> widget) {
+	const auto toplevel = widget->window();
+	toplevel->createWinId();
+	SendWMPaintForce(toplevel->windowHandle());
+}
+
+void SendWMPaintForce(not_null<QWindow*> window) {
+	::InvalidateRect(GetWindowHandle(window), nullptr, FALSE);
+}
+
 std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 		not_null<RpWidget*> window) {
 	return std::make_unique<WindowHelper>(window);
