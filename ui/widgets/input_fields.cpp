@@ -3281,8 +3281,8 @@ void InputField::addMarkdownTag(
 		int till,
 		const QString &tag) {
 	const auto current = getTextWithTagsPart(from, till);
+	const auto currentLength = current.text.size();
 	const auto tagRef = tag.midRef(0);
-	auto markdownTagApplies = std::vector<MarkdownTag>();
 
 	// #TODO Trim inserted tag, so that all newlines are left outside.
 	auto tags = TagList();
@@ -3293,19 +3293,11 @@ void InputField::addMarkdownTag(
 		filled = std::clamp(
 			existing.offset + existing.length,
 			filled,
-			till - from);
-		markdownTagApplies.push_back({
-			from + existing.offset,
-			from + filled,
-			-1,
-			-1,
-			false,
-			id,
-		});
+			currentLength);
 	};
 	if (!TextUtilities::IsSeparateTag(tag)) {
 		for (const auto &existing : current.tags) {
-			if (existing.offset >= till) {
+			if (existing.offset >= currentLength) {
 				break;
 			} else if (existing.offset > filled) {
 				add({ filled, existing.offset - filled, tag });
@@ -3313,16 +3305,14 @@ void InputField::addMarkdownTag(
 			add(existing);
 		}
 	}
-	if (filled < till - from) {
-		add({ filled, till - from - filled, tag });
+	if (filled < currentLength) {
+		add({ filled, currentLength - filled, tag });
 	}
 
 	finishMarkdownTagChange(from, till, { current.text, tags });
 
-	// Fire the tags to the spellchecker.
-	for (auto &apply : markdownTagApplies) {
-		_markdownTagApplies.fire(std::move(apply));
-	}
+	// Fire the tag to the spellchecker.
+	_markdownTagApplies.fire({ from, till, -1, -1, false, tag });
 }
 
 void InputField::removeMarkdownTag(
