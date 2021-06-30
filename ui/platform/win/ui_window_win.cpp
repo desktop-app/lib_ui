@@ -94,7 +94,7 @@ HRESULT WinApiSetWindowTheme(
 			LPCWSTR pszSubAppName,
 			LPCWSTR pszSubIdList);
 		auto result = f_SetWindowTheme();
-		const auto loaded = base::Platform::SafeLoadLibrary(u"uxtheme.dll"_q);
+		const auto loaded = base::Platform::SafeLoadLibrary(L"uxtheme.dll");
 		base::Platform::LoadMethod(loaded, "SetWindowTheme", result);
 		return result;
 	}();
