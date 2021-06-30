@@ -24,4 +24,20 @@ struct Capabilities {
 
 void ForceDisable(bool disable);
 
+[[nodiscard]] bool LastCrashCheckFailed();
+void CrashCheckFinish();
+
+// Windows only.
+enum class ANGLE {
+	Auto,
+	D3D9,
+	D3D11,
+	D3D11on12,
+	OpenGL,
+};
+
+void ConfigureANGLE(); // Requires Ui::Integration being set.
+void ChangeANGLE(ANGLE backend);
+[[nodiscard]] ANGLE CurrentANGLE();
+
 } // namespace Ui::GL

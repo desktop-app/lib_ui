@@ -10,6 +10,7 @@
 #include "base/debug_log.h"
 
 #include <QtCore/QSet>
+#include <QtCore/QFile>
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
@@ -21,6 +22,16 @@ namespace Ui::GL {
 namespace {
 
 bool ForceDisabled/* = false*/;
+
+ANGLE ResolvedANGLE = ANGLE::Auto;
+
+void CrashCheckStart() {
+	auto f = QFile(Integration::Instance().openglCheckFilePath());
+	if (f.open(QIODevice::WriteOnly)) {
+		f.write("1", 1);
+		f.close();
+	}
+}
 
 } // namespace
 
@@ -47,9 +58,9 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	auto tester = QOpenGLWidget(widget);
 	tester.setFormat(format);
 
-	Ui::Integration::Instance().openglCheckStart();
+	CrashCheckStart();
 	tester.grabFramebuffer(); // Force initialize().
-	Ui::Integration::Instance().openglCheckFinish();
+	CrashCheckFinish();
 
 	if (!tester.window()->windowHandle()) {
 		tester.window()->createWinId();
@@ -123,8 +134,71 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	return result;
 }
 
+bool LastCrashCheckFailed() {
+	return QFile::exists(Integration::Instance().openglCheckFilePath());
+}
+
+void CrashCheckFinish() {
+	QFile::remove(Integration::Instance().openglCheckFilePath());
+}
+
 void ForceDisable(bool disable) {
 	ForceDisabled = disable;
 }
+
+#ifdef Q_OS_WIN
+
+void ConfigureANGLE() {
+	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
+	const auto path = Ui::Integration::Instance().angleBackendFilePath();
+	if (path.isEmpty()) {
+		return;
+	}
+	auto f = QFile(path);
+	if (!f.open(QIODevice::ReadOnly)) {
+		return;
+	}
+	auto bytes = f.read(32);
+	const auto check = [&](const char *backend, ANGLE angle) {
+		if (bytes.startsWith(backend)) {
+			ResolvedANGLE = angle;
+			qputenv("DESKTOP_APP_QT_ANGLE_PLATFORM", backend);
+		}
+	};
+	check("d3d11on12", ANGLE::D3D11on12);
+	check("d3d11", ANGLE::D3D11);
+	check("d3d9", ANGLE::D3D9);
+	check("gl", ANGLE::OpenGL);
+	if (ResolvedANGLE == ANGLE::Auto) {
+		LOG(("ANGLE Warning: Unknown backend: %1"
+			).arg(QString::fromUtf8(bytes)));
+	}
+}
+
+void ChangeANGLE(ANGLE backend) {
+	const auto path = Ui::Integration::Instance().angleBackendFilePath();
+	const auto write = [&](QByteArray backend) {
+		auto f = QFile(path);
+		if (!f.open(QIODevice::WriteOnly)) {
+			LOG(("ANGLE Warning: Could not write to %1.").arg(path));
+			return;
+		}
+		f.write(backend);
+	};
+	switch (backend) {
+	case ANGLE::Auto: QFile(path).remove(); break;
+	case ANGLE::D3D9: write("d3d9"); break;
+	case ANGLE::D3D11: write("d3d11"); break;
+	case ANGLE::D3D11on12: write("d3d11on12"); break;
+	case ANGLE::OpenGL: write("gl"); break;
+	default: Unexpected("ANGLE backend value.");
+	}
+}
+
+ANGLE CurrentANGLE() {
+	return ResolvedANGLE;
+}
+
+#endif // Q_OS_WIN
 
 } // namespace Ui::GL
