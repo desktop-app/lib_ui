@@ -155,4 +155,14 @@ TexturedRect Image::texturedRect(
 	};
 }
 
+GLint CurrentSingleComponentFormat() {
+	const auto context = QOpenGLContext::currentContext();
+	Assert(context != nullptr);
+
+	const auto format = context->format();
+	return (format.renderableType() == QSurfaceFormat::OpenGLES)
+		? GL_LUMINANCE
+		: GL_RED;
+}
+
 } // namespace Ui::GL

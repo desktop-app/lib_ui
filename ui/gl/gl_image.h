@@ -134,4 +134,6 @@ private:
 
 };
 
+[[nodiscard]] GLint CurrentSingleComponentFormat();
+
 } // namespace Ui::GL
