@@ -165,10 +165,10 @@ void ConfigureANGLE() {
 			qputenv("DESKTOP_APP_QT_ANGLE_PLATFORM", backend);
 		}
 	};
-	check("d3d11on12", ANGLE::D3D11on12);
-	check("d3d11", ANGLE::D3D11);
-	check("d3d9", ANGLE::D3D9);
 	check("gl", ANGLE::OpenGL);
+	check("d3d9", ANGLE::D3D9);
+	check("d3d11", ANGLE::D3D11);
+	check("d3d11on12", ANGLE::D3D11on12);
 	if (ResolvedANGLE == ANGLE::Auto) {
 		LOG(("ANGLE Warning: Unknown backend: %1"
 			).arg(QString::fromUtf8(bytes)));
