@@ -22,7 +22,7 @@
 namespace Ui::GL {
 namespace {
 
-constexpr auto kUseNativeChild = ::Platform::IsWindows();
+constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
 
 } // namespace
 
