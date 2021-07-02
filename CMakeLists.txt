@@ -51,6 +51,8 @@ PRIVATE
     ui/effects/numbers_animation.h
     ui/effects/panel_animation.cpp
     ui/effects/panel_animation.h
+    ui/effects/path_shift_gradient.cpp
+    ui/effects/path_shift_gradient.h
     ui/effects/radial_animation.cpp
     ui/effects/radial_animation.h
     ui/effects/ripple_animation.cpp
