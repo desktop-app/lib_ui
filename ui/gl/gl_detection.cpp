@@ -113,7 +113,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			functions->glGetString(GL_VERSION));
 		LOG(("OpenGL Version: %1").arg(version ? version : "[nullptr]"));
 		auto list = QStringList();
-		for (const auto extension : context->extensions()) {
+		for (const auto &extension : context->extensions()) {
 			list.append(QString::fromLatin1(extension));
 		}
 		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));

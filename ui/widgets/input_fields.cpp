@@ -1352,7 +1352,7 @@ InputField::InputField(
 	_inner->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	_inner->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-	_inner->setFrameStyle(QFrame::NoFrame | QFrame::Plain);
+	_inner->setFrameStyle(int(QFrame::NoFrame) | QFrame::Plain);
 	_inner->viewport()->setAutoFillBackground(false);
 
 	_inner->setContentsMargins(0, 0, 0, 0);

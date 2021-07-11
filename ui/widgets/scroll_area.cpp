@@ -292,7 +292,7 @@ ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handle
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-	setFrameStyle(QFrame::NoFrame | QFrame::Plain);
+	setFrameStyle(int(QFrame::NoFrame) | QFrame::Plain);
 	viewport()->setAutoFillBackground(false);
 
 	_horizontalValue = horizontalScrollBar()->value();
