@@ -39,7 +39,9 @@ public:
 		return toggle(false, animated);
 	}
 	SlideWrap *finishAnimating();
-	SlideWrap *toggleOn(rpl::producer<bool> &&shown);
+	SlideWrap *toggleOn(
+		rpl::producer<bool> &&shown,
+		anim::type animated = anim::type::normal);
 
 	bool animating() const {
 		return _animation.animating();
@@ -104,8 +106,10 @@ public:
 	SlideWrap *finishAnimating() {
 		return chain(Parent::finishAnimating());
 	}
-	SlideWrap *toggleOn(rpl::producer<bool> &&shown) {
-		return chain(Parent::toggleOn(std::move(shown)));
+	SlideWrap *toggleOn(
+			rpl::producer<bool> &&shown,
+			anim::type animated = anim::type::normal) {
+		return chain(Parent::toggleOn(std::move(shown), animated));
 	}
 
 private:

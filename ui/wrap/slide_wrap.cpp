@@ -80,11 +80,12 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::finishAnimating() {
 }
 
 SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggleOn(
-		rpl::producer<bool> &&shown) {
+		rpl::producer<bool> &&shown,
+		anim::type animated) {
 	std::move(
 		shown
-	) | rpl::start_with_next([this](bool shown) {
-		toggle(shown, anim::type::normal);
+	) | rpl::start_with_next([=](bool shown) {
+		toggle(shown, animated);
 	}, lifetime());
 	finishAnimating();
 	return this;
