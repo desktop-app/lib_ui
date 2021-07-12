@@ -163,29 +163,6 @@ bool IsNewline(QChar ch) {
 	return !CheckFullTextTag(textWithTags, tag).isEmpty();
 }
 
-QString GetFullSimpleTextTag(const TextWithTags &textWithTags) {
-	const auto &text = textWithTags.text;
-	const auto &tags = textWithTags.tags;
-	const auto tag = (tags.size() == 1) ? tags[0] : TextWithTags::Tag();
-	auto from = 0;
-	auto till = int(text.size());
-	for (; from != till; ++from) {
-		if (!IsNewline(text[from]) && !Text::IsSpace(text[from])) {
-			break;
-		}
-	}
-	while (till != from) {
-		if (!IsNewline(text[till - 1]) && !Text::IsSpace(text[till - 1])) {
-			break;
-		}
-		--till;
-	}
-	return ((tag.offset <= from)
-		&& (tag.offset + tag.length >= till))
-		? (tag.id == kTagPre ? kTagCode : tag.id)
-		: QString();
-}
-
 class TagAccumulator {
 public:
 	TagAccumulator(TextWithTags::Tags &tags) : _tags(tags) {
