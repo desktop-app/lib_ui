@@ -97,7 +97,6 @@ void colorizeImage(const QImage &src, QColor c, QImage *outResult, QRect srcRect
 
 	auto pattern = anim::shifted(c);
 
-	auto resultBytesPerPixel = (src.depth() >> 3);
 	constexpr auto resultIntsPerPixel = 1;
 	auto resultIntsPerLine = (outResult->bytesPerLine() >> 2);
 	auto resultIntsAdded = resultIntsPerLine - width * resultIntsPerPixel;

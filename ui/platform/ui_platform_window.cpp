@@ -115,7 +115,6 @@ void BasicWindowHelper::setupBodyTitleAreaEvents() {
 				== Qt::LeftButton)) {
 			_mousePressed = true;
 		} else if (e->type() == QEvent::MouseMove) {
-			const auto mouseEvent = static_cast<QMouseEvent*>(e.get());
 			if (_mousePressed
 #ifndef Q_OS_WIN // We handle fullscreen startSystemMove() only on Windows.
 				&& !_window->isFullScreen()

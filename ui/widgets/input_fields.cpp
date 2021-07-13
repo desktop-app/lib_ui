@@ -108,7 +108,6 @@ bool IsNewline(QChar ch) {
 	auto resultLink = QString();
 	const auto checkingLink = (tag == kTagCheckLinkMeta);
 	const auto &text = textWithTags.text;
-	const auto &tags = textWithTags.tags;
 	auto from = 0;
 	auto till = int(text.size());
 	const auto adjust = [&] {
@@ -1038,8 +1037,7 @@ void FlatInput::touchEvent(QTouchEvent *e) {
 		if (!_touchPress) return;
 		auto weak = MakeWeak(this);
 		if (!_touchMove && window()) {
-			Qt::MouseButton btn(_touchRightButton ? Qt::RightButton : Qt::LeftButton);
-			QPoint mapped(mapFromGlobal(_touchStart)), winMapped(window()->mapFromGlobal(_touchStart));
+			QPoint mapped(mapFromGlobal(_touchStart));
 
 			if (_touchRightButton) {
 				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
@@ -1077,7 +1075,6 @@ void FlatInput::finishAnimations() {
 void FlatInput::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
-	auto ms = crl::now();
 	auto placeholderFocused = _placeholderFocusedAnimation.value(_focused ? 1. : 0.);
 	auto pen = anim::pen(_st.borderColor, _st.borderActive, placeholderFocused);
 	pen.setWidth(_st.borderWidth);
@@ -1650,8 +1647,7 @@ void InputField::handleTouchEvent(QTouchEvent *e) {
 		if (!_touchPress) return;
 		auto weak = MakeWeak(this);
 		if (!_touchMove && window()) {
-			Qt::MouseButton btn(_touchRightButton ? Qt::RightButton : Qt::LeftButton);
-			QPoint mapped(mapFromGlobal(_touchStart)), winMapped(window()->mapFromGlobal(_touchStart));
+			QPoint mapped(mapFromGlobal(_touchStart));
 
 			if (_touchRightButton) {
 				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
@@ -2279,9 +2275,6 @@ void InputField::onDocumentContentsChange(
 	const auto insertLength = (_realInsertPosition >= 0)
 		? _realCharsAdded
 		: charsAdded;
-
-	const auto removePosition = position;
-	const auto removeLength = charsRemoved;
 
 	_correcting = true;
 	QTextCursor(document->docHandle(), 0).joinPreviousEditBlock();
@@ -3855,8 +3848,7 @@ void MaskedInputField::touchEvent(QTouchEvent *e) {
 		if (!_touchPress) return;
 		auto weak = MakeWeak(this);
 		if (!_touchMove && window()) {
-			Qt::MouseButton btn(_touchRightButton ? Qt::RightButton : Qt::LeftButton);
-			QPoint mapped(mapFromGlobal(_touchStart)), winMapped(window()->mapFromGlobal(_touchStart));
+			QPoint mapped(mapFromGlobal(_touchStart));
 
 			if (_touchRightButton) {
 				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);

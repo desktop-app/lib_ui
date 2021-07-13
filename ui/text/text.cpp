@@ -79,7 +79,6 @@ TextWithEntities PrepareRichFromRich(
 			int32 i = 0, l = preparsed.size();
 			result.entities.clear();
 			result.entities.reserve(l);
-			const QChar s = result.text.size();
 			for (; i < l; ++i) {
 				auto type = preparsed.at(i).type();
 				if (((type == EntityType::Mention || type == EntityType::MentionName) && !parseMentions) ||

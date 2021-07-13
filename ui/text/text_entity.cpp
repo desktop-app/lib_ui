@@ -1315,7 +1315,7 @@ QString EscapeForRichParsing(const QString &text) {
 
 QString SingleLine(const QString &text) {
 	auto result = text;
-	auto s = text.unicode(), ch = s, e = text.unicode() + text.size();
+	auto s = text.unicode(), e = text.unicode() + text.size();
 
 	// Trim.
 	while (s < e && IsTrimmed(*s)) {
@@ -1405,7 +1405,6 @@ QStringList PrepareSearchWords(
 			? *SplitterOverride
 			: RegExpWordSplit(),
 			base::QStringSkipEmptyParts);
-		auto size = list.size();
 		result.reserve(list.size());
 		for (const auto &word : std::as_const(list)) {
 			auto trimmed = word.trimmed();
@@ -2196,7 +2195,6 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		}
 		return result;
 	};
-	auto till = offset;
 	for (const auto &tag : tags) {
 		if (tag.offset > offset) {
 			processState(State());

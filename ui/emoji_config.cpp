@@ -35,7 +35,9 @@ constexpr auto kSetVersion = uint32(2);
 constexpr auto kCacheVersion = uint32(6);
 constexpr auto kMaxId = uint32(1 << 8);
 
+#if defined Q_OS_MAC && !defined OS_MAC_OLD
 constexpr auto kScaleForTouchBar = 150;
+#endif
 
 enum class ConfigResult {
 	Invalid,

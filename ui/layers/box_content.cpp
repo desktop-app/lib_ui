@@ -175,7 +175,6 @@ void BoxContent::setInnerTopSkip(int innerTopSkip, bool scrollBottomFixed) {
 
 void BoxContent::setInnerBottomSkip(int innerBottomSkip) {
 	if (_innerBottomSkip != innerBottomSkip) {
-		auto delta = innerBottomSkip - _innerBottomSkip;
 		_innerBottomSkip = innerBottomSkip;
 		if (_scroll && width() > 0) {
 			updateScrollAreaGeometry();

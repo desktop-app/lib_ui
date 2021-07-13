@@ -416,7 +416,6 @@ void PanelAnimation::paintFrame(QPainter &p, int x, int y, int outerWidth, float
 			if (fadeTop != fadeBottom) {
 				auto painterFadeTop = fadeTop / pixelRatio;
 				auto painterFrameWidth = frameWidth / pixelRatio;
-				auto painterFrameHeight = frameHeight / pixelRatio;
 				p.drawPixmap(painterFrameLeft, painterFadeTop, painterFrameWidth, painterFadeBottom - painterFadeTop, _fadeMask, 0, fadeSkipLines, pixelRatio, fadeBottom - fadeTop);
 			}
 			if (fadeBottom != frameBottom) {
@@ -424,8 +423,6 @@ void PanelAnimation::paintFrame(QPainter &p, int x, int y, int outerWidth, float
 			}
 		}
 	}
-	auto frameInts = _frameInts + frameLeft + frameTop * _frameIntsPerLine;
-	auto frameIntsPerLineAdd = (_finalWidth - frameWidth) + _frameIntsPerLineAdded;
 
 	// Draw corners
 	paintCorner(_topLeft, frameLeft, frameTop);

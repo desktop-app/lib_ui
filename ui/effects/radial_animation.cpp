@@ -222,7 +222,6 @@ RadialState InfiniteRadialAnimation::computeState() {
 			kFullArcLength };
 	}
 	if (anim::Disabled()) {
-		const auto shown = 1.;
 		return { 1., 0, kFullArcLength };
 	}
 	const auto min = int(std::round(kFullArcLength * _st.arcMin));
@@ -245,9 +244,6 @@ RadialState InfiniteRadialAnimation::computeState() {
 		const auto cycles = (now - _workStarted) / _st.sinePeriod;
 		const auto relative = (now - _workStarted) % _st.sinePeriod;
 		const auto smallDuration = _st.sineShift - _st.sineDuration;
-		const auto largeDuration = _st.sinePeriod
-			- _st.sineShift
-			- _st.sineDuration;
 		const auto basic = int((linear
 			+ min
 			+ (cycles * (kFullArcLength + min - max))) % kFullArcLength);
