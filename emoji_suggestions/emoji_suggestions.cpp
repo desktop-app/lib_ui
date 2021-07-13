@@ -147,7 +147,7 @@ private:
 	public:
 		UsedWordGuard(std::vector<small> &map, int index);
 		UsedWordGuard(const UsedWordGuard &other) = delete;
-		UsedWordGuard(UsedWordGuard &&other);
+		[[maybe_unused]] UsedWordGuard(UsedWordGuard &&other);
 		UsedWordGuard &operator=(const UsedWordGuard &other) = delete;
 		UsedWordGuard &operator=(UsedWordGuard &&other) = delete;
 		explicit operator bool() const;

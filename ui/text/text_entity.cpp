@@ -1481,7 +1481,7 @@ bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
 		}
 
 		int elen = 0;
-		if (auto e = Ui::Emoji::Find(ch, end, &elen)) {
+		if (Ui::Emoji::Find(ch, end, &elen)) {
 			for (int i = 0; i < elen; ++i, ++ch, ++s) {
 				if (ch->isHighSurrogate() && i + 1 < elen && (ch + 1)->isLowSurrogate()) {
 					++ch;
