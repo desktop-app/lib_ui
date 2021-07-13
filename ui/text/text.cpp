@@ -2763,20 +2763,14 @@ void String::recountNaturalSize(bool initial, Qt::LayoutDirection optionsDir) {
 }
 
 int String::countMaxMonospaceWidth() const {
-	const NewlineBlock *lastNewline = nullptr;
-
 	auto result = QFixed();
 	auto paragraphWidth = QFixed();
-	auto lastNewlineStart = 0;
 	auto fullMonospace = true;
 	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
 	for (auto &block : _blocks) {
 		auto b = block.get();
 		auto _btype = b->type();
 		if (_btype == TextBlockTNewline) {
-			lastNewlineStart = b->from();
-			lastNewline = &block.unsafe<NewlineBlock>();
-
 			last_rBearing = b->f_rbearing();
 			last_rPadding = b->f_rpadding();
 
