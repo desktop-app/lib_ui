@@ -12,13 +12,6 @@
 #include "ui/image/image_prepare.h"
 #include "ui/ui_utility.h"
 
-namespace {
-
-constexpr float64 kFadeHeight = 1. / 3;
-constexpr int kFadeAlphaMax = 160;
-
-} // namespace
-
 namespace Ui {
 
 InnerDropdown::InnerDropdown(

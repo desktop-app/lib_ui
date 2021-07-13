@@ -124,7 +124,7 @@ QImage prepareBlur(QImage img) {
 
 	uchar *pix = img.bits();
 	if (pix) {
-		int w = img.width(), h = img.height(), wold = w, hold = h;
+		int w = img.width(), h = img.height();
 		const int radius = 3;
 		const int r1 = radius + 1;
 		const int div = radius * 2 + 1;

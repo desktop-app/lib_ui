@@ -564,7 +564,6 @@ void Checkbox::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	auto check = checkRect();
-	auto ms = crl::now();
 	auto active = _check->currentAnimationValue();
 	if (isDisabled()) {
 		p.setOpacity(_st.disabledOpacity);

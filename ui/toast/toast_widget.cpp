@@ -165,7 +165,6 @@ void Widget::mouseMoveEvent(QMouseEvent *e) {
 	}
 	const auto point = e->pos()
 		- QPoint(_st->padding.left(), _textTop);
-	const auto lines = _maxTextHeight / _st->style.font->height;
 	const auto state = _text.getStateElided(point, _textWidth + 1);
 	const auto was = ClickHandler::getActive();
 	if (was != state.link) {
