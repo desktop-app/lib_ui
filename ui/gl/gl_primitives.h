@@ -25,7 +25,6 @@ void FillTriangles(
 	const QColor &color,
 	Fn<void()> additional = nullptr);
 
-
 void FillRectangle(
 	QOpenGLFunctions &f,
 	not_null<QOpenGLShaderProgram*> program,

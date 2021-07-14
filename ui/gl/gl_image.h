@@ -136,4 +136,12 @@ private:
 
 [[nodiscard]] GLint CurrentSingleComponentFormat();
 
+#ifdef Q_OS_WIN
+inline constexpr auto kFormatRGBA = GL_BGRA_EXT;
+inline constexpr auto kSwizzleRedBlue = false;
+#else // Q_OS_WIN
+inline constexpr auto kFormatRGBA = GL_RGBA;
+inline constexpr auto kSwizzleRedBlue = true;
+#endif // Q_OS_WIN
+
 } // namespace Ui::GL

@@ -6,6 +6,7 @@
 //
 #include "ui/gl/gl_shader.h"
 
+#include "ui/gl/gl_image.h"
 #include "base/debug_log.h"
 
 #include <QtGui/QOpenGLContext>
@@ -72,8 +73,10 @@ uniform sampler2D s_texture;
 )",
 		.body = R"(
 	result = texture2D(s_texture, v_texcoord);
+)" + (kSwizzleRedBlue
+	? R"(
 	result = vec4(result.b, result.g, result.r, result.a);
-)",
+)" : QString()),
 	};
 }
 
