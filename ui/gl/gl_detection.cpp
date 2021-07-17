@@ -6,6 +6,7 @@
 //
 #include "ui/gl/gl_detection.h"
 
+#include "ui/gl/gl_shader.h"
 #include "ui/integration.h"
 #include "base/debug_log.h"
 
@@ -86,6 +87,22 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	} else if (!functions->hasOpenGLFeature(Feature::Shaders)) {
 		LOG_ONCE(("OpenGL: Shaders not supported."));
 		return {};
+	}
+	{
+		auto program = QOpenGLShaderProgram();
+		LinkProgram(
+			&program,
+			VertexShader({
+				VertexViewportTransform(),
+				VertexPassTextureCoord(),
+			}),
+			FragmentShader({
+				FragmentSampleARGB32Texture(),
+			}));
+		if (!program.isLinked()) {
+			LOG_ONCE(("OpenGL: Could not link simple shader."));
+			return {};
+		}
 	}
 	const auto supported = context->format();
 	switch (supported.profile()) {
