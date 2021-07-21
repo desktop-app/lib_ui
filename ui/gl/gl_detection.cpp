@@ -17,6 +17,12 @@
 #include <QtGui/QOpenGLFunctions>
 #include <QtWidgets/QOpenGLWidget>
 
+#ifdef Q_OS_WIN
+#include <QtGui/QGuiApplication>
+#include <qpa/qplatformnativeinterface.h>
+#include <EGL/egl.h>
+#endif // Q_OS_WIN
+
 #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
 
 namespace Ui::GL {
@@ -142,6 +148,15 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			list.append(QString::fromLatin1(extension));
 		}
 		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
+
+#ifdef Q_OS_WIN
+		auto egllist = QStringList();
+		for (const auto &extension : EGLExtensions(context)) {
+			egllist.append(QString::fromLatin1(extension));
+		}
+		LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
+#endif // Q_OS_WIN
+
 		return true;
 	}();
 
@@ -223,6 +238,19 @@ void ChangeANGLE(ANGLE backend) {
 
 ANGLE CurrentANGLE() {
 	return ResolvedANGLE;
+}
+
+QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
+	const auto native = QGuiApplication::platformNativeInterface();
+	Assert(native != nullptr);
+
+	const auto display = static_cast<EGLDisplay>(
+		native->nativeResourceForContext(
+			QByteArrayLiteral("egldisplay"),
+			context));
+	return display
+		? QByteArray(eglQueryString(display, EGL_EXTENSIONS)).split(' ')
+		: QList<QByteArray>();
 }
 
 #endif // Q_OS_WIN

@@ -40,4 +40,7 @@ void ConfigureANGLE(); // Requires Ui::Integration being set.
 void ChangeANGLE(ANGLE backend);
 [[nodiscard]] ANGLE CurrentANGLE();
 
+[[nodiscard]] QList<QByteArray> EGLExtensions(
+	not_null<QOpenGLContext*> context);
+
 } // namespace Ui::GL
