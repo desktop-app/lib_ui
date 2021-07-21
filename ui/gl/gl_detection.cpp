@@ -44,7 +44,6 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		return {};
 	}
 	auto format = QSurfaceFormat();
-	format.setAlphaBufferSize(8);
 	if (widget) {
 		if (!widget->window()->windowHandle()) {
 			widget->window()->createWinId();
@@ -57,6 +56,11 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			LOG_ONCE(("OpenGL: Not supported for window."));
 			return {};
 		}
+		format = widget->window()->windowHandle()->format();
+		format.setAlphaBufferSize(8);
+		widget->window()->windowHandle()->setFormat(format);
+	} else {
+		format.setAlphaBufferSize(8);
 	}
 	auto tester = QOpenGLWidget(widget);
 	tester.setFormat(format);
@@ -104,6 +108,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			return {};
 		}
 	}
+
 	const auto supported = context->format();
 	switch (supported.profile()) {
 	case QSurfaceFormat::NoProfile: {
@@ -121,6 +126,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		LOG_ONCE(("OpenGL Profile: Compatibility."));
 	} break;
 	}
+
 	[[maybe_unused]] static const auto extensionsLogged = [&] {
 		const auto renderer = reinterpret_cast<const char*>(
 			functions->glGetString(GL_RENDERER));
@@ -138,6 +144,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
 		return true;
 	}();
+
 	const auto version = u"%1.%2"_q
 		.arg(supported.majorVersion())
 		.arg(supported.majorVersion());
