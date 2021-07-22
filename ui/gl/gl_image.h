@@ -134,8 +134,6 @@ private:
 
 };
 
-[[nodiscard]] GLint CurrentSingleComponentFormat();
-
 #ifdef Q_OS_WIN
 inline constexpr auto kFormatRGBA = GL_BGRA_EXT;
 inline constexpr auto kSwizzleRedBlue = false;

@@ -89,9 +89,9 @@ uniform sampler2D u_texture;
 uniform sampler2D v_texture;
 )",
 		.body = R"(
-	float y = texture2D(y_texture, v_texcoord).r - 0.0625;
-	float u = texture2D(u_texture, v_texcoord).r - 0.5;
-	float v = texture2D(v_texture, v_texcoord).r - 0.5;
+	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
+	float u = texture2D(u_texture, v_texcoord).a - 0.5;
+	float v = texture2D(v_texture, v_texcoord).a - 0.5;
 	result = vec4(
 		1.164 * y + 1.596 * v,
 		1.164 * y - 0.392 * u - 0.813 * v,
