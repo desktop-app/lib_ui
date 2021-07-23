@@ -20,6 +20,8 @@
 #ifdef Q_OS_WIN
 #include <QtGui/QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
+
+#define KHRONOS_STATIC
 #include <EGL/egl.h>
 #endif // Q_OS_WIN
 
