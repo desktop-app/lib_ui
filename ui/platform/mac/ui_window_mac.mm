@@ -367,7 +367,6 @@ void WindowHelper::setGeometry(QRect rect) {
 }
 
 void WindowHelper::setupBodyTitleAreaEvents() {
-#ifndef OS_OSX
 	const auto controls = _private->controlsRect();
 	qApp->installNativeEventFilter(new EventFilter(window(), [=](void *nswindow) {
 		const auto point = body()->mapFromGlobal(QCursor::pos());
@@ -380,28 +379,6 @@ void WindowHelper::setupBodyTitleAreaEvents() {
 		}
 		return false;
 	}));
-#else // OS_OSX
-	// OS X 10.10 doesn't have performWindowDragWithEvent yet.
-	body()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
-		const auto hitTest = [&] {
-			return bodyTitleAreaHit(
-				static_cast<QMouseEvent*>(e.get())->pos());
-		};
-		if (e->type() == QEvent::MouseButtonRelease
-			&& (static_cast<QMouseEvent*>(e.get())->button()
-				== Qt::LeftButton)) {
-			_drag = std::nullopt;
-		} else if (e->type() == QEvent::MouseButtonPress
-			&& hitTest()
-			&& (static_cast<QMouseEvent*>(e.get())->button()
-				== Qt::LeftButton)) {
-			_drag = { window()->pos(), static_cast<QMouseEvent*>(e.get())->globalPos() };
-		} else if (e->type() == QEvent::MouseMove && _drag && !window()->isFullScreen()) {
-			const auto delta = static_cast<QMouseEvent*>(e.get())->globalPos() - _drag->dragStartPosition;
-			window()->move(_drag->windowStartPosition + delta);
-		}
-	}, body()->lifetime());
-#endif // OS_OSX
 }
 
 void WindowHelper::close() {

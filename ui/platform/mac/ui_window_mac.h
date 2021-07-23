@@ -41,14 +41,6 @@ private:
 	const not_null<RpWidget*> _body;
 	bool _titleVisible = true;
 
-#ifdef OS_OSX
-	struct WindowDrag {
-		QPoint windowStartPosition;
-		QPoint dragStartPosition;
-	};
-	std::optional<WindowDrag> _drag;
-#endif // OS_OSX
-
 };
 
 } // namespace Platform
