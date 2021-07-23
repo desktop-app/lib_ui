@@ -8,6 +8,8 @@
 
 #include "base/flags.h"
 
+class QOpenGLContext;
+
 namespace Ui::GL {
 
 enum class Backend {
