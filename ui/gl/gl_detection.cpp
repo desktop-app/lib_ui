@@ -52,7 +52,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		return {};
 	}
 
-	static const auto BugListInited = [] {
+	[[maybe_unused]] static const auto BugListInited = [] {
 		if (!QFile::exists(":/misc/gpu_driver_bug_list.json")) {
 			return false;
 		}
