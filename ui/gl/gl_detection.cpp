@@ -49,6 +49,16 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		LOG_ONCE(("OpenGL: Force-disabled."));
 		return {};
 	}
+
+	static const auto BugListInited = [] {
+		if (!QFile::exists(":/misc/gpu_driver_bug_list.json")) {
+			return false;
+		}
+		LOG(("OpenGL: Using custom 'gpu_driver_bug_list.json'."));
+		qputenv("QT_OPENGL_BUGLIST", ":/misc/gpu_driver_bug_list.json");
+		return true;
+	}();
+
 	auto format = QSurfaceFormat();
 	if (widget) {
 		if (!widget->window()->windowHandle()) {
