@@ -282,7 +282,7 @@ bool DefaultWindowHelper::eventFilter(QObject *obj, QEvent *e) {
 	// doesn't work with RpWidget::events() for some reason
 	if (e->type() == QEvent::MouseMove
 		&& obj->isWidgetType()
-		&& static_cast<QWidget*>(window()) == static_cast<QWidget*>(obj)) {
+		&& window()->isAncestorOf(static_cast<QWidget*>(obj))) {
 		const auto mouseEvent = static_cast<QMouseEvent*>(e);
 		const auto currentPoint = mouseEvent->windowPos().toPoint();
 		const auto edges = edgesFromPos(currentPoint);
