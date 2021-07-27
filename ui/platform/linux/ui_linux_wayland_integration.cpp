@@ -24,21 +24,69 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <private/qwaylandwindow_p.h>
 #include <private/qwaylandshellsurface_p.h>
 
+#include <connection_thread.h>
+#include <registry.h>
+
 Q_DECLARE_METATYPE(QMargins);
 
 using QtWaylandClient::QWaylandIntegration;
 using QtWaylandClient::QWaylandWindow;
+using namespace KWayland::Client;
 
 namespace Ui {
 namespace Platform {
 
-WaylandIntegration::WaylandIntegration() {
+struct WaylandIntegration::Private {
+	std::unique_ptr<ConnectionThread> connection;
+	Registry registry;
+	QEventLoop interfacesLoop;
+	bool interfacesAnnounced = false;
+};
+
+WaylandIntegration::WaylandIntegration()
+: _private(std::make_unique<Private>()) {
+	_private->connection = std::unique_ptr<ConnectionThread>{
+		ConnectionThread::fromApplication(),
+	};
+
+	_private->registry.create(_private->connection.get());
+	_private->registry.setup();
+
+	QObject::connect(
+		_private->connection.get(),
+		&ConnectionThread::connectionDied,
+		&_private->registry,
+		&Registry::destroy);
+
+	QObject::connect(
+		&_private->registry,
+		&Registry::interfacesAnnounced,
+		[=] {
+			_private->interfacesAnnounced = true;
+			if (_private->interfacesLoop.isRunning()) {
+				_private->interfacesLoop.quit();
+			}
+		});
 }
+
+WaylandIntegration::~WaylandIntegration() = default;
 
 WaylandIntegration *WaylandIntegration::Instance() {
 	if (!::Platform::IsWayland()) return nullptr;
 	static WaylandIntegration instance;
 	return &instance;
+}
+
+void WaylandIntegration::waitForInterfaceAnnounce() {
+	Expects(!_private->interfacesLoop.isRunning());
+	if (!_private->interfacesAnnounced) {
+		_private->interfacesLoop.exec();
+	}
+}
+
+bool WaylandIntegration::xdgDecorationSupported() {
+	return _private->registry.hasInterface(
+		Registry::Interface::XdgDecorationUnstableV1);
 }
 
 bool WaylandIntegration::windowExtentsSupported() {

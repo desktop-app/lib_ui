@@ -412,5 +412,9 @@ std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 	return std::make_unique<WindowHelper>(window);
 }
 
+bool NativeWindowFrameSupported() {
+	return false;
+}
+
 } // namespace Platform
 } // namespace Ui
