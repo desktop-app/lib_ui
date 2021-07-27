@@ -44,6 +44,9 @@ void BasicWindowHelper::setTitle(const QString &title) {
 void BasicWindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
+void BasicWindowHelper::setNativeFrame(bool enabled) {
+}
+
 void BasicWindowHelper::setMinimumSize(QSize size) {
 	_window->setMinimumSize(size);
 }
@@ -161,17 +164,21 @@ void DefaultWindowHelper::init() {
 
 	rpl::combine(
 		window()->sizeValue(),
-		_title->heightValue()
-	) | rpl::start_with_next([=](QSize size, int titleHeight) {
+		_title->heightValue(),
+		_title->shownValue()
+	) | rpl::start_with_next([=](
+			QSize size,
+			int titleHeight,
+			bool titleShown) {
 		const auto area = resizeArea();
 
 		const auto sizeWithoutMargins = size
-			.shrunkBy({ 0, titleHeight, 0, 0 })
+			.shrunkBy({ 0, titleShown ? titleHeight : 0, 0, 0 })
 			.shrunkBy(area);
 
 		const auto topLeft = QPoint(
 			area.left(),
-			area.top() + titleHeight);
+			area.top() + (titleShown ? titleHeight : 0));
 
 		_body->setGeometry(QRect(topLeft, sizeWithoutMargins));
 	}, _body->lifetime());
@@ -233,7 +240,9 @@ bool DefaultWindowHelper::hasShadow() const {
 }
 
 QMargins DefaultWindowHelper::resizeArea() const {
-	if (window()->isMaximized() || window()->isFullScreen()) {
+	if (window()->isMaximized()
+		|| window()->isFullScreen()
+		|| _nativeFrame) {
 		return QMargins();
 	}
 
@@ -310,16 +319,23 @@ void DefaultWindowHelper::setTitleStyle(const style::WindowTitle &st) {
 		_title->st()->height);
 }
 
+void DefaultWindowHelper::setNativeFrame(bool enabled) {
+	_nativeFrame = enabled;
+	window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
+	_title->setVisible(!enabled);
+	updateWindowExtents();
+}
+
 void DefaultWindowHelper::setMinimumSize(QSize size) {
 	const auto sizeWithMargins = size
-		.grownBy({ 0, _title->height(), 0, 0 })
+		.grownBy({ 0, _title->isVisible() ? _title->height() : 0, 0, 0 })
 		.grownBy(resizeArea());
 	window()->setMinimumSize(sizeWithMargins);
 }
 
 void DefaultWindowHelper::setFixedSize(QSize size) {
 	const auto sizeWithMargins = size
-		.grownBy({ 0, _title->height(), 0, 0 })
+		.grownBy({ 0, _title->isVisible() ? _title->height() : 0, 0, 0 })
 		.grownBy(resizeArea());
 	window()->setFixedSize(sizeWithMargins);
 	_title->setResizeEnabled(false);
@@ -327,7 +343,7 @@ void DefaultWindowHelper::setFixedSize(QSize size) {
 
 void DefaultWindowHelper::setGeometry(QRect rect) {
 	window()->setGeometry(rect
-		.marginsAdded({ 0, _title->height(), 0, 0 })
+		.marginsAdded({ 0, _title->isVisible() ? _title->height() : 0, 0, 0 })
 		.marginsAdded(resizeArea()));
 }
 
@@ -376,7 +392,7 @@ void DefaultWindowHelper::paintBorders(QPainter &p) {
 }
 
 void DefaultWindowHelper::updateWindowExtents() {
-	if (hasShadow()) {
+	if (hasShadow() && !_nativeFrame) {
 		Platform::SetWindowExtents(
 			window()->windowHandle(),
 			resizeArea());

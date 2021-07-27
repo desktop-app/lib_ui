@@ -14,15 +14,21 @@ namespace Platform {
 
 class WaylandIntegration {
 public:
-	static WaylandIntegration *Instance();
+	[[nodiscard]] static WaylandIntegration *Instance();
 
-	bool windowExtentsSupported();
+	void waitForInterfaceAnnounce();
+	[[nodiscard]] bool xdgDecorationSupported();
+	[[nodiscard]] bool windowExtentsSupported();
 	void setWindowExtents(QWindow *window, const QMargins &extents);
 	void unsetWindowExtents(QWindow *window);
 	bool showWindowMenu(QWindow *window);
 
 private:
 	WaylandIntegration();
+	~WaylandIntegration();
+
+	struct Private;
+	const std::unique_ptr<Private> _private;
 };
 
 } // namespace Platform

@@ -36,6 +36,10 @@ void Window::setTitleStyle(const style::WindowTitle &st) {
 	_helper->setTitleStyle(st);
 }
 
+void Window::setNativeFrame(bool enabled) {
+	_helper->setNativeFrame(enabled);
+}
+
 void Window::setMinimumSize(QSize size) {
 	_helper->setMinimumSize(size);
 }

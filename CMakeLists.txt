@@ -253,6 +253,7 @@ elseif(LINUX)
     target_link_libraries(lib_ui
     PUBLIC
         desktop-app::lib_waylandshells
+        desktop-app::external_kwayland
     )
 endif()
 

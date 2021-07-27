@@ -39,6 +39,7 @@ public:
 
 	void setTitle(const QString &title);
 	void setTitleStyle(const style::WindowTitle &st);
+	void setNativeFrame(bool enabled);
 	void setMinimumSize(QSize size);
 	void setFixedSize(QSize size);
 	void setStaysOnTop(bool enabled);
