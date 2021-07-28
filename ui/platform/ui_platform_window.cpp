@@ -8,7 +8,7 @@
 
 #include "ui/platform/ui_platform_window_title.h"
 #include "ui/platform/ui_platform_utility.h"
-#include "ui/widgets/window.h"
+#include "ui/widgets/rp_window.h"
 #include "ui/widgets/shadow.h"
 #include "ui/painter.h"
 #include "styles/style_widgets.h"

@@ -7,7 +7,7 @@
 #include "ui/gl/gl_window.h"
 
 #include "ui/gl/gl_detection.h"
-#include "ui/widgets/window.h"
+#include "ui/widgets/rp_window.h"
 #include "base/event_filter.h"
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
@@ -38,40 +38,40 @@ Backend Window::backend() const {
 	return _backend;
 }
 
-not_null<Ui::Window*> Window::window() const {
+not_null<RpWindow*> Window::window() const {
 	return _window.get();
 }
 
-not_null<Ui::RpWidget*> Window::widget() const {
+not_null<RpWidget*> Window::widget() const {
 	return _body.get();
 }
 
-std::unique_ptr<Ui::Window> Window::createWindow() {
-	auto result = std::make_unique<Ui::Window>();
+std::unique_ptr<RpWindow> Window::createWindow() {
+	auto result = std::make_unique<RpWindow>();
 	if constexpr (!kUseNativeChild) {
-		const auto capabilities = Ui::GL::CheckCapabilities(result.get());
+		const auto capabilities = CheckCapabilities(result.get());
 		const auto use = ::Platform::IsMac()
 			? true
 			: ::Platform::IsWindows()
 			? capabilities.supported
 			: capabilities.transparency;
-		LOG(("OpenGL: %1 (Ui::GL::Window)").arg(use ? "[TRUE]" : "[FALSE]"));
-		_backend = use ? Ui::GL::Backend::OpenGL : Ui::GL::Backend::Raster;
+		LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
+		_backend = use ? Backend::OpenGL : Backend::Raster;
 
 		if (!use) {
 			// We have to create a new window, if OpenGL initialization failed.
-			result = std::make_unique<Ui::Window>();
+			result = std::make_unique<RpWindow>();
 		}
 	}
 	return result;
 }
 
-std::unique_ptr<Ui::RpWidget> Window::createNativeBodyWrap() {
+std::unique_ptr<RpWidget> Window::createNativeBodyWrap() {
 	if constexpr (!kUseNativeChild) {
 		return nullptr;
 	}
 	const auto create = [] {
-		auto result = std::make_unique<Ui::RpWidget>();
+		auto result = std::make_unique<RpWidget>();
 		result->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
 		result->setAttribute(Qt::WA_NativeWindow);
 		result->setAttribute(Qt::WA_DontCreateNativeAncestors);
@@ -81,14 +81,14 @@ std::unique_ptr<Ui::RpWidget> Window::createNativeBodyWrap() {
 	};
 
 	auto result = create();
-	const auto capabilities = Ui::GL::CheckCapabilities(result.get());
+	const auto capabilities = CheckCapabilities(result.get());
 	const auto use = ::Platform::IsMac()
 		? true
 		: ::Platform::IsWindows()
 		? capabilities.supported
 		: capabilities.transparency;
-	LOG(("OpenGL: %1 (Ui::GL::WindowBody)").arg(use ? "[TRUE]" : "[FALSE]"));
-	_backend = use ? Ui::GL::Backend::OpenGL : Ui::GL::Backend::Raster;
+	LOG(("OpenGL: %1 (WindowBody)").arg(use ? "[TRUE]" : "[FALSE]"));
+	_backend = use ? Backend::OpenGL : Backend::Raster;
 
 	if (!use) {
 		// We have to create a new window, if OpenGL initialization failed.
@@ -117,7 +117,7 @@ std::unique_ptr<Ui::RpWidget> Window::createNativeBodyWrap() {
 	const auto childWindow = raw->windowHandle();
 	base::install_event_filter(childWindow, [=](not_null<QEvent*> event) {
 		if (event->type() == QEvent::Expose && childWindow->isExposed()) {
-			Ui::Platform::SendWMPaintForce(_window.get());
+			Platform::SendWMPaintForce(_window.get());
 		}
 		return base::EventFilterResult::Continue;
 	});

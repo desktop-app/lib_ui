@@ -7,7 +7,7 @@
 #include "ui/platform/mac/ui_window_mac.h"
 
 #include "ui/platform/mac/ui_window_title_mac.h"
-#include "ui/widgets/window.h"
+#include "ui/widgets/rp_window.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/palette.h"
 

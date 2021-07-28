@@ -29,10 +29,10 @@ inline constexpr bool is_flag_type(WindowTitleHitTestFlag) {
 }
 using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 
-class Window : public RpWidget {
+class RpWindow : public RpWidget {
 public:
-	explicit Window(QWidget *parent = nullptr);
-	~Window();
+	explicit RpWindow(QWidget *parent = nullptr);
+	~RpWindow();
 
 	[[nodiscard]] not_null<RpWidget*> body();
 	[[nodiscard]] not_null<const RpWidget*> body() const;

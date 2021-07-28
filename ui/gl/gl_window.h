@@ -8,7 +8,7 @@
 
 
 namespace Ui {
-class Window;
+class RpWindow;
 class RpWidget;
 } // namespace Ui
 
@@ -22,17 +22,17 @@ public:
 	~Window();
 
 	[[nodiscard]] Backend backend() const;
-	[[nodiscard]] not_null<Ui::Window*> window() const;
-	[[nodiscard]] not_null<Ui::RpWidget*> widget() const;
+	[[nodiscard]] not_null<RpWindow*> window() const;
+	[[nodiscard]] not_null<RpWidget*> widget() const;
 
 private:
-	[[nodiscard]] std::unique_ptr<Ui::Window> createWindow();
-	[[nodiscard]] std::unique_ptr<Ui::RpWidget> createNativeBodyWrap();
+	[[nodiscard]] std::unique_ptr<RpWindow> createWindow();
+	[[nodiscard]] std::unique_ptr<RpWidget> createNativeBodyWrap();
 
-	Ui::GL::Backend _backend = Ui::GL::Backend();
-	const std::unique_ptr<Ui::Window> _window;
-	const std::unique_ptr<Ui::RpWidget> _bodyNativeWrap;
-	const not_null<Ui::RpWidget*> _body;
+	Backend _backend = Backend();
+	const std::unique_ptr<RpWindow> _window;
+	const std::unique_ptr<RpWidget> _bodyNativeWrap;
+	const not_null<RpWidget*> _body;
 
 };
 

@@ -180,6 +180,8 @@ PRIVATE
     ui/widgets/menu/menu_toggle.h
     ui/widgets/popup_menu.cpp
     ui/widgets/popup_menu.h
+    ui/widgets/rp_window.cpp
+    ui/widgets/rp_window.h
     ui/widgets/scroll_area.cpp
     ui/widgets/scroll_area.h
     ui/widgets/side_bar_button.cpp
@@ -188,8 +190,6 @@ PRIVATE
     ui/widgets/shadow.h
     ui/widgets/tooltip.cpp
     ui/widgets/tooltip.h
-    ui/widgets/window.cpp
-    ui/widgets/window.h
     ui/wrap/fade_wrap.cpp
     ui/wrap/fade_wrap.h
     ui/wrap/padding_wrap.cpp
