@@ -84,6 +84,8 @@ private:
 	void paintBorders(QPainter &p);
 	void updateWindowExtents();
 	void updateCursor(Qt::Edges edges);
+	[[nodiscard]] int titleHeight() const;
+	[[nodiscard]] QMargins bodyPadding() const;
 
 	const not_null<DefaultTitleWidget*> _title;
 	const not_null<RpWidget*> _body;

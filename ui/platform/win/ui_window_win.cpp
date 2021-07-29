@@ -151,7 +151,6 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 , _shadow(std::in_place, window, st::windowShadowFg->c) {
 	Expects(_handle != nullptr);
 
-	GetNativeFilter()->registerWindow(_handle, this);
 	init();
 }
 
@@ -186,13 +185,11 @@ void WindowHelper::setNativeFrame(bool enabled) {
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
-	const auto titleHeight = _title->isVisible() ? _title->height() : 0;
-	window()->setMinimumSize(size.width(), titleHeight + size.height());
+	window()->setMinimumSize(size.width(), titleHeight() + size.height());
 }
 
 void WindowHelper::setFixedSize(QSize size) {
-	const auto titleHeight = _title->isVisible() ? _title->height() : 0;
-	window()->setFixedSize(size.width(), titleHeight + size.height());
+	window()->setFixedSize(size.width(), titleHeight() + size.height());
 	_title->setResizeEnabled(false);
 	if (_shadow) {
 		_shadow->setResizeEnabled(false);
@@ -200,8 +197,7 @@ void WindowHelper::setFixedSize(QSize size) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	const auto titleHeight = _title->isVisible() ? _title->height() : 0;
-	window()->setGeometry(rect.marginsAdded({ 0, titleHeight, 0, 0 }));
+	window()->setGeometry(rect.marginsAdded({ 0, titleHeight(), 0, 0 }));
 }
 
 void WindowHelper::showFullScreen() {
@@ -221,6 +217,9 @@ void WindowHelper::showNormal() {
 }
 
 void WindowHelper::init() {
+	_title->show(); // Be consistent with _nativeFrame == false.
+	GetNativeFilter()->registerWindow(_handle, this);
+
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
 		if (_shadow) {
@@ -429,7 +428,8 @@ bool WindowHelper::handleNativeEvent(
 			p.y - r.top + _marginsDelta.top());
 		if (!window()->rect().contains(mapped)) {
 			*result = HTTRANSPARENT;
-		} else if (!_title->isVisible() || !_title->geometry().contains(mapped)) {
+		} else if (_title->isHidden()
+			|| !_title->geometry().contains(mapped)) {
 			*result = HTCLIENT;
 		} else switch (_title->hitTest(_title->pos() + mapped)) {
 		case HitTestResult::Client:
@@ -500,6 +500,10 @@ bool WindowHelper::handleNativeEvent(
 
 bool WindowHelper::fixedSize() const {
 	return window()->minimumSize() == window()->maximumSize();
+}
+
+int WindowHelper::titleHeight() const {
+	return _title->isHidden() ? 0 : _title->height();
 }
 
 void WindowHelper::updateMargins() {

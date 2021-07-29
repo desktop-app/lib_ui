@@ -47,6 +47,7 @@ private:
 		LRESULT *result);
 	[[nodiscard]] bool fixedSize() const;
 
+	[[nodiscard]] int titleHeight() const;
 	static not_null<NativeFilter*> GetNativeFilter();
 
 	const HWND _handle = nullptr;
