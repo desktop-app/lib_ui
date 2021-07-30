@@ -153,8 +153,10 @@ void DefaultWindowHelper::init() {
 		window()->setAttribute(Qt::WA_TranslucentBackground);
 	}
 
-	window()->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	rpl::combine(
+		window()->widthValue(),
+		_title->shownValue()
+	) | rpl::start_with_next([=](int width, bool shown) {
 		const auto area = resizeArea();
 		_title->setGeometry(
 			area.left(),
