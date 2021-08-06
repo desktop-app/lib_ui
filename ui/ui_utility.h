@@ -14,6 +14,7 @@
 
 class QPixmap;
 class QImage;
+class QWheelEvent;
 
 enum class RectPart;
 using RectParts = base::flags<RectPart>;
@@ -192,5 +193,7 @@ QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
     const QRect &rect = QRect());
 
 void DisableCustomScaling();
+
+int WheelDirection(not_null<QWheelEvent*> e);
 
 } // namespace Ui
