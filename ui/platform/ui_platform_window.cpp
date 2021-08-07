@@ -146,7 +146,7 @@ DefaultWindowHelper::DefaultWindowHelper(not_null<RpWidget*> window)
 }
 
 void DefaultWindowHelper::init() {
-	_title->show(); // Be consistent with _nativeFrame == false.
+	_title->show();
 	window()->setWindowFlag(Qt::FramelessWindowHint);
 
 	if (WindowExtentsSupported()) {
@@ -251,7 +251,7 @@ bool DefaultWindowHelper::hasShadow() const {
 QMargins DefaultWindowHelper::resizeArea() const {
 	if (window()->isMaximized()
 		|| window()->isFullScreen()
-		|| _nativeFrame) {
+		|| _title->isHidden()) {
 		return QMargins();
 	}
 
@@ -329,7 +329,6 @@ void DefaultWindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
 void DefaultWindowHelper::setNativeFrame(bool enabled) {
-	_nativeFrame = enabled;
 	window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
 	_title->setVisible(!enabled);
 	updateWindowExtents();
@@ -395,7 +394,7 @@ void DefaultWindowHelper::paintBorders(QPainter &p) {
 }
 
 void DefaultWindowHelper::updateWindowExtents() {
-	if (hasShadow() && !_nativeFrame) {
+	if (hasShadow() && !_title->isHidden()) {
 		Platform::SetWindowExtents(
 			window()->windowHandle(),
 			resizeArea());
