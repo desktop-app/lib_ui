@@ -58,7 +58,6 @@ private:
 	QMargins _marginsDelta;
 	HMENU _menu = nullptr;
 	bool _isFullScreen = false;
-	bool _nativeFrame = false;
 
 };
 

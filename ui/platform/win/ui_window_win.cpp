@@ -172,7 +172,6 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
 void WindowHelper::setNativeFrame(bool enabled) {
-	_nativeFrame = enabled;
 	_title->setVisible(!enabled);
 	if (enabled) {
 		_shadow.reset();
@@ -217,7 +216,7 @@ void WindowHelper::showNormal() {
 }
 
 void WindowHelper::init() {
-	_title->show(); // Be consistent with _nativeFrame == false.
+	_title->show();
 	GetNativeFilter()->registerWindow(_handle, this);
 
 	style::PaletteChanged(
@@ -290,14 +289,14 @@ bool WindowHelper::handleNativeEvent(
 	} return false;
 
 	case WM_NCPAINT: {
-		if (::Platform::IsWindows8OrGreater() || _nativeFrame) {
+		if (::Platform::IsWindows8OrGreater() || _title->isHidden()) {
 			return false;
 		}
 		if (result) *result = 0;
 	} return true;
 
 	case WM_NCCALCSIZE: {
-		if (_nativeFrame) {
+		if (_title->isHidden()) {
 			return false;
 		}
 		WINDOWPLACEMENT wp;
@@ -343,7 +342,7 @@ bool WindowHelper::handleNativeEvent(
 	} return true;
 
 	case WM_NCACTIVATE: {
-		if (_nativeFrame) {
+		if (_title->isHidden()) {
 			return false;
 		}
 		if (IsCompositionEnabled()) {
@@ -416,7 +415,7 @@ bool WindowHelper::handleNativeEvent(
 	} return false;
 
 	case WM_NCHITTEST: {
-		if (!result || _nativeFrame) {
+		if (!result || _title->isHidden()) {
 			return false;
 		}
 
@@ -449,7 +448,7 @@ bool WindowHelper::handleNativeEvent(
 	} return true;
 
 	case WM_NCRBUTTONUP: {
-		if (_nativeFrame) {
+		if (_title->isHidden()) {
 			return false;
 		}
 		SendMessage(_handle, WM_SYSCOMMAND, SC_MOUSEMENU, lParam);
@@ -566,9 +565,9 @@ void WindowHelper::updateMargins() {
 		_marginsDelta = QMargins();
 	}
 
-	if (_isFullScreen || _nativeFrame) {
+	if (_isFullScreen || _title->isHidden()) {
 		margins = QMargins();
-		if (_nativeFrame) {
+		if (_title->isHidden()) {
 			_marginsDelta = QMargins();
 		}
 	}
