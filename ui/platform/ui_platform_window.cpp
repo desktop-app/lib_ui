@@ -155,8 +155,12 @@ void DefaultWindowHelper::init() {
 
 	rpl::combine(
 		window()->widthValue(),
+		_windowState.value(),
 		_title->shownValue()
-	) | rpl::start_with_next([=](int width, bool shown) {
+	) | rpl::start_with_next([=](
+			int width,
+			Qt::WindowStates windowState,
+			bool shown) {
 		const auto area = resizeArea();
 		_title->setGeometry(
 			area.left(),
@@ -167,10 +171,12 @@ void DefaultWindowHelper::init() {
 
 	rpl::combine(
 		window()->sizeValue(),
+		_windowState.value(),
 		_title->heightValue(),
 		_title->shownValue()
 	) | rpl::start_with_next([=](
 			QSize size,
+			Qt::WindowStates windowState,
 			int titleHeight,
 			bool titleShown) {
 		const auto area = resizeArea();
@@ -207,8 +213,10 @@ void DefaultWindowHelper::init() {
 		}
 	}, window()->lifetime());
 
-	window()->shownValue(
-	) | rpl::start_with_next([=](bool shown) {
+	rpl::combine(
+		window()->shownValue(),
+		_windowState.value()
+	) | rpl::start_with_next([=](bool shown, Qt::WindowStates windowState) {
 		if (shown) {
 			updateWindowExtents();
 		}
@@ -223,10 +231,8 @@ void DefaultWindowHelper::init() {
 			if (mouseEvent->button() == Qt::LeftButton && edges) {
 				window()->windowHandle()->startSystemResize(edges);
 			}
-		} else if (e->type() == QEvent::Move
-			|| e->type() == QEvent::Resize
-			|| e->type() == QEvent::WindowStateChange) {
-			updateWindowExtents();
+		} else if (e->type() == QEvent::WindowStateChange) {
+			_windowState = window()->windowState();
 		}
 	}, window()->lifetime());
 
