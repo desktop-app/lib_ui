@@ -91,6 +91,7 @@ private:
 	const not_null<RpWidget*> _body;
 	bool _extentsSet = false;
 	bool _nativeFrame = false;
+	rpl::variable<Qt::WindowStates> _windowState = Qt::WindowNoState;
 
 };
 
