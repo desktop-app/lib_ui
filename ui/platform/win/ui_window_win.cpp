@@ -178,9 +178,20 @@ void WindowHelper::setNativeFrame(bool enabled) {
 	} else {
 		_shadow.emplace(window(), st::windowShadowFg->c);
 		_shadow->setResizeEnabled(!fixedSize());
+		initialShadowUpdate();
 	}
 	updateMargins();
 	fixMaximizedWindow();
+}
+
+void WindowHelper::initialShadowUpdate() {
+	using Change = WindowShadow::Change;
+	const auto noShadowStates = (Qt::WindowMinimized | Qt::WindowMaximized);
+	if ((window()->windowState() & noShadowStates) || window()->isHidden()) {
+		_shadow->update(Change::Hidden);
+	} else {
+		_shadow->update(Change::Moved | Change::Resized | Change::Shown);
+	}
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
@@ -265,6 +276,8 @@ void WindowHelper::init() {
 		window()->windowHandle(),
 		&QWindow::windowStateChanged,
 		handleStateChanged);
+
+	initialShadowUpdate();
 }
 
 bool WindowHelper::handleNativeEvent(
