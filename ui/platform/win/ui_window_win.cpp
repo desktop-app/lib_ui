@@ -101,6 +101,24 @@ HRESULT WinApiSetWindowTheme(
 	return method ? method(hWnd, pszSubAppName, pszSubIdList) : HRESULT();
 }
 
+void FixAeroSnap(HWND handle) {
+	SetWindowLongPtr(
+		handle,
+		GWL_STYLE,
+		GetWindowLongPtr(handle, GWL_STYLE) | WS_CAPTION | WS_THICKFRAME);
+}
+
+[[nodiscard]] HWND ResolveWindowHandle(not_null<QWidget*> widget) {
+	if (!::Platform::IsWindows8OrGreater()) {
+		widget->setWindowFlag(Qt::FramelessWindowHint);
+	}
+	const auto result = GetWindowHandle(widget);
+	if (!::Platform::IsWindows8OrGreater()) {
+		FixAeroSnap(result);
+	}
+	return result;
+}
+
 } // namespace
 
 class WindowHelper::NativeFilter final : public QAbstractNativeEventFilter {
@@ -145,7 +163,7 @@ bool WindowHelper::NativeFilter::nativeEventFilter(
 
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
 : BasicWindowHelper(window)
-, _handle(GetWindowHandle(window))
+, _handle(ResolveWindowHandle(window))
 , _title(Ui::CreateChild<TitleWidget>(window.get()))
 , _body(Ui::CreateChild<RpWidget>(window.get()))
 , _shadow(std::in_place, window, st::windowShadowFg->c) {
@@ -172,6 +190,12 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
 void WindowHelper::setNativeFrame(bool enabled) {
+	if (!::Platform::IsWindows8OrGreater()) {
+		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
+		if (!enabled) {
+			FixAeroSnap(_handle);
+		}
+	}
 	_title->setVisible(!enabled);
 	if (enabled) {
 		_shadow.reset();
