@@ -39,6 +39,26 @@ namespace Images {
 	int radius,
 	const style::color &color);
 
+
+// Try to read images up to 64MB.
+inline constexpr auto kReadBytesLimit = 64 * 1024 * 1024;
+inline constexpr auto kReadMaxArea = 12'032 * 9'024;
+
+struct ReadArgs {
+	QString path;
+	QByteArray content;
+	QSize maxSize;
+	bool forceOpaque = false;
+	bool returnContent = false;
+};
+struct ReadResult {
+	QImage image;
+	QByteArray content;
+	QByteArray format;
+	bool animated = false;
+};
+[[nodiscard]] ReadResult Read(ReadArgs &&args);
+
 QImage prepareBlur(QImage image);
 void prepareRound(
 	QImage &image,

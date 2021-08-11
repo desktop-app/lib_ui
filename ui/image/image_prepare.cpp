@@ -13,6 +13,10 @@
 #include "styles/palette.h"
 #include "styles/style_basic.h"
 
+#include <QtCore/QFile>
+#include <QtCore/QBuffer>
+#include <QtGui/QImageReader>
+
 namespace Images {
 namespace {
 
@@ -107,6 +111,50 @@ std::array<QImage, 4> PrepareCorners(
 	auto result = CornersMask(radius);
 	for (auto &image : result) {
 		style::colorizeImage(image, color->c, &image);
+	}
+	return result;
+}
+
+ReadResult Read(ReadArgs &&args) {
+	if (args.content.isEmpty()) {
+		auto file = QFile(args.path);
+		if (file.size() > kReadBytesLimit
+			|| !file.open(QIODevice::ReadOnly)) {
+			return {};
+		}
+		args.content = file.readAll();
+	}
+	if (args.content.isEmpty()) {
+		return {};
+	}
+	auto result = ReadResult();
+	{
+		auto buffer = QBuffer(&args.content);
+		auto reader = QImageReader(&buffer);
+		reader.setAutoTransform(true);
+		if (!reader.canRead()) {
+			return {};
+		}
+		const auto size = reader.size();
+		if (size.width() * size.height() > kReadMaxArea) {
+			return {};
+		}
+		if (!reader.read(&result.image) || result.image.isNull()) {
+			return {};
+		}
+		result.animated = reader.supportsAnimation()
+			&& (reader.imageCount() > 1);
+		result.format = reader.format().toLower();
+	}
+	if (args.returnContent) {
+		result.content = args.content;
+	} else {
+		args.content = QByteArray();
+	}
+	if (args.forceOpaque
+		&& result.format != qstr("jpg")
+		&& result.format != qstr("jpeg")) {
+		result.image = prepareOpaque(std::move(result.image));
 	}
 	return result;
 }
