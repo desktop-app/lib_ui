@@ -134,14 +134,7 @@ bool IsBad(QChar ch) {
 		|| (ch >= 127 && ch < 160 && ch != 156)
 
 		// qt harfbuzz crash see https://github.com/telegramdesktop/tdesktop/issues/4551
-		|| (Platform::IsMac() && ch == 6158)
-
-		// tmp hack see https://bugreports.qt.io/browse/QTBUG-48910
-		|| (Platform::IsMac10_11OrGreater()
-			&& !Platform::IsMac10_12OrGreater()
-			&& ch >= 0x0B00
-			&& ch <= 0x0B7F
-			&& IsDiac(ch));
+		|| (Platform::IsMac() && ch == 6158);
 }
 
 } // namespace
@@ -1982,12 +1975,7 @@ private:
 		if (item == -1)
 			return;
 
-#ifdef OS_MAC_OLD
-		auto end = _e->findItem(line.from + line.length - 1);
-#else // OS_MAC_OLD
 		auto end = _e->findItem(line.from + line.length - 1, item);
-#endif // OS_MAC_OLD
-
 		auto blockIndex = _lineStartBlock;
 		auto currentBlock = _t->_blocks[blockIndex].get();
 		auto nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
