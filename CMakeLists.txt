@@ -266,4 +266,6 @@ PUBLIC
 target_link_libraries(lib_ui
 PUBLIC
     desktop-app::lib_base
+PRIVATE
+    desktop-app::external_zlib
 )

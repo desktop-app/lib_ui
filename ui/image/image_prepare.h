@@ -39,6 +39,7 @@ namespace Images {
 	int radius,
 	const style::color &color);
 
+[[nodiscard]] QByteArray UnpackGzip(const QByteArray &bytes);
 
 // Try to read images up to 64MB.
 inline constexpr auto kReadBytesLimit = 64 * 1024 * 1024;
@@ -48,6 +49,7 @@ struct ReadArgs {
 	QString path;
 	QByteArray content;
 	QSize maxSize;
+	bool gzipSvg = false;
 	bool forceOpaque = false;
 	bool returnContent = false;
 };
