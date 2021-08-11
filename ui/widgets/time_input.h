@@ -28,6 +28,7 @@ public:
 	bool setFocusFast();
 	rpl::producer<QString> value() const;
 	rpl::producer<> submitRequests() const;
+	rpl::producer<> focuses() const;
 	QString valueCurrent() const;
 	void showError();
 
@@ -61,6 +62,7 @@ private:
 	object_ptr<TimePart> _minute;
 	rpl::variable<QString> _value;
 	rpl::event_stream<> _submitRequests;
+	rpl::event_stream<> _focuses;
 
 	style::cursor _cursor = style::cur_default;
 	Animations::Simple _a_borderShown;
