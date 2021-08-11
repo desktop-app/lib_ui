@@ -144,11 +144,7 @@ namespace internal {
 
 QImage createCircleMask(int size, QColor bg, QColor fg) {
 	int realSize = size * DevicePixelRatio();
-#ifndef OS_MAC_OLD
 	auto result = QImage(realSize, realSize, QImage::Format::Format_Grayscale8);
-#else // OS_MAC_OLD
-	auto result = QImage(realSize, realSize, QImage::Format::Format_RGB32);
-#endif // OS_MAC_OLD
 	{
 		QPainter p(&result);
 		PainterHighQualityEnabler hq(p);
