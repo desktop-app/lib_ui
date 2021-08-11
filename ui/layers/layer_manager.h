@@ -36,6 +36,8 @@ public:
 	void raise();
 	bool setFocus();
 
+	const LayerWidget *topShownLayer() const;
+
 private:
 	void ensureLayerCreated();
 	void destroyLayer();

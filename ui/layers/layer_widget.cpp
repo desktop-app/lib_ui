@@ -458,6 +458,17 @@ bool LayerStackWidget::layerShown() const {
 	return _specialLayer || currentLayer() || _mainMenu;
 }
 
+const LayerWidget *LayerStackWidget::topShownLayer() const {
+	if (const auto result = currentLayer()) {
+		return result;
+	} else if (const auto special = _specialLayer.data()) {
+		return special;
+	} else if (const auto menu = _mainMenu.data()) {
+		return menu;
+	}
+	return nullptr;
+}
+
 void LayerStackWidget::setStyleOverrides(
 		const style::Box *boxSt,
 		const style::Box *layerSt) {

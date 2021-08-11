@@ -59,6 +59,10 @@ bool LayerManager::setFocus() {
 	return true;
 }
 
+const LayerWidget *LayerManager::topShownLayer() const {
+	return _layer ? _layer->topShownLayer() : nullptr;
+}
+
 void LayerManager::ensureLayerCreated() {
 	if (_layer) {
 		return;

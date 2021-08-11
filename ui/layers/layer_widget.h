@@ -144,6 +144,7 @@ public:
 		const ::Window::SectionShow &params);
 
 	bool layerShown() const;
+	const LayerWidget *topShownLayer() const;
 
 	~LayerStackWidget();
 
