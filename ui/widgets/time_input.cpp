@@ -214,6 +214,7 @@ TimeInput::TimeInput(
 				+ pointer->x()
 				- _hour->x();
 			setFocused(true);
+			_focuses.fire({});
 		};
 	};
 	const auto blurred = [=] {
@@ -318,6 +319,10 @@ rpl::producer<QString> TimeInput::value() const {
 
 rpl::producer<> TimeInput::submitRequests() const {
 	return _submitRequests.events();
+}
+
+rpl::producer<> TimeInput::focuses() const {
+	return _focuses.events();
 }
 
 void TimeInput::paintEvent(QPaintEvent *e) {
