@@ -35,7 +35,7 @@ constexpr auto kSetVersion = uint32(2);
 constexpr auto kCacheVersion = uint32(6);
 constexpr auto kMaxId = uint32(1 << 8);
 
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 constexpr auto kScaleForTouchBar = 150;
 #endif
 
@@ -80,7 +80,7 @@ auto CanClearUniversal = false;
 auto WaitingToSwitchBackToId = 0;
 auto Updates = rpl::event_stream<>();
 
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 auto TouchbarSize = -1;
 auto TouchbarInstance = std::unique_ptr<Instance>();
 auto TouchbarEmoji = (Instance*)nullptr;
@@ -498,7 +498,7 @@ void Init() {
 	InstanceNormal = std::make_unique<Instance>(SizeNormal);
 	InstanceLarge = std::make_unique<Instance>(SizeLarge);
 
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 	if (style::Scale() != kScaleForTouchBar) {
 		TouchbarSize = int(style::ConvertScale(18 * 4 / 3.,
 			kScaleForTouchBar * style::DevicePixelRatio()));
@@ -516,7 +516,7 @@ void Clear() {
 
 	InstanceNormal = nullptr;
 	InstanceLarge = nullptr;
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 	TouchbarInstance = nullptr;
 	TouchbarEmoji = nullptr;
 #endif
@@ -620,7 +620,7 @@ int GetSizeLarge() {
 	return SizeLarge;
 }
 
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 int GetSizeTouchbar() {
 	return (style::Scale() == kScaleForTouchBar)
 		? GetSizeLarge()
@@ -763,7 +763,7 @@ const QPixmap &SinglePixmap(EmojiPtr emoji, int fontHeight) {
 }
 
 void Draw(QPainter &p, EmojiPtr emoji, int size, int x, int y) {
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 	const auto s = (style::Scale() == kScaleForTouchBar)
 		? SizeLarge
 		: TouchbarSize;

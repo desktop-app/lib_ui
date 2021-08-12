@@ -10,11 +10,21 @@
 #include "ui/style/style_core.h"
 #include "ui/painter.h"
 #include "base/flat_map.h"
+#include "base/debug_log.h"
 #include "styles/palette.h"
 #include "styles/style_basic.h"
 
+#include "zlib.h"
+#include <QtCore/QFile>
+#include <QtCore/QBuffer>
+#include <QtGui/QImageReader>
+#include <QtSvg/QSvgRenderer>
+
 namespace Images {
 namespace {
+
+// They should be smaller.
+constexpr auto kMaxGzipFileSize = 5 * 1024 * 1024;
 
 TG_FORCE_INLINE uint64 blurGetColors(const uchar *p) {
 	return (uint64)p[0] + ((uint64)p[1] << 16) + ((uint64)p[2] << 32) + ((uint64)p[3] << 48);
@@ -107,6 +117,131 @@ std::array<QImage, 4> PrepareCorners(
 	auto result = CornersMask(radius);
 	for (auto &image : result) {
 		style::colorizeImage(image, color->c, &image);
+	}
+	return result;
+}
+
+[[nodiscard]] QByteArray UnpackGzip(const QByteArray &bytes) {
+	z_stream stream;
+	stream.zalloc = nullptr;
+	stream.zfree = nullptr;
+	stream.opaque = nullptr;
+	stream.avail_in = 0;
+	stream.next_in = nullptr;
+	int res = inflateInit2(&stream, 16 + MAX_WBITS);
+	if (res != Z_OK) {
+		return bytes;
+	}
+	const auto guard = gsl::finally([&] { inflateEnd(&stream); });
+
+	auto result = QByteArray(kMaxGzipFileSize + 1, char(0));
+	stream.avail_in = bytes.size();
+	stream.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(bytes.data()));
+	stream.avail_out = 0;
+	while (!stream.avail_out) {
+		stream.avail_out = result.size();
+		stream.next_out = reinterpret_cast<Bytef*>(result.data());
+		int res = inflate(&stream, Z_NO_FLUSH);
+		if (res != Z_OK && res != Z_STREAM_END) {
+			return bytes;
+		} else if (!stream.avail_out) {
+			return bytes;
+		}
+	}
+	result.resize(result.size() - stream.avail_out);
+	return result;
+}
+
+[[nodiscard]] ReadResult ReadGzipSvg(const ReadArgs &args) {
+	const auto bytes = UnpackGzip(args.content);
+	if (bytes.isEmpty()) {
+		LOG(("Svg Error: Couldn't unpack gzip-ed content."));
+		return {};
+	}
+	auto renderer = QSvgRenderer(bytes);
+	if (!renderer.isValid()) {
+		LOG(("Svg Error: Invalid data."));
+		return {};
+	}
+	auto size = renderer.defaultSize();
+	if (!args.maxSize.isEmpty()
+		&& (size.width() > args.maxSize.width()
+			|| size.height() > args.maxSize.height())) {
+		size = size.scaled(args.maxSize, Qt::KeepAspectRatio);
+	}
+	if (size.isEmpty()) {
+		LOG(("Svg Error: Bad size %1x%2."
+			).arg(renderer.defaultSize().width()
+			).arg(renderer.defaultSize().height()));
+		return {};
+	}
+	auto result = ReadResult();
+	result.image = QImage(size, QImage::Format_ARGB32_Premultiplied);
+	result.image.fill(Qt::transparent);
+	{
+		QPainter p(&result.image);
+		renderer.render(&p, QRect(QPoint(), size));
+	}
+	result.format = "svg";
+	return result;
+}
+
+[[nodiscard]] ReadResult ReadOther(const ReadArgs &args) {
+	auto bytes = args.content;
+	if (bytes.isEmpty()) {
+		return {};
+	}
+	auto buffer = QBuffer(&bytes);
+	auto reader = QImageReader(&buffer);
+	reader.setAutoTransform(true);
+	if (!reader.canRead()) {
+		return {};
+	}
+	const auto size = reader.size();
+	if (size.width() * size.height() > kReadMaxArea) {
+		return {};
+	}
+	auto result = ReadResult();
+	if (!reader.read(&result.image) || result.image.isNull()) {
+		return {};
+	}
+	result.animated = reader.supportsAnimation()
+		&& (reader.imageCount() > 1);
+	result.format = reader.format().toLower();
+	return result;
+}
+
+ReadResult Read(ReadArgs &&args) {
+	if (args.content.isEmpty()) {
+		auto file = QFile(args.path);
+		if (file.size() > kReadBytesLimit
+			|| !file.open(QIODevice::ReadOnly)) {
+			return {};
+		}
+		args.content = file.readAll();
+	}
+	auto result = args.gzipSvg ? ReadGzipSvg(args) : ReadOther(args);
+	if (result.image.isNull()) {
+		args = ReadArgs();
+		return {};
+	}
+	if (args.returnContent) {
+		result.content = args.content;
+	} else {
+		args.content = QByteArray();
+	}
+	if (!args.maxSize.isEmpty()
+		&& (result.image.width() > args.maxSize.width()
+			|| result.image.height() > args.maxSize.height())) {
+		result.image = result.image.scaled(
+			args.maxSize,
+			Qt::KeepAspectRatio,
+			Qt::SmoothTransformation);
+	}
+	if (args.forceOpaque
+		&& result.format != qstr("jpg")
+		&& result.format != qstr("jpeg")) {
+		result.image = prepareOpaque(std::move(result.image));
 	}
 	return result;
 }

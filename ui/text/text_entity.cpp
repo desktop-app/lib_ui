@@ -88,9 +88,7 @@ QRegularExpression CreateRegExp(const QString &expression) {
 	auto result = QRegularExpression(
 		expression,
 		QRegularExpression::UseUnicodePropertiesOption);
-#ifndef OS_MAC_OLD
 	result.optimize();
-#endif // OS_MAC_OLD
 	return result;
 }
 

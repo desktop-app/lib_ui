@@ -40,7 +40,7 @@ void ClearNeedSwitchToId();
 
 [[nodiscard]] int GetSizeNormal();
 [[nodiscard]] int GetSizeLarge();
-#if defined Q_OS_MAC && !defined OS_MAC_OLD
+#ifdef Q_OS_MAC
 [[nodiscard]] int GetSizeTouchbar();
 #endif
 

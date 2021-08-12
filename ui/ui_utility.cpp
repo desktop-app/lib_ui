@@ -170,9 +170,7 @@ void SendSynteticMouseEvent(QWidget *widget, QEvent::Type type, Qt::MouseButton 
 			, button
 			, QGuiApplication::mouseButtons() | button
 			, QGuiApplication::keyboardModifiers()
-#ifndef OS_MAC_OLD
 			, Qt::MouseEventSynthesizedByApplication
-#endif // OS_MAC_OLD
 		);
 		ev.setTimestamp(crl::now());
 		QGuiApplication::sendEvent(windowHandle, &ev);
