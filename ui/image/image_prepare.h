@@ -27,6 +27,7 @@ namespace Images {
 
 [[nodiscard]] QPixmap PixmapFast(QImage &&image);
 [[nodiscard]] QImage BlurLargeImage(QImage image, int radius);
+[[nodiscard]] QImage DitherImage(QImage image);
 
 [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 	ImageRoundRadius radius);

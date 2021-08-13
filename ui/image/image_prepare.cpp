@@ -11,6 +11,7 @@
 #include "ui/painter.h"
 #include "base/flat_map.h"
 #include "base/debug_log.h"
+#include "base/bytes.h"
 #include "styles/palette.h"
 #include "styles/style_basic.h"
 
@@ -580,6 +581,77 @@ QImage BlurLargeImage(QImage image, int radius) {
 		}
 	}
 	return image;
+}
+
+[[nodiscard]] QImage DitherImage(QImage image) {
+	Expects(image.bytesPerLine() == image.width() * 4);
+
+	const auto width = image.width();
+	const auto height = image.height();
+
+	if (width < 16 || height < 16) {
+		return image;
+	}
+
+	const auto area = width * height;
+	const auto shifts = std::make_unique<uchar[]>(area);
+	bytes::set_random(bytes::make_span(shifts.get(), area));
+
+	// shiftx = int(shift & 0x0F) - 8; shifty = int(shift >> 4) - 8;
+	// Clamp shifts close to edges.
+	for (auto y = 0; y != 8; ++y) {
+		const auto min = 8 - y;
+		const auto shifted = (min << 4);
+		auto shift = shifts.get() + y * width;
+		for (const auto till = shift + width; shift != till; ++shift) {
+			if ((*shift >> 4) < min) {
+				*shift = shifted | (*shift & 0x0F);
+			}
+		}
+	}
+	for (auto y = height - 7; y != height; ++y) {
+		const auto max = 8 + (height - y - 1);
+		const auto shifted = (max << 4);
+		auto shift = shifts.get() + y * width;
+		for (const auto till = shift + width; shift != till; ++shift) {
+			if ((*shift >> 4) > max) {
+				*shift = shifted | (*shift & 0x0F);
+			}
+		}
+	}
+	for (auto shift = shifts.get(), ytill = shift + area
+		; shift != ytill
+		; shift += width - 8) {
+		for (const auto till = shift + 8; shift != till; ++shift) {
+			const auto min = (till - shift);
+			if ((*shift & 0x0F) < min) {
+				*shift = (*shift & 0xF0) | min;
+			}
+		}
+	}
+	for (auto shift = shifts.get(), ytill = shift + area; shift != ytill;) {
+		shift += width - 7;
+		for (const auto till = shift + 7; shift != till; ++shift) {
+			const auto max = 8 + (till - shift - 1);
+			if ((*shift & 0x0F) > max) {
+				*shift = (*shift & 0xF0) | max;
+			}
+		}
+	}
+
+	auto result = image;
+	result.detach();
+
+	const auto src = reinterpret_cast<const uint32*>(image.constBits());
+	const auto dst = reinterpret_cast<uint32*>(result.bits());
+	for (auto index = 0; index != area; ++index) {
+		const auto shift = shifts[index];
+		const auto shiftx = int(shift & 0x0F) - 8;
+		const auto shifty = int(shift >> 4) - 8;
+		dst[index] = src[index + (shifty * width) + shiftx];
+	}
+
+	return result;
 }
 
 void prepareCircle(QImage &img) {
