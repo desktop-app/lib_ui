@@ -24,6 +24,7 @@ enum class EntityType : uchar {
 	Mention,
 	MentionName,
 	BotCommand,
+	MediaTimestamp,
 
 	Bold,
 	Semibold,
