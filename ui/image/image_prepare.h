@@ -29,6 +29,12 @@ namespace Images {
 [[nodiscard]] QImage BlurLargeImage(QImage image, int radius);
 [[nodiscard]] QImage DitherImage(QImage image);
 
+[[nodiscard]] QImage GenerateGradient(
+	QSize size,
+	const std::vector<QColor> &colors, // colors.size() <= 4.
+	int rotation = 0,
+	float progress = 1.f);
+
 [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 	ImageRoundRadius radius);
 [[nodiscard]] std::array<QImage, 4> PrepareCorners(

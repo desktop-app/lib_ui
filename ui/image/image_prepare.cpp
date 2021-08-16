@@ -79,6 +79,210 @@ std::array<QImage, 4> PrepareCornersMask(int radius) {
 	return result;
 }
 
+template <int kBits> // 4 means 16x16, 3 means 8x8
+[[nodiscard]] QImage DitherGeneric(const QImage &image) {
+	static_assert(kBits >= 1 && kBits <= 4);
+
+	constexpr auto kSquareSide = (1 << kBits);
+	constexpr auto kShift = kSquareSide / 2;
+	constexpr auto kMask = (kSquareSide - 1);
+
+	const auto width = image.width();
+	const auto height = image.height();
+	const auto area = width * height;
+	const auto shifts = std::make_unique<uchar[]>(area);
+	bytes::set_random(bytes::make_span(shifts.get(), area));
+
+	// shiftx = int(shift & kMask) - kShift;
+	// shifty = int((shift >> 4) & kMask) - kShift;
+	// Clamp shifts close to edges.
+	for (auto y = 0; y != kShift; ++y) {
+		const auto min = kShift - y;
+		const auto shifted = (min << 4);
+		auto shift = shifts.get() + y * width;
+		for (const auto till = shift + width; shift != till; ++shift) {
+			if (((*shift >> 4) & kMask) < min) {
+				*shift = shifted | (*shift & 0x0F);
+			}
+		}
+	}
+	for (auto y = height - (kShift - 1); y != height; ++y) {
+		const auto max = kShift + (height - y - 1);
+		const auto shifted = (max << 4);
+		auto shift = shifts.get() + y * width;
+		for (const auto till = shift + width; shift != till; ++shift) {
+			if (((*shift >> 4) & kMask) > max) {
+				*shift = shifted | (*shift & 0x0F);
+			}
+		}
+	}
+	for (auto shift = shifts.get(), ytill = shift + area
+		; shift != ytill
+		; shift += width - kShift) {
+		for (const auto till = shift + kShift; shift != till; ++shift) {
+			const auto min = (till - shift);
+			if ((*shift & kMask) < min) {
+				*shift = (*shift & 0xF0) | min;
+			}
+		}
+	}
+	for (auto shift = shifts.get(), ytill = shift + area; shift != ytill;) {
+		shift += width - (kShift - 1);
+		for (const auto till = shift + (kShift - 1); shift != till; ++shift) {
+			const auto max = kShift + (till - shift - 1);
+			if ((*shift & kMask) > max) {
+				*shift = (*shift & 0xF0) | max;
+			}
+		}
+	}
+
+	auto result = image;
+	result.detach();
+
+	const auto src = reinterpret_cast<const uint32*>(image.constBits());
+	const auto dst = reinterpret_cast<uint32*>(result.bits());
+	for (auto index = 0; index != area; ++index) {
+		const auto shift = shifts[index];
+		const auto shiftx = int(shift & kMask) - kShift;
+		const auto shifty = int((shift >> 4) & kMask) - kShift;
+		dst[index] = src[index + (shifty * width) + shiftx];
+	}
+
+	return result;
+}
+
+[[nodiscard]] QImage GenerateSmallComplexGradient(
+		const std::vector<QColor> &colors,
+		int rotation,
+		float progress) {
+	const auto positions = std::vector<std::pair<float, float>>{
+		{ 0.80f, 0.10f },
+		{ 0.60f, 0.20f },
+		{ 0.35f, 0.25f },
+		{ 0.25f, 0.60f },
+		{ 0.20f, 0.90f },
+		{ 0.40f, 0.80f },
+		{ 0.65f, 0.75f },
+		{ 0.75f, 0.40f },
+	};
+	const auto positionsForPhase = [&](int phase) {
+		auto result = std::vector<std::pair<float, float>>(4);
+		for (auto i = 0; i != 4; ++i) {
+			result[i] = positions[(phase + i * 2) % 8];
+			result[i].second = 1.f - result[i].second;
+		}
+		return result;
+	};
+	const auto phase = std::clamp(rotation, 0, 315) / 45;
+	const auto previousPhase = (phase + 1) % 8;
+	const auto previous = positionsForPhase(previousPhase);
+	const auto current = positionsForPhase(phase);
+
+	constexpr auto kWidth = 64;
+	constexpr auto kHeight = 64;
+	static const auto pixelCache = [&] {
+		auto result = std::make_unique<float[]>(kWidth * kHeight * 2);
+		const auto invwidth = 1.f / kWidth;
+		const auto invheight = 1.f / kHeight;
+		auto floats = result.get();
+		for (auto y = 0; y != kHeight; ++y) {
+			const auto directPixelY = y * invheight;
+			const auto centerDistanceY = directPixelY - 0.5f;
+			const auto centerDistanceY2 = centerDistanceY * centerDistanceY;
+			for (auto x = 0; x != kWidth; ++x) {
+				const auto directPixelX = x * invwidth;
+				const auto centerDistanceX = directPixelX - 0.5f;
+				const auto centerDistance = sqrtf(
+					centerDistanceX * centerDistanceX + centerDistanceY2);
+
+				const auto swirlFactor = 0.35f * centerDistance;
+				const auto theta = swirlFactor * swirlFactor * 0.8f * 8.0f;
+				const auto sinTheta = sinf(theta);
+				const auto cosTheta = cosf(theta);
+				*floats++ = std::max(
+					0.0f,
+					std::min(
+						1.0f,
+						(0.5f
+							+ centerDistanceX * cosTheta
+							- centerDistanceY * sinTheta)));
+				*floats++ = std::max(
+					0.0f,
+					std::min(
+						1.0f,
+						(0.5f
+							+ centerDistanceX * sinTheta
+							+ centerDistanceY * cosTheta)));
+			}
+		}
+		return result;
+	}();
+	const auto colorsCount = int(colors.size());
+	auto colorsFloat = std::vector<std::array<float, 3>>(colorsCount);
+	for (auto i = 0; i != colorsCount; ++i) {
+		colorsFloat[i] = {
+			float(colors[i].red()),
+			float(colors[i].green()),
+			float(colors[i].blue()),
+		};
+	}
+	auto result = QImage(
+		kWidth,
+		kHeight,
+		QImage::Format_ARGB32_Premultiplied);
+	Assert(result.bytesPerLine() == kWidth * 4);
+
+	auto cache = pixelCache.get();
+	auto pixels = reinterpret_cast<uint32*>(result.bits());
+	for (auto y = 0; y != kHeight; ++y) {
+		for (auto x = 0; x != kWidth; ++x) {
+			const auto pixelX = *cache++;
+			const auto pixelY = *cache++;
+
+			auto distanceSum = 0.f;
+			auto r = 0.f;
+			auto g = 0.f;
+			auto b = 0.f;
+			for (auto i = 0; i != colorsCount; ++i) {
+				const auto colorX = previous[i].first
+					+ (current[i].first - previous[i].first) * progress;
+				const auto colorY = previous[i].second
+					+ (current[i].second - previous[i].second) * progress;
+
+				const auto dx = pixelX - colorX;
+				const auto dy = pixelY - colorY;
+				const auto distance = std::max(
+					0.0f,
+					0.9f - sqrtf(dx * dx + dy * dy));
+				const auto square = distance * distance;
+				const auto fourth = square * square;
+				distanceSum += fourth;
+
+				r += fourth * colorsFloat[i][0];
+				g += fourth * colorsFloat[i][1];
+				b += fourth * colorsFloat[i][2];
+			}
+
+			const auto red = uint32(r / distanceSum);
+			const auto green = uint32(g / distanceSum);
+			const auto blue = uint32(b / distanceSum);
+			*pixels++ = 0xFF000000U | (red << 16) | (green << 8) | blue;
+		}
+	}
+	return result;
+}
+
+[[nodiscard]] QImage GenerateComplexGradient(
+		QSize size,
+		const std::vector<QColor> &colors,
+		int rotation,
+		float progress) {
+	auto exact = GenerateSmallComplexGradient(colors, rotation, progress);
+	return (exact.size() == size)
+		? exact
+		: exact.scaled(size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
+
 } // namespace
 
 QPixmap PixmapFast(QImage &&image) {
@@ -583,78 +787,6 @@ QImage BlurLargeImage(QImage image, int radius) {
 	return image;
 }
 
-template <int kBits> // 4 means 16x16, 3 means 8x8
-[[nodiscard]] QImage DitherGeneric(const QImage &image) {
-	static_assert(kBits >= 1 && kBits <= 4);
-
-	constexpr auto kSquareSide = (1 << kBits);
-	constexpr auto kShift = kSquareSide / 2;
-	constexpr auto kMask = (kSquareSide - 1);
-
-	const auto width = image.width();
-	const auto height = image.height();
-	const auto area = width * height;
-	const auto shifts = std::make_unique<uchar[]>(area);
-	bytes::set_random(bytes::make_span(shifts.get(), area));
-
-	// shiftx = int(shift & kMask) - kShift;
-	// shifty = int((shift >> 4) & kMask) - kShift;
-	// Clamp shifts close to edges.
-	for (auto y = 0; y != kShift; ++y) {
-		const auto min = kShift - y;
-		const auto shifted = (min << 4);
-		auto shift = shifts.get() + y * width;
-		for (const auto till = shift + width; shift != till; ++shift) {
-			if (((*shift >> 4) & kMask) < min) {
-				*shift = shifted | (*shift & 0x0F);
-			}
-		}
-	}
-	for (auto y = height - (kShift - 1); y != height; ++y) {
-		const auto max = kShift + (height - y - 1);
-		const auto shifted = (max << 4);
-		auto shift = shifts.get() + y * width;
-		for (const auto till = shift + width; shift != till; ++shift) {
-			if (((*shift >> 4) & kMask) > max) {
-				*shift = shifted | (*shift & 0x0F);
-			}
-		}
-	}
-	for (auto shift = shifts.get(), ytill = shift + area
-		; shift != ytill
-		; shift += width - kShift) {
-		for (const auto till = shift + kShift; shift != till; ++shift) {
-			const auto min = (till - shift);
-			if ((*shift & kMask) < min) {
-				*shift = (*shift & 0xF0) | min;
-			}
-		}
-	}
-	for (auto shift = shifts.get(), ytill = shift + area; shift != ytill;) {
-		shift += width - (kShift - 1);
-		for (const auto till = shift + (kShift - 1); shift != till; ++shift) {
-			const auto max = kShift + (till - shift - 1);
-			if ((*shift & kMask) > max) {
-				*shift = (*shift & 0xF0) | max;
-			}
-		}
-	}
-
-	auto result = image;
-	result.detach();
-
-	const auto src = reinterpret_cast<const uint32*>(image.constBits());
-	const auto dst = reinterpret_cast<uint32*>(result.bits());
-	for (auto index = 0; index != area; ++index) {
-		const auto shift = shifts[index];
-		const auto shiftx = int(shift & kMask) - kShift;
-		const auto shifty = int((shift >> 4) & kMask) - kShift;
-		dst[index] = src[index + (shifty * width) + shiftx];
-	}
-
-	return result;
-}
-
 [[nodiscard]] QImage DitherImage(QImage image) {
 	Expects(image.bytesPerLine() == image.width() * 4);
 
@@ -672,6 +804,53 @@ template <int kBits> // 4 means 16x16, 3 means 8x8
 		return DitherGeneric<1>(image);
 	}
 	return image;
+}
+
+[[nodiscard]] QImage GenerateGradient(
+		QSize size,
+		const std::vector<QColor> &colors,
+		int rotation,
+		float progress) {
+	Expects(!colors.empty());
+	Expects(colors.size() <= 4);
+
+	if (size.isEmpty()) {
+		return QImage();
+	} else if (colors.size() > 2) {
+		return GenerateComplexGradient(size, colors, rotation, progress);
+	}
+	auto result = QImage(size, QImage::Format_ARGB32_Premultiplied);
+	if (colors.size() == 1) {
+		result.fill(colors.front());
+		return result;
+	}
+
+	auto p = QPainter(&result);
+	const auto width = size.width();
+	const auto height = size.height();
+	const auto [start, finalStop] = [&]() -> std::pair<QPoint, QPoint> {
+		const auto type = std::clamp(rotation, 0, 315) / 45;
+		switch (type) {
+		case 0: return { { 0, 0 }, { 0, height } };
+		case 1: return { { width, 0 }, { 0, height } };
+		case 2: return { { width, 0 }, { 0, 0 } };
+		case 3: return { { width, height }, { 0, 0 } };
+		case 4: return { { 0, height }, { 0, 0 } };
+		case 5: return { { 0, height }, { width, 0 } };
+		case 6: return { { 0, 0 }, { width, 0 } };
+		case 7: return { { 0, 0 }, { width, height } };
+		}
+		Unexpected("Rotation value in GenerateDitheredGradient.");
+	}();
+	auto gradient = QLinearGradient(start, finalStop);
+	gradient.setStops(QGradientStops{
+		{ 0.0, colors[0] },
+		{ 1.0, colors[1] }
+	});
+	p.fillRect(QRect(QPoint(), size), QBrush(std::move(gradient)));
+	p.end();
+
+	return result;
 }
 
 void prepareCircle(QImage &img) {
