@@ -229,7 +229,7 @@ template <int kBits> // 4 means 16x16, 3 means 8x8
 	auto result = QImage(
 		kWidth,
 		kHeight,
-		QImage::Format_ARGB32_Premultiplied);
+		QImage::Format_RGB32);
 	Assert(result.bytesPerLine() == kWidth * 4);
 
 	auto cache = pixelCache.get();
@@ -819,7 +819,7 @@ QImage BlurLargeImage(QImage image, int radius) {
 	} else if (colors.size() > 2) {
 		return GenerateComplexGradient(size, colors, rotation, progress);
 	}
-	auto result = QImage(size, QImage::Format_ARGB32_Premultiplied);
+	auto result = QImage(size, QImage::Format_RGB32);
 	if (colors.size() == 1) {
 		result.fill(colors.front());
 		return result;
