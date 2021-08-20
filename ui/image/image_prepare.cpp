@@ -418,6 +418,9 @@ std::array<QImage, 4> PrepareCorners(
 
 ReadResult Read(ReadArgs &&args) {
 	if (args.content.isEmpty()) {
+		if (args.path.isEmpty()) {
+			return {};
+		}
 		auto file = QFile(args.path);
 		if (file.size() > kReadBytesLimit
 			|| !file.open(QIODevice::ReadOnly)) {
