@@ -20,7 +20,7 @@ uint32 colorKey(QColor c) {
 }
 
 base::flat_map<const IconMask*, QImage> iconMasks;
-QMap<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
+base::flat_map<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
 OrderedSet<IconData*> iconData;
 
 QImage createIconMask(const IconMask *mask, int scale) {
@@ -268,12 +268,14 @@ void MonoIcon::ensureColorizedImage(QColor color) const {
 
 void MonoIcon::createCachedPixmap() const {
 	auto key = qMakePair(_mask, colorKey(_color->c));
-	auto j = iconPixmaps.constFind(key);
-	if (j == iconPixmaps.cend()) {
+	auto j = iconPixmaps.find(key);
+	if (j == end(iconPixmaps)) {
 		auto image = colorizeImage(_maskImage, _color);
-		j = iconPixmaps.insert(key, QPixmap::fromImage(std::move(image)));
+		j = iconPixmaps.emplace(
+			key,
+			QPixmap::fromImage(std::move(image))).first;
 	}
-	_pixmap = j.value();
+	_pixmap = j->second;
 	_size = _pixmap.size() / DevicePixelRatio();
 }
 
