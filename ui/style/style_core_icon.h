@@ -43,6 +43,7 @@ public:
 	MonoIcon &operator=(const MonoIcon &other) = delete;
 	MonoIcon(MonoIcon &&other) = default;
 	MonoIcon &operator=(MonoIcon &&other) = default;
+	MonoIcon(const MonoIcon &other, const style::palette &palette);
 	MonoIcon(const IconMask *mask, Color color, QPoint offset);
 
 	void reset() const;
@@ -82,12 +83,17 @@ private:
 
 class IconData {
 public:
+	struct FromIcons {
+	};
 	template <typename ...MonoIcons>
-	IconData(MonoIcons &&...icons) {
+	IconData(FromIcons, MonoIcons &&...icons) {
 		created();
 		_parts.reserve(sizeof...(MonoIcons));
 		addIcons(std::forward<MonoIcons>(icons)...);
 	}
+
+	IconData(const IconData &other, const style::palette &palette);
+	~IconData();
 
 	void reset() {
 		for (const auto &part : _parts) {
@@ -149,11 +155,17 @@ public:
 	}
 
 	template <typename ... MonoIcons>
-	Icon(MonoIcons&&... icons) : _data(new IconData(std::forward<MonoIcons>(icons)...)), _owner(true) {
+	Icon(MonoIcons&&... icons)
+	: _data(new IconData(
+		IconData::FromIcons{},
+		std::forward<MonoIcons>(icons)...))
+	, _owner(true) {
 	}
 	Icon(const Icon &other) : _data(other._data) {
 	}
-	Icon(Icon &&other) : _data(base::take(other._data)), _owner(base::take(other._owner)) {
+	Icon(Icon &&other)
+	: _data(base::take(other._data))
+	, _owner(base::take(other._owner)) {
 	}
 	Icon &operator=(const Icon &other) {
 		Expects(!_owner);
@@ -246,6 +258,8 @@ public:
 	Proxy operator[](const style::palette &paletteOverride) const {
 		return Proxy(*this, paletteOverride);
 	}
+
+	Icon withPalette(const style::palette &palette) const;
 
 	~Icon() {
 		if (auto data = base::take(_data)) {
