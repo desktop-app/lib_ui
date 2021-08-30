@@ -1188,6 +1188,12 @@ historySendActionUploadStrokeNumerator: 16px;
 historySendActionUploadSizeNumerator: 32px;
 historySendActionUploadDenominator: 8.;
 
+historySendActionChooseStickerDuration: 2000;
+historySendActionChooseStickerPosition: point(1px, -10px);
+historySendActionChooseStickerEyeWidth: 7px;
+historySendActionChooseStickerEyeHeight: 11px;
+historySendActionChooseStickerEyeStep: 2px;
+
 MediaPlayerButton {
 	playPosition: point;
 	playOuter: size;
