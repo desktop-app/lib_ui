@@ -10,6 +10,7 @@
 #include "ui/platform/win/ui_window_title_win.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/win/base_windows_safe_library.h"
+#include "base/integration.h"
 #include "base/debug_log.h"
 #include "styles/palette.h"
 
@@ -150,15 +151,19 @@ bool WindowHelper::NativeFilter::nativeEventFilter(
 		const QByteArray &eventType,
 		void *message,
 		long *result) {
+	auto filtered = false;
 	const auto msg = static_cast<MSG*>(message);
 	const auto i = _windowByHandle.find(msg->hwnd);
-	return (i != end(_windowByHandle))
-		? i->second->handleNativeEvent(
-			msg->message,
-			msg->wParam,
-			msg->lParam,
-			reinterpret_cast<LRESULT*>(result))
-		: false;
+	if (i != end(_windowByHandle)) {
+		base::Integration::Instance().enterFromEventLoop([&] {
+			filtered = i->second->handleNativeEvent(
+				msg->message,
+				msg->wParam,
+				msg->lParam,
+				reinterpret_cast<LRESULT*>(result));
+		});
+	}
+	return filtered;
 }
 
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
