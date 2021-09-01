@@ -1295,7 +1295,6 @@ InputField::InputField(
 , _lastTextWithTags(value)
 , _placeholderFull(std::move(placeholder)) {
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
-
 	_inner->setAcceptRichText(false);
 	resize(_st.width, _minHeight);
 
@@ -2976,7 +2975,7 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 	const auto weak = Ui::MakeWeak(this);
 	_inner->QTextEdit::inputMethodEvent(e);
 
-	if (weak) {
+	if (weak && _inputMethodCommit.has_value()) {
 		const auto text = *base::take(_inputMethodCommit);
 		if (!processMarkdownReplaces(text)) {
 			processInstantReplaces(text);
