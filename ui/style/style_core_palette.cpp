@@ -126,6 +126,11 @@ palette::SetResult palette::setColor(QLatin1String name, QLatin1String from) {
 	return duplicate ? SetResult::Duplicate : SetResult::Ok;
 }
 
+void palette::reset(const colorizer &with) {
+	clear();
+	finalize(with);
+}
+
 void palette::reset() {
 	clear();
 	finalize();
@@ -233,6 +238,11 @@ void apply(const palette &other) {
 
 void reset() {
 	GetMutable().reset();
+	style::internal::resetIcons();
+}
+
+void reset(const colorizer &with) {
+	GetMutable().reset(with);
 	style::internal::resetIcons();
 }
 
