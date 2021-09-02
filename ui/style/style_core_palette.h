@@ -15,12 +15,10 @@ struct colorizer;
 
 class palette : public palette_data {
 public:
-	palette() = default;
+	palette();
 	palette(const palette &other) = delete;
 	palette &operator=(const palette &other);
-	~palette() {
-		clear();
-	}
+	~palette();
 
 	QByteArray save() const;
 	bool load(const QByteArray &cache);
@@ -43,14 +41,18 @@ public:
 	color colorAtIndex(int index) const;
 
 private:
+	struct FinalizeHelper;
 	struct TempColorData { uchar r, g, b, a; };
 	friend class palette_data;
+
+	[[nodiscard]] static auto PrepareFinalizeHelper(const colorizer &with)
+		-> std::unique_ptr<FinalizeHelper>;
 
 	void clear();
 	void compute(int index, int fallbackIndex, TempColorData value);
 	void setData(int index, const internal::ColorData &value);
 
-	const colorizer *_colorizer = nullptr;
+	std::unique_ptr<FinalizeHelper> _finalizeHelper;
 	bool _ready = false;
 
 };

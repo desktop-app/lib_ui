@@ -10,6 +10,20 @@
 
 namespace style {
 
+struct palette::FinalizeHelper {
+	not_null<const colorizer*> with;
+	base::flat_set<int> ignoreKeys;
+	base::flat_map<
+		int,
+		std::pair<colorizer::Color, colorizer::Color>> keepContrast;
+};
+
+palette::palette() = default;
+
+palette::~palette() {
+	clear();
+}
+
 int palette::indexOfColor(style::color c) const {
 	auto start = data(0);
 	if (c._data >= start && c._data < start + kCount) {
@@ -19,8 +33,9 @@ int palette::indexOfColor(style::color c) const {
 }
 
 color palette::colorAtIndex(int index) const {
-	Assert(_ready);
-	Assert(index >= 0 && index < kCount);
+	Expects(index >= 0 && index < kCount);
+	Expects(_ready);
+
 	return _colors[index];
 }
 
@@ -28,8 +43,9 @@ void palette::finalize(const colorizer &with) {
 	if (_ready) return;
 	_ready = true;
 
-	_colorizer = with ? &with : nullptr;
+	_finalizeHelper = PrepareFinalizeHelper(with);
 	palette_data::finalize(*this);
+	_finalizeHelper = nullptr;
 }
 
 void palette::finalize() {
@@ -131,18 +147,18 @@ void palette::compute(int index, int fallbackIndex, TempColorData value) {
 			_status[index] = Status::Loaded;
 			new (data(index)) internal::ColorData(*data(fallbackIndex));
 		} else {
-			if (_colorizer && *_colorizer) {
-				colorize(
-					//(index
-					//	? style::main_palette::data()[index - 1].name
-					//	: qstr("transparent")),
-					value.r,
-					value.g,
-					value.b,
-					*_colorizer);
-				_status[index] = Status::Loaded;
-			} else {
+			if (!_finalizeHelper
+				|| _finalizeHelper->ignoreKeys.contains(index)) {
 				_status[index] = Status::Created;
+			} else {
+				const auto &with = *_finalizeHelper->with;
+				const auto i = _finalizeHelper->keepContrast.find(index);
+				if (i == end(_finalizeHelper->keepContrast)) {
+					colorize(value.r, value.g, value.b, with);
+				} else {
+					colorize(i->second, value.r, value.g, value.b, with);
+				}
+				_status[index] = Status::Loaded;
 			}
 			new (data(index)) internal::ColorData(value.r, value.g, value.b, value.a);
 		}
@@ -158,6 +174,28 @@ void palette::setData(int index, const internal::ColorData &value) {
 	_status[index] = Status::Loaded;
 }
 
+auto palette::PrepareFinalizeHelper(const colorizer &with)
+-> std::unique_ptr<FinalizeHelper> {
+	if (!with) {
+		return nullptr;
+	}
+	auto result = std::make_unique<FinalizeHelper>(FinalizeHelper{
+		.with = &with,
+	});
+	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
+	result->ignoreKeys.emplace(0);
+	for (const auto &key : with.ignoreKeys) {
+		if (const auto index = internal::GetPaletteIndex(key); index > 0) {
+			result->ignoreKeys.emplace(index);
+		}
+	}
+	for (const auto &[key, contrast] : with.keepContrast) {
+		if (const auto index = internal::GetPaletteIndex(key); index > 0) {
+			result->keepContrast.emplace(index, contrast);
+		}
+	}
+	return result;
+}
 
 namespace main_palette {
 namespace {

@@ -40,6 +40,12 @@ void colorize(
 	uchar &g,
 	uchar &b,
 	const colorizer &with);
+void colorize(
+	const std::pair<colorizer::Color, colorizer::Color> &contrast,
+	uchar &r,
+	uchar &g,
+	uchar &b,
+	const colorizer &with);
 void colorize(QImage &image, const colorizer &with);
 
 [[nodiscard]] std::optional<QColor> colorize(

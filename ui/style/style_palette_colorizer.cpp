@@ -101,9 +101,18 @@ void colorize(
 	const auto i = with.keepContrast.find(name);
 	if (i == end(with.keepContrast)) {
 		colorize(r, g, b, with);
-		return;
+	} else {
+		colorize(i->second, r, g, b, with);
 	}
-	const auto check = i->second.first;
+}
+
+void colorize(
+		const std::pair<colorizer::Color, colorizer::Color> &contrast,
+		uchar &r,
+		uchar &g,
+		uchar &b,
+		const colorizer &with) {
+	const auto check = contrast.first;
 	const auto rgb = QColor(int(r), int(g), int(b));
 	const auto changed = colorize(rgb, with);
 	const auto checked = colorize(check, with).value_or(check);
@@ -120,7 +129,7 @@ void colorize(
 		}
 		return;
 	}
-	const auto replace = i->second.second;
+	const auto replace = contrast.second;
 	const auto result = colorize(replace, with).value_or(replace);
 	FillColorizeResult(
 		r,
