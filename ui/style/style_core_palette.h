@@ -11,6 +11,8 @@
 
 namespace style {
 
+struct colorizer;
+
 class palette : public palette_data {
 public:
 	palette() = default;
@@ -34,6 +36,7 @@ public:
 	void reset();
 
 	// Created not inited, should be finalized before usage.
+	void finalize(const colorizer &with);
 	void finalize();
 
 	int indexOfColor(color c) const;
@@ -47,6 +50,7 @@ private:
 	void compute(int index, int fallbackIndex, TempColorData value);
 	void setData(int index, const internal::ColorData &value);
 
+	const colorizer *_colorizer = nullptr;
 	bool _ready = false;
 
 };

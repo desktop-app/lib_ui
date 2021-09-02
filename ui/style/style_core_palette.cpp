@@ -6,6 +6,8 @@
 //
 #include "ui/style/style_core_palette.h"
 
+#include "ui/style/style_palette_colorizer.h"
+
 namespace style {
 
 int palette::indexOfColor(style::color c) const {
@@ -22,11 +24,16 @@ color palette::colorAtIndex(int index) const {
 	return _colors[index];
 }
 
-void palette::finalize() {
+void palette::finalize(const colorizer &with) {
 	if (_ready) return;
 	_ready = true;
 
+	_colorizer = with ? &with : nullptr;
 	palette_data::finalize(*this);
+}
+
+void palette::finalize() {
+	finalize(colorizer());
 }
 
 palette &palette::operator=(const palette &other) {
@@ -124,7 +131,19 @@ void palette::compute(int index, int fallbackIndex, TempColorData value) {
 			_status[index] = Status::Loaded;
 			new (data(index)) internal::ColorData(*data(fallbackIndex));
 		} else {
-			_status[index] = Status::Created;
+			if (_colorizer && *_colorizer) {
+				colorize(
+					//(index
+					//	? style::main_palette::data()[index - 1].name
+					//	: qstr("transparent")),
+					value.r,
+					value.g,
+					value.b,
+					*_colorizer);
+				_status[index] = Status::Loaded;
+			} else {
+				_status[index] = Status::Created;
+			}
 			new (data(index)) internal::ColorData(value.r, value.g, value.b, value.a);
 		}
 	}

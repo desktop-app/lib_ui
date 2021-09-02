@@ -137,6 +137,8 @@ PRIVATE
     ui/style/style_core_scale.h
     ui/style/style_core_types.cpp
     ui/style/style_core_types.h
+    ui/style/style_palette_colorizer.cpp
+    ui/style/style_palette_colorizer.h
     ui/text/text.cpp
     ui/text/text.h
     ui/text/text_block.cpp
