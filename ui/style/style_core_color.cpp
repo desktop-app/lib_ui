@@ -6,7 +6,7 @@
 //
 #include "ui/style/style_core_color.h"
 
-#include "styles/palette.h"
+#include "ui/style/style_core_palette.h"
 
 namespace style {
 namespace internal {

@@ -14,6 +14,7 @@
 
 namespace style {
 
+class palette_data;
 class palette;
 
 namespace internal {
@@ -41,6 +42,7 @@ private:
 	friend class Color;
 	friend class OwnedColor;
 	friend class style::palette;
+	friend class style::palette_data;
 
 };
 
@@ -80,6 +82,7 @@ public:
 private:
 	friend class OwnedColor;
 	friend class style::palette;
+	friend class style::palette_data;
 
 	Color(ColorData *data) : _data(data) {
 	}

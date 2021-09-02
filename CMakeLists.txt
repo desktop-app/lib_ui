@@ -131,6 +131,8 @@ PRIVATE
     ui/style/style_core_font.h
     ui/style/style_core_icon.cpp
     ui/style/style_core_icon.h
+    ui/style/style_core_palette.cpp
+    ui/style/style_core_palette.h
     ui/style/style_core_scale.cpp
     ui/style/style_core_scale.h
     ui/style/style_core_types.cpp

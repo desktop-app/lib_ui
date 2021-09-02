@@ -6,9 +6,9 @@
 //
 #include "ui/style/style_core_icon.h"
 
+#include "ui/style/style_core_palette.h"
 #include "ui/style/style_core.h"
 #include "base/basic_types.h"
-#include "styles/palette.h"
 
 #include <QtGui/QPainter>
 
