@@ -12,15 +12,13 @@
 #include "ui/effects/animations.h"
 #include "ui/effects/panel_animation.h"
 #include "base/object_ptr.h"
-
-#include <QtCore/QTimer>
+#include "base/timer.h"
 
 namespace Ui {
 
 class ScrollArea;
 
 class InnerDropdown : public RpWidget {
-	Q_OBJECT
 
 public:
 	InnerDropdown(QWidget *parent, const style::InnerDropdown &st = st::defaultInnerDropdown);
@@ -81,11 +79,6 @@ protected:
 
 	int resizeGetHeight(int newWidth) override;
 
-private Q_SLOTS:
-	void onHideAnimated() {
-		hideAnimated();
-	}
-	void onScroll();
 
 private:
 	QPointer<RpWidget> doSetOwnedWidget(object_ptr<RpWidget> widget);
@@ -103,6 +96,8 @@ private:
 
 	void updateHeight();
 
+	void scrolled();
+
 	const style::InnerDropdown &_st;
 
 	RoundRect _roundRect;
@@ -115,7 +110,7 @@ private:
 	QPixmap _cache;
 	Animations::Simple _a_opacity;
 
-	QTimer _hideTimer;
+	base::Timer _hideTimer;
 	bool _ignoreShowEvents = false;
 	Fn<void()> _showStartCallback;
 	Fn<void()> _hideStartCallback;

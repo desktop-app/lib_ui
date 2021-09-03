@@ -20,11 +20,9 @@ InnerDropdown::InnerDropdown(
 : RpWidget(parent)
 , _st(st)
 , _roundRect(ImageRoundRadius::Small, _st.bg)
+, _hideTimer([=] { hideAnimated(); })
 , _scroll(this, _st.scroll) {
-	_hideTimer.setSingleShot(true);
-	connect(&_hideTimer, SIGNAL(timeout()), this, SLOT(onHideAnimated()));
-
-	connect(_scroll, SIGNAL(scrolled()), this, SLOT(onScroll()));
+	connect(_scroll, &ScrollArea::scrolled, [=] { scrolled(); });
 
 	hide();
 
@@ -89,11 +87,11 @@ void InnerDropdown::resizeEvent(QResizeEvent *e) {
 	_scroll->setGeometry(rect().marginsRemoved(_st.padding).marginsRemoved(_st.scrollMargin));
 	if (auto widget = static_cast<TWidget*>(_scroll->widget())) {
 		widget->resizeToWidth(_scroll->width());
-		onScroll();
+		scrolled();
 	}
 }
 
-void InnerDropdown::onScroll() {
+void InnerDropdown::scrolled() {
 	if (auto widget = static_cast<TWidget*>(_scroll->widget())) {
 		int visibleTop = _scroll->scrollTop();
 		int visibleBottom = visibleTop + _scroll->height();
@@ -140,7 +138,7 @@ void InnerDropdown::leaveEventHook(QEvent *e) {
 		if (_a_show.animating() || _a_opacity.animating()) {
 			hideAnimated();
 		} else {
-			_hideTimer.start(300);
+			_hideTimer.callOnce(300);
 		}
 	}
 	return RpWidget::leaveEventHook(e);
@@ -157,7 +155,7 @@ void InnerDropdown::otherLeave() {
 		if (_a_show.animating() || _a_opacity.animating()) {
 			hideAnimated();
 		} else {
-			_hideTimer.start(0);
+			_hideTimer.callOnce(0);
 		}
 	}
 }
@@ -172,7 +170,7 @@ void InnerDropdown::showAnimated(PanelAnimation::Origin origin) {
 }
 
 void InnerDropdown::showAnimated() {
-	_hideTimer.stop();
+	_hideTimer.cancel();
 	showStarted();
 }
 
@@ -183,7 +181,7 @@ void InnerDropdown::hideAnimated(HideOption option) {
 	}
 	if (_hiding) return;
 
-	_hideTimer.stop();
+	_hideTimer.cancel();
 	startOpacityAnimation(true);
 }
 
@@ -203,7 +201,7 @@ void InnerDropdown::finishAnimating() {
 }
 
 void InnerDropdown::showFast() {
-	_hideTimer.stop();
+	_hideTimer.cancel();
 	finishAnimating();
 	if (isHidden()) {
 		showChildren();
@@ -215,7 +213,7 @@ void InnerDropdown::showFast() {
 void InnerDropdown::hideFast() {
 	if (isHidden()) return;
 
-	_hideTimer.stop();
+	_hideTimer.cancel();
 	finishAnimating();
 	_hiding = false;
 	hideFinished();
