@@ -187,7 +187,12 @@ void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
 bool PopupMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
 	if (auto submenu = _submenus.value(data.action)) {
 		if (_activeSubmenu == submenu) {
+			// There is a strange problem on macOS
+			// when a submenu closes arbitrarily
+			// if we try to move the cursor to it.
+#ifndef Q_OS_MAC
 			submenu->hideMenu(true);
+#endif
 		} else {
 			popupSubmenu(submenu, data.actionTop, data.source);
 		}
