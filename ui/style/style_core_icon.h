@@ -83,10 +83,8 @@ private:
 
 class IconData {
 public:
-	struct FromIcons {
-	};
 	template <typename ...MonoIcons>
-	IconData(FromIcons, MonoIcons &&...icons) {
+	IconData(std::in_place_t, MonoIcons &&...icons) {
 		created();
 		_parts.reserve(sizeof...(MonoIcons));
 		addIcons(std::forward<MonoIcons>(icons)...);
@@ -151,14 +149,12 @@ private:
 
 class Icon {
 public:
-	Icon(Qt::Initialization) {
+	Icon(Qt::Initialization = Qt::Uninitialized) {
 	}
 
 	template <typename ... MonoIcons>
-	Icon(MonoIcons&&... icons)
-	: _data(new IconData(
-		IconData::FromIcons{},
-		std::forward<MonoIcons>(icons)...))
+	Icon(std::in_place_t, MonoIcons&&... icons)
+	: _data(new IconData(std::in_place, std::forward<MonoIcons>(icons)...))
 	, _owner(true) {
 	}
 	Icon(const Icon &other) : _data(other._data) {
