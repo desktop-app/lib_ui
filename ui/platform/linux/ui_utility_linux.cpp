@@ -7,15 +7,20 @@
 #include "ui/platform/linux/ui_utility_linux.h"
 
 #include "base/platform/base_platform_info.h"
-#include "base/platform/linux/base_linux_gtk_integration.h"
+#include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/debug_log.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 #include "base/const_string.h"
 #include "base/qt_adapters.h"
 #include "base/flat_set.h"
 
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include "base/platform/linux/base_linux_xdp_utilities.h"
+#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xcb_utilities.h"
+#include "base/platform/linux/base_linux_xsettings.h"
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #include <QtCore/QPoint>
@@ -393,6 +398,29 @@ TitleControls::Control GtkKeywordToTitleControl(const QString &keyword) {
 	return TitleControls::Control::Unknown;
 }
 
+TitleControls::Layout GtkKeywordsToTitleControlsLayout(const QString &keywords) {
+	const auto splitted = keywords.split(':');
+
+	std::vector<TitleControls::Control> controlsLeft;
+	ranges::transform(
+		splitted[0].split(','),
+		ranges::back_inserter(controlsLeft),
+		GtkKeywordToTitleControl);
+
+	std::vector<TitleControls::Control> controlsRight;
+	if (splitted.size() > 1) {
+		ranges::transform(
+			splitted[1].split(','),
+			ranges::back_inserter(controlsRight),
+			GtkKeywordToTitleControl);
+	}
+
+	return TitleControls::Layout{
+		.left = controlsLeft,
+		.right = controlsRight
+	};
+}
+
 } // namespace
 
 bool IsApplicationActive() {
@@ -504,53 +532,85 @@ bool ShowWindowMenu(QWindow *window) {
 }
 
 TitleControls::Layout TitleControlsLayout() {
-	if (static auto Once = false; !std::exchange(Once, true)) {
-		const auto integration = base::Platform::GtkIntegration::Instance();
-		if (integration && integration->checkVersion(3, 12, 0)) {
-			integration->connectToSetting(
-				"gtk-decoration-layout",
-				NotifyTitleControlsLayoutChanged);
+	[[maybe_unused]] static const auto Inited = [] {
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+		using base::Platform::XCB::XSettings;
+		if (const auto xSettings = XSettings::Instance()) {
+			xSettings->registerCallbackForProperty("Gtk/DecorationLayout", [](
+					xcb_connection_t *,
+					const QByteArray &,
+					const QVariant &,
+					void *) {
+				NotifyTitleControlsLayoutChanged();
+			}, nullptr);
 		}
-	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-	const auto gtkResult = []() -> std::optional<TitleControls::Layout> {
-		const auto integration = base::Platform::GtkIntegration::Instance();
-		if (!integration || !integration->checkVersion(3, 12, 0)) {
-			return std::nullopt;
-		}
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+		using XDPSettingWatcher = base::Platform::XDP::SettingWatcher;
+		static const XDPSettingWatcher settingWatcher(
+			[=](
+				const Glib::ustring &group,
+				const Glib::ustring &key,
+				const Glib::VariantBase &value) {
+				if (group == "org.gnome.desktop.wm.preferences"
+					&& key == "button-layout") {
+					NotifyTitleControlsLayoutChanged();
+				}
+			});
+#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
-		const auto decorationLayoutSetting = integration->getStringSetting(
-			"gtk-decoration-layout");
-
-		if (!decorationLayoutSetting.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto decorationLayout = decorationLayoutSetting->split(':');
-
-		std::vector<TitleControls::Control> controlsLeft;
-		ranges::transform(
-			decorationLayout[0].split(','),
-			ranges::back_inserter(controlsLeft),
-			GtkKeywordToTitleControl);
-
-		std::vector<TitleControls::Control> controlsRight;
-		if (decorationLayout.size() > 1) {
-			ranges::transform(
-				decorationLayout[1].split(','),
-				ranges::back_inserter(controlsRight),
-				GtkKeywordToTitleControl);
-		}
-
-		return TitleControls::Layout{
-			.left = controlsLeft,
-			.right = controlsRight
-		};
+		return true;
 	}();
 
-	if (gtkResult.has_value()) {
-		return *gtkResult;
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	const auto xSettingsResult = []() -> std::optional<TitleControls::Layout> {
+		using base::Platform::XCB::XSettings;
+		const auto xSettings = XSettings::Instance();
+		if (!xSettings) {
+			return std::nullopt;
+		}
+
+		const auto decorationLayout = xSettings->setting("Gtk/DecorationLayout");
+		if (!decorationLayout.isValid()) {
+			return std::nullopt;
+		}
+
+		return GtkKeywordsToTitleControlsLayout(decorationLayout.toString());
+	}();
+
+	if (xSettingsResult.has_value()) {
+		return *xSettingsResult;
 	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+	const auto portalResult = []() -> std::optional<TitleControls::Layout> {
+		try {
+			using namespace base::Platform::XDP;
+
+			const auto decorationLayout = ReadSetting(
+				"org.gnome.desktop.wm.preferences",
+				"button-layout");
+
+			if (!decorationLayout.has_value()) {
+				return std::nullopt;
+			}
+
+			return GtkKeywordsToTitleControlsLayout(
+				QString::fromStdString(
+					base::Platform::GlibVariantCast<Glib::ustring>(
+						*decorationLayout)));
+		} catch (...) {
+		}
+
+		return std::nullopt;
+	}();
+
+	if (portalResult.has_value()) {
+		return *portalResult;
+	}
+#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
 #ifdef __HAIKU__
 	return TitleControls::Layout{
