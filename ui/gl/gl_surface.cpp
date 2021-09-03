@@ -107,11 +107,13 @@ void SurfaceOpenGL::callDeInit() {
 		return;
 	}
 	QObject::disconnect(base::take(_connection));
-	const auto surface = window()->windowHandle();
-	Assert(surface != nullptr);
+	makeCurrent();
 	const auto context = this->context();
-	context->makeCurrent(surface);
-	_renderer->deinit(this, *context->functions());
+	_renderer->deinit(
+		this,
+		((isValid() && context && QOpenGLContext::currentContext() == context)
+			? context->functions()
+			: nullptr));
 }
 
 SurfaceRaster::SurfaceRaster(

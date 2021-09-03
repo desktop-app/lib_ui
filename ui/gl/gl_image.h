@@ -18,10 +18,10 @@ void GenerateTextures(
 	gsl::span<GLuint> values,
 	GLint filter,
 	GLint clamp);
-void DestroyTextures(QOpenGLFunctions &f, gsl::span<GLuint> values);
+void DestroyTextures(QOpenGLFunctions *f, gsl::span<GLuint> values);
 
 void GenerateFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values);
-void DestroyFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values);
+void DestroyFramebuffers(QOpenGLFunctions *f, gsl::span<GLuint> values);
 
 } // namespace details
 
@@ -42,7 +42,7 @@ public:
 				clamp);
 		}
 	}
-	void destroy(QOpenGLFunctions &f) {
+	void destroy(QOpenGLFunctions *f) {
 		if (created()) {
 			details::DestroyTextures(f, gsl::make_span(_values));
 		}
@@ -79,7 +79,7 @@ public:
 			details::GenerateFramebuffers(f, gsl::make_span(_values));
 		}
 	}
-	void destroy(QOpenGLFunctions &f) {
+	void destroy(QOpenGLFunctions *f) {
 		if (created()) {
 			details::DestroyFramebuffers(f, gsl::make_span(_values));
 		}
@@ -113,7 +113,7 @@ public:
 	void invalidate();
 
 	void bind(QOpenGLFunctions &f);
-	void destroy(QOpenGLFunctions &f);
+	void destroy(QOpenGLFunctions *f);
 
 	[[nodiscard]] TexturedRect texturedRect(
 		const QRect &geometry,

@@ -28,7 +28,7 @@ public:
 
     virtual void deinit(
         not_null<QOpenGLWidget*> widget,
-        QOpenGLFunctions &f) {
+        QOpenGLFunctions *f) {
     }
 
     virtual void resize(

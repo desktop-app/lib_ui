@@ -29,10 +29,12 @@ void GenerateTextures(
 	}
 }
 
-void DestroyTextures(QOpenGLFunctions &f, gsl::span<GLuint> values) {
+void DestroyTextures(QOpenGLFunctions *f, gsl::span<GLuint> values) {
 	Expects(!values.empty());
 
-	f.glDeleteTextures(values.size(), values.data());
+	if (f) {
+		f->glDeleteTextures(values.size(), values.data());
+	}
 	ranges::fill(values, 0);
 }
 
@@ -42,10 +44,12 @@ void GenerateFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values) {
 	f.glGenFramebuffers(values.size(), values.data());
 }
 
-void DestroyFramebuffers(QOpenGLFunctions &f, gsl::span<GLuint> values) {
+void DestroyFramebuffers(QOpenGLFunctions *f, gsl::span<GLuint> values) {
 	Expects(!values.empty());
 
-	f.glDeleteTextures(values.size(), values.data());
+	if (f) {
+		f->glDeleteTextures(values.size(), values.data());
+	}
 	ranges::fill(values, 0);
 }
 
@@ -114,7 +118,7 @@ void Image::bind(QOpenGLFunctions &f) {
 	}
 }
 
-void Image::destroy(QOpenGLFunctions &f) {
+void Image::destroy(QOpenGLFunctions *f) {
 	_textures.destroy(f);
 	_cacheKey = 0;
 }
