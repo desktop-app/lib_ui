@@ -10,6 +10,7 @@
 #include "ui/text/text.h"
 #include "ui/emoji_config.h"
 #include "ui/ui_utility.h"
+#include "base/invoke_queued.h"
 #include "base/openssl_help.h"
 #include "base/platform/base_platform_info.h"
 #include "emoji_suggestions_helper.h"
@@ -1778,12 +1779,12 @@ void InputField::focusInEvent(QFocusEvent *e) {
 	_borderAnimationStart = (e->reason() == Qt::MouseFocusReason)
 		? mapFromGlobal(QCursor::pos()).x()
 		: (width() / 2);
-	QTimer::singleShot(0, this, SLOT(onFocusInner()));
+	InvokeQueued(this, [=] { onFocusInner(); });
 }
 
 void InputField::mousePressEvent(QMouseEvent *e) {
 	_borderAnimationStart = e->pos().x();
-	QTimer::singleShot(0, this, SLOT(onFocusInner()));
+	InvokeQueued(this, [=] { onFocusInner(); });
 }
 
 void InputField::onFocusInner() {
