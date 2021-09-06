@@ -30,6 +30,7 @@ public:
 		Duplicate,
 	};
 	SetResult setColor(QLatin1String name, uchar r, uchar g, uchar b, uchar a);
+	SetResult setColor(QLatin1String name, const QColor &color);
 	SetResult setColor(QLatin1String name, QLatin1String from);
 	void reset(const colorizer &with);
 	void reset();

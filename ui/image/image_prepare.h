@@ -35,6 +35,11 @@ namespace Images {
 	int rotation = 0,
 	float progress = 1.f);
 
+[[nodiscard]] QImage GenerateLinearGradient(
+	QSize size,
+	const std::vector<QColor> &colors,
+	int rotation = 0);
+
 [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 	ImageRoundRadius radius);
 [[nodiscard]] std::array<QImage, 4> PrepareCorners(

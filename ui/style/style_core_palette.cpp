@@ -110,6 +110,15 @@ palette::SetResult palette::setColor(QLatin1String name, uchar r, uchar g, uchar
 	return duplicate ? SetResult::Duplicate : SetResult::Ok;
 }
 
+palette::SetResult palette::setColor(QLatin1String name, const QColor &color) {
+	auto r = 0;
+	auto g = 0;
+	auto b = 0;
+	auto a = 0;
+	color.getRgb(&r, &g, &b, &a);
+	return setColor(name, uchar(r), uchar(g), uchar(b), uchar(a));
+}
+
 palette::SetResult palette::setColor(QLatin1String name, QLatin1String from) {
 	const auto nameIndex = internal::GetPaletteIndex(name);
 	if (nameIndex < 0) {

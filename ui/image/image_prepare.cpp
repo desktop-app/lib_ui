@@ -821,7 +821,17 @@ QImage BlurLargeImage(QImage image, int radius) {
 		return QImage();
 	} else if (colors.size() > 2) {
 		return GenerateComplexGradient(size, colors, rotation, progress);
+	} else {
+		return GenerateLinearGradient(size, colors, rotation);
 	}
+}
+
+QImage GenerateLinearGradient(
+		QSize size,
+		const std::vector<QColor> &colors,
+		int rotation) {
+	Expects(!colors.empty());
+
 	auto result = QImage(size, QImage::Format_RGB32);
 	if (colors.size() == 1) {
 		result.fill(colors.front());
@@ -846,10 +856,21 @@ QImage BlurLargeImage(QImage image, int radius) {
 		Unexpected("Rotation value in GenerateDitheredGradient.");
 	}();
 	auto gradient = QLinearGradient(start, finalStop);
-	gradient.setStops(QGradientStops{
-		{ 0.0, colors[0] },
-		{ 1.0, colors[1] }
-	});
+
+	if (colors.size() == 2) {
+		gradient.setStops(QGradientStops{
+			{ 0.0, colors[0] },
+			{ 1.0, colors[1] }
+		});
+	} else {
+		auto stops = QGradientStops();
+		const auto step = 1. / (colors.size() - 1);
+		auto point = 0.;
+		for (const auto color : colors) {
+			stops.append({ point, color });
+			point += step;
+		}
+	}
 	p.fillRect(QRect(QPoint(), size), QBrush(std::move(gradient)));
 	p.end();
 
