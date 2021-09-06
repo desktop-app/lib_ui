@@ -13,10 +13,19 @@ namespace Ui {
 class BoxContentDivider : public Ui::RpWidget {
 public:
 	BoxContentDivider(QWidget *parent);
-	BoxContentDivider(QWidget *parent, int height);
+	BoxContentDivider(
+		QWidget *parent,
+		int height);
+	BoxContentDivider(
+		QWidget *parent,
+		int height,
+		const style::color &bg);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
+
+private:
+	const style::color &_bg;
 
 };
 

@@ -18,13 +18,21 @@ BoxContentDivider::BoxContentDivider(QWidget *parent)
 }
 
 BoxContentDivider::BoxContentDivider(QWidget *parent, int height)
-: RpWidget(parent) {
+: BoxContentDivider(parent, height, st::boxDividerBg) {
+}
+
+BoxContentDivider::BoxContentDivider(
+	QWidget *parent,
+	int height,
+	const style::color &bg)
+: RpWidget(parent)
+, _bg(bg) {
 	resize(width(), height);
 }
 
 void BoxContentDivider::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
-	p.fillRect(e->rect(), st::boxDividerBg);
+	p.fillRect(e->rect(), _bg);
 	const auto dividerFillTop = QRect(
 		0,
 		0,
