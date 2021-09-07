@@ -36,10 +36,12 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 , _menu(this, menu, _st.menu) {
 	init();
 
-	for (auto action : actions()) {
-		if (auto submenu = action->menu()) {
-			auto it = _submenus.insert(action, new PopupMenu(parentWidget(), submenu, st));
-			it.value()->deleteOnHide(false);
+	for (const auto action : actions()) {
+		if (const auto submenu = action->menu()) {
+			_submenus.emplace(
+				action,
+				base::make_unique_q<PopupMenu>(parentWidget(), submenu, st)
+			).first->second->deleteOnHide(false);
 		}
 	}
 }
@@ -78,6 +80,27 @@ void PopupMenu::init() {
 	setAttribute(Qt::WA_TranslucentBackground, true);
 }
 
+not_null<PopupMenu*> PopupMenu::ensureSubmenu(not_null<QAction*> action) {
+	const auto &list = actions();
+	const auto i = ranges::find(list, action);
+	Assert(i != end(list));
+
+	const auto j = _submenus.find(action);
+	if (j != end(_submenus)) {
+		return j->second.get();
+	}
+	const auto result = _submenus.emplace(
+		action,
+		base::make_unique_q<PopupMenu>(parentWidget(), st())
+	).first->second.get();
+	result->deleteOnHide(false);
+	return result;
+}
+
+void PopupMenu::removeSubmenu(not_null<QAction*> action) {
+	_submenus.remove(action);
+}
+
 void PopupMenu::handleCompositingUpdate() {
 	_padding = _useTransparency ? _st.shadow.extend : style::margins(st::lineWidth, st::lineWidth, st::lineWidth, st::lineWidth);
 	_menu->moveToLeft(_padding.left() + _st.scrollPadding.left(), _padding.top() + _st.scrollPadding.top());
@@ -100,11 +123,16 @@ not_null<QAction*> PopupMenu::addAction(const QString &text, Fn<void()> callback
 	return _menu->addAction(text, std::move(callback), icon, iconOver);
 }
 
-not_null<QAction*> PopupMenu::addAction(const QString &text, std::unique_ptr<PopupMenu> submenu) {
+not_null<QAction*> PopupMenu::addAction(
+		const QString &text,
+		std::unique_ptr<PopupMenu> submenu) {
 	const auto action = _menu->addAction(text, std::make_unique<QMenu>());
-	auto it = _submenus.insert(action, submenu.release());
-	it.value()->setParent(parentWidget());
-	it.value()->deleteOnHide(false);
+	const auto saved = _submenus.emplace(
+		action,
+		base::unique_qptr<PopupMenu>(submenu.release())
+	).first->second.get();
+	saved->setParent(parentWidget());
+	saved->deleteOnHide(false);
 	return action;
 }
 
@@ -113,9 +141,7 @@ not_null<QAction*> PopupMenu::addSeparator() {
 }
 
 void PopupMenu::clearActions() {
-	for (const auto &submenu : base::take(_submenus)) {
-		delete submenu;
-	}
+	_submenus.clear();
 	return _menu->clearActions();
 }
 
@@ -164,7 +190,7 @@ void PopupMenu::paintBg(QPainter &p) {
 void PopupMenu::handleActivated(const Menu::CallbackData &data) {
 	if (data.source == TriggeredSource::Mouse) {
 		if (!popupSubmenuFromAction(data)) {
-			if (auto currentSubmenu = base::take(_activeSubmenu)) {
+			if (const auto currentSubmenu = base::take(_activeSubmenu)) {
 				currentSubmenu->hideMenu(true);
 			}
 		}
@@ -185,7 +211,8 @@ void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
 }
 
 bool PopupMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
-	if (auto submenu = _submenus.value(data.action)) {
+	if (const auto i = _submenus.find(data.action); i != end(_submenus)) {
+		const auto submenu = i->second.get();
 		if (_activeSubmenu == submenu) {
 			// There is a strange problem on macOS
 			// when a submenu closes arbitrarily
@@ -201,7 +228,7 @@ bool PopupMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
 	return false;
 }
 
-void PopupMenu::popupSubmenu(SubmenuPointer submenu, int actionTop, TriggeredSource source) {
+void PopupMenu::popupSubmenu(not_null<PopupMenu*> submenu, int actionTop, TriggeredSource source) {
 	if (auto currentSubmenu = base::take(_activeSubmenu)) {
 		currentSubmenu->hideMenu(true);
 	}
@@ -287,7 +314,9 @@ void PopupMenu::mousePressEvent(QMouseEvent *e) {
 }
 
 void PopupMenu::hideMenu(bool fast) {
-	if (isHidden()) return;
+	if (isHidden()) {
+		return;
+	}
 	if (_parent && !_a_opacity.animating()) {
 		_parent->childHiding(this);
 	}
@@ -306,7 +335,7 @@ void PopupMenu::hideMenu(bool fast) {
 
 void PopupMenu::childHiding(PopupMenu *child) {
 	if (_activeSubmenu && _activeSubmenu == child) {
-		_activeSubmenu = SubmenuPointer();
+		_activeSubmenu = nullptr;
 	}
 	if (!_hiding && !isHidden()) {
 		raise();
@@ -549,7 +578,7 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 }
 
 PopupMenu::~PopupMenu() {
-	for (const auto &submenu : base::take(_submenus)) {
+	for (const auto &[action, submenu] : base::take(_submenus)) {
 		delete submenu;
 	}
 	if (const auto parent = parentWidget()) {

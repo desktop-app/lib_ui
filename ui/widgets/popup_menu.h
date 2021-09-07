@@ -13,6 +13,7 @@
 #include "ui/round_rect.h"
 #include "ui/rp_widget.h"
 #include "base/object_ptr.h"
+#include "base/unique_qptr.h"
 
 namespace Ui {
 
@@ -31,7 +32,10 @@ public:
 	not_null<QAction*> addSeparator();
 	void clearActions();
 
-	const std::vector<not_null<QAction*>> &actions() const;
+	[[nodiscard]] const std::vector<not_null<QAction*>> &actions() const;
+	[[nodiscard]] not_null<PopupMenu*> ensureSubmenu(
+		not_null<QAction*> action);
+	void removeSubmenu(not_null<QAction*> action);
 	bool empty() const;
 
 	void deleteOnHide(bool del);
@@ -101,9 +105,11 @@ private:
 	}
 	void handleMouseRelease(QPoint globalPosition);
 
-	using SubmenuPointer = QPointer<PopupMenu>;
 	bool popupSubmenuFromAction(const Menu::CallbackData &data);
-	void popupSubmenu(SubmenuPointer submenu, int actionTop, TriggeredSource source);
+	void popupSubmenu(
+		not_null<PopupMenu*> submenu,
+		int actionTop,
+		TriggeredSource source);
 	void showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source);
 
 	const style::PopupMenu &_st;
@@ -111,15 +117,16 @@ private:
 	RoundRect _roundRect;
 	object_ptr<Menu::Menu> _menu;
 
-	using Submenus = QMap<QAction*, SubmenuPointer>;
-	Submenus _submenus;
+	base::flat_map<
+		not_null<QAction*>,
+		base::unique_qptr<PopupMenu>> _submenus;
 
 	PopupMenu *_parent = nullptr;
 
 	QRect _inner;
 	style::margins _padding;
 
-	SubmenuPointer _activeSubmenu;
+	QPointer<PopupMenu> _activeSubmenu;
 
 	PanelAnimation::Origin _origin = PanelAnimation::Origin::TopLeft;
 	std::optional<PanelAnimation::Origin> _forcedOrigin;
