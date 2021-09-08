@@ -45,8 +45,8 @@ public:
 
 	void clearSelection();
 
-	void setChildShown(bool shown) {
-		_childShown = shown;
+	void setChildShownAction(QAction *action) {
+		_childShownAction = action;
 	}
 	void setShowSource(TriggeredSource source);
 	void setForceWidth(int forceWidth);
@@ -59,6 +59,8 @@ public:
 	void setTriggeredCallback(Fn<void(const CallbackData &data)> callback) {
 		_triggeredCallback = std::move(callback);
 	}
+
+	[[nodiscard]] ItemBase *findSelectedAction() const;
 
 	void setKeyPressDelegate(Fn<bool(int key)> delegate) {
 		_keyPressDelegate = std::move(delegate);
@@ -102,8 +104,6 @@ private:
 
 	void itemPressed(TriggeredSource source);
 
-	ItemBase *findSelectedAction() const;
-
 	void resizeFromInner(int w, int h);
 
 	const style::Menu &_st;
@@ -121,7 +121,7 @@ private:
 
 	int _forceWidth = 0;
 
-	bool _childShown = false;
+	QPointer<QAction> _childShownAction;
 
 	rpl::event_stream<> _resizesFromInner;
 

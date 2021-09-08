@@ -107,6 +107,11 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 	widget->selects(
 	) | rpl::start_with_next([=](const CallbackData &data) {
 		if (!data.selected) {
+			if (!findSelectedAction()
+				&& data.index < _actionWidgets.size()
+				&& _childShownAction == data.action) {
+				_actionWidgets[data.index]->setSelected(true);
+			}
 			return;
 		}
 		for (auto i = 0; i < _actionWidgets.size(); i++) {
@@ -282,7 +287,7 @@ void Menu::clearMouseSelection() {
 	const auto mouseSelection = selected
 		? (selected->lastTriggeredSource() == TriggeredSource::Mouse)
 		: false;
-	if (mouseSelection && !_childShown) {
+	if (mouseSelection && !_childShownAction) {
 		clearSelection();
 	}
 }

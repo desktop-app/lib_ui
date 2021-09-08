@@ -36,6 +36,7 @@ public:
 	[[nodiscard]] not_null<PopupMenu*> ensureSubmenu(
 		not_null<QAction*> action);
 	void removeSubmenu(not_null<QAction*> action);
+	void checkSubmenuShow();
 	bool empty() const;
 
 	void deleteOnHide(bool del);
@@ -107,6 +108,7 @@ private:
 
 	bool popupSubmenuFromAction(const Menu::CallbackData &data);
 	void popupSubmenu(
+		not_null<QAction*> action,
 		not_null<PopupMenu*> submenu,
 		int actionTop,
 		TriggeredSource source);

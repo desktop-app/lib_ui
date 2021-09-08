@@ -9,6 +9,7 @@
 #include "ui/widgets/shadow.h"
 #include "ui/image/image_prepare.h"
 #include "ui/platform/ui_platform_utility.h"
+#include "ui/widgets/menu//menu_item_base.h"
 #include "ui/ui_utility.h"
 #include "ui/delayed_activation.h"
 #include "base/platform/base_platform_info.h"
@@ -98,7 +99,22 @@ not_null<PopupMenu*> PopupMenu::ensureSubmenu(not_null<QAction*> action) {
 }
 
 void PopupMenu::removeSubmenu(not_null<QAction*> action) {
-	_submenus.remove(action);
+	const auto menu = _submenus.take(action);
+	if (menu && menu->get() == _activeSubmenu) {
+		base::take(_activeSubmenu)->hideMenu(true);
+	}
+}
+
+void PopupMenu::checkSubmenuShow() {
+	if (_activeSubmenu) {
+		return;
+	} else if (const auto item = _menu->findSelectedAction()) {
+		if (item->lastTriggeredSource() == Menu::TriggeredSource::Mouse) {
+			if (_submenus.contains(item->action())) {
+				item->setClicked(Menu::TriggeredSource::Mouse);
+			}
+		}
+	}
 }
 
 void PopupMenu::handleCompositingUpdate() {
@@ -211,24 +227,24 @@ void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
 }
 
 bool PopupMenu::popupSubmenuFromAction(const Menu::CallbackData &data) {
+	if (!data.action) {
+		return false;
+	}
 	if (const auto i = _submenus.find(data.action); i != end(_submenus)) {
 		const auto submenu = i->second.get();
-		if (_activeSubmenu == submenu) {
-			// There is a strange problem on macOS
-			// when a submenu closes arbitrarily
-			// if we try to move the cursor to it.
-#ifndef Q_OS_MAC
-			submenu->hideMenu(true);
-#endif
-		} else {
-			popupSubmenu(submenu, data.actionTop, data.source);
+		if (_activeSubmenu != submenu) {
+			popupSubmenu(data.action, submenu, data.actionTop, data.source);
 		}
 		return true;
 	}
 	return false;
 }
 
-void PopupMenu::popupSubmenu(not_null<PopupMenu*> submenu, int actionTop, TriggeredSource source) {
+void PopupMenu::popupSubmenu(
+		not_null<QAction*> action,
+		not_null<PopupMenu*> submenu,
+		int actionTop,
+		TriggeredSource source) {
 	if (auto currentSubmenu = base::take(_activeSubmenu)) {
 		currentSubmenu->hideMenu(true);
 	}
@@ -236,10 +252,7 @@ void PopupMenu::popupSubmenu(not_null<PopupMenu*> submenu, int actionTop, Trigge
 		QPoint p(_inner.x() + (style::RightToLeft() ? _padding.right() : _inner.width() - _padding.left()), _inner.y() + actionTop);
 		_activeSubmenu = submenu;
 		_activeSubmenu->showMenu(geometry().topLeft() + p, this, source);
-
-		_menu->setChildShown(true);
-	} else {
-		_menu->setChildShown(false);
+		_menu->setChildShownAction(action);
 	}
 }
 
@@ -260,6 +273,12 @@ bool PopupMenu::handleKeyPress(int key) {
 		if (_parent) {
 			hideMenu(true);
 			return true;
+		}
+	} else if (key == (style::RightToLeft() ? Qt::Key_Left : Qt::Key_Right)) {
+		if (const auto item = _menu->findSelectedAction()) {
+			if (_submenus.contains(item->action())) {
+				item->setClicked(Menu::TriggeredSource::Keyboard);
+			}
 		}
 	}
 	return false;
@@ -336,6 +355,9 @@ void PopupMenu::hideMenu(bool fast) {
 void PopupMenu::childHiding(PopupMenu *child) {
 	if (_activeSubmenu && _activeSubmenu == child) {
 		_activeSubmenu = nullptr;
+	}
+	if (!_activeSubmenu) {
+		_menu->setChildShownAction(nullptr);
 	}
 	if (!_hiding && !isHidden()) {
 		raise();

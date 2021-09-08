@@ -189,12 +189,6 @@ void Action::handleKeyPress(not_null<QKeyEvent*> e) {
 		setClicked(TriggeredSource::Keyboard);
 		return;
 	}
-	if (key == (style::RightToLeft() ? Qt::Key_Left : Qt::Key_Right)) {
-		if (hasSubmenu()) {
-			setClicked(TriggeredSource::Keyboard);
-			return;
-		}
-	}
 }
 
 } // namespace Ui::Menu
