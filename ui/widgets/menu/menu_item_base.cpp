@@ -17,7 +17,7 @@ ItemBase::ItemBase(
 void ItemBase::setSelected(
 		bool selected,
 		TriggeredSource source) {
-	if (!isEnabled()) {
+	if (selected && !isEnabled()) {
 		return;
 	}
 	if (_selected.current() != selected) {

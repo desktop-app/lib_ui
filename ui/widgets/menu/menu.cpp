@@ -110,10 +110,12 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 			if (!findSelectedAction()
 				&& data.index < _actionWidgets.size()
 				&& _childShownAction == data.action) {
-				_actionWidgets[data.index]->setSelected(true);
+				const auto widget = _actionWidgets[data.index].get();
+				widget->setSelected(true, widget->lastTriggeredSource());
 			}
 			return;
 		}
+		_lastSelectedByMouse = (data.source == TriggeredSource::Mouse);
 		for (auto i = 0; i < _actionWidgets.size(); i++) {
 			if (i != data.index) {
 				_actionWidgets[i]->setSelected(false);
@@ -130,6 +132,15 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 			_triggeredCallback(data);
 		}
 	}, widget->lifetime());
+
+	QObject::connect(action.get(), &QAction::changed, widget.get(), [=] {
+		// Select an item under mouse that was disabled and became enabled.
+		if (_lastSelectedByMouse
+			&& !findSelectedAction()
+			&& action->isEnabled()) {
+			updateSelected(QCursor::pos());
+		}
+	});
 
 	const auto raw = widget.get();
 	_actionWidgets.push_back(std::move(widget));
@@ -222,6 +233,9 @@ void Menu::updateSelected(QPoint globalPosition) {
 	for (const auto &widget : _actionWidgets) {
 		const auto widgetRect = QRect(widget->pos(), widget->size());
 		if (widgetRect.contains(p)) {
+			_lastSelectedByMouse = true;
+
+			// It may actually fail to become selected (if it is disabled).
 			widget->setSelected(true);
 			break;
 		}
@@ -271,7 +285,8 @@ void Menu::handleKeyPress(not_null<QKeyEvent*> e) {
 		} else if (newSelected >= _actions.size()) {
 			newSelected -= _actions.size();
 		}
-	} while (newSelected != start && (!_actionWidgets[newSelected]->isEnabled()));
+	} while (newSelected != start
+		&& (!_actionWidgets[newSelected]->isEnabled()));
 
 	if (_actionWidgets[newSelected]->isEnabled()) {
 		setSelected(newSelected, false);

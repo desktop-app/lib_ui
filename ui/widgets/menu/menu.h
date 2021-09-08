@@ -120,6 +120,7 @@ private:
 	std::vector<base::unique_qptr<ItemBase>> _actionWidgets;
 
 	int _forceWidth = 0;
+	bool _lastSelectedByMouse = false;
 
 	QPointer<QAction> _childShownAction;
 
