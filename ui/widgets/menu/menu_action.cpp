@@ -18,7 +18,7 @@ namespace {
 	auto result = TextWithEntities();
 	result.text.reserve(text.size());
 	auto afterAmpersand = false;
-	for (const auto ch : text) {
+	for (const auto &ch : text) {
 		if (afterAmpersand) {
 			afterAmpersand = false;
 			if (ch == '&') {

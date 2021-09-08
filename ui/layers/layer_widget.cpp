@@ -281,7 +281,7 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 		// in the transparent special layer cache corners after filling special layer
 		// rect above its cache with alpha_current opacity.
 		const auto region = QRegion(bg) - specialLayerBox;
-		for (const auto rect : region) {
+		for (const auto &rect : region) {
 			p.fillRect(rect, st::layerBg);
 		}
 		p.setOpacity((bgOpacity - overSpecialOpacity) / (1. - (overSpecialOpacity * st::layerBg->c.alphaF())));

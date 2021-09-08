@@ -866,7 +866,7 @@ QImage GenerateLinearGradient(
 		auto stops = QGradientStops();
 		const auto step = 1. / (colors.size() - 1);
 		auto point = 0.;
-		for (const auto color : colors) {
+		for (const auto &color : colors) {
 			stops.append({ point, color });
 			point += step;
 		}

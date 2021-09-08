@@ -37,7 +37,7 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 , _menu(this, menu, _st.menu) {
 	init();
 
-	for (const auto action : actions()) {
+	for (const auto &action : actions()) {
 		if (const auto submenu = action->menu()) {
 			_submenus.emplace(
 				action,

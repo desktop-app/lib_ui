@@ -126,7 +126,7 @@ void BoxLayerWidget::paintEvent(QPaintEvent *e) {
 	}
 	auto other = e->region().intersected(QRect(0, st::boxRadius, width(), height() - 2 * st::boxRadius));
 	if (!other.isEmpty()) {
-		for (const auto rect : other) {
+		for (const auto &rect : other) {
 			p.fillRect(rect, st().bg);
 		}
 	}
