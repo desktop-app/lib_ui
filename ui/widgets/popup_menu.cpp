@@ -222,6 +222,16 @@ void PopupMenu::init() {
 		}
 	}, paddingWrap->lifetime());
 
+	_menu->scrollToRequests(
+	) | rpl::start_with_next([=](ScrollToRequest request) {
+		_scroll->scrollTo({
+			request.ymin ? (_st.scrollPadding.top() + request.ymin) : 0,
+			(request.ymax == _menu->height()
+				? paddingWrap->height()
+				: (_st.scrollPadding.top() + request.ymax)),
+		});
+	}, _menu->lifetime());
+
 	_menu->resizesFromInner(
 	) | rpl::start_with_next([=] {
 		handleMenuResize();

@@ -9,6 +9,7 @@
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
+#include "ui/widgets/scroll_area.h"
 
 #include <QtGui/QtEvents>
 
@@ -212,6 +213,10 @@ rpl::producer<> Menu::resizesFromInner() const {
 	return _resizesFromInner.events();
 }
 
+rpl::producer<ScrollToRequest> Menu::scrollToRequests() const {
+	return _scrollToRequests.events();
+}
+
 void Menu::setShowSource(TriggeredSource source) {
 	const auto mouseSelection = (source == TriggeredSource::Mouse);
 	setSelected(
@@ -314,6 +319,13 @@ void Menu::setSelected(int selected, bool isMouseSelection) {
 	const auto source = isMouseSelection
 		? TriggeredSource::Mouse
 		: TriggeredSource::Keyboard;
+	if (selected >= 0 && source == TriggeredSource::Keyboard) {
+		const auto widget = _actionWidgets[selected].get();
+		_scrollToRequests.fire({
+			widget->y(),
+			widget->y() + widget->height(),
+		});
+	}
 	if (const auto selectedItem = findSelectedAction()) {
 		if (selectedItem->index() == selected) {
 			return;
@@ -321,7 +333,7 @@ void Menu::setSelected(int selected, bool isMouseSelection) {
 		selectedItem->setSelected(false, source);
 	}
 	if (selected >= 0) {
-		_actionWidgets[selected]->setSelected(true, source);
+		_actionWidgets[selected].get()->setSelected(true, source);
 	}
 }
 

@@ -13,6 +13,10 @@
 
 #include <QtWidgets/QMenu>
 
+namespace Ui {
+struct ScrollToRequest;
+} // namespace Ui
+
 namespace Ui::Menu {
 
 class ItemBase;
@@ -82,7 +86,8 @@ public:
 	}
 	void handleMouseRelease(QPoint globalPosition);
 
-	rpl::producer<> resizesFromInner() const;
+	[[nodiscard]] rpl::producer<> resizesFromInner() const;
+	[[nodiscard]] rpl::producer<ScrollToRequest> scrollToRequests() const;
 
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
@@ -125,6 +130,7 @@ private:
 	QPointer<QAction> _childShownAction;
 
 	rpl::event_stream<> _resizesFromInner;
+	rpl::event_stream<ScrollToRequest> _scrollToRequests;
 
 };
 
