@@ -131,8 +131,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		if (supported.renderableType() == QSurfaceFormat::OpenGLES) {
 			LOG_ONCE(("OpenGL Profile: OpenGLES."));
 		} else {
-			LOG_ONCE(("OpenGL Profile: None."));
-			return {};
+			LOG_ONCE(("OpenGL Profile: NoProfile."));
 		}
 	} break;
 	case QSurfaceFormat::CoreProfile: {
