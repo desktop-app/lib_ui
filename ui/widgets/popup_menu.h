@@ -17,6 +17,8 @@
 
 namespace Ui {
 
+class ScrollArea;
+
 class PopupMenu : public RpWidget {
 public:
 	PopupMenu(QWidget *parent, const style::PopupMenu &st = st::defaultPopupMenu);
@@ -52,7 +54,7 @@ public:
 	}
 
 	[[nodiscard]] not_null<Menu::Menu*> menu() const {
-		return _menu.data();
+		return _menu;
 	}
 
 	~PopupMenu();
@@ -113,11 +115,14 @@ private:
 		int actionTop,
 		TriggeredSource source);
 	void showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source);
+	void updateRoundingOverlay();
 
 	const style::PopupMenu &_st;
 
 	RoundRect _roundRect;
-	object_ptr<Menu::Menu> _menu;
+	object_ptr<ScrollArea> _scroll;
+	not_null<Menu::Menu*> _menu;
+	object_ptr<RpWidget> _roundingOverlay = { nullptr };
 
 	base::flat_map<
 		not_null<QAction*>,
@@ -144,6 +149,7 @@ private:
 	bool _triggering = false;
 	bool _deleteLater = false;
 	bool _reactivateParent = true;
+	bool _grabbingForPanelAnimation = false;
 
 	Fn<void()> _destroyedCallback;
 

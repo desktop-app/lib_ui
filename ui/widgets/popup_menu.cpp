@@ -6,12 +6,15 @@
 //
 #include "ui/widgets/popup_menu.h"
 
-#include "ui/widgets/shadow.h"
 #include "ui/image/image_prepare.h"
 #include "ui/platform/ui_platform_utility.h"
-#include "ui/widgets/menu//menu_item_base.h"
+#include "ui/widgets/shadow.h"
+#include "ui/widgets/menu/menu_item_base.h"
+#include "ui/widgets/scroll_area.h"
+#include "ui/wrap/padding_wrap.h"
 #include "ui/ui_utility.h"
 #include "ui/delayed_activation.h"
+#include "ui/painter.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_adapters.h"
 
@@ -21,12 +24,151 @@
 #include <QtWidgets/QApplication>
 
 namespace Ui {
+namespace {
+
+constexpr auto kShadowCornerMultiplier = 3;
+
+[[nodiscard]] not_null<QImage*> PrepareCachedShadow(
+		style::margins padding,
+		not_null<const style::Shadow*> shadow,
+		not_null<const RoundRect*> body,
+		rpl::lifetime &lifetime) {
+	const auto radius = st::roundRadiusSmall;
+	const auto side = radius * kShadowCornerMultiplier;
+	const auto middle = radius;
+	const auto size = side * 2 + middle;
+	const auto rect = QRect(0, 0, size, size);
+	const auto result = lifetime.make_state<QImage>(
+		rect.marginsAdded(padding).size() * style::DevicePixelRatio(),
+		QImage::Format_ARGB32_Premultiplied);
+	result->setDevicePixelRatio(style::DevicePixelRatio());
+	const auto render = [=] {
+		result->fill(Qt::transparent);
+		auto p = QPainter(result);
+		const auto inner = QRect(padding.left(), padding.top(), size, size);
+		const auto outerWidth = padding.left() + size + padding.right();
+		Shadow::paint(p, inner, outerWidth, *shadow);
+		p.setCompositionMode(QPainter::CompositionMode_DestinationOut);
+		body->paint(p, inner);
+	};
+	render();
+	style::PaletteChanged(
+	) | rpl::start_with_next(render, lifetime);
+	return result;
+}
+
+void PaintCachedShadow(
+		QPainter &p,
+		QSize outer,
+		style::margins padding,
+		const QImage &cached) {
+	const auto fill = [&](
+			int dstx, int dsty, int dstw, int dsth,
+			int srcx, int srcy, int srcw, int srch) {
+		p.drawImage(
+			QRect(dstx, dsty, dstw, dsth),
+			cached,
+			QRect(
+				QPoint(srcx, srcy) * style::DevicePixelRatio(),
+				QSize(srcw, srch) * style::DevicePixelRatio()));
+	};
+	const auto paintCorner = [&](
+			int width, int height,
+			int dstx, int dsty,
+			int srcx, int srcy) {
+		fill(dstx, dsty, width, height, srcx, srcy, width, height);
+	};
+
+	const auto radius = st::roundRadiusSmall;
+	const auto side = radius * kShadowCornerMultiplier;
+	const auto middle = radius;
+	const auto size = side * 2 + middle;
+	paintCorner( // Top-Left
+		padding.left() + side,
+		padding.top() + side,
+		0,
+		0,
+		0,
+		0);
+	paintCorner( // Top-Right
+		side + padding.right(),
+		padding.top() + side,
+		outer.width() - side - padding.right(),
+		0,
+		padding.left() + size - side,
+		0);
+	paintCorner( // Bottom-Right
+		side + padding.right(),
+		side + padding.bottom(),
+		outer.width() - side - padding.right(),
+		outer.height() - side - padding.bottom(),
+		padding.left() + size - side,
+		padding.top() + size - side);
+	paintCorner( // Bottom-Left
+		padding.left() + side,
+		side + padding.bottom(),
+		0,
+		outer.height() - side - padding.bottom(),
+		0,
+		padding.top() + size - side);
+	const auto fillx = outer.width()
+		- padding.left()
+		- padding.right()
+		- 2 * side;
+	fill( // Top
+		padding.left() + side,
+		0,
+		fillx,
+		padding.top(),
+		padding.left() + side + (middle / 2),
+		0,
+		1,
+		padding.top());
+	fill( // Bottom
+		padding.left() + side,
+		outer.height() - padding.bottom(),
+		fillx,
+		padding.bottom(),
+		padding.left() + side + (middle / 2),
+		padding.top() + size,
+		1,
+		padding.bottom());
+	const auto filly = outer.height()
+		- padding.top()
+		- padding.bottom()
+		- 2 * side;
+	fill( // Left
+		0,
+		padding.top() + side,
+		padding.left(),
+		filly,
+		0,
+		padding.top() + side + (middle / 2),
+		padding.left(),
+		1);
+	fill( // Right
+		outer.width() - padding.right(),
+		padding.top() + side,
+		padding.right(),
+		filly,
+		padding.left() + size,
+		padding.top() + side + (middle / 2),
+		padding.right(),
+		1);
+}
+
+} // namespace
 
 PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 : RpWidget(parent)
 , _st(st)
 , _roundRect(ImageRoundRadius::Small, _st.menu.itemBg)
-, _menu(this, _st.menu) {
+, _scroll(this, st::defaultMultiSelect.scroll)
+, _menu(_scroll->setOwnedWidget(
+	object_ptr<PaddingWrap<Menu::Menu>>(
+		_scroll.data(),
+		object_ptr<Menu::Menu>(_scroll.data(), _st.menu),
+		_st.scrollPadding))->entity()) {
 	init();
 }
 
@@ -34,7 +176,12 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 : RpWidget(parent)
 , _st(st)
 , _roundRect(ImageRoundRadius::Small, _st.menu.itemBg)
-, _menu(this, menu, _st.menu) {
+, _scroll(this, st::defaultMultiSelect.scroll)
+, _menu(_scroll->setOwnedWidget(
+	object_ptr<PaddingWrap<Menu::Menu>>(
+		_scroll.data(),
+		object_ptr<Menu::Menu>(_scroll.data(), menu, _st.menu),
+		_st.scrollPadding))->entity()) {
 	init();
 
 	for (const auto &action : actions()) {
@@ -54,6 +201,26 @@ void PopupMenu::init() {
 	) | rpl::start_with_next([=] {
 		hideMenu(true);
 	}, lifetime());
+
+	const auto paddingWrap = static_cast<PaddingWrap<Menu::Menu>*>(
+		_menu->parentWidget());
+	paddingWrap->paintRequest(
+	) | rpl::start_with_next([=](QRect clip) {
+		const auto top = clip.intersected(
+			QRect(0, 0, paddingWrap->width(), _st.scrollPadding.top()));
+		const auto bottom = clip.intersected(QRect(
+			0,
+			paddingWrap->height() - _st.scrollPadding.bottom(),
+			paddingWrap->width(),
+			_st.scrollPadding.bottom()));
+		auto p = QPainter(paddingWrap);
+		if (!top.isEmpty()) {
+			p.fillRect(top, _st.menu.itemBg);
+		}
+		if (!bottom.isEmpty()) {
+			p.fillRect(bottom, _st.menu.itemBg);
+		}
+	}, paddingWrap->lifetime());
 
 	_menu->resizesFromInner(
 	) | rpl::start_with_next([=] {
@@ -118,15 +285,61 @@ void PopupMenu::checkSubmenuShow() {
 }
 
 void PopupMenu::handleCompositingUpdate() {
-	_padding = _useTransparency ? _st.shadow.extend : style::margins(st::lineWidth, st::lineWidth, st::lineWidth, st::lineWidth);
-	_menu->moveToLeft(_padding.left() + _st.scrollPadding.left(), _padding.top() + _st.scrollPadding.top());
+	const auto line = st::lineWidth;
+	_padding = _useTransparency
+		? _st.shadow.extend
+		: style::margins(line, line, line, line);
+	_scroll->moveToLeft(_padding.left(), _padding.top());
 	handleMenuResize();
+	updateRoundingOverlay();
+}
+
+void PopupMenu::updateRoundingOverlay() {
+	if (!_useTransparency) {
+		_roundingOverlay.destroy();
+		return;
+	} else if (_roundingOverlay) {
+		return;
+	}
+	_roundingOverlay.create(this);
+
+	sizeValue(
+	) | rpl::start_with_next([=](QSize size) {
+		_roundingOverlay->setGeometry(QRect(QPoint(), size));
+	}, _roundingOverlay->lifetime());
+
+	const auto shadow = PrepareCachedShadow(
+		_padding,
+		&_st.shadow,
+		&_roundRect,
+		_roundingOverlay->lifetime());
+
+	_roundingOverlay->paintRequest(
+	) | rpl::start_with_next([=](QRect clip) {
+		auto p = QPainter(_roundingOverlay.data());
+		auto hq = PainterHighQualityEnabler(p);
+		p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+		_roundRect.paint(p, _inner, RectPart::AllCorners);
+		if (!_grabbingForPanelAnimation) {
+			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+			PaintCachedShadow(p, size(), _padding, *shadow);
+		}
+	}, _roundingOverlay->lifetime());
+
+	_roundingOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
 }
 
 void PopupMenu::handleMenuResize() {
 	auto newWidth = _padding.left() + _st.scrollPadding.left() + _menu->width() + _st.scrollPadding.right() + _padding.right();
 	auto newHeight = _padding.top() + _st.scrollPadding.top() + _menu->height() + _st.scrollPadding.bottom() + _padding.bottom();
-	resize(newWidth, newHeight);
+	const auto wantedHeight = newHeight - _padding.top() - _padding.bottom();
+	const auto scrollHeight = _st.maxHeight
+		? std::min(_st.maxHeight, wantedHeight)
+		: wantedHeight;
+	_scroll->resize(
+		newWidth - _padding.left() - _padding.right(),
+		scrollHeight);
+	resize(newWidth, _padding.top() + scrollHeight + _padding.bottom());
 	_inner = rect().marginsRemoved(_padding);
 }
 
@@ -184,22 +397,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 	} else if (_showAnimation) {
 		_showAnimation->paintFrame(p, 0, 0, width(), 1., 1.);
 		_showAnimation.reset();
-		showChildren();
+		PostponeCall(this, [=] { showChildren(); });
 	} else {
 		paintBg(p);
 	}
 }
 
 void PopupMenu::paintBg(QPainter &p) {
-	if (_useTransparency) {
-		Shadow::paint(p, _inner, width(), _st.shadow);
-		_roundRect.paint(p, _inner);
-	} else {
+	if (!_useTransparency) {
 		p.fillRect(0, 0, width() - _padding.right(), _padding.top(), _st.shadow.fallback);
 		p.fillRect(width() - _padding.right(), 0, _padding.right(), height() - _padding.bottom(), _st.shadow.fallback);
 		p.fillRect(_padding.left(), height() - _padding.bottom(), width() - _padding.left(), _padding.bottom(), _st.shadow.fallback);
 		p.fillRect(0, _padding.top(), _padding.left(), height() - _padding.top(), _st.shadow.fallback);
-		p.fillRect(_inner, _st.menu.itemBg);
 	}
 }
 
@@ -491,16 +700,14 @@ QImage PopupMenu::grabForPanelAnimation() {
 	result.fill(Qt::transparent);
 	{
 		QPainter p(&result);
-		if (_useTransparency) {
-			_roundRect.paint(p, _inner);
-		} else {
-			p.fillRect(_inner, _st.menu.itemBg);
-		}
+		_grabbingForPanelAnimation = true;
+		p.fillRect(_inner, _st.menu.itemBg);
 		for (const auto child : children()) {
 			if (const auto widget = qobject_cast<QWidget*>(child)) {
 				RenderWidget(p, widget, widget->pos());
 			}
 		}
+		_grabbingForPanelAnimation = false;
 	}
 	return result;
 }

@@ -245,6 +245,7 @@ Menu {
 PopupMenu {
 	shadow: Shadow;
 	scrollPadding: margins;
+	maxHeight: pixels;
 	animation: PanelAnimation;
 
 	menu: Menu;
@@ -866,6 +867,7 @@ defaultPopupMenu: PopupMenu {
 	animation: defaultPanelAnimation;
 
 	scrollPadding: margins(0px, 8px, 0px, 8px);
+	maxHeight: 0px;
 
 	menu: defaultMenu;
 
