@@ -7,7 +7,6 @@
 #include "ui/platform/linux/ui_utility_linux.h"
 
 #include "base/platform/base_platform_info.h"
-#include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/debug_log.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 #include "base/const_string.h"
@@ -15,6 +14,7 @@
 #include "base/flat_set.h"
 
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
 #endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
