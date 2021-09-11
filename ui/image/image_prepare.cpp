@@ -870,6 +870,7 @@ QImage GenerateLinearGradient(
 			stops.append({ point, color });
 			point += step;
 		}
+		gradient.setStops(std::move(stops));
 	}
 	p.fillRect(QRect(QPoint(), size), QBrush(std::move(gradient)));
 	p.end();

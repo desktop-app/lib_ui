@@ -55,7 +55,7 @@ void palette::finalize() {
 palette &palette::operator=(const palette &other) {
 	auto wasReady = _ready;
 	for (int i = 0; i != kCount; ++i) {
-		if (other._status[i] == Status::Loaded) {
+		if (other._status[i] != Status::Initial) {
 			if (_status[i] == Status::Initial) {
 				new (data(i)) internal::ColorData(*other.data(i));
 			} else {
