@@ -17,7 +17,8 @@ public:
 	PathShiftGradient(
 		const style::color &bg,
 		const style::color &fg,
-		Fn<void()> animationCallback);
+		Fn<void()> animationCallback,
+		rpl::producer<> paletteUpdated = nullptr);
 	~PathShiftGradient();
 
 	void startFrame(

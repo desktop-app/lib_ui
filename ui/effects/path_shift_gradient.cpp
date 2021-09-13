@@ -29,12 +29,17 @@ std::weak_ptr<PathShiftGradient::AnimationData> PathShiftGradient::Animation;
 PathShiftGradient::PathShiftGradient(
 	const style::color &bg,
 	const style::color &fg,
-	Fn<void()> animationCallback)
+	Fn<void()> animationCallback,
+	rpl::producer<> paletteUpdated)
 : _bg(bg)
 , _fg(fg)
 , _animationCallback(std::move(animationCallback)) {
 	refreshColors();
-	style::PaletteChanged(
+	if (!paletteUpdated) {
+		paletteUpdated = style::PaletteChanged();
+	}
+	std::move(
+		paletteUpdated
 	) | rpl::start_with_next([=] {
 		refreshColors();
 	}, _lifetime);
