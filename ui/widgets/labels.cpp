@@ -444,11 +444,15 @@ Text::StateResult FlatLabel::dragActionFinish(const QPoint &p, Qt::MouseButton b
 	_selectionType = TextSelectType::Letters;
 
 	if (activated) {
-		const auto guard = window();
-		if (!_clickHandlerFilter
-			|| _clickHandlerFilter(activated, button)) {
-			ActivateClickHandler(guard, activated, button);
-		}
+		// _clickHandlerFilter may delete `this`. In that case we don't want
+		// to try to show a context menu or smth like that.
+		crl::on_main(this, [=] {
+			const auto guard = window();
+			if (!_clickHandlerFilter
+				|| _clickHandlerFilter(activated, button)) {
+				ActivateClickHandler(guard, activated, button);
+			}
+		});
 	}
 
 	if (QGuiApplication::clipboard()->supportsSelection()
