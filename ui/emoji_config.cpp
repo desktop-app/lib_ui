@@ -31,8 +31,8 @@ constexpr auto kUniversalSize = 72;
 constexpr auto kImagesPerRow = 32;
 constexpr auto kImageRowsPerSprite = 16;
 
-constexpr auto kSetVersion = uint32(2);
-constexpr auto kCacheVersion = uint32(6);
+constexpr auto kSetVersion = uint32(3);
+constexpr auto kCacheVersion = uint32(7);
 constexpr auto kMaxId = uint32(1 << 8);
 
 #ifdef Q_OS_MAC
