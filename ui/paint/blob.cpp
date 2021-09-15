@@ -6,7 +6,7 @@
 //
 #include "ui/paint/blob.h"
 
-#include "base/openssl_help.h"
+#include "base/random.h"
 #include "ui/painter.h"
 
 #include <QtGui/QPainterPath>
@@ -22,8 +22,8 @@ constexpr auto kMinSpeed = 0.8;
 constexpr auto kMinSegmentSpeed = 0.017;
 constexpr auto kSegmentSpeedDiff = 0.003;
 
-float64 RandomAdditional() {
-	return (openssl::RandomValue<int>() % 100 / 100.);
+[[nodiscard]] float64 RandomAdditional() {
+	return (base::RandomValue<int>() % 100 / 100.);
 }
 
 } // namespace

@@ -11,7 +11,7 @@
 #include "ui/emoji_config.h"
 #include "ui/ui_utility.h"
 #include "base/invoke_queued.h"
-#include "base/openssl_help.h"
+#include "base/random.h"
 #include "base/platform/base_platform_info.h"
 #include "emoji_suggestions_helper.h"
 #include "styles/palette.h"
@@ -3130,7 +3130,7 @@ void InputField::commitInstantReplacement(
 	format.setProperty(kInstantReplaceWithId, replacement);
 	format.setProperty(
 		kInstantReplaceRandomId,
-		openssl::RandomValue<uint32>());
+		base::RandomValue<uint32>());
 	ApplyTagFormat(format, cursor.charFormat());
 	cursor.insertText(replacement, format);
 }
