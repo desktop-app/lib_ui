@@ -22,6 +22,7 @@ public:
 	~WindowHelper();
 
 	not_null<RpWidget*> body() override;
+	QMargins frameMargins() override;
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;
 	void setNativeFrame(bool enabled) override;

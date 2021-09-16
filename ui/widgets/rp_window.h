@@ -36,6 +36,7 @@ public:
 
 	[[nodiscard]] not_null<RpWidget*> body();
 	[[nodiscard]] not_null<const RpWidget*> body() const;
+	[[nodiscard]] QMargins frameMargins() const;
 
 	void setTitle(const QString &title);
 	void setTitleStyle(const style::WindowTitle &st);

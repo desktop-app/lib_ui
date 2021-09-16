@@ -185,6 +185,12 @@ not_null<RpWidget*> WindowHelper::body() {
 	return _body;
 }
 
+QMargins WindowHelper::frameMargins() {
+	return _title->isHidden()
+		? BasicWindowHelper::nativeFrameMargins()
+		: QMargins{ 0, _title->height(), 0, 0 };
+}
+
 void WindowHelper::setTitle(const QString &title) {
 	_title->setText(title);
 	window()->setWindowTitle(title);

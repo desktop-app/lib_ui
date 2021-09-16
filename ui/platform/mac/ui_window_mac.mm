@@ -300,11 +300,9 @@ void WindowHelper::Private::init() {
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
 : BasicWindowHelper(window)
 , _private(std::make_unique<Private>(this))
-, _title(_private->customTitleHeight()
-	? Ui::CreateChild<TitleWidget>(
-		window.get(),
-		_private->customTitleHeight())
-	: nullptr)
+, _title(Ui::CreateChild<TitleWidget>(
+	window.get(),
+	_private->customTitleHeight()))
 , _body(Ui::CreateChild<RpWidget>(window.get())) {
 	if (_title->shouldBeHidden()) {
 		updateCustomTitleVisibility();
@@ -319,26 +317,26 @@ not_null<RpWidget*> WindowHelper::body() {
 	return _body;
 }
 
+QMargins WindowHelper::frameMargins() {
+	const auto titleHeight = !_title->isHidden() ? _title->height() : 0;
+	return QMargins{ 0, titleHeight, 0, 0 };
+}
+
 void WindowHelper::setTitle(const QString &title) {
-	if (_title) {
-		_title->setText(title);
-	}
-	window()->setWindowTitle(
-		(!_title || !_titleVisible) ? title : QString());
+	_title->setText(title);
+	window()->setWindowTitle(_titleVisible ? QString() : title);
 }
 
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
-	if (_title) {
-		_title->setStyle(st);
-		if (_title->shouldBeHidden()) {
-			updateCustomTitleVisibility();
-		}
+	_title->setStyle(st);
+	if (_title->shouldBeHidden()) {
+		updateCustomTitleVisibility();
 	}
 }
 
 void WindowHelper::updateCustomTitleVisibility(bool force) {
-	auto visible = !_title->shouldBeHidden() && _titleVisible;
-	if (!_title || (!force && _title->isHidden() != visible)) {
+	const auto visible = !_title->shouldBeHidden() && _titleVisible;
+	if (!force && _title->isHidden() != visible) {
 		return;
 	}
 	_title->setVisible(visible);
@@ -346,15 +344,11 @@ void WindowHelper::updateCustomTitleVisibility(bool force) {
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
-	window()->setMinimumSize(
-		size.width(),
-		(_title ? _title->height() : 0) + size.height());
+	window()->setMinimumSize(size.width(), _title->height() + size.height());
 }
 
 void WindowHelper::setFixedSize(QSize size) {
-	window()->setFixedSize(
-		size.width(),
-		(_title ? _title->height() : 0) + size.height());
+	window()->setFixedSize(size.width(), _title->height() + size.height());
 }
 
 void WindowHelper::setStaysOnTop(bool enabled) {
@@ -362,8 +356,7 @@ void WindowHelper::setStaysOnTop(bool enabled) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	window()->setGeometry(
-		rect.marginsAdded({ 0, (_title ? _title->height() : 0), 0, 0 }));
+	window()->setGeometry(rect.marginsAdded({ 0, _title->height(), 0, 0 }));
 }
 
 void WindowHelper::setupBodyTitleAreaEvents() {

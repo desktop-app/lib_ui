@@ -37,6 +37,10 @@ not_null<RpWidget*> BasicWindowHelper::body() {
 	return _window;
 }
 
+QMargins BasicWindowHelper::frameMargins() {
+	return nativeFrameMargins();
+}
+
 void BasicWindowHelper::setTitle(const QString &title) {
 	_window->setWindowTitle(title);
 }
@@ -84,6 +88,16 @@ void BasicWindowHelper::setBodyTitleArea(
 	}
 	_bodyTitleAreaTestMethod = std::move(testMethod);
 	setupBodyTitleAreaEvents();
+}
+
+QMargins BasicWindowHelper::nativeFrameMargins() const {
+	const auto inner = window()->geometry();
+	const auto outer = window()->frameGeometry();
+	return QMargins(
+		inner.x() - outer.x(),
+		inner.y() - outer.y(),
+		outer.x() + outer.width() - inner.x() - inner.width(),
+		outer.y() + outer.height() - inner.y() - inner.height());
 }
 
 void BasicWindowHelper::setupBodyTitleAreaEvents() {
@@ -241,6 +255,12 @@ void DefaultWindowHelper::init() {
 
 not_null<RpWidget*> DefaultWindowHelper::body() {
 	return _body;
+}
+
+QMargins DefaultWindowHelper::frameMargins() {
+	return _title->isHidden()
+		? BasicWindowHelper::nativeFrameMargins()
+		: QMargins{ 0, _title->height(), 0, 0 };
 }
 
 bool DefaultWindowHelper::hasShadow() const {

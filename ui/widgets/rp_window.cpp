@@ -28,6 +28,10 @@ not_null<const RpWidget*> RpWindow::body() const {
 	return _helper->body().get();
 }
 
+QMargins RpWindow::frameMargins() const {
+	return _helper->frameMargins();
+}
+
 void RpWindow::setTitle(const QString &title) {
 	_helper->setTitle(title);
 }

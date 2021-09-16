@@ -28,6 +28,7 @@ public:
 	virtual ~BasicWindowHelper() = default;
 
 	[[nodiscard]] virtual not_null<RpWidget*> body();
+	[[nodiscard]] virtual QMargins frameMargins();
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);
@@ -51,6 +52,7 @@ protected:
 			? _bodyTitleAreaTestMethod(point)
 			: WindowTitleHitTestFlag();
 	}
+	[[nodiscard]] QMargins nativeFrameMargins() const;
 
 private:
 	virtual void setupBodyTitleAreaEvents();
@@ -66,6 +68,7 @@ public:
 	explicit DefaultWindowHelper(not_null<RpWidget*> window);
 
 	not_null<RpWidget*> body() override;
+	QMargins frameMargins() override;
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;
 	void setNativeFrame(bool enabled) override;
