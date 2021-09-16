@@ -26,10 +26,10 @@ public:
 		const style::margins &stSeparatorPadding);
 
 	bool setFocusFast();
-	rpl::producer<QString> value() const;
-	rpl::producer<> submitRequests() const;
-	rpl::producer<> focuses() const;
-	QString valueCurrent() const;
+	[[nodiscard]] rpl::producer<QString> value() const;
+	[[nodiscard]] rpl::producer<> submitRequests() const;
+	[[nodiscard]] rpl::producer<> focuses() const;
+	[[nodiscard]] QString valueCurrent() const;
 	void showError();
 
 	int resizeGetHeight(int width) override;
@@ -49,8 +49,8 @@ private:
 	template <typename Widget>
 	bool insideSeparator(QPoint position, const Widget &widget) const;
 
-	int hour() const;
-	int minute() const;
+	[[nodiscard]] std::optional<int> hour() const;
+	[[nodiscard]] std::optional<int> minute() const;
 
 	const style::InputField &_stField;
 	const style::InputField &_stDateField;

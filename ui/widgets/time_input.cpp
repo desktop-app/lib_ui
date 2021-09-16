@@ -76,13 +76,15 @@ private:
 
 };
 
-int Number(not_null<TimePart*> field) {
+std::optional<int> Number(not_null<TimePart*> field) {
 	const auto text = field->getLastText();
 	auto ref = text.midRef(0);
-	while (!ref.isEmpty() && ref.at(0) == '0') {
+	while (ref.size() > 1 && ref.at(0) == '0') {
 		ref = ref.mid(1);
 	}
-	return ref.toInt();
+	return QRegularExpression("^\\d+$").match(ref).hasMatch()
+		? std::make_optional(ref.toInt())
+		: std::nullopt;
 }
 
 void TimePart::setMaxValue(int value) {
@@ -118,7 +120,11 @@ void TimePart::keyPressEvent(QKeyEvent *e) {
 
 void TimePart::wheelEvent(QWheelEvent *e) {
 	const auto direction = WheelDirection(e);
-	auto time = Number(this) + (direction * _wheelStep);
+	const auto now = Number(this);
+	if (!now.has_value()) {
+		return;
+	}
+	auto time = *now + (direction * _wheelStep);
 	const auto max = _maxValue + 1;
 	if (time < 0) {
 		time += max;
@@ -248,13 +254,13 @@ TimeInput::TimeInput(
 	}, lifetime());
 
 	const auto submitHour = [=] {
-		if (hour()) {
+		if (hour().has_value()) {
 			_minute->setFocus();
 		}
 	};
 	const auto submitMinute = [=] {
-		if (minute()) {
-			if (hour()) {
+		if (minute().has_value()) {
+			if (hour().has_value()) {
 				_submitRequests.fire({});
 			} else {
 				_hour->setFocus();
@@ -290,7 +296,7 @@ void TimeInput::erasePrevious(const object_ptr<TimePart> &field) {
 }
 
 bool TimeInput::setFocusFast() {
-	if (hour()) {
+	if (hour().has_value()) {
 		_minute->setFocusFast();
 	} else {
 		_hour->setFocusFast();
@@ -298,18 +304,18 @@ bool TimeInput::setFocusFast() {
 	return true;
 }
 
-int TimeInput::hour() const {
+std::optional<int> TimeInput::hour() const {
 	return Number(_hour);
 }
 
-int TimeInput::minute() const {
+std::optional<int> TimeInput::minute() const {
 	return Number(_minute);
 }
 
 QString TimeInput::valueCurrent() const {
 	const auto result = QString("%1:%2"
-		).arg(hour()
-		).arg(minute(), 2, 10, QChar('0'));
+		).arg(hour().value_or(0)
+		).arg(minute().value_or(0), 2, 10, QChar('0'));
 	return ValidateTime(result).isValid() ? result : QString();
 }
 
@@ -422,7 +428,7 @@ void TimeInput::showError() {
 }
 
 void TimeInput::setInnerFocus() {
-	if (hour()) {
+	if (hour().has_value()) {
 		_minute->setFocus();
 	} else {
 		_hour->setFocus();
