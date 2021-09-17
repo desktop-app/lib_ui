@@ -161,15 +161,16 @@ std::optional<QColor> colorize(const QColor &color, const colorizer &with) {
 	auto hue = 0;
 	auto saturation = 0;
 	auto lightness = 0;
-	color.getHsv(&hue, &saturation, &lightness);
+	auto alpha = 0;
+	color.getHsv(&hue, &saturation, &lightness, &alpha);
 	const auto result = colorize(
 		colorizer::Color{ hue, saturation, lightness },
 		with);
 	if (!result) {
 		return std::nullopt;
 	}
-	const auto &fields = *result;
-	return QColor::fromHsv(fields.hue, fields.saturation, fields.value);
+	const auto &hsv = *result;
+	return QColor::fromHsv(hsv.hue, hsv.saturation, hsv.value, alpha);
 }
 
 QByteArray colorize(
