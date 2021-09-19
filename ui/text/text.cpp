@@ -2018,7 +2018,10 @@ private:
 		const auto flags = block->flags();
 		const auto usedFont = [&] {
 			if (const auto index = block->lnkIndex()) {
-				return ClickHandler::showAsActive(_t->_links.at(index - 1))
+				const auto active = ClickHandler::showAsActive(
+					_t->_links.at(index - 1)
+				) || (_textPalette && _textPalette->linkAlwaysActive > 0);
+				return active
 					? _t->_st->linkFontOver
 					: _t->_st->linkFont;
 			}

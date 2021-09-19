@@ -14,6 +14,7 @@ TextPalette {
 	selectLinkFg: color;
 	selectMonoFg: color;
 	selectOverlay: color;
+	linkAlwaysActive: int;
 }
 
 TextStyle {
