@@ -91,6 +91,9 @@ void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
 		return;
 	}
 	engine->begin(device);
+	if (!isValid()) { // The call above could lose the context.
+		return;
+	}
 	const auto f = context()->functions();
 	if (const auto bg = _renderer->clearColor()) {
 		f->glClearColor(bg->redF(), bg->greenF(), bg->blueF(), bg->alphaF());
