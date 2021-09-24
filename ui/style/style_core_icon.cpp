@@ -10,6 +10,7 @@
 #include "ui/style/style_core.h"
 #include "base/basic_types.h"
 
+#include <QtCore/QMutex>
 #include <QtGui/QPainter>
 
 namespace style {
@@ -20,11 +21,15 @@ uint32 colorKey(QColor c) {
 	return (((((uint32(c.red()) << 8) | uint32(c.green())) << 8) | uint32(c.blue())) << 8) | uint32(c.alpha());
 }
 
-base::flat_map<const IconMask*, QImage> iconMasks;
+base::flat_map<const IconMask*, QImage> IconMasks;
+QMutex IconMasksMutex;
+
 base::flat_map<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
 base::flat_set<IconData*> iconData;
 
-QImage createIconMask(const IconMask *mask, int scale) {
+[[nodiscard]] QImage CreateIconMask(
+		not_null<const IconMask*> mask,
+		int scale) {
 	auto maskImage = QImage::fromData(mask->data(), mask->size(), "PNG");
 	maskImage.setDevicePixelRatio(DevicePixelRatio());
 	Assert(!maskImage.isNull());
@@ -53,6 +58,17 @@ QImage createIconMask(const IconMask *mask, int scale) {
 		ConvertScale(height, scale) * factor,
 		Qt::IgnoreAspectRatio,
 		Qt::SmoothTransformation);
+}
+
+[[nodiscard]] QImage ResolveIconMask(not_null<const IconMask*> mask) {
+	QMutexLocker lock(&IconMasksMutex);
+	if (const auto i = IconMasks.find(mask); i != end(IconMasks)) {
+		return i->second;
+	}
+	return IconMasks.emplace(
+		mask,
+		CreateIconMask(mask, Scale())
+	).first->second;
 }
 
 QSize readGeneratedSize(const IconMask *mask, int scale) {
@@ -181,7 +197,7 @@ void MonoIcon::paint(
 	auto size = readGeneratedSize(_mask, Scale());
 	auto maskImage = QImage();
 	if (size.isEmpty()) {
-		maskImage = createIconMask(_mask, Scale());
+		maskImage = CreateIconMask(_mask, Scale());
 		size = maskImage.size() / DevicePixelRatio();
 	}
 
@@ -209,7 +225,7 @@ void MonoIcon::fill(
 	auto size = readGeneratedSize(_mask, Scale());
 	auto maskImage = QImage();
 	if (size.isEmpty()) {
-		maskImage = createIconMask(_mask, Scale());
+		maskImage = CreateIconMask(_mask, Scale());
 		size = maskImage.size() / DevicePixelRatio();
 	}
 	if (!maskImage.isNull()) {
@@ -242,7 +258,7 @@ QImage MonoIcon::instance(QColor colorOverride, int scale) const {
 		result.fill(colorOverride);
 		return result;
 	}
-	auto mask = createIconMask(_mask, scale);
+	auto mask = CreateIconMask(_mask, scale);
 	auto result = QImage(mask.size(), QImage::Format_ARGB32_Premultiplied);
 	result.setDevicePixelRatio(DevicePixelRatio());
 	colorizeImage(mask, colorOverride, &result);
@@ -252,26 +268,24 @@ QImage MonoIcon::instance(QColor colorOverride, int scale) const {
 void MonoIcon::ensureLoaded() const {
 	if (_size.isValid()) {
 		return;
-	}
-	if (!_maskImage.isNull()) {
+	} else if (!_maskImage.isNull()) {
 		createCachedPixmap();
 		return;
 	}
 
 	_size = readGeneratedSize(_mask, Scale());
 	if (_size.isEmpty()) {
-		auto i = iconMasks.find(_mask);
-		if (i == iconMasks.cend()) {
-			i = iconMasks.emplace(_mask, createIconMask(_mask, Scale())).first;
-		}
-		_maskImage = i->second;
-
+		_maskImage = ResolveIconMask(_mask);
 		createCachedPixmap();
 	}
 }
 
 void MonoIcon::ensureColorizedImage(QColor color) const {
-	if (_colorizedImage.isNull()) _colorizedImage = QImage(_maskImage.size(), QImage::Format_ARGB32_Premultiplied);
+	if (_colorizedImage.isNull()) {
+		_colorizedImage = QImage(
+			_maskImage.size(),
+			QImage::Format_ARGB32_Premultiplied);
+	}
 	colorizeImage(_maskImage, color, &_colorizedImage);
 }
 
@@ -373,7 +387,9 @@ void resetIcons() {
 void destroyIcons() {
 	iconData.clear();
 	iconPixmaps.clear();
-	iconMasks.clear();
+
+	QMutexLocker lock(&IconMasksMutex);
+	IconMasks.clear();
 }
 
 } // namespace internal
