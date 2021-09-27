@@ -81,7 +81,7 @@ void prepareRound(
 	QRect target = QRect());
 void prepareRound(
 	QImage &image,
-	QImage *cornerMasks,
+	gsl::span<const QImage, 4> cornerMasks,
 	RectParts corners = RectPart::AllCorners,
 	QRect target = QRect());
 void prepareCircle(QImage &image);

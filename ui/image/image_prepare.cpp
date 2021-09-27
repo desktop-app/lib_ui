@@ -893,7 +893,7 @@ void prepareCircle(QImage &img) {
 
 void prepareRound(
 		QImage &image,
-		QImage *cornerMasks,
+		gsl::span<const QImage, 4> cornerMasks,
 		RectParts corners,
 		QRect target) {
 	if (target.isNull()) {
@@ -970,8 +970,8 @@ void prepareRound(
 		QImage::Format_ARGB32_Premultiplied);
 	Assert(!image.isNull());
 
-	auto masks = CornersMask(radius);
-	prepareRound(image, masks.data(), corners, target);
+	const auto masks = CornersMask(radius);
+	prepareRound(image, masks, corners, target);
 }
 
 QImage prepareColored(style::color add, QImage image) {
