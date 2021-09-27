@@ -99,7 +99,7 @@ TG_FORCE_INLINE float64 interpolateF(int a, int b, float64 b_ratio) {
 }
 
 TG_FORCE_INLINE int interpolate(int a, int b, float64 b_ratio) {
-	return std::round(interpolateF(a, b, b_ratio));
+	return base::SafeRound(interpolateF(a, b, b_ratio));
 }
 
 #ifdef ARCH_CPU_32_BITS

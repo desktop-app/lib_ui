@@ -260,8 +260,9 @@ void VerticalLayoutReorder::updateShift(
 		? indexHint
 		: indexOf(widget);
 	auto &entry = _entries[index];
-	entry.shift = std::round(entry.shiftAnimation.value(entry.finalShift))
-		+ entry.deltaShift;
+	entry.shift = base::SafeRound(
+		entry.shiftAnimation.value(entry.finalShift)
+	) + entry.deltaShift;
 	if (entry.deltaShift && !entry.shiftAnimation.animating()) {
 		entry.finalShift += entry.deltaShift;
 		entry.deltaShift = 0;

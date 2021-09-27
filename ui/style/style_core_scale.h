@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "base/algorithm.h"
+
 #include <QtCore/QSize>
 
 #include <algorithm>
@@ -34,7 +36,7 @@ template <typename T>
 [[nodiscard]] inline T ConvertScale(T value, int scale) {
 	return (value < 0.)
 		? (-ConvertScale(-value, scale))
-		: T(std::round((double(value) * scale / 100.) - 0.01));
+		: T(base::SafeRound((double(value) * scale / 100.) - 0.01));
 }
 
 template <typename T>

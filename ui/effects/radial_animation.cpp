@@ -224,8 +224,8 @@ RadialState InfiniteRadialAnimation::computeState() {
 	if (anim::Disabled()) {
 		return { 1., 0, kFullArcLength };
 	}
-	const auto min = int(std::round(kFullArcLength * _st.arcMin));
-	const auto max = int(std::round(kFullArcLength * _st.arcMax));
+	const auto min = int(base::SafeRound(kFullArcLength * _st.arcMin));
+	const auto max = int(base::SafeRound(kFullArcLength * _st.arcMax));
 	if (now <= _workStarted) {
 		// zero .. _workStarted
 		const auto zero = _workStarted - _st.sineDuration;
@@ -314,8 +314,8 @@ RadialState InfiniteRadialAnimation::computeState() {
 	//	st.arcMax - st.arcMin,
 	//	std::min(backCurrent, crl::time(st.sineDuration))
 	//	/ float64(st.sineDuration));
-	//const auto front = linear + std::round((st.arcMin + frontProgress + frontPeriods * (st.arcMax - st.arcMin)) * kFullArcLength);
-	//const auto from = linear + std::round((backProgress + backPeriods * (st.arcMax - st.arcMin)) * kFullArcLength);
+	//const auto front = linear + base::SafeRound((st.arcMin + frontProgress + frontPeriods * (st.arcMax - st.arcMin)) * kFullArcLength);
+	//const auto from = linear + base::SafeRound((backProgress + backPeriods * (st.arcMax - st.arcMin)) * kFullArcLength);
 	//const auto length = (front - from);
 
 	//return {
