@@ -8,6 +8,7 @@
 
 #include "ui/rp_widget.h"
 #include "ui/platform/win/ui_window_win.h"
+#include "base/platform/base_platform_info.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QPainter>
@@ -42,7 +43,8 @@ base::flat_map<HWND, not_null<WindowShadow*>> ShadowByHandle;
 
 WindowShadow::WindowShadow(not_null<RpWidget*> window, QColor color)
 : _window(window)
-, _handle(GetWindowHandle(window)) {
+, _handle(GetWindowHandle(window))
+, _windows11(::Platform::IsWindows11OrGreater()) {
 	init(color);
 }
 
@@ -315,7 +317,7 @@ void WindowShadow::horCorners(int w, Gdiplus::Graphics *pgraphics0, Gdiplus::Gra
 }
 
 Gdiplus::Color WindowShadow::getColor(uchar alpha) const {
-	return Gdiplus::Color(BYTE(alpha), _r, _g, _b);
+	return Gdiplus::Color(BYTE(_windows11 ? 1 : alpha), _r, _g, _b);
 }
 
 Gdiplus::SolidBrush WindowShadow::getBrush(uchar alpha) const {

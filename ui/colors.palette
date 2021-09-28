@@ -89,7 +89,7 @@ tooltipBg: #eef2f5; // tooltip background (like when you put mouse over the mess
 tooltipFg: #5d6c80; // tooltip text
 tooltipBorderFg: #c9d1db; // tooltip border
 
-// custom title bar for Windows and macOS
+// custom title bar
 titleShadow: #00000003; // one pixel line shadow at the bottom of custom window title
 titleBg: windowBgOver; // custom window title background when window is inactive
 titleBgActive: titleBg; // custom window title background when window is active
@@ -109,8 +109,8 @@ titleButtonCloseBgActive: titleButtonCloseBg; // custom window title close butto
 titleButtonCloseFgActive: titleButtonCloseFg; // custom window title close button icon when window is active (Windows only)
 titleButtonCloseBgActiveOver: titleButtonCloseBgOver; // custom window title close button background with mouse over when window is active (Windows only)
 titleButtonCloseFgActiveOver: titleButtonCloseFgOver; // custom window title close button icon with mouse over when window is active (Windows only)
-titleFg: #acacac; // custom window title text when window is inactive (macOS only)
-titleFgActive: #3e3c3e; // custom window title text when window is active (macOS only)
+titleFg: #acacac; // custom window title text when window is inactive (Windows 11 and macOS)
+titleFgActive: #3e3c3e; // custom window title text when window is active (Windows 11 and macOS)
 
 // tray icon
 trayCounterBg: #f23c34; // tray icon counter background

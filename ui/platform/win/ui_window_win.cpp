@@ -13,6 +13,7 @@
 #include "base/integration.h"
 #include "base/debug_log.h"
 #include "styles/palette.h"
+#include "styles/style_widgets.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
 #include <QtGui/QWindow>
@@ -29,7 +30,13 @@ namespace Ui {
 namespace Platform {
 namespace {
 
-bool IsCompositionEnabled() {
+constexpr auto kDWMWCP_ROUND = DWORD(2);
+constexpr auto kDWMWA_WINDOW_CORNER_PREFERENCE = DWORD(33);
+constexpr auto kDWMWA_BORDER_COLOR = DWORD(34);
+constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
+constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
+
+[[nodiscard]] bool IsCompositionEnabled() {
 	auto result = BOOL(FALSE);
 	const auto success = (DwmIsCompositionEnabled(&result) == S_OK);
 	return success && result;
@@ -83,23 +90,6 @@ bool IsTaskbarAutoHidden(LPRECT rcMon = nullptr, PUINT pEdge = nullptr) {
 	}
 
 	return bAutoHidden;
-}
-
-HRESULT WinApiSetWindowTheme(
-		HWND hWnd,
-		LPCWSTR pszSubAppName,
-		LPCWSTR pszSubIdList) {
-	static const auto method = [&] {
-		using f_SetWindowTheme = HRESULT(FAR STDAPICALLTYPE*)(
-			HWND hWnd,
-			LPCWSTR pszSubAppName,
-			LPCWSTR pszSubIdList);
-		auto result = f_SetWindowTheme();
-		const auto loaded = base::Platform::SafeLoadLibrary(L"uxtheme.dll");
-		base::Platform::LoadMethod(loaded, "SetWindowTheme", result);
-		return result;
-	}();
-	return method ? method(hWnd, pszSubAppName, pszSubIdList) : HRESULT();
 }
 
 void FixAeroSnap(HWND handle) {
@@ -198,6 +188,7 @@ void WindowHelper::setTitle(const QString &title) {
 
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 	_title->setStyle(st);
+	updateWindowFrameColors();
 }
 
 void WindowHelper::setNativeFrame(bool enabled) {
@@ -216,6 +207,7 @@ void WindowHelper::setNativeFrame(bool enabled) {
 		initialShadowUpdate();
 	}
 	updateMargins();
+	updateWindowFrameColors();
 	fixMaximizedWindow();
 }
 
@@ -226,6 +218,15 @@ void WindowHelper::initialShadowUpdate() {
 		_shadow->update(Change::Hidden);
 	} else {
 		_shadow->update(Change::Moved | Change::Resized | Change::Shown);
+	}
+
+	if (::Platform::IsWindows11OrGreater()) {
+		auto preference = kDWMWCP_ROUND;
+		DwmSetWindowAttribute(
+			_handle,
+			kDWMWA_WINDOW_CORNER_PREFERENCE,
+			&preference,
+			sizeof(preference));
 	}
 }
 
@@ -270,6 +271,7 @@ void WindowHelper::init() {
 		if (_shadow) {
 			_shadow->setColor(st::windowShadowFg->c);
 		}
+		updateWindowFrameColors();
 		Ui::ForceFullRepaint(window());
 	}, window()->lifetime());
 
@@ -291,9 +293,10 @@ void WindowHelper::init() {
 	updateMargins();
 
 	if (!::Platform::IsWindows8OrGreater()) {
-		WinApiSetWindowTheme(_handle, L" ", L" ");
+		SetWindowTheme(_handle, L" ", L" ");
 		QApplication::setStyle(QStyleFactory::create("Windows"));
 	}
+	updateWindowFrameColors();
 
 	_menu = GetSystemMenu(_handle, FALSE);
 	updateSystemMenu();
@@ -326,13 +329,15 @@ bool WindowHelper::handleNativeEvent(
 		if (LOWORD(wParam) == WA_CLICKACTIVE) {
 			Ui::MarkInactivePress(window(), true);
 		}
+		const auto active = (LOWORD(wParam) != WA_INACTIVE);
 		if (_shadow) {
-			if (LOWORD(wParam) != WA_INACTIVE) {
+			if (active) {
 				_shadow->update(WindowShadow::Change::Activate);
 			} else {
 				_shadow->update(WindowShadow::Change::Deactivate);
 			}
 		}
+		updateWindowFrameColors(active);
 		window()->update();
 	} return false;
 
@@ -551,6 +556,39 @@ bool WindowHelper::fixedSize() const {
 
 int WindowHelper::titleHeight() const {
 	return _title->isHidden() ? 0 : _title->height();
+}
+
+void WindowHelper::updateWindowFrameColors() {
+	updateWindowFrameColors(window()->isActiveWindow());
+}
+
+void WindowHelper::updateWindowFrameColors(bool active) {
+	if (!::Platform::IsWindows11OrGreater()) {
+		return;
+	}
+	const auto bg = active
+		? _title->st()->bgActive->c
+		: _title->st()->bg->c;
+	COLORREF bgRef = RGB(bg.red(), bg.green(), bg.blue());
+	DwmSetWindowAttribute(
+		_handle,
+		kDWMWA_BORDER_COLOR,
+		&bgRef,
+		sizeof(COLORREF));
+	DwmSetWindowAttribute(
+		_handle,
+		kDWMWA_CAPTION_COLOR,
+		&bgRef,
+		sizeof(COLORREF));
+	const auto fg = active
+		? _title->st()->fgActive->c
+		: _title->st()->fg->c;
+	COLORREF fgRef = RGB(fg.red(), fg.green(), fg.blue());
+	DwmSetWindowAttribute(
+		_handle,
+		kDWMWA_TEXT_COLOR,
+		&fgRef,
+		sizeof(COLORREF));
 }
 
 void WindowHelper::updateMargins() {

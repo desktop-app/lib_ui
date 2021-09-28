@@ -38,6 +38,8 @@ private:
 
 	void init();
 	void updateMargins();
+	void updateWindowFrameColors();
+	void updateWindowFrameColors(bool active);
 	void updateSystemMenu();
 	void updateSystemMenu(Qt::WindowState state);
 	void initialShadowUpdate();

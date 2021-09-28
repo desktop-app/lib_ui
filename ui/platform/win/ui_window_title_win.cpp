@@ -41,6 +41,10 @@ void TitleWidget::setStyle(const style::WindowTitle &st) {
 	update();
 }
 
+not_null<const style::WindowTitle*> TitleWidget::st() const {
+	return _controls.st();
+}
+
 void TitleWidget::setResizeEnabled(bool enabled) {
 	_controls.setResizeEnabled(enabled);
 }

@@ -45,6 +45,7 @@ public:
 
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
+	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
 	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
 	void setResizeEnabled(bool enabled);
 
