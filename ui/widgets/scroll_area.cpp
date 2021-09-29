@@ -282,8 +282,16 @@ ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handle
 	setLayoutDirection(style::LayoutDirection());
 	setFocusPolicy(Qt::NoFocus);
 
-	connect(_verticalBar, SIGNAL(topShadowVisibility(bool)), _topShadow, SLOT(changeVisibility(bool)));
-	connect(_verticalBar, SIGNAL(bottomShadowVisibility(bool)), _bottomShadow, SLOT(changeVisibility(bool)));
+	connect(
+		_verticalBar,
+		&ScrollBar::topShadowVisibility,
+		_topShadow,
+		&ScrollShadow::changeVisibility);
+	connect(
+		_verticalBar,
+		&ScrollBar::bottomShadowVisibility,
+		_bottomShadow,
+		&ScrollShadow::changeVisibility);
 	_verticalBar->updateBar(true);
 
 	verticalScrollBar()->setSingleStep(style::ConvertScale(verticalScrollBar()->singleStep()));

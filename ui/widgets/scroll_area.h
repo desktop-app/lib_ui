@@ -48,15 +48,11 @@ struct ScrollToRequest {
 
 };
 
-class ScrollShadow : public QWidget {
-	Q_OBJECT
-
+class ScrollShadow final : public QWidget {
 public:
 	ScrollShadow(ScrollArea *parent, const style::ScrollArea *st);
 
 	void paintEvent(QPaintEvent *e);
-
-public Q_SLOTS:
 	void changeVisibility(bool shown);
 
 private:
