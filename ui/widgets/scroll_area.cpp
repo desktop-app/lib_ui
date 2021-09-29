@@ -43,11 +43,11 @@ ScrollBar::ScrollBar(ScrollArea *parent, bool vert, const style::ScrollArea *st)
 	recountSize();
 
 	connect(_connected, &QAbstractSlider::valueChanged, [=] {
-		area()->onScrolled();
+		area()->scrolled();
 		updateBar();
 	});
 	connect(_connected, &QAbstractSlider::rangeChanged, [=] {
-		area()->onInnerResized();
+		area()->innerResized();
 		updateBar();
 	});
 
@@ -266,7 +266,6 @@ void ScrollBar::mousePressEvent(QMouseEvent *e) {
 	}
 
 	area()->setMovingByScrollBar(true);
-	area()->scrollStarted();
 }
 
 void ScrollBar::mouseReleaseEvent(QMouseEvent *e) {
@@ -274,7 +273,6 @@ void ScrollBar::mouseReleaseEvent(QMouseEvent *e) {
 		setMoving(false);
 
 		area()->setMovingByScrollBar(false);
-		area()->scrollFinished();
 	}
 	if (!_over) {
 		setMouseTracking(false);
@@ -306,7 +304,7 @@ ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handle
 		((data.type == ScrollShadow::Type::Top)
 			? _topShadow
 			: _bottomShadow)->changeVisibility(data.visible);
-	}, _lifetime);
+	}, lifetime());
 
 	_verticalBar->updateBar(true);
 
@@ -324,9 +322,8 @@ ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handle
 
 	if (_touchEnabled) {
 		viewport()->setAttribute(Qt::WA_AcceptTouchEvents);
-		_touchTimer.setSingleShot(true);
-		connect(&_touchTimer, SIGNAL(timeout()), this, SLOT(onTouchTimer()));
-		connect(&_touchScrollTimer, SIGNAL(timeout()), this, SLOT(onTouchScrollTimer()));
+		_touchTimer.setCallback([=] { _touchRightButton = true; });
+		_touchScrollTimer.setCallback([=] { touchScrollTimer(); });
 	}
 }
 
@@ -337,7 +334,7 @@ void ScrollArea::touchDeaccelerate(int32 elapsed) {
 	_touchSpeed.setY((y == 0) ? y : (y > 0) ? qMax(0, y - elapsed) : qMin(0, y + elapsed));
 }
 
-void ScrollArea::onScrolled() {
+void ScrollArea::scrolled() {
 	if (const auto inner = widget()) {
 		SendPendingMoveResizeEvents(inner);
 	}
@@ -369,15 +366,15 @@ void ScrollArea::onScrolled() {
 		}
 	}
 	if (em) {
-		scrolled();
+		_scrolls.fire({});
 		if (!_movingByScrollBar) {
 			SendSynteticMouseEvent(this, QEvent::MouseMove, Qt::NoButton);
 		}
 	}
 }
 
-void ScrollArea::onInnerResized() {
-	innerResized();
+void ScrollArea::innerResized() {
+	_innerResizes.fire({});
 }
 
 int ScrollArea::scrollWidth() const {
@@ -406,11 +403,7 @@ int ScrollArea::scrollTop() const {
 	return _verticalValue;
 }
 
-void ScrollArea::onTouchTimer() {
-	_touchRightButton = true;
-}
-
-void ScrollArea::onTouchScrollTimer() {
+void ScrollArea::touchScrollTimer() {
 	auto nowTime = crl::now();
 	if (_touchScrollState == TouchScrollState::Acceleration && _touchWaitingAcceleration && (nowTime - _touchAccelerationTime) > 40) {
 		_touchScrollState = TouchScrollState::Manual;
@@ -423,7 +416,7 @@ void ScrollArea::onTouchScrollTimer() {
 		if (_touchSpeed.isNull() || !hasScrolled) {
 			_touchScrollState = TouchScrollState::Manual;
 			_touchScroll = false;
-			_touchScrollTimer.stop();
+			_touchScrollTimer.cancel();
 		} else {
 			_touchTime = nowTime;
 		}
@@ -518,7 +511,7 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 			_touchStart = _touchPos;
 		} else {
 			_touchScroll = false;
-			_touchTimer.start(QApplication::startDragTime());
+			_touchTimer.callOnce(QApplication::startDragTime());
 		}
 		_touchStart = _touchPrevPos = _touchPos;
 		_touchRightButton = false;
@@ -527,7 +520,7 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 	case QEvent::TouchUpdate: {
 		if (!_touchPress) return;
 		if (!_touchScroll && (_touchPos - _touchStart).manhattanLength() >= QApplication::startDragDistance()) {
-			_touchTimer.stop();
+			_touchTimer.cancel();
 			_touchScroll = true;
 			touchUpdateSpeed();
 		}
@@ -552,7 +545,7 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 			if (_touchScrollState == TouchScrollState::Manual) {
 				_touchScrollState = TouchScrollState::Auto;
 				_touchPrevPosValid = false;
-				_touchScrollTimer.start(15);
+				_touchScrollTimer.callEach(15);
 				_touchTime = crl::now();
 			} else if (_touchScrollState == TouchScrollState::Auto) {
 				_touchScrollState = TouchScrollState::Manual;
@@ -579,7 +572,7 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 			}
 		}
 		if (weak) {
-			_touchTimer.stop();
+			_touchTimer.cancel();
 			_touchRightButton = false;
 		}
 	} break;
@@ -588,7 +581,7 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 		_touchPress = false;
 		_touchScroll = false;
 		_touchScrollState = TouchScrollState::Manual;
-		_touchTimer.stop();
+		_touchTimer.cancel();
 	} break;
 	}
 }
@@ -628,12 +621,12 @@ void ScrollArea::resizeEvent(QResizeEvent *e) {
 	_verticalBar->recountSize();
 	_topShadow->setGeometry(QRect(0, 0, width(), qAbs(_st.topsh)));
 	_bottomShadow->setGeometry(QRect(0, height() - qAbs(_st.bottomsh), width(), qAbs(_st.bottomsh)));
-	geometryChanged();
+	_geometryChanged.fire({});
 }
 
 void ScrollArea::moveEvent(QMoveEvent *e) {
 	QScrollArea::moveEvent(e);
-	geometryChanged();
+	_geometryChanged.fire({});
 }
 
 void ScrollArea::keyPressEvent(QKeyEvent *e) {
@@ -746,6 +739,18 @@ bool ScrollArea::focusNextPrevChild(bool next) {
 
 void ScrollArea::setMovingByScrollBar(bool movingByScrollBar) {
 	_movingByScrollBar = movingByScrollBar;
+}
+
+rpl::producer<> ScrollArea::scrolls() const {
+	return _scrolls.events();
+}
+
+rpl::producer<> ScrollArea::innerResizes() const {
+	return _innerResizes.events();
+}
+
+rpl::producer<> ScrollArea::geometryChanged() const {
+	return _geometryChanged.events();
 }
 
 } // namespace Ui

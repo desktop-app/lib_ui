@@ -17,6 +17,8 @@
 #include "styles/style_layers.h"
 #include "styles/palette.h"
 
+#include <QtCore/QTimer>
+
 namespace Ui {
 
 void BoxContent::setTitle(rpl::producer<QString> title) {
@@ -85,8 +87,14 @@ void BoxContent::finishScrollCreate() {
 		_scroll->show();
 	}
 	updateScrollAreaGeometry();
-	connect(_scroll, SIGNAL(scrolled()), this, SLOT(onScroll()));
-	connect(_scroll, SIGNAL(innerResized()), this, SLOT(onInnerResize()));
+	_scroll->scrolls(
+	) | rpl::start_with_next([=] {
+		onScroll();
+	}, lifetime());
+	_scroll->innerResizes(
+	) | rpl::start_with_next([=] {
+		onInnerResize();
+	}, lifetime());
 }
 
 void BoxContent::scrollToWidget(not_null<QWidget*> widget) {

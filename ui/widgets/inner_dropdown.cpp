@@ -22,7 +22,10 @@ InnerDropdown::InnerDropdown(
 , _roundRect(ImageRoundRadius::Small, _st.bg)
 , _hideTimer([=] { hideAnimated(); })
 , _scroll(this, _st.scroll) {
-	connect(_scroll, &ScrollArea::scrolled, [=] { scrolled(); });
+	_scroll->scrolls(
+	) | rpl::start_with_next([=] {
+		scrolled();
+	}, lifetime());
 
 	hide();
 
