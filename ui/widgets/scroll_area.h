@@ -9,6 +9,7 @@
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "base/object_ptr.h"
+#include "base/timer.h"
 #include "styles/style_widgets.h"
 
 #include <QtWidgets/QScrollArea>
@@ -50,6 +51,10 @@ struct ScrollToRequest {
 
 class ScrollShadow final : public QWidget {
 public:
+	enum class Type {
+		Top,
+		Bottom,
+	};
 	ScrollShadow(ScrollArea *parent, const style::ScrollArea *st);
 
 	void paintEvent(QPaintEvent *e);
@@ -61,9 +66,11 @@ private:
 };
 
 class ScrollBar : public TWidget {
-	Q_OBJECT
-
 public:
+	struct ShadowVisibility {
+		ScrollShadow::Type type;
+		bool visible = false;
+	};
 	ScrollBar(ScrollArea *parent, bool vertical, const style::ScrollArea *st);
 
 	void recountSize();
@@ -71,14 +78,8 @@ public:
 
 	void hideTimeout(crl::time dt);
 
-private Q_SLOTS:
-	void onValueChanged();
-	void onRangeChanged();
-	void onHideTimer();
-
-Q_SIGNALS:
-	void topShadowVisibility(bool);
-	void bottomShadowVisibility(bool);
+	[[nodiscard]] auto shadowVisibilityChanged() const
+		-> rpl::producer<ShadowVisibility>;
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -96,6 +97,8 @@ private:
 	void setOverBar(bool overbar);
 	void setMoving(bool moving);
 
+	void hideTimer();
+
 	const style::ScrollArea *_st;
 
 	bool _vertical = true;
@@ -112,13 +115,15 @@ private:
 	int32 _startFrom, _scrollMax;
 
 	crl::time _hideIn = 0;
-	QTimer _hideTimer;
+	base::Timer _hideTimer;
 
 	Animations::Simple _a_over;
 	Animations::Simple _a_barOver;
 	Animations::Simple _a_opacity;
 
 	QRect _bar;
+
+	rpl::event_stream<ShadowVisibility> _shadowVisibilityChanged;
 };
 
 class ScrollArea : public RpWidgetBase<QScrollArea> {
@@ -239,6 +244,7 @@ private:
 	object_ptr<QWidget> _widget = { nullptr };
 
 	rpl::event_stream<int> _scrollTopUpdated;
+	rpl::lifetime _lifetime;
 
 };
 

@@ -38,30 +38,24 @@ ScrollBar::ScrollBar(ScrollArea *parent, bool vert, const style::ScrollArea *st)
 , _vertical(vert)
 , _hiding(_st->hiding != 0)
 , _connected(vert ? parent->verticalScrollBar() : parent->horizontalScrollBar())
-, _scrollMax(_connected->maximum()) {
+, _scrollMax(_connected->maximum())
+, _hideTimer([=] { hideTimer(); }) {
 	recountSize();
 
-	_hideTimer.setSingleShot(true);
-	connect(&_hideTimer, SIGNAL(timeout()), this, SLOT(onHideTimer()));
-
-	connect(_connected, SIGNAL(valueChanged(int)), this, SLOT(onValueChanged()));
-	connect(_connected, SIGNAL(rangeChanged(int, int)), this, SLOT(onRangeChanged()));
+	connect(_connected, &QAbstractSlider::valueChanged, [=] {
+		area()->onScrolled();
+		updateBar();
+	});
+	connect(_connected, &QAbstractSlider::rangeChanged, [=] {
+		area()->onInnerResized();
+		updateBar();
+	});
 
 	updateBar();
 }
 
 void ScrollBar::recountSize() {
 	setGeometry(_vertical ? QRect(style::RightToLeft() ? 0 : (area()->width() - _st->width), _st->deltat, _st->width, area()->height() - _st->deltat - _st->deltab) : QRect(_st->deltat, area()->height() - _st->width, area()->width() - _st->deltat - _st->deltab, _st->width));
-}
-
-void ScrollBar::onValueChanged() {
-	area()->onScrolled();
-	updateBar();
-}
-
-void ScrollBar::onRangeChanged() {
-	area()->onInnerResized();
-	updateBar();
 }
 
 void ScrollBar::updateBar(bool force) {
@@ -76,8 +70,18 @@ void ScrollBar::updateBar(bool force) {
 		if (h >= rh || !area()->scrollTopMax() || rh < _st->minHeight) {
 			if (!isHidden()) hide();
 			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
-			if (newTopSh != _topSh || force) topShadowVisibility(_topSh = newTopSh);
-			if (newBottomSh != _bottomSh || force) bottomShadowVisibility(_bottomSh = newBottomSh);
+			if (newTopSh != _topSh || force) {
+				_shadowVisibilityChanged.fire({
+					.type = ScrollShadow::Type::Top,
+					.visible = (_topSh = newTopSh),
+				});
+			}
+			if (newBottomSh != _bottomSh || force) {
+				_shadowVisibilityChanged.fire({
+					.type = ScrollShadow::Type::Bottom,
+					.visible = (_bottomSh = newBottomSh),
+				});
+			}
 			return;
 		}
 
@@ -105,13 +109,23 @@ void ScrollBar::updateBar(bool force) {
 	}
 	if (_vertical) {
 		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
-		if (newTopSh != _topSh || force) topShadowVisibility(_topSh = newTopSh);
-		if (newBottomSh != _bottomSh || force) bottomShadowVisibility(_bottomSh = newBottomSh);
+		if (newTopSh != _topSh || force) {
+			_shadowVisibilityChanged.fire({
+				.type = ScrollShadow::Type::Top,
+				.visible = (_topSh = newTopSh),
+			});
+		}
+		if (newBottomSh != _bottomSh || force) {
+			_shadowVisibilityChanged.fire({
+				.type = ScrollShadow::Type::Bottom,
+				.visible = (_bottomSh = newBottomSh),
+			});
+		}
 	}
 	if (isHidden()) show();
 }
 
-void ScrollBar::onHideTimer() {
+void ScrollBar::hideTimer() {
 	if (!_hiding) {
 		_hiding = true;
 		_a_opacity.start([this] { update(); }, 1., 0., _st->duration);
@@ -162,7 +176,7 @@ void ScrollBar::setMoving(bool moving) {
 			_a_over.start([this] { update(); }, nowOver ? 0. : 1., nowOver ? 1. : 0., _st->duration);
 		}
 		if (!nowOver && _st->hiding && !_hiding) {
-			_hideTimer.start(_hideIn);
+			_hideTimer.callOnce(_hideIn);
 		}
 	}
 }
@@ -202,12 +216,12 @@ void ScrollBar::hideTimeout(crl::time dt) {
 	}
 	_hideIn = dt;
 	if (!_moving) {
-		_hideTimer.start(_hideIn);
+		_hideTimer.callOnce(_hideIn);
 	}
 }
 
 void ScrollBar::enterEventHook(QEvent *e) {
-	_hideTimer.stop();
+	_hideTimer.cancel();
 	setMouseTracking(true);
 	setOver(true);
 }
@@ -219,7 +233,7 @@ void ScrollBar::leaveEventHook(QEvent *e) {
 	setOver(false);
 	setOverBar(false);
 	if (_st->hiding && !_hiding) {
-		_hideTimer.start(_hideIn);
+		_hideTimer.callOnce(_hideIn);
 	}
 }
 
@@ -271,6 +285,11 @@ void ScrollBar::resizeEvent(QResizeEvent *e) {
 	updateBar();
 }
 
+auto ScrollBar::shadowVisibilityChanged() const
+-> rpl::producer<ScrollBar::ShadowVisibility> {
+	return _shadowVisibilityChanged.events();
+}
+
 ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handleTouch)
 : Parent(parent)
 , _st(st)
@@ -282,16 +301,13 @@ ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handle
 	setLayoutDirection(style::LayoutDirection());
 	setFocusPolicy(Qt::NoFocus);
 
-	connect(
-		_verticalBar,
-		&ScrollBar::topShadowVisibility,
-		_topShadow,
-		&ScrollShadow::changeVisibility);
-	connect(
-		_verticalBar,
-		&ScrollBar::bottomShadowVisibility,
-		_bottomShadow,
-		&ScrollShadow::changeVisibility);
+	_verticalBar->shadowVisibilityChanged(
+	) | rpl::start_with_next([=](const ScrollBar::ShadowVisibility &data) {
+		((data.type == ScrollShadow::Type::Top)
+			? _topShadow
+			: _bottomShadow)->changeVisibility(data.visible);
+	}, _lifetime);
+
 	_verticalBar->updateBar(true);
 
 	verticalScrollBar()->setSingleStep(style::ConvertScale(verticalScrollBar()->singleStep()));
