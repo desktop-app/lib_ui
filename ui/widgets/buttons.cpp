@@ -301,6 +301,11 @@ void RoundButton::setBrushOverride(std::optional<QBrush> brush) {
 	update();
 }
 
+void RoundButton::setPenOverride(std::optional<QPen> pen) {
+	_penOverride = std::move(pen);
+	update();
+}
+
 void RoundButton::finishNumbersAnimation() {
 	if (_numbers) {
 		_numbers->finishAnimating();
@@ -371,11 +376,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		if (_fullRadius) {
 			const auto radius = rounded.height() / 2;
 			PainterHighQualityEnabler hq(p);
-			p.setPen(Qt::NoPen);
+			p.setPen(_penOverride ? *_penOverride : Qt::NoPen);
 			p.setBrush(_brushOverride ? *_brushOverride : rect.color()->b);
 			p.drawRoundedRect(fill, radius, radius);
 		} else if (_brushOverride) {
-			p.setPen(Qt::NoPen);
+			PainterHighQualityEnabler hq(p);
+			p.setPen(_penOverride ? *_penOverride : Qt::NoPen);
 			p.setBrush(*_brushOverride);
 			const auto radius = _st.radius ? _st.radius : st::buttonRadius;
 			p.drawRoundedRect(fill, radius, radius);
@@ -383,6 +389,9 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 			rect.paint(p, fill);
 		}
 	};
+	if (_penOverride) {
+		paintRipple(p, rounded.topLeft());
+	}
 	drawRect(_roundRect);
 
 	auto over = isOver();
@@ -391,7 +400,9 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		drawRect(_roundRectOver);
 	}
 
-	paintRipple(p, rounded.topLeft());
+	if (!_penOverride) {
+		paintRipple(p, rounded.topLeft());
+	}
 
 	p.setFont(_st.font);
 	const auto textTop = _st.padding.top() + _st.textTop;

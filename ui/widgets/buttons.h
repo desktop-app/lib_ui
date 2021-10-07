@@ -131,6 +131,7 @@ public:
 	}
 	void setWidthChangedCallback(Fn<void()> callback);
 	void setBrushOverride(std::optional<QBrush> brush);
+	void setPenOverride(std::optional<QPen> pen);
 	void finishNumbersAnimation();
 
 	int contentWidth() const;
@@ -167,6 +168,7 @@ private:
 
 	const style::RoundButton &_st;
 	std::optional<QBrush> _brushOverride;
+	std::optional<QPen> _penOverride;
 	RoundRect _roundRect;
 	RoundRect _roundRectOver;
 
