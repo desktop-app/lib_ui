@@ -32,7 +32,7 @@ void AbstractButton::leaveEventHook(QEvent *e) {
 	return TWidget::leaveEventHook(e);
 }
 
-void AbstractButton::enterEventHook(QEvent *e) {
+void AbstractButton::enterEventHook(QEnterEvent *e) {
 	checkIfOver(mapFromGlobal(QCursor::pos()));
 	return TWidget::enterEventHook(e);
 }

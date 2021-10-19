@@ -220,7 +220,7 @@ void ScrollBar::hideTimeout(crl::time dt) {
 	}
 }
 
-void ScrollBar::enterEventHook(QEvent *e) {
+void ScrollBar::enterEventHook(QEnterEvent *e) {
 	_hideTimer.cancel();
 	setMouseTracking(true);
 	setOver(true);
@@ -639,7 +639,7 @@ void ScrollArea::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
-void ScrollArea::enterEventHook(QEvent *e) {
+void ScrollArea::enterEventHook(QEnterEvent *e) {
 	if (_disabled) return;
 	if (_st.hiding) {
 		_horizontalBar->hideTimeout(_st.hiding);
