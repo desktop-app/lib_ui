@@ -8,6 +8,7 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
+#include "base/qt_adapters.h"
 
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QApplication>
@@ -472,7 +473,7 @@ bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
 	bool res = QScrollArea::eventFilter(obj, e);
 	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
 		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (_touchEnabled && ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (_touchEnabled && ev->device()->type() == base::TouchDevice::TouchScreen) {
 			if (obj == widget()) {
 				touchEvent(ev);
 				return true;
@@ -485,7 +486,7 @@ bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
 bool ScrollArea::viewportEvent(QEvent *e) {
 	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
 		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (_touchEnabled && ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (_touchEnabled && ev->device()->type() == base::TouchDevice::TouchScreen) {
 			touchEvent(ev);
 			return true;
 		}

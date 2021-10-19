@@ -15,6 +15,7 @@
 #include "base/platform/base_platform_info.h"
 #include "emoji_suggestions_helper.h"
 #include "styles/palette.h"
+#include "base/qt_adapters.h"
 
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
@@ -1011,7 +1012,7 @@ bool FlatInput::eventHook(QEvent *e) {
 		|| e->type() == QEvent::TouchEnd
 		|| e->type() == QEvent::TouchCancel) {
 		const auto ev = static_cast<QTouchEvent*>(e);
-		if (ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
 			touchEvent(ev);
 		}
 	}
@@ -1382,7 +1383,7 @@ bool InputField::viewportEventInner(QEvent *e) {
 		|| e->type() == QEvent::TouchEnd
 		|| e->type() == QEvent::TouchCancel) {
 		const auto ev = static_cast<QTouchEvent*>(e);
-		if (ev->device()->type() == QTouchDevice::TouchScreen) {
+		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
 			handleTouchEvent(ev);
 		}
 	}
@@ -1590,7 +1591,7 @@ void InputField::insertTag(const QString &text, QString tagId) {
 		cursor.insertText(text + ' ', _defaultCharFormat);
 	} else {
 		_insertedTags.clear();
-		_insertedTags.push_back({ 0, text.size(), tagId });
+		_insertedTags.push_back({ 0, int(text.size()), tagId });
 		_insertedTagsAreFromMime = false;
 		cursor.insertText(text + ' ');
 		_insertedTags.clear();
@@ -3819,7 +3820,7 @@ bool MaskedInputField::eventHook(QEvent *e) {
 		|| type == QEvent::TouchEnd
 		|| type == QEvent::TouchCancel) {
 		auto event = static_cast<QTouchEvent*>(e);
-		if (event->device()->type() == QTouchDevice::TouchScreen) {
+		if (event->device()->type() == base::TouchDevice::TouchScreen) {
 			touchEvent(event);
 		}
 	}

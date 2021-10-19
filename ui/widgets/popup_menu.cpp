@@ -16,7 +16,6 @@
 #include "ui/delayed_activation.h"
 #include "ui/painter.h"
 #include "base/platform/base_platform_info.h"
-#include "base/qt_adapters.h"
 
 #include <QtGui/QtEvents>
 #include <QtGui/QPainter>
@@ -731,7 +730,7 @@ void PopupMenu::popup(const QPoint &p) {
 }
 
 void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source) {
-	const auto screen = base::QScreenNearestTo(p);
+	const auto screen = QGuiApplication::screenAt(p);
 	if (!screen
 		|| (!parent && ::Platform::IsMac() && !Platform::IsApplicationActive())) {
 		_hiding = false;
