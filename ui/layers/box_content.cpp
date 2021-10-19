@@ -12,6 +12,7 @@
 #include "ui/widgets/shadow.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/text/text_utilities.h"
+#include "ui/rect_part.h"
 #include "ui/painter.h"
 #include "base/timer.h"
 #include "styles/style_layers.h"
@@ -101,6 +102,10 @@ void BoxContent::scrollToWidget(not_null<QWidget*> widget) {
 	if (_scroll) {
 		_scroll->scrollToWidget(widget);
 	}
+}
+
+RectParts BoxContent::customCornersFilling() {
+	return {};
 }
 
 void BoxContent::onScrollToY(int top, int bottom) {

@@ -115,16 +115,21 @@ QRect BoxLayerWidget::loadingRect() const {
 
 void BoxLayerWidget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
-	auto clip = e->rect();
-	auto paintTopRounded = clip.intersects(QRect(0, 0, width(), st::boxRadius));
-	auto paintBottomRounded = clip.intersects(QRect(0, height() - st::boxRadius, width(), st::boxRadius));
+
+	const auto custom = _content->customCornersFilling();
+	const auto clip = e->rect();
+	const auto paintTopRounded = !(custom & RectPart::FullTop)
+		&& clip.intersects(QRect(0, 0, width(), st::boxRadius));
+	const auto paintBottomRounded = !(custom & RectPart::FullBottom)
+		&& clip.intersects(
+			QRect(0, height() - st::boxRadius, width(), st::boxRadius));
 	if (paintTopRounded || paintBottomRounded) {
-		auto parts = RectPart::None | 0;
-		if (paintTopRounded) parts |= RectPart::FullTop;
-		if (paintBottomRounded) parts |= RectPart::FullBottom;
-		_roundRect.paint(p, rect(), parts);
+		_roundRect.paint(p, rect(), RectPart::None
+			| (paintTopRounded ? RectPart::FullTop : RectPart::None)
+			| (paintBottomRounded ? RectPart::FullBottom : RectPart::None));
 	}
-	auto other = e->region().intersected(QRect(0, st::boxRadius, width(), height() - 2 * st::boxRadius));
+	const auto other = e->region().intersected(
+		QRect(0, st::boxRadius, width(), height() - 2 * st::boxRadius));
 	if (!other.isEmpty()) {
 		for (const auto &rect : other) {
 			p.fillRect(rect, st().bg);

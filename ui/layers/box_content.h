@@ -15,6 +15,9 @@
 #include "ui/text/text_entity.h"
 #include "ui/rp_widget.h"
 
+enum class RectPart;
+using RectParts = base::flags<RectPart>;
+
 namespace style {
 struct RoundButton;
 struct IconButton;
@@ -128,6 +131,7 @@ public:
 
 	virtual void showFinished() {
 	}
+	virtual RectParts customCornersFilling();
 	void clearButtons() {
 		getDelegate()->clearButtons();
 	}
