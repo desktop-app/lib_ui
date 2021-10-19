@@ -22,11 +22,11 @@ QTime ValidateTime(const QString &value) {
 		return QTime();
 	}
 	const auto readInt = [](const QString &value) {
-		auto ref = value.midRef(0);
-		while (!ref.isEmpty() && ref.at(0) == '0') {
-			ref = ref.mid(1);
+		auto view = QStringView(value);
+		while (!view.isEmpty() && view.at(0) == '0') {
+			view = view.mid(1);
 		}
-		return ref.toInt();
+		return view.toInt();
 	};
 	return QTime(readInt(match.captured(1)), readInt(match.captured(2)));
 }
@@ -78,12 +78,12 @@ private:
 
 std::optional<int> Number(not_null<TimePart*> field) {
 	const auto text = field->getLastText();
-	auto ref = text.midRef(0);
-	while (ref.size() > 1 && ref.at(0) == '0') {
-		ref = ref.mid(1);
+	auto view = QStringView(text);
+	while (view.size() > 1 && view.at(0) == '0') {
+		view = view.mid(1);
 	}
-	return QRegularExpression("^\\d+$").match(ref).hasMatch()
-		? std::make_optional(ref.toInt())
+	return QRegularExpression("^\\d+$").match(view).hasMatch()
+		? std::make_optional(view.toInt())
 		: std::nullopt;
 }
 

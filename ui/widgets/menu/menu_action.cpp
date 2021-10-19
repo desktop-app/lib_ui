@@ -26,7 +26,7 @@ namespace {
 			} else {
 				result.entities.append(EntityInText{
 					EntityType::Underline,
-					result.text.size(),
+					int(result.text.size()),
 					1 });
 				result.text.append(ch);
 			}

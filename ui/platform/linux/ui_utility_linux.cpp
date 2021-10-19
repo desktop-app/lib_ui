@@ -434,20 +434,18 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 
 	if (::Platform::IsX11()) {
 		if (const auto native = QGuiApplication::platformNativeInterface()) {
-			if (const auto desktop = QApplication::desktop()) {
-				if (const auto screen = base::QScreenNearestTo(globalPosition)) {
-					if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
-						return true;
-					}
-					const auto index = QGuiApplication::screens().indexOf(screen);
-					static auto WarnedAbout = base::flat_set<int>();
-					if (!WarnedAbout.contains(index)) {
-						WarnedAbout.emplace(index);
-						LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
-					}
-				} else {
-					LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
+			if (const auto screen = base::QScreenNearestTo(globalPosition)) {
+				if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
+					return true;
 				}
+				const auto index = QGuiApplication::screens().indexOf(screen);
+				static auto WarnedAbout = base::flat_set<int>();
+				if (!WarnedAbout.contains(index)) {
+					WarnedAbout.emplace(index);
+					LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
+				}
+			} else {
+				LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
 			}
 		}
 	}

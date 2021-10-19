@@ -6,7 +6,7 @@
 //
 #include "ui/widgets/menu/menu_common.h"
 
-#include <QtWidgets/QAction>
+#include <QAction>
 
 namespace Ui::Menu {
 

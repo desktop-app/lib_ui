@@ -15,7 +15,7 @@
 #include <QtCore/QAbstractNativeEventFilter>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
-#include <QtWidgets/QOpenGLWidget>
+#include <QOpenGLWidget>
 #include <Cocoa/Cocoa.h>
 
 @interface WindowObserver : NSObject {

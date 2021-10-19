@@ -242,7 +242,7 @@ public:
 
 	struct ExtendedContextMenu {
 		QMenu *menu = nullptr;
-		QContextMenuEvent event;
+		std::shared_ptr<QContextMenuEvent> event;
 	};
 
 	void setAdditionalMargin(int margin);
@@ -256,10 +256,7 @@ public:
 		EditLinkSelection selection,
 		const QString &text,
 		const QString &link);
-	static bool IsValidMarkdownLink(const QStringRef &link);
-	static bool IsValidMarkdownLink(const QString &link) {
-		return IsValidMarkdownLink(link.midRef(0));
-	}
+	static bool IsValidMarkdownLink(QStringView link);
 
 	const QString &getLastText() const {
 		return _lastTextWithTags.text;

@@ -99,7 +99,7 @@ bool IsNewline(QChar ch) {
 	return (kNewlineChars.indexOf(ch) >= 0);
 }
 
-[[nodiscard]] bool IsValidMarkdownLink(const QStringRef &link) {
+[[nodiscard]] bool IsValidMarkdownLink(QStringView link) {
 	return (link.indexOf('.') >= 0) || (link.indexOf(':') >= 0);
 }
 
@@ -124,21 +124,21 @@ bool IsNewline(QChar ch) {
 			return QString();
 		}
 		auto found = false;
-		for (const auto &single : existing.id.splitRef('|')) {
-			const auto normalized = (single == kTagPre.midRef(0))
-				? kTagCode.midRef(0)
+		for (const auto &single : QStringView(existing.id).split('|')) {
+			const auto normalized = (single == QStringView(kTagPre).mid(0))
+				? QStringView(kTagCode).mid(0)
 				: single;
 			if (checkingLink && IsValidMarkdownLink(single)) {
 				if (resultLink.isEmpty()) {
 					resultLink = single.toString();
 					found = true;
 					break;
-				} else if (resultLink.midRef(0) == single) {
+				} else if (QStringView(resultLink).mid(0) == single) {
 					found = true;
 					break;
 				}
 				return QString();
-			} else if (!checkingLink && tag.midRef(0) == normalized) {
+			} else if (!checkingLink && QStringView(tag).mid(0) == normalized) {
 				found = true;
 				break;
 			}
@@ -683,7 +683,8 @@ void RemoveDocumentTags(
 		not_null<QTextDocument*> document,
 		int from,
 		int end) {
-	auto cursor = QTextCursor(document->docHandle(), from);
+	auto cursor = QTextCursor(document);
+	cursor.setPosition(from);
 	cursor.setPosition(end, QTextCursor::KeepAnchor);
 
 	auto format = QTextCharFormat();
@@ -700,7 +701,7 @@ QTextCharFormat PrepareTagFormat(
 	auto result = QTextCharFormat();
 	auto font = st.font;
 	auto color = std::optional<style::color>();
-	const auto applyOne = [&](const QStringRef &tag) {
+	const auto applyOne = [&](QStringView tag) {
 		if (IsValidMarkdownLink(tag)) {
 			color = st::defaultTextPalette.linkFg;
 		} else if (tag == kTagBold) {
@@ -716,7 +717,7 @@ QTextCharFormat PrepareTagFormat(
 			font = font->monospace();
 		}
 	};
-	for (const auto &tag : tag.splitRef('|')) {
+	for (const auto &tag : QStringView(tag).split('|')) {
 		applyOne(tag);
 	}
 	result.setFont(font);
@@ -760,7 +761,7 @@ int ProcessInsertedTags(
 					applyNoTagFrom,
 					tagFrom);
 			}
-			QTextCursor c(document->docHandle(), 0);
+			QTextCursor c(document);
 			c.setPosition(tagFrom);
 			c.setPosition(tagTo, QTextCursor::KeepAnchor);
 
@@ -1444,7 +1445,7 @@ void InputField::setExtendedContextMenu(
 		value
 	) | rpl::start_with_next([=](auto pair) {
 		auto &[menu, e] = pair;
-		contextMenuEventInner(&e, std::move(menu));
+		contextMenuEventInner(e.get(), std::move(menu));
 	}, lifetime());
 }
 
@@ -1493,14 +1494,14 @@ void InputField::setMaxLength(int length) {
 		if (_maxLength > 0) {
 			const auto document = _inner->document();
 			_correcting = true;
-			QTextCursor(document->docHandle(), 0).joinPreviousEditBlock();
+			QTextCursor(document).joinPreviousEditBlock();
 			const auto guard = gsl::finally([&] {
 				_correcting = false;
-				QTextCursor(document->docHandle(), 0).endEditBlock();
+				QTextCursor(document).endEditBlock();
 				handleContentsChanged();
 			});
 
-			auto cursor = QTextCursor(document->docHandle(), 0);
+			auto cursor = QTextCursor(document);
 			cursor.movePosition(QTextCursor::End);
 			chopByMaxLength(0, cursor.position());
 		}
@@ -2188,9 +2189,8 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 		if (action.type != ActionType::Invalid) {
 			PrepareFormattingOptimization(document);
 
-			auto cursor = QTextCursor(
-				document->docHandle(),
-				action.intervalStart);
+			auto cursor = QTextCursor(document);
+			cursor.setPosition(action.intervalStart);
 			cursor.setPosition(action.intervalEnd, QTextCursor::KeepAnchor);
 			if (action.type == ActionType::InsertEmoji) {
 				InsertEmojiAtCursor(cursor, action.emoji);
@@ -2258,7 +2258,7 @@ void InputField::onDocumentContentsChange(
 
 	// Qt bug workaround https://bugreports.qt.io/browse/QTBUG-49062
 	if (!position) {
-		auto cursor = QTextCursor(document->docHandle(), 0);
+		auto cursor = QTextCursor(document);
 		cursor.movePosition(QTextCursor::End);
 		if (position + charsAdded > cursor.position()) {
 			const auto delta = position + charsAdded - cursor.position();
@@ -2277,10 +2277,10 @@ void InputField::onDocumentContentsChange(
 		: charsAdded;
 
 	_correcting = true;
-	QTextCursor(document->docHandle(), 0).joinPreviousEditBlock();
+	QTextCursor(document).joinPreviousEditBlock();
 	const auto guard = gsl::finally([&] {
 		_correcting = false;
-		QTextCursor(document->docHandle(), 0).endEditBlock();
+		QTextCursor(document).endEditBlock();
 		handleContentsChanged();
 		const auto added = charsAdded - _emojiSurrogateAmount;
 		_documentContentsChanges.fire({position, charsRemoved, added});
@@ -2313,7 +2313,7 @@ void InputField::chopByMaxLength(int insertPosition, int insertLength) {
 		return;
 	}
 
-	auto cursor = QTextCursor(document()->docHandle(), 0);
+	auto cursor = QTextCursor(document());
 	cursor.movePosition(QTextCursor::End);
 	const auto fullSize = cursor.position();
 	const auto toRemove = fullSize - _maxLength;
@@ -2508,7 +2508,7 @@ void InputField::setTextWithTags(
 	_realInsertPosition = 0;
 	_realCharsAdded = textWithTags.text.size();
 	const auto document = _inner->document();
-	auto cursor = QTextCursor(document->docHandle(), 0);
+	auto cursor = QTextCursor(document);
 	if (historyAction == HistoryAction::Clear) {
 		document->setUndoRedoEnabled(false);
 		cursor.beginEditBlock();
@@ -2565,7 +2565,7 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 	auto from = 0;
 	const auto addOriginalTextUpTill = [&](int offset) {
 		if (offset > from) {
-			result.text.append(originalText.midRef(from, offset - from));
+			result.text.append(QStringView(originalText).mid(from, offset - from));
 		}
 	};
 	auto link = links.begin();
@@ -2621,7 +2621,7 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 				int(result.text.size()),
 				entityLength,
 				tag.tag });
-			result.text.append(originalText.midRef(
+			result.text.append(QStringView(originalText).mid(
 				entityStart,
 				entityLength));
 		}
@@ -2896,7 +2896,8 @@ auto InputField::selectionEditLinkData(EditLinkSelection selection) const
 	};
 	const auto stateTagHasLink = [&](const State &state) {
 		const auto tag = stateTag(state);
-		return (tag == link) || tag.splitRef('|').contains(link.midRef(0));
+		return (tag == link) || QStringView(tag).split('|').contains(
+			QStringView(link).mid(0));
 	};
 	const auto stateStart = [&](const State &state) {
 		return state.i.fragment().position();
@@ -3104,9 +3105,9 @@ void InputField::commitInstantReplacement(
 		const auto currentTag = cursor.charFormat().property(
 			kTagProperty
 		).toString();
-		const auto currentTags = currentTag.splitRef('|');
-		if (currentTags.contains(kTagPre.midRef(0))
-			|| currentTags.contains(kTagCode.midRef(0))) {
+		const auto currentTags = QStringView(currentTag).split('|');
+		if (currentTags.contains(QStringView(kTagPre).mid(0))
+			|| currentTags.contains(QStringView(kTagCode).mid(0))) {
 			return;
 		}
 	}
@@ -3141,7 +3142,7 @@ bool InputField::commitMarkdownReplacement(
 		const QString &tag,
 		const QString &edge) {
 	const auto end = [&] {
-		auto cursor = QTextCursor(document()->docHandle(), 0);
+		auto cursor = QTextCursor(document());
 		cursor.movePosition(QTextCursor::End);
 		return cursor.position();
 	}();
@@ -3155,7 +3156,7 @@ bool InputField::commitMarkdownReplacement(
 	const auto extended = getTextWithTagsPart(
 		from - extendLeft,
 		till + extendRight).text;
-	const auto outer = extended.midRef(
+	const auto outer = QStringView(extended).mid(
 		extendLeft,
 		extended.size() - extendLeft - extendRight);
 	if ((outer.size() <= 2 * edge.size())
@@ -3251,8 +3252,7 @@ void InputField::addMarkdownTag(
 		int till,
 		const QString &tag) {
 	const auto current = getTextWithTagsPart(from, till);
-	const auto currentLength = current.text.size();
-	const auto tagRef = tag.midRef(0);
+	const auto currentLength = int(current.text.size());
 
 	// #TODO Trim inserted tag, so that all newlines are left outside.
 	auto tags = TagList();
@@ -3290,7 +3290,6 @@ void InputField::removeMarkdownTag(
 		int till,
 		const QString &tag) {
 	const auto current = getTextWithTagsPart(from, till);
-	const auto tagRef = tag.midRef(0);
 
 	auto tags = TagList();
 	for (const auto &existing : current.tags) {
@@ -3319,7 +3318,7 @@ void InputField::finishMarkdownTagChange(
 	_inner->setTextCursor(cursor);
 }
 
-bool InputField::IsValidMarkdownLink(const QStringRef &link) {
+bool InputField::IsValidMarkdownLink(QStringView link) {
 	return ::Ui::IsValidMarkdownLink(link);
 }
 
@@ -4180,7 +4179,7 @@ void NumberInput::correctValue(
 	QString newText;
 	newText.reserve(now.size());
 	auto newPos = nowCursor;
-	for (auto i = 0, l = now.size(); i < l; ++i) {
+	for (auto i = 0, l = int(now.size()); i < l; ++i) {
 		if (now.at(i).isDigit()) {
 			newText.append(now.at(i));
 		} else if (i < nowCursor) {
@@ -4216,7 +4215,7 @@ void HexInput::correctValue(
 	QString newText;
 	newText.reserve(now.size());
 	auto newPos = nowCursor;
-	for (auto i = 0, l = now.size(); i < l; ++i) {
+	for (auto i = 0, l = int(now.size()); i < l; ++i) {
 		const auto ch = now[i];
 		if ((ch >= '0' && ch <= '9')
 			|| (ch >= 'a' && ch <= 'f')

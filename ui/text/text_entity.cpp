@@ -1156,13 +1156,13 @@ const QRegularExpression &RegExpWordSplit() {
 	for (const auto &entity : urls) {
 		const auto till = entity.offset() + entity.length();
 		if (till > offset) {
-			result.append(original.midRef(offset, till - offset));
+			result.append(QStringView(original).mid(offset, till - offset));
 		}
 		result.append(qstr(" (")).append(entity.data()).append(')');
 		offset = till;
 	}
 	if (original.size() > offset) {
-		result.append(original.midRef(offset));
+		result.append(QStringView(original).mid(offset));
 	}
 	return result;
 }
@@ -1619,10 +1619,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 		auto mentionIgnore = false;
 
 		if (mHashtag.hasMatch()) {
-			if (!mHashtag.capturedRef(1).isEmpty()) {
+			if (!mHashtag.capturedView(1).isEmpty()) {
 				++hashtagStart;
 			}
-			if (!mHashtag.capturedRef(2).isEmpty()) {
+			if (!mHashtag.capturedView(2).isEmpty()) {
 				--hashtagEnd;
 			}
 			if (RegExpHashtagExclude().match(
@@ -1633,10 +1633,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 			}
 		}
 		while (mMention.hasMatch()) {
-			if (!mMention.capturedRef(1).isEmpty()) {
+			if (!mMention.capturedView(1).isEmpty()) {
 				++mentionStart;
 			}
-			if (!mMention.capturedRef(2).isEmpty()) {
+			if (!mMention.capturedView(2).isEmpty()) {
 				--mentionEnd;
 			}
 			if (!(start + mentionStart + 1)->isLetter() || !(start + mentionEnd - 1)->isLetterOrNumber()) {
@@ -1657,10 +1657,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 			}
 		}
 		if (mBotCommand.hasMatch()) {
-			if (!mBotCommand.capturedRef(1).isEmpty()) {
+			if (!mBotCommand.capturedView(1).isEmpty()) {
 				++botCommandStart;
 			}
-			if (!mBotCommand.capturedRef(3).isEmpty()) {
+			if (!mBotCommand.capturedView(3).isEmpty()) {
 				--botCommandEnd;
 			}
 		}
@@ -2019,16 +2019,16 @@ QString TagsTextMimeType() {
 	return QString::fromLatin1("application/x-td-field-text");
 }
 
-bool IsMentionLink(const QStringRef &link) {
+bool IsMentionLink(QStringView link) {
 	return link.startsWith(kMentionTagStart);
 }
 
-[[nodiscard]] bool IsSeparateTag(const QStringRef &tag) {
+[[nodiscard]] bool IsSeparateTag(QStringView tag) {
 	return (tag == Ui::InputField::kTagCode)
 		|| (tag == Ui::InputField::kTagPre);
 }
 
-QString JoinTag(const QVector<QStringRef> &list) {
+QString JoinTag(const QVector<QStringView> &list) {
 	if (list.isEmpty()) {
 		return QString();
 	}
@@ -2039,7 +2039,7 @@ QString JoinTag(const QVector<QStringRef> &list) {
 	auto result = QString();
 	result.reserve(length);
 	result.append(list.front());
-	for (auto i = 1, count = list.size(); i != count; ++i) {
+	for (auto i = 1, count = int(list.size()); i != count; ++i) {
 		if (!IsSeparateTag(list[i])) {
 			result.append('|').append(list[i]);
 		}
@@ -2051,8 +2051,8 @@ QString TagWithRemoved(const QString &tag, const QString &removed) {
 	if (tag == removed) {
 		return QString();
 	}
-	auto list = tag.splitRef('|');
-	list.erase(ranges::remove(list, removed.midRef(0)), list.end());
+	auto list = QStringView(tag).split('|');
+	list.erase(ranges::remove(list, QStringView(removed).mid(0)), list.end());
 	return JoinTag(list);
 }
 
@@ -2060,8 +2060,8 @@ QString TagWithAdded(const QString &tag, const QString &added) {
 	if (tag.isEmpty() || tag == added) {
 		return added;
 	}
-	auto list = tag.splitRef('|');
-	const auto ref = added.midRef(0);
+	auto list = QStringView(tag).split('|');
+	const auto ref = QStringView(added).mid(0);
 	if (list.contains(ref)) {
 		return tag;
 	}
@@ -2156,7 +2156,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 			if (IsMentionLink(nextState.link)) {
 				const auto match = qthelp::regex_match(
 					"^(\\d+\\.\\d+)(/|$)",
-					nextState.link.midRef(kMentionTagStart.size()));
+					QStringView(nextState.link).mid(kMentionTagStart.size()));
 				if (match) {
 					openType(EntityType::MentionName, match->captured(1));
 				}
@@ -2173,7 +2173,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 	};
 	const auto stateForTag = [&](const QString &tag) {
 		auto result = State();
-		const auto list = tag.splitRef('|');
+		const auto list = QStringView(tag).split('|');
 		for (const auto &single : list) {
 			if (single == Ui::InputField::kTagBold) {
 				result.set(EntityType::Bold);

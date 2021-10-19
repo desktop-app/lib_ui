@@ -118,7 +118,7 @@ private:
 [[nodiscard]] inline EmojiPtr FromUrl(const QString &url) {
 	auto start = qstr("emoji://e.");
 	if (url.startsWith(start)) {
-		return internal::ByIndex(url.midRef(start.size()).toInt()); // skip emoji://e.
+		return internal::ByIndex(QStringView(url).mid(start.size()).toInt()); // skip emoji://e.
 	}
 	return nullptr;
 }
