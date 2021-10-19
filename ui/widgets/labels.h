@@ -154,7 +154,7 @@ protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void mouseDoubleClickEvent(QMouseEvent *e) override;
-	void enterEventHook(QEvent *e) override;
+	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	void focusOutEvent(QFocusEvent *e) override;
 	void focusInEvent(QFocusEvent *e) override;

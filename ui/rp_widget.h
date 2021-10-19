@@ -16,6 +16,7 @@
 
 #include <QtWidgets/QWidget>
 #include <QtCore/QPointer>
+#include <QtGui/QtEvents>
 
 class TWidget;
 
@@ -104,13 +105,22 @@ public:
 	}
 
 protected:
-	void enterEvent(QEvent *e) final override {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	void enterEvent(QEnterEvent *e) final override {
 		if (auto parent = tparent()) {
 			parent->leaveToChildEvent(e, this);
 		}
 		return enterEventHook(e);
 	}
-	virtual void enterEventHook(QEvent *e) {
+#else // Qt >= 6.0.0
+	void enterEvent(QEvent *e) final override {
+		if (auto parent = tparent()) {
+			parent->leaveToChildEvent(e, this);
+		}
+		return enterEventHook(static_cast<QEnterEvent*>(e));
+	}
+#endif // Qt < 6.0.0
+	virtual void enterEventHook(QEnterEvent *e) {
 		return Base::enterEvent(e);
 	}
 
