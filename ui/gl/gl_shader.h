@@ -7,7 +7,7 @@
 #pragma once
 
 #include <QtCore/QString>
-#include <QtGui/QOpenGLShader>
+#include <QOpenGLShader>
 
 class OpenGLShaderProgram;
 

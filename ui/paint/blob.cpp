@@ -84,7 +84,7 @@ RadialBlob::RadialBlob(int n, float minScale, float minSpeed, float maxSpeed)
 
 void RadialBlob::paint(Painter &p, const QBrush &brush, float outerScale) {
 	auto path = QPainterPath();
-	auto m = QMatrix();
+	auto m = QTransform();
 
 	const auto scale = (_minScale + (1. - _minScale) * _scale) * outerScale;
 	if (scale == 0.) {

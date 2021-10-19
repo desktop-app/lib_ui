@@ -62,7 +62,7 @@ void NumbersAnimation::realSetText(QString text, int value) {
 	}
 	auto oldSize = _digits.size();
 	auto animating = false;
-	for (auto i = 0, size = _digits.size(); i != size; ++i) {
+	for (auto i = 0, size = int(_digits.size()); i != size; ++i) {
 		auto &digit = _digits[i];
 		digit.from = digit.to;
 		digit.fromWidth = digit.toWidth;

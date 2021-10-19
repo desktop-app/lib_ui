@@ -13,7 +13,7 @@
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QWindow>
 #include <QtGui/QPaintEngine>
-#include <QtWidgets/QOpenGLWidget>
+#include <QOpenGLWidget>
 
 namespace Ui::GL {
 namespace {

@@ -15,7 +15,7 @@
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
-#include <QtWidgets/QOpenGLWidget>
+#include <QOpenGLWidget>
 
 #ifdef Q_OS_WIN
 #include <QtGui/QGuiApplication>

@@ -14,7 +14,9 @@
 #include "base/platform/base_platform_info.h"
 
 #include <private/qfontengine_p.h>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <private/qharfbuzz_p.h>
+#endif // Qt < 6.0.0
 
 namespace Ui {
 namespace Text {
@@ -161,7 +163,7 @@ QString textcmdStartLink(const QString &url) {
 
 	QString result;
 	result.reserve(url.size() + 4);
-	return result.append(TextCommand).append(QChar(TextCommandLinkText)).append(QChar(url.size())).append(url).append(TextCommand);
+	return result.append(TextCommand).append(QChar(TextCommandLinkText)).append(QChar(int(url.size()))).append(url).append(TextCommand);
 }
 
 QString textcmdStopLink() {
@@ -2056,10 +2058,21 @@ private:
 		auto analysis = _parAnalysis.data() + (_localFrom - _parStart);
 
 		{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+			QUnicodeTools::ScriptItemArray scriptItems;
+			QUnicodeTools::initScripts(_e->layoutData->string, &scriptItems);
+			for (int i = 0; i < scriptItems.length(); ++i) {
+				const auto &item = scriptItems.at(i);
+				int end = i < scriptItems.length() - 1 ? scriptItems.at(i + 1).position : length;
+				for (int j = item.position; j < end; ++j)
+					analysis[j].script = item.script;
+			}
+#else // Qt >= 6.0.0
 			QVarLengthArray<uchar> scripts(length);
 			QUnicodeTools::initScripts(string, length, scripts.data());
 			for (int i = 0; i < length; ++i)
 				analysis[i].script = scripts.at(i);
+#endif // Qt < 6.0.0
 		}
 
 		blockIndex = _lineStartBlock;
@@ -2080,7 +2093,9 @@ private:
 			} else {
 				analysis->flags = QScriptAnalysis::None;
 			}
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 			analysis->script = hbscript_to_script(script_to_hbscript(analysis->script)); // retain the old behavior
+#endif // Qt < 6.0.0
 			++start;
 			++analysis;
 		}
@@ -3149,7 +3164,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 				auto rangeFrom = qMax(selection.from, lnkFrom);
 				auto rangeTo = qMin(selection.to, blockFrom);
 				if (rangeTo > rangeFrom) { // handle click handler
-					QStringRef r = _text.midRef(rangeFrom, rangeTo - rangeFrom);
+					const auto r = QStringView(_text).mid(rangeFrom, rangeTo - rangeFrom);
 					if (lnkFrom != rangeFrom || blockFrom != rangeTo) {
 						// Ignore links that are partially copied.
 						clickHandlerFinishCallback(r, nullptr);
@@ -3180,7 +3195,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 		auto rangeFrom = qMax(selection.from, blockFrom);
 		auto rangeTo = qMin(selection.to, uint16(blockFrom + countBlockLength(i, e)));
 		if (rangeTo > rangeFrom) {
-			appendPartCallback(_text.midRef(rangeFrom, rangeTo - rangeFrom));
+			appendPartCallback(QStringView(_text).mid(rangeFrom, rangeTo - rangeFrom));
 		}
 	}
 }
@@ -3243,7 +3258,7 @@ TextForMimeData String::toText(
 				insertEntity({
 					tracker.type,
 					tracker.start,
-					result.rich.text.size() - tracker.start });
+					int(result.rich.text.size()) - tracker.start });
 			} else if ((newFlags & flag) && !(oldFlags & flag)) {
 				tracker.start = result.rich.text.size();
 			}
@@ -3253,7 +3268,7 @@ TextForMimeData String::toText(
 		linkStart = result.rich.text.size();
 	};
 	const auto clickHandlerFinishCallback = [&](
-			const QStringRef &inText,
+			QStringView inText,
 			const ClickHandlerPtr &handler) {
 		if (!handler || (!composeExpanded && !composeEntities)) {
 			return;
@@ -3262,7 +3277,7 @@ TextForMimeData String::toText(
 		const auto plainUrl = (entity.type == EntityType::Url)
 			|| (entity.type == EntityType::Email);
 		const auto full = plainUrl
-			? entity.data.midRef(0, entity.data.size())
+			? QStringView(entity.data).mid(0, entity.data.size())
 			: inText;
 		const auto customTextLink = (entity.type == EntityType::CustomUrl);
 		const auto internalLink = customTextLink
@@ -3280,11 +3295,11 @@ TextForMimeData String::toText(
 			insertEntity({
 				entity.type,
 				linkStart,
-				(result.rich.text.size() - linkStart),
+				int(result.rich.text.size() - linkStart),
 				plainUrl ? QString() : entity.data });
 		}
 	};
-	const auto appendPartCallback = [&](const QStringRef &part) {
+	const auto appendPartCallback = [&](QStringView part) {
 		result.rich.text += part;
 		if (composeExpanded) {
 			result.expanded += part;

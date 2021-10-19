@@ -9,8 +9,8 @@
 #include "ui/gl/gl_math.h"
 #include "ui/style/style_core.h"
 
-#include <QtGui/QOpenGLBuffer>
-#include <QtGui/QOpenGLShaderProgram>
+#include <QOpenGLBuffer>
+#include <QOpenGLShaderProgram>
 
 class QOpenGLFunctions;
 
