@@ -9,7 +9,6 @@
 #include "base/qthelp_url.h"
 #include "base/qthelp_regex.h"
 #include "base/crc32hash.h"
-#include "base/qt_adapters.h"
 #include "ui/text/text.h"
 #include "ui/widgets/input_fields.h"
 #include "ui/emoji_config.h"
@@ -1402,7 +1401,7 @@ QStringList PrepareSearchWords(
 		auto list = clean.split(SplitterOverride
 			? *SplitterOverride
 			: RegExpWordSplit(),
-			base::QStringSkipEmptyParts);
+			Qt::SkipEmptyParts);
 		result.reserve(list.size());
 		for (const auto &word : std::as_const(list)) {
 			auto trimmed = word.trimmed();

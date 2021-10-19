@@ -9,7 +9,6 @@
 #include "ui/ui_utility.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "base/invoke_queued.h"
-#include "base/qt_adapters.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QScreen>
@@ -73,7 +72,7 @@ Tooltip::~Tooltip() {
 }
 
 void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *st) {
-	const auto screen = base::QScreenNearestTo(m);
+	const auto screen = QGuiApplication::screenAt(m);
 	if (!screen) {
 		Hide();
 		return;

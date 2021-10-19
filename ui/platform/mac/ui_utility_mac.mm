@@ -7,7 +7,6 @@
 #include "ui/platform/mac/ui_utility_mac.h"
 
 #include "ui/integration.h"
-#include "base/qt_adapters.h"
 
 #include <QtGui/QPainter>
 #include <QtGui/QtEvents>

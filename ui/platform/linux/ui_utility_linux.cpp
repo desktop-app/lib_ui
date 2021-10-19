@@ -10,7 +10,6 @@
 #include "base/debug_log.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 #include "base/const_string.h"
-#include "base/qt_adapters.h"
 #include "base/flat_set.h"
 
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
@@ -434,7 +433,7 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 
 	if (::Platform::IsX11()) {
 		if (const auto native = QGuiApplication::platformNativeInterface()) {
-			if (const auto screen = base::QScreenNearestTo(globalPosition)) {
+			if (const auto screen = QGuiApplication::screenAt(globalPosition)) {
 				if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
 					return true;
 				}
