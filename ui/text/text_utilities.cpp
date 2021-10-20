@@ -7,6 +7,7 @@
 #include "ui/text/text_utilities.h"
 
 #include "base/algorithm.h"
+#include "base/qt_adapters.h"
 
 #include <QtCore/QRegularExpression>
 
@@ -49,7 +50,7 @@ TextWithEntities RichLangValue(const QString &text) {
 	while (offset < text.size()) {
 		const auto m = kStart.match(text, offset);
 		if (!m.hasMatch()) {
-			result.text.append(QStringView(text).mid(offset));
+			result.text.append(base::StringViewMid(text, offset));
 			break;
 		}
 		const auto position = m.capturedStart();
@@ -61,13 +62,13 @@ TextWithEntities RichLangValue(const QString &text) {
 			continue;
 		}
 		if (position > offset) {
-			result.text.append(QStringView(text).mid(offset, position - offset));
+			result.text.append(base::StringViewMid(text, offset, position - offset));
 		}
 		const auto type = (tag == qstr("__"))
 			? EntityType::Italic
 			: EntityType::Bold;
 		result.entities.push_back({ type, int(result.text.size()), int(till - from) });
-		result.text.append(QStringView(text).mid(from, till - from));
+		result.text.append(base::StringViewMid(text, from, till - from));
 		offset = till + tag.size();
 	}
 	return result;

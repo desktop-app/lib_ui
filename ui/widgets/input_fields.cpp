@@ -126,20 +126,20 @@ bool IsNewline(QChar ch) {
 		}
 		auto found = false;
 		for (const auto &single : QStringView(existing.id).split('|')) {
-			const auto normalized = (single == QStringView(kTagPre).mid(0))
-				? QStringView(kTagCode).mid(0)
+			const auto normalized = (single == QStringView(kTagPre))
+				? QStringView(kTagCode)
 				: single;
 			if (checkingLink && IsValidMarkdownLink(single)) {
 				if (resultLink.isEmpty()) {
 					resultLink = single.toString();
 					found = true;
 					break;
-				} else if (QStringView(resultLink).mid(0) == single) {
+				} else if (QStringView(resultLink) == single) {
 					found = true;
 					break;
 				}
 				return QString();
-			} else if (!checkingLink && QStringView(tag).mid(0) == normalized) {
+			} else if (!checkingLink && QStringView(tag) == normalized) {
 				found = true;
 				break;
 			}
@@ -2566,7 +2566,7 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 	auto from = 0;
 	const auto addOriginalTextUpTill = [&](int offset) {
 		if (offset > from) {
-			result.text.append(QStringView(originalText).mid(from, offset - from));
+			result.text.append(base::StringViewMid(originalText, from, offset - from));
 		}
 	};
 	auto link = links.begin();
@@ -2622,7 +2622,8 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 				int(result.text.size()),
 				entityLength,
 				tag.tag });
-			result.text.append(QStringView(originalText).mid(
+			result.text.append(base::StringViewMid(
+				originalText,
 				entityStart,
 				entityLength));
 		}
@@ -2898,7 +2899,7 @@ auto InputField::selectionEditLinkData(EditLinkSelection selection) const
 	const auto stateTagHasLink = [&](const State &state) {
 		const auto tag = stateTag(state);
 		return (tag == link) || QStringView(tag).split('|').contains(
-			QStringView(link).mid(0));
+			QStringView(link));
 	};
 	const auto stateStart = [&](const State &state) {
 		return state.i.fragment().position();
@@ -3107,8 +3108,8 @@ void InputField::commitInstantReplacement(
 			kTagProperty
 		).toString();
 		const auto currentTags = QStringView(currentTag).split('|');
-		if (currentTags.contains(QStringView(kTagPre).mid(0))
-			|| currentTags.contains(QStringView(kTagCode).mid(0))) {
+		if (currentTags.contains(QStringView(kTagPre))
+			|| currentTags.contains(QStringView(kTagCode))) {
 			return;
 		}
 	}
@@ -3157,7 +3158,8 @@ bool InputField::commitMarkdownReplacement(
 	const auto extended = getTextWithTagsPart(
 		from - extendLeft,
 		till + extendRight).text;
-	const auto outer = QStringView(extended).mid(
+	const auto outer = base::StringViewMid(
+		extended,
 		extendLeft,
 		extended.size() - extendLeft - extendRight);
 	if ((outer.size() <= 2 * edge.size())
@@ -3221,7 +3223,7 @@ bool InputField::commitMarkdownReplacement(
 	if (tagTill > tagFrom) {
 		_insertedTags.push_back({
 			tagFrom,
-			tagTill - tagFrom,
+			int(tagTill - tagFrom),
 			tag,
 		});
 	}
@@ -3333,7 +3335,7 @@ void InputField::commitMarkdownLinkEdit(
 		return;
 	}
 	_insertedTags.clear();
-	_insertedTags.push_back({ 0, text.size(), link });
+	_insertedTags.push_back({ 0, int(text.size()), link });
 
 	auto cursor = textCursor();
 	const auto editData = selectionEditLinkData(selection);

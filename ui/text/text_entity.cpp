@@ -12,6 +12,7 @@
 #include "ui/text/text.h"
 #include "ui/widgets/input_fields.h"
 #include "ui/emoji_config.h"
+#include "base/qt_adapters.h"
 
 #include <QtCore/QStack>
 #include <QtCore/QMimeData>
@@ -1155,13 +1156,13 @@ const QRegularExpression &RegExpWordSplit() {
 	for (const auto &entity : urls) {
 		const auto till = entity.offset() + entity.length();
 		if (till > offset) {
-			result.append(QStringView(original).mid(offset, till - offset));
+			result.append(base::StringViewMid(original, offset, till - offset));
 		}
 		result.append(qstr(" (")).append(entity.data()).append(')');
 		offset = till;
 	}
 	if (original.size() > offset) {
-		result.append(QStringView(original).mid(offset));
+		result.append(base::StringViewMid(original, offset));
 	}
 	return result;
 }
@@ -2051,7 +2052,7 @@ QString TagWithRemoved(const QString &tag, const QString &removed) {
 		return QString();
 	}
 	auto list = QStringView(tag).split('|');
-	list.erase(ranges::remove(list, QStringView(removed).mid(0)), list.end());
+	list.erase(ranges::remove(list, QStringView(removed)), list.end());
 	return JoinTag(list);
 }
 
@@ -2060,7 +2061,7 @@ QString TagWithAdded(const QString &tag, const QString &added) {
 		return added;
 	}
 	auto list = QStringView(tag).split('|');
-	const auto ref = QStringView(added).mid(0);
+	const auto ref = QStringView(added);
 	if (list.contains(ref)) {
 		return tag;
 	}
@@ -2155,7 +2156,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 			if (IsMentionLink(nextState.link)) {
 				const auto match = qthelp::regex_match(
 					"^(\\d+\\.\\d+)(/|$)",
-					QStringView(nextState.link).mid(kMentionTagStart.size()));
+					base::StringViewMid(nextState.link, kMentionTagStart.size()));
 				if (match) {
 					openType(EntityType::MentionName, match->captured(1));
 				}

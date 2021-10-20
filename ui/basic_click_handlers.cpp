@@ -10,6 +10,7 @@
 #include "ui/text/text_entity.h"
 #include "ui/integration.h"
 #include "base/qthelp_url.h"
+#include "base/qt_adapters.h"
 
 #include <QtCore/QUrl>
 #include <QtCore/QRegularExpression>
@@ -104,7 +105,7 @@ QString UrlClickHandler::ShowEncoded(const QString &url) {
 		if (const auto u = QUrl(domain); u.isValid()) {
 			return QString(
 			).append(QString::fromUtf8(u.toEncoded())
-			).append(QStringView(url).mid(match1.capturedEnd(2)));
+			).append(base::StringViewMid(url, match1.capturedEnd(2)));
 		}
 	}
 	return url;

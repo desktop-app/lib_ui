@@ -8,6 +8,7 @@
 
 #include "base/basic_types.h"
 #include "base/binary_guard.h"
+#include "base/qt_adapters.h"
 #include "emoji.h"
 
 #include <QtGui/QPainter>
@@ -118,7 +119,7 @@ private:
 [[nodiscard]] inline EmojiPtr FromUrl(const QString &url) {
 	auto start = qstr("emoji://e.");
 	if (url.startsWith(start)) {
-		return internal::ByIndex(QStringView(url).mid(start.size()).toInt()); // skip emoji://e.
+		return internal::ByIndex(base::StringViewMid(url, start.size()).toInt()); // skip emoji://e.
 	}
 	return nullptr;
 }
