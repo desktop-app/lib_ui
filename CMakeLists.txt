@@ -259,8 +259,14 @@ elseif(LINUX)
     target_link_libraries(lib_ui
     PUBLIC
         desktop-app::lib_waylandshells
-        desktop-app::external_kwayland
     )
+
+    if (NOT DESKTOP_APP_QT6)
+        target_link_libraries(lib_ui
+        PUBLIC
+            desktop-app::external_kwayland
+        )
+    endif()
 endif()
 
 target_include_directories(lib_ui
