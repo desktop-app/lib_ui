@@ -2028,7 +2028,7 @@ bool IsMentionLink(QStringView link) {
 		|| (tag == Ui::InputField::kTagPre);
 }
 
-QString JoinTag(const QVector<QStringView> &list) {
+QString JoinTag(const QList<QStringView> &list) {
 	if (list.isEmpty()) {
 		return QString();
 	}
@@ -2051,11 +2051,7 @@ QString TagWithRemoved(const QString &tag, const QString &removed) {
 	if (tag == removed) {
 		return QString();
 	}
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	auto list = QStringView(tag).split('|');
-#else // Qt >= 6.0.0
-	auto list = QStringView(tag).split('|').toVector();
-#endif // Qt < 6.0.0
 	list.erase(ranges::remove(list, QStringView(removed)), list.end());
 	return JoinTag(list);
 }
@@ -2064,17 +2060,13 @@ QString TagWithAdded(const QString &tag, const QString &added) {
 	if (tag.isEmpty() || tag == added) {
 		return added;
 	}
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	auto list = QStringView(tag).split('|');
-#else // Qt >= 6.0.0
-	auto list = QStringView(tag).split('|').toVector();
-#endif // Qt < 6.0.0
 	const auto ref = QStringView(added);
 	if (list.contains(ref)) {
 		return tag;
 	}
 	list.push_back(ref);
-	ranges::sort(list);
+	std::sort(list.begin(), list.end());
 	return JoinTag(list);
 }
 

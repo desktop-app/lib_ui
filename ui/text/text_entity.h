@@ -362,7 +362,7 @@ inline const auto kMentionTagStart = qstr("mention://user.");
 
 [[nodiscard]] bool IsMentionLink(QStringView link);
 [[nodiscard]] bool IsSeparateTag(QStringView tag);
-[[nodiscard]] QString JoinTag(const QVector<QStringView> &list);
+[[nodiscard]] QString JoinTag(const QList<QStringView> &list);
 [[nodiscard]] QString TagWithRemoved(
 	const QString &tag,
 	const QString &removed);
