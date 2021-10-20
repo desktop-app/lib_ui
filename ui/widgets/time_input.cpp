@@ -8,6 +8,7 @@
 
 #include "ui/widgets/input_fields.h"
 #include "ui/ui_utility.h"
+#include "base/qt_adapters.h"
 
 #include <QtCore/QRegularExpression>
 #include <QTime>
@@ -24,7 +25,7 @@ QTime ValidateTime(const QString &value) {
 	const auto readInt = [](const QString &value) {
 		auto view = QStringView(value);
 		while (!view.isEmpty() && view.at(0) == '0') {
-			view = view.mid(1);
+			view = base::StringViewMid(view, 1);
 		}
 		return view.toInt();
 	};
@@ -80,7 +81,7 @@ std::optional<int> Number(not_null<TimePart*> field) {
 	const auto text = field->getLastText();
 	auto view = QStringView(text);
 	while (view.size() > 1 && view.at(0) == '0') {
-		view = view.mid(1);
+		view = base::StringViewMid(view, 1);
 	}
 	return QRegularExpression("^\\d+$").match(view).hasMatch()
 		? std::make_optional(view.toInt())

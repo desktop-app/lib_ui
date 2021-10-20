@@ -12,6 +12,7 @@
 #include "ui/emoji_config.h"
 #include "ui/integration.h"
 #include "base/platform/base_platform_info.h"
+#include "base/qt_adapters.h"
 
 #include <private/qfontengine_p.h>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -3164,7 +3165,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 				auto rangeFrom = qMax(selection.from, lnkFrom);
 				auto rangeTo = qMin(selection.to, blockFrom);
 				if (rangeTo > rangeFrom) { // handle click handler
-					const auto r = QStringView(_text).mid(rangeFrom, rangeTo - rangeFrom);
+					const auto r = base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom);
 					if (lnkFrom != rangeFrom || blockFrom != rangeTo) {
 						// Ignore links that are partially copied.
 						clickHandlerFinishCallback(r, nullptr);
@@ -3195,7 +3196,7 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 		auto rangeFrom = qMax(selection.from, blockFrom);
 		auto rangeTo = qMin(selection.to, uint16(blockFrom + countBlockLength(i, e)));
 		if (rangeTo > rangeFrom) {
-			appendPartCallback(QStringView(_text).mid(rangeFrom, rangeTo - rangeFrom));
+			appendPartCallback(base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom));
 		}
 	}
 }
