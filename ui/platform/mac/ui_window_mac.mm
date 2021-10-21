@@ -8,6 +8,7 @@
 
 #include "ui/platform/mac/ui_window_title_mac.h"
 #include "ui/widgets/rp_window.h"
+#include "base/qt_adapters.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/palette.h"
 
@@ -93,7 +94,7 @@ public:
 	bool nativeEventFilter(
 			const QByteArray &eventType,
 			void *message,
-			long *result) {
+			base::NativeEventResult *result) {
 		NSEvent *e = static_cast<NSEvent*>(message);
 		return (e && [e type] == NSEventTypeLeftMouseDown)
 			? _checkPerformDrag([e window])
