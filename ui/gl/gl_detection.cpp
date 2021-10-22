@@ -142,7 +142,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	} break;
 	}
 
-	[[maybe_unused]] static const auto extensionsLogged = [&] {
+	static const auto checkVendor = [&] {
 		const auto renderer = reinterpret_cast<const char*>(
 			functions->glGetString(GL_RENDERER));
 		LOG(("OpenGL Renderer: %1").arg(renderer ? renderer : "[nullptr]"));
@@ -166,8 +166,19 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
 #endif // Q_OS_WIN
 
+#ifdef Q_OS_LINUX
+		if (version && QByteArray(version).contains("NVIDIA")) {
+			// https://github.com/telegramdesktop/tdesktop/issues/16830
+			LOG_ONCE(("OpenGL: Disable on NVIDIA driver on Linux."));
+			return false;
+		}
+#endif // Q_OS_LINUX
+
 		return true;
 	}();
+	if (!checkVendor) {
+		return {};
+	}
 
 	const auto version = u"%1.%2"_q
 		.arg(supported.majorVersion())
