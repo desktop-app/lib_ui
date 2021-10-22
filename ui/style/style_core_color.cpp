@@ -31,7 +31,7 @@ void ColorData::set(uchar r, uchar g, uchar b, uchar a) {
 void ComplexColor::subscribeToPaletteChanges() {
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
-		_owned.update(_generator());
+		refresh();
 	}, _lifetime);
 }
 

@@ -145,6 +145,9 @@ public:
 	[[nodiscard]] const Color &color() const {
 		return _owned.color();
 	}
+	void refresh() {
+		_owned.update(_generator());
+	}
 
 private:
 	void subscribeToPaletteChanges();

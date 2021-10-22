@@ -952,7 +952,7 @@ void prepareRound(
 	auto cornerHeight = cornerMasks[0].height();
 	auto targetWidth = target.width();
 	auto targetHeight = target.height();
-	if (targetWidth < 2 * cornerWidth || targetHeight < 2 * cornerHeight) {
+	if (targetWidth < cornerWidth || targetHeight < cornerHeight) {
 		return;
 	}
 
