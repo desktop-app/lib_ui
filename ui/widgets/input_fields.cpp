@@ -1045,6 +1045,8 @@ void FlatInput::touchEvent(QTouchEvent *e) {
 			if (_touchRightButton) {
 				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
 				contextMenuEvent(&contextEvent);
+			} else {
+				QGuiApplication::inputMethod()->show();
 			}
 		}
 		if (weak) {
@@ -1654,6 +1656,8 @@ void InputField::handleTouchEvent(QTouchEvent *e) {
 			if (_touchRightButton) {
 				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
 				contextMenuEvent(&contextEvent);
+			} else {
+				QGuiApplication::inputMethod()->show();
 			}
 		}
 		if (weak) {
@@ -3855,6 +3859,8 @@ void MaskedInputField::touchEvent(QTouchEvent *e) {
 			if (_touchRightButton) {
 				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
 				contextMenuEvent(&contextEvent);
+			} else {
+				QGuiApplication::inputMethod()->show();
 			}
 		}
 		if (weak) {
