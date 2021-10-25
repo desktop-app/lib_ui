@@ -24,34 +24,27 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <private/qwaylandwindow_p.h>
 #include <private/qwaylandshellsurface_p.h>
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <connection_thread.h>
 #include <registry.h>
-#endif // Qt < 6.0.0
 
 Q_DECLARE_METATYPE(QMargins);
 
 using QtWaylandClient::QWaylandIntegration;
 using QtWaylandClient::QWaylandWindow;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 using namespace KWayland::Client;
-#endif // Qt < 6.0.0
 
 namespace Ui {
 namespace Platform {
 
 struct WaylandIntegration::Private {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	std::unique_ptr<ConnectionThread> connection;
 	Registry registry;
 	QEventLoop interfacesLoop;
 	bool interfacesAnnounced = false;
-#endif // Qt < 6.0.0
 };
 
 WaylandIntegration::WaylandIntegration()
 : _private(std::make_unique<Private>()) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	_private->connection = std::unique_ptr<ConnectionThread>{
 		ConnectionThread::fromApplication(),
 	};
@@ -74,7 +67,6 @@ WaylandIntegration::WaylandIntegration()
 				_private->interfacesLoop.quit();
 			}
 		});
-#endif // Qt < 6.0.0
 }
 
 WaylandIntegration::~WaylandIntegration() = default;
@@ -86,21 +78,15 @@ WaylandIntegration *WaylandIntegration::Instance() {
 }
 
 void WaylandIntegration::waitForInterfaceAnnounce() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	Expects(!_private->interfacesLoop.isRunning());
 	if (!_private->interfacesAnnounced) {
 		_private->interfacesLoop.exec();
 	}
-#endif // Qt < 6.0.0
 }
 
 bool WaylandIntegration::xdgDecorationSupported() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	return _private->registry.hasInterface(
 		Registry::Interface::XdgDecorationUnstableV1);
-#else // Qt < 6.0.0
-	return false;
-#endif // Qt >= 6.0.0
 }
 
 bool WaylandIntegration::windowExtentsSupported() {
