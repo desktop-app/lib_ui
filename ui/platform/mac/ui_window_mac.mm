@@ -96,7 +96,7 @@ public:
 			void *message,
 			base::NativeEventResult *result) {
 		NSEvent *e = static_cast<NSEvent*>(message);
-		return (e && [e type] == NSEventTypeLeftMouseDown)
+		return (e && [e type] == NSEventTypeLeftMouseDragged)
 			? _checkPerformDrag([e window])
 			: false;
 		return false;
@@ -399,6 +399,15 @@ void WindowHelper::init() {
 			size.width(),
 			size.height() - titleHeight);
 	}, _body->lifetime());
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	setBodyTitleArea([=](QPoint widgetPoint) {
+		using Flag = Ui::WindowTitleHitTestFlag;
+		return (_body->y() > widgetPoint.y())
+			? (Flag::Move | Flag::Maximize)
+			: Flag::None;
+	});
+#endif // Qt >= 6.0.0
 }
 
 std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(

@@ -81,13 +81,15 @@ void BasicWindowHelper::close() {
 
 void BasicWindowHelper::setBodyTitleArea(
 		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
-	Expects(!_bodyTitleAreaTestMethod);
+	Expects(!_bodyTitleAreaTestMethod || testMethod);
 
 	if (!testMethod) {
 		return;
 	}
+	if (!_bodyTitleAreaTestMethod) {
+		setupBodyTitleAreaEvents();
+	}
 	_bodyTitleAreaTestMethod = std::move(testMethod);
-	setupBodyTitleAreaEvents();
 }
 
 QMargins BasicWindowHelper::nativeFrameMargins() const {
