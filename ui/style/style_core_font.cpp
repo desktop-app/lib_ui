@@ -8,6 +8,7 @@
 
 #include "base/algorithm.h"
 #include "base/debug_log.h"
+#include "base/base_file_utilities.h"
 #include "ui/style/style_core_custom_font.h"
 #include "ui/integration.h"
 
@@ -18,16 +19,22 @@
 #include <QtWidgets/QApplication>
 
 void style_InitFontsResource() {
+#ifdef Q_OS_MAC // Use resources from the .app bundle on macOS.
+
+	base::RegisterBundledResources(u"lib_ui.rcc"_q);
+
+#else // Q_OS_MAC
+
 #ifndef DESKTOP_APP_USE_PACKAGED_FONTS
 	Q_INIT_RESOURCE(fonts);
 #endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 #ifdef Q_OS_WIN
 	Q_INIT_RESOURCE(win);
-#elif defined Q_OS_MAC // Q_OS_WIN
-	Q_INIT_RESOURCE(mac);
-#elif defined Q_OS_UNIX && !defined DESKTOP_APP_USE_PACKAGED // Q_OS_WIN || Q_OS_MAC
+#elif defined Q_OS_UNIX && !defined DESKTOP_APP_USE_PACKAGED // Q_OS_WIN
 	Q_INIT_RESOURCE(linux);
-#endif // Q_OS_WIN || Q_OS_MAC || (Q_OS_UNIX && !DESKTOP_APP_USE_PACKAGED)
+#endif // Q_OS_WIN || (Q_OS_UNIX && !DESKTOP_APP_USE_PACKAGED)
+
+#endif // Q_OS_MAC
 }
 
 namespace style {

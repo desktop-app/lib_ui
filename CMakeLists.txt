@@ -24,7 +24,8 @@ generate_palette(lib_ui ui/colors.palette)
 generate_styles(lib_ui ${src_loc} "${style_files}" ui/colors.palette)
 generate_emoji(lib_ui emoji.txt emoji_suggestions/emoji_autocomplete.json)
 
-set_target_properties(lib_ui PROPERTIES AUTOMOC ON AUTORCC ON)
+set_target_properties(lib_ui PROPERTIES AUTOMOC ON)
+target_prepare_qrc(lib_ui)
 
 target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
 nice_target_sources(lib_ui ${src_loc}
