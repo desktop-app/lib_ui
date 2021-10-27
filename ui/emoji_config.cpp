@@ -733,7 +733,8 @@ QVector<EmojiPtr> GetDefaultRecent() {
 }
 
 const QPixmap &SinglePixmap(EmojiPtr emoji, int fontHeight) {
-	auto &map = (fontHeight == st::normalFont->height * style::DevicePixelRatio())
+	const auto factor = style::DevicePixelRatio();
+	auto &map = (fontHeight == st::normalFont->height * factor)
 		? MainEmojiMap
 		: OtherEmojiMap[fontHeight];
 	auto i = map.find(emoji->index());
@@ -741,10 +742,10 @@ const QPixmap &SinglePixmap(EmojiPtr emoji, int fontHeight) {
 		return i->second;
 	}
 	auto image = QImage(
-		SizeNormal + st::emojiPadding * 2,
+		SizeNormal + st::emojiPadding * factor * 2,
 		fontHeight,
 		QImage::Format_ARGB32_Premultiplied);
-	image.setDevicePixelRatio(style::DevicePixelRatio());
+	image.setDevicePixelRatio(factor);
 	image.fill(Qt::transparent);
 	{
 		QPainter p(&image);
@@ -753,8 +754,8 @@ const QPixmap &SinglePixmap(EmojiPtr emoji, int fontHeight) {
 			p,
 			emoji,
 			SizeNormal,
-			st::emojiPadding * style::DevicePixelRatio(),
-			(fontHeight - SizeNormal) / 2);
+			st::emojiPadding,
+			(fontHeight - SizeNormal) / (2 * factor));
 	}
 	return map.emplace(
 		emoji->index(),
