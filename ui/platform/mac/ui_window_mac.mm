@@ -85,24 +85,35 @@ private:
 
 class EventFilter : public QObject, public QAbstractNativeEventFilter {
 public:
-	EventFilter(not_null<QObject*> parent, Fn<bool(void*)> checkPerformDrag)
+	EventFilter(
+		not_null<QObject*> parent,
+		Fn<bool()> checkStartDrag,
+		Fn<bool(void*)> checkPerformDrag)
 	: QObject(parent)
+	, _checkStartDrag(std::move(checkStartDrag))
 	, _checkPerformDrag(std::move(checkPerformDrag)) {
 		Expects(_checkPerformDrag != nullptr);
+		Expects(_checkStartDrag != nullptr);
 	}
 
 	bool nativeEventFilter(
 			const QByteArray &eventType,
 			void *message,
 			base::NativeEventResult *result) {
-		NSEvent *e = static_cast<NSEvent*>(message);
-		return (e && [e type] == NSEventTypeLeftMouseDragged)
-			? _checkPerformDrag([e window])
-			: false;
+		if (NSEvent *e = static_cast<NSEvent*>(message)) {
+			if ([e type] == NSEventTypeLeftMouseDown) {
+				_dragStarted = _checkStartDrag();
+			} else if (([e type] == NSEventTypeLeftMouseDragged)
+					&& _dragStarted) {
+				return _checkPerformDrag([e window]);
+			}
+		}
 		return false;
 	}
 
 private:
+	bool _dragStarted = false;
+	Fn<bool()> _checkStartDrag;
 	Fn<bool(void*)> _checkPerformDrag;
 
 };
@@ -362,7 +373,10 @@ void WindowHelper::setGeometry(QRect rect) {
 
 void WindowHelper::setupBodyTitleAreaEvents() {
 	const auto controls = _private->controlsRect();
-	qApp->installNativeEventFilter(new EventFilter(window(), [=](void *nswindow) {
+	qApp->installNativeEventFilter(new EventFilter(window(), [=] {
+		const auto point = body()->mapFromGlobal(QCursor::pos());
+		return (bodyTitleAreaHit(point) & WindowTitleHitTestFlag::Move);
+	}, [=](void *nswindow) {
 		const auto point = body()->mapFromGlobal(QCursor::pos());
 		if (_private->checkNativeMove(nswindow)
 			&& !controls.contains(point)
@@ -401,9 +415,9 @@ void WindowHelper::init() {
 	}, _body->lifetime());
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-	setBodyTitleArea([=](QPoint widgetPoint) {
+	setBodyTitleArea([](QPoint widgetPoint) {
 		using Flag = Ui::WindowTitleHitTestFlag;
-		return (_body->y() > widgetPoint.y())
+		return (widgetPoint.y() < 0)
 			? (Flag::Move | Flag::Maximize)
 			: Flag::None;
 	});
