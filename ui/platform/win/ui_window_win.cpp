@@ -32,7 +32,6 @@ namespace {
 
 constexpr auto kDWMWCP_ROUND = DWORD(2);
 constexpr auto kDWMWA_WINDOW_CORNER_PREFERENCE = DWORD(33);
-constexpr auto kDWMWA_BORDER_COLOR = DWORD(34);
 constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
 constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
 
@@ -570,11 +569,6 @@ void WindowHelper::updateWindowFrameColors(bool active) {
 		? _title->st()->bgActive->c
 		: _title->st()->bg->c;
 	COLORREF bgRef = RGB(bg.red(), bg.green(), bg.blue());
-	DwmSetWindowAttribute(
-		_handle,
-		kDWMWA_BORDER_COLOR,
-		&bgRef,
-		sizeof(COLORREF));
 	DwmSetWindowAttribute(
 		_handle,
 		kDWMWA_CAPTION_COLOR,
