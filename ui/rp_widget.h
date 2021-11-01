@@ -18,6 +18,12 @@
 #include <QtCore/QPointer>
 #include <QtGui/QtEvents>
 
+namespace Ui {
+
+void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible);
+
+} // namespace Ui
+
 class TWidget;
 
 template <typename Base>
@@ -30,18 +36,10 @@ public:
 	}
 
 	void hideChildren() {
-		for (auto child : Base::children()) {
-			if (child->isWidgetType()) {
-				static_cast<QWidget*>(child)->hide();
-			}
-		}
+		Ui::ToggleChildrenVisibility(this, false);
 	}
 	void showChildren() {
-		for (auto child : Base::children()) {
-			if (child->isWidgetType()) {
-				static_cast<QWidget*>(child)->show();
-			}
-		}
+		Ui::ToggleChildrenVisibility(this, true);
 	}
 
 	void moveToLeft(int x, int y, int outerw = 0) {
