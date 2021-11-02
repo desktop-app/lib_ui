@@ -104,7 +104,7 @@ public:
 		const PainterHighQualityEnabler &other) = delete;
 
 	~PainterHighQualityEnabler() {
-		if (_hints) {
+		if (_hints && _painter.isActive()) {
 			_painter.setRenderHints(_hints, false);
 		}
 	}
