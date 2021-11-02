@@ -86,7 +86,15 @@ void RippleAnimation::Ripple::paint(QPainter &p, const QPixmap &mask, const QCol
 	}
 
 	if (_cache.isNull() || colorOverride != nullptr) {
-		auto radius = anim::interpolate(_radiusFrom, _radiusTo, _show.value(1.));
+		const auto shown = _show.value(1.);
+		Assert(!std::isnan(shown));
+		const auto diff = float64(_radiusTo - _radiusFrom);
+		Assert(!std::isnan(diff));
+		const auto mult = diff * shown;
+		Assert(!std::isnan(mult));
+		const auto interpolated = _radiusFrom + mult;//anim::interpolateF(_radiusFrom, _radiusTo, shown);
+		Assert(!std::isnan(interpolated));
+		auto radius = int(base::SafeRound(interpolated));//anim::interpolate(_radiusFrom, _radiusTo, _show.value(1.));
 		_frame.fill(Qt::transparent);
 		{
 			QPainter p(&_frame);
