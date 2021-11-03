@@ -9,7 +9,6 @@
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/style/style_core.h"
 
-#include <QtCore/QCoreApplication>
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
@@ -214,9 +213,7 @@ bool IsContentVisible(
 }
 
 void DisableCustomScaling() {
-	if (QCoreApplication::testAttribute(Qt::AA_DisableHighDpiScaling)) {
-		QHighDpiScaling::setGlobalFactor(1);
-	}
+	QHighDpiScaling::setGlobalFactor(1);
 }
 
 int WheelDirection(not_null<QWheelEvent*> e) {
