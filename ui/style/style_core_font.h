@@ -24,7 +24,7 @@ int registerFontFamily(const QString &family);
 class FontData;
 class Font {
 public:
-	Font(Qt::Initialization = Qt::Uninitialized) : ptr(0) {
+	Font(Qt::Initialization = Qt::Uninitialized) {
 	}
 	Font(int size, uint32 flags, const QString &family);
 	Font(int size, uint32 flags, int family);
@@ -43,7 +43,7 @@ public:
 	operator const QFont &() const;
 
 private:
-	FontData *ptr;
+	FontData *ptr = nullptr;
 
 	void init(int size, uint32 flags, int family, Font *modified);
 	friend void startManager();

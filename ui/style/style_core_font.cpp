@@ -301,8 +301,6 @@ FontData::FontData(int size, uint32 flags, int family, Font *other)
 , _family(family) {
 	if (other) {
 		memcpy(modified, other, sizeof(modified));
-	} else {
-		memset(modified, 0, sizeof(modified));
 	}
 	modified[_flags] = Font(this);
 
