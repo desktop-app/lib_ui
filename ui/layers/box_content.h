@@ -160,6 +160,15 @@ public:
 			std::move(clickCallback),
 			st);
 	}
+	QPointer<RoundButton> addLeftButton(
+			rpl::producer<QString> text,
+			Fn<void()> clickCallback,
+			const style::RoundButton& st) {
+		return getDelegate()->addLeftButton(
+			std::move(text),
+			std::move(clickCallback),
+			st);
+	}
 	void showLoading(bool show) {
 		getDelegate()->showLoading(show);
 	}
