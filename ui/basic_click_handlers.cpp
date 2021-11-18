@@ -19,7 +19,11 @@
 
 QString TextClickHandler::readable() const {
 	const auto result = url();
-	return result.startsWith(qstr("internal:")) ? QString() : result;
+	return !result.startsWith(qstr("internal:"))
+		? result
+		: result.startsWith(qstr("internal:url:"))
+		? result.mid(qstr("internal:url:").size())
+		: QString();
 }
 
 UrlClickHandler::UrlClickHandler(const QString &url, bool fullDisplayed)
@@ -33,6 +37,13 @@ UrlClickHandler::UrlClickHandler(const QString &url, bool fullDisplayed)
 			? original.toEncoded()
 			: QString());
 		_readable = good.isValid() ? good.toDisplayString() : _originalUrl;
+	} else if (_originalUrl.startsWith(qstr("internal:url:"))) {
+		const auto external = _originalUrl.mid(qstr("internal:url:").size());
+		const auto original = QUrl(external);
+		const auto good = QUrl(original.isValid()
+			? original.toEncoded()
+			: QString());
+		_readable = good.isValid() ? good.toDisplayString() : external;
 	}
 }
 
