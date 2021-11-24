@@ -137,6 +137,9 @@ boxTitleAdditionalFg: #808080; // box title additional text (like in create grou
 boxTitleCloseFg: cancelIconFg; // settings close icon and box search cancel icon (like in contacts box)
 boxTitleCloseFgOver: cancelIconFgOver; // settings close icon and box search cancel icon (like in contacts box) with mouse over
 
+boxDividerBg: windowBgOver; // gray divider in boxes and layers
+boxDividerFg: windowShadowFg; // gray divider shadow in boxes and layers
+
 paymentsTipActive: #01ad0f; // tip button text in payments checkout form
 
 membersAboutLimitFg: windowSubTextFgOver; // text in channel members box about the limit (max 200 last members are shown)

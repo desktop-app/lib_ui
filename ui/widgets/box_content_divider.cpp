@@ -7,6 +7,7 @@
 #include "ui/widgets/box_content_divider.h"
 
 #include "styles/style_layers.h"
+#include "styles/palette.h"
 
 #include <QtGui/QPainter>
 #include <QtGui/QtEvents>

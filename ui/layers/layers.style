@@ -154,8 +154,6 @@ boxLoadingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
 }
 boxLoadingSize: 20px;
 
-boxDividerBg: windowBgOver;
-boxDividerFg: windowShadowFg;
 boxDividerTop: icon {{ "box_divider_top", boxDividerFg }};
 boxDividerBottom: icon {{ "box_divider_bottom", boxDividerFg }};
 boxDividerHeight: 10px;
