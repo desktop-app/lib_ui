@@ -28,6 +28,10 @@ public:
 
 	void handleKeyPress(not_null<QKeyEvent*> e) override;
 
+	void setIcon(
+		const style::icon *icon,
+		const style::icon *iconOver = nullptr);
+
 protected:
 	QPoint prepareRippleStartPosition() const override;
 	QImage prepareRippleMask() const override;

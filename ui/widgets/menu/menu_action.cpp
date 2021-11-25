@@ -192,4 +192,12 @@ void Action::handleKeyPress(not_null<QKeyEvent*> e) {
 	}
 }
 
+void Action::setIcon(
+		const style::icon *icon,
+		const style::icon *iconOver) {
+	_icon = icon;
+	_iconOver = iconOver ? iconOver : icon;
+	update();
+}
+
 } // namespace Ui::Menu
