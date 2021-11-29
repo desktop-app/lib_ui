@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/basic_types.h"
+#include "base/flat_map.h"
 
 #include <QtCore/QVariant>
 
@@ -62,6 +63,9 @@ public:
 	};
 	virtual TextEntity getTextEntity() const;
 
+	void setProperty(int id, QVariant value);
+	[[nodiscard]] const QVariant &property(int id) const;
+
 	// This method should be called on mouse over a click handler.
 	// It returns true if the active handler was changed or false otherwise.
 	static bool setActive(const ClickHandlerPtr &p, ClickHandlerHost *host = nullptr);
@@ -87,6 +91,8 @@ public:
 private:
 	static ClickHandlerHost *_activeHost;
 	static ClickHandlerHost *_pressedHost;
+
+	base::flat_map<int, QVariant> _properties;
 
 };
 

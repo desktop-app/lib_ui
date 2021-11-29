@@ -154,6 +154,16 @@ auto ClickHandler::getTextEntity() const -> TextEntity {
 	return { EntityType::Invalid };
 }
 
+void ClickHandler::setProperty(int id, QVariant value) {
+	_properties[id] = std::move(value);
+}
+
+const QVariant &ClickHandler::property(int id) const {
+	static const QVariant kEmpty;
+	const auto i = _properties.find(id);
+	return (i != end(_properties)) ? i->second : kEmpty;
+}
+
 void ActivateClickHandler(
 		not_null<QWidget*> guard,
 		ClickHandlerPtr handler,
