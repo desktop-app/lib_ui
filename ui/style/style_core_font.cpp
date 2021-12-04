@@ -30,9 +30,7 @@ void style_InitFontsResource() {
 #endif // !DESKTOP_APP_USE_PACKAGED_FONTS
 #ifdef Q_OS_WIN
 	Q_INIT_RESOURCE(win);
-#elif defined Q_OS_UNIX && !defined DESKTOP_APP_USE_PACKAGED // Q_OS_WIN
-	Q_INIT_RESOURCE(linux);
-#endif // Q_OS_WIN || (Q_OS_UNIX && !DESKTOP_APP_USE_PACKAGED)
+#endif // Q_OS_WIN
 
 #endif // Q_OS_MAC
 }

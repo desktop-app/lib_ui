@@ -34,7 +34,6 @@ PRIVATE
     ui/colors.palette
     emoji_suggestions/emoji_autocomplete.json
 
-    qt_conf/mac.qrc
     qt_conf/win.qrc
 
     ui/effects/animation_value.cpp
@@ -245,8 +244,6 @@ PRIVATE
 
 if (DESKTOP_APP_USE_PACKAGED)
     nice_target_sources(lib_ui ${src_loc} PRIVATE ui/text/qtextitemint.cpp)
-else()
-    nice_target_sources(lib_ui ${src_loc} PRIVATE qt_conf/linux.qrc)
 endif()
 
 if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
