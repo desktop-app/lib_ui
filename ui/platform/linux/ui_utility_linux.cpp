@@ -132,7 +132,7 @@ std::optional<uint> XCBCurrentWorkspace() {
 		return std::nullopt;
 	}
 
-	const auto root = base::Platform::XCB::GetRootWindowFromQt();
+	const auto root = base::Platform::XCB::GetRootWindow(connection);
 	if (!root.has_value()) {
 		return std::nullopt;
 	}
@@ -220,7 +220,7 @@ std::optional<bool> XCBIsOverlapped(
 		return std::nullopt;
 	}
 
-	const auto root = base::Platform::XCB::GetRootWindowFromQt();
+	const auto root = base::Platform::XCB::GetRootWindow(connection);
 	if (!root.has_value()) {
 		return std::nullopt;
 	}
@@ -345,7 +345,7 @@ bool ShowXCBWindowMenu(QWindow *window) {
 		return false;
 	}
 
-	const auto root = base::Platform::XCB::GetRootWindowFromQt();
+	const auto root = base::Platform::XCB::GetRootWindow(connection);
 	if (!root.has_value()) {
 		return false;
 	}
