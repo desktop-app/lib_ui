@@ -7,10 +7,8 @@
 #include "ui/platform/linux/ui_utility_linux.h"
 
 #include "base/platform/base_platform_info.h"
-#include "base/debug_log.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 #include "base/const_string.h"
-#include "base/flat_set.h"
 
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 #include "base/platform/linux/base_linux_glibmm_helper.h"
@@ -23,10 +21,8 @@
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #include <QtCore/QPoint>
-#include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
-#include <qpa/qplatformnativeinterface.h>
 
 namespace Ui {
 namespace Platform {
@@ -431,23 +427,36 @@ bool TranslucentWindowsSupported(QPoint globalPosition) {
 		return true;
 	}
 
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
-		if (const auto native = QGuiApplication::platformNativeInterface()) {
-			if (const auto screen = QGuiApplication::screenAt(globalPosition)) {
-				if (native->nativeResourceForScreen(QByteArray("compositingEnabled"), screen)) {
-					return true;
-				}
-				const auto index = QGuiApplication::screens().indexOf(screen);
-				static auto WarnedAbout = base::flat_set<int>();
-				if (!WarnedAbout.contains(index)) {
-					WarnedAbout.emplace(index);
-					LOG(("WARNING: Compositing is disabled for screen index %1 (for position %2,%3)").arg(index).arg(globalPosition.x()).arg(globalPosition.y()));
-				}
-			} else {
-				LOG(("WARNING: Could not get screen for position %1,%2").arg(globalPosition.x()).arg(globalPosition.y()));
-			}
+		const auto connection = base::Platform::XCB::GetConnectionFromQt();
+		if (!connection) {
+			return false;
 		}
+
+		const auto atom = base::Platform::XCB::GetAtom(
+			connection,
+			"_NET_WM_CM_S0");
+
+		if (!atom) {
+			return false;
+		}
+
+		const auto cookie = xcb_get_selection_owner(connection, *atom);
+
+		const auto result = base::Platform::XCB::MakeReplyPointer(
+			xcb_get_selection_owner_reply(
+				connection,
+				cookie,
+				nullptr));
+
+		if (!result) {
+			return false;
+		}
+
+		return result->owner;
 	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 	return false;
 }
