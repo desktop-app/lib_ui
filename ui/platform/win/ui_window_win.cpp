@@ -740,16 +740,7 @@ HWND GetWindowHandle(not_null<QWidget*> widget) {
 }
 
 HWND GetWindowHandle(not_null<QWindow*> window) {
-	if (!window->winId()) {
-		window->create();
-	}
-
-	const auto native = QGuiApplication::platformNativeInterface();
-	Assert(native != nullptr);
-
-	return static_cast<HWND>(native->nativeResourceForWindow(
-		QByteArrayLiteral("handle"),
-		window));
+	return static_cast<HWND>(window->winId());
 }
 
 void SendWMPaintForce(not_null<QWidget*> widget) {
