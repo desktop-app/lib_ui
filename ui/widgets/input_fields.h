@@ -137,6 +137,9 @@ private:
 	QTimer _touchTimer;
 	bool _touchPress, _touchRightButton, _touchMove;
 	QPoint _touchStart;
+
+	base::unique_qptr<PopupMenu> _contextMenu;
+
 };
 
 class InputField : public RpWidget {
@@ -696,6 +699,9 @@ private:
 	bool _touchRightButton = false;
 	bool _touchMove = false;
 	QPoint _touchStart;
+
+	base::unique_qptr<PopupMenu> _contextMenu;
+
 };
 
 class PasswordInput : public MaskedInputField {
