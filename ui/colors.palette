@@ -55,7 +55,7 @@ menuBgOver: windowBgOver; // default popup menu item background with mouse over
 menuBgRipple: windowBgRipple; // default popup menu item ripple effect
 menuIconFg: #a8a8a8; // default popup menu item icon (like main menu)
 menuIconFgOver: #999999; // default popup menu item icon with mouse over
-menuSubmenuArrowFg: #373737; // default popup menu submenu arrow icon (like in message field context menu in case of RTL system language)
+menuSubmenuArrowFg: #666B72; // default popup menu submenu arrow icon (like in message field context menu in case of RTL system language)
 menuFgDisabled: #cccccc; // default popup menu item disabled text (like unavailable items in message field context menu)
 menuSeparatorFg: #f1f1f1; // default popup menu separator (like in message field context menu)
 
