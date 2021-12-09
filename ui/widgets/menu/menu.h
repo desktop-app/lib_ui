@@ -40,7 +40,9 @@ public:
 		const style::icon *iconOver = nullptr);
 	not_null<QAction*> addAction(
 		const QString &text,
-		std::unique_ptr<QMenu> submenu);
+		std::unique_ptr<QMenu> submenu,
+		const style::icon *icon = nullptr,
+		const style::icon *iconOver = nullptr);
 	not_null<QAction*> addSeparator();
 	void clearActions();
 	void finishAnimating();

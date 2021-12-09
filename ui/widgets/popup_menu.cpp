@@ -357,14 +357,24 @@ not_null<QAction*> PopupMenu::addAction(
 	return _menu->addAction(std::move(widget));
 }
 
-not_null<QAction*> PopupMenu::addAction(const QString &text, Fn<void()> callback, const style::icon *icon, const style::icon *iconOver) {
+not_null<QAction*> PopupMenu::addAction(
+		const QString &text,
+		Fn<void()> callback,
+		const style::icon *icon,
+		const style::icon *iconOver) {
 	return _menu->addAction(text, std::move(callback), icon, iconOver);
 }
 
 not_null<QAction*> PopupMenu::addAction(
 		const QString &text,
-		std::unique_ptr<PopupMenu> submenu) {
-	const auto action = _menu->addAction(text, std::make_unique<QMenu>());
+		std::unique_ptr<PopupMenu> submenu,
+		const style::icon *icon,
+		const style::icon *iconOver) {
+	const auto action = _menu->addAction(
+		text,
+		std::make_unique<QMenu>(),
+		icon,
+		iconOver);
 	const auto saved = _submenus.emplace(
 		action,
 		base::unique_qptr<PopupMenu>(submenu.release())

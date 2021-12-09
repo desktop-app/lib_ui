@@ -68,10 +68,12 @@ not_null<QAction*> Menu::addAction(
 
 not_null<QAction*> Menu::addAction(
 		const QString &text,
-		std::unique_ptr<QMenu> submenu) {
+		std::unique_ptr<QMenu> submenu,
+		const style::icon *icon,
+		const style::icon *iconOver) {
 	const auto action = new QAction(text, this);
 	action->setMenu(submenu.release());
-	return addAction(action, nullptr, nullptr);
+	return addAction(action, icon, iconOver);
 }
 
 not_null<QAction*> Menu::addAction(
