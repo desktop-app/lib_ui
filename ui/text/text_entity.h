@@ -33,6 +33,7 @@ enum class EntityType : uchar {
 	StrikeOut,
 	Code, // inline
 	Pre,  // block
+	Spoiler,
 };
 
 enum class EntityLinkShown : uchar {

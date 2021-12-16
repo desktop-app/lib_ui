@@ -253,6 +253,30 @@ const TextParseOptions _textPlainOptions = {
 namespace Ui {
 namespace Text {
 
+class String::SpoilerClickHandler final : public ClickHandler {
+public:
+	SpoilerClickHandler() = default;
+
+	TextEntity getTextEntity() const override {
+		return { EntityType::Spoiler };
+	}
+
+	void onClick(ClickContext context) const override {
+		if (!_shown) {
+			const auto nonconst = const_cast<SpoilerClickHandler*>(this);
+			nonconst->_shown = true;
+		}
+	}
+
+	[[nodiscard]] bool shown() const {
+		return _shown;
+	}
+
+private:
+	bool _shown = false;
+
+};
+
 class Parser {
 public:
 	Parser(
@@ -273,13 +297,20 @@ private:
 	class StartedEntity {
 	public:
 		explicit StartedEntity(TextBlockFlags flags);
-		explicit StartedEntity(uint16 lnkIndex);
+		explicit StartedEntity(uint16 index, bool isLnk = true);
 
 		std::optional<TextBlockFlags> flags() const;
 		std::optional<uint16> lnkIndex() const;
+		std::optional<uint16> spoilerIndex() const;
 
 	private:
-		int _value = 0;
+		enum class Type {
+			Flags,
+			Link,
+			Spoiler,
+		};
+		const int _value = 0;
+		const Type _type;
 
 	};
 
@@ -334,15 +365,18 @@ private:
 	const bool _checkTilde = false; // do we need a special text block for tilde symbol
 
 	std::vector<EntityLinkData> _links;
+	std::vector<EntityLinkData> _spoilers;
 	base::flat_map<
 		const QChar*,
 		std::vector<StartedEntity>> _startedEntities;
 
 	uint16 _maxLnkIndex = 0;
+	uint16 _maxSpoilerIndex = 0;
 
 	// current state
 	int32 _flags = 0;
 	uint16 _lnkIndex = 0;
+	uint16 _spoilerIndex = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
 	int32 _blockStart = 0; // offset in result, from which current parsed block is started
 	int32 _diacs = 0; // diac chars skipped without good char
@@ -357,23 +391,36 @@ private:
 
 };
 
-Parser::StartedEntity::StartedEntity(TextBlockFlags flags) : _value(flags) {
+Parser::StartedEntity::StartedEntity(TextBlockFlags flags)
+: _value(flags)
+, _type(Type::Flags) {
 	Expects(_value >= 0 && _value < int(kStringLinkIndexShift));
 }
 
-Parser::StartedEntity::StartedEntity(uint16 lnkIndex) : _value(lnkIndex) {
-	Expects(_value >= kStringLinkIndexShift);
+Parser::StartedEntity::StartedEntity(uint16 index, bool isLnk)
+: _value(index)
+, _type(isLnk ? Type::Link : Type::Spoiler) {
+	Expects((_type == Type::Link)
+		? (_value >= kStringLinkIndexShift)
+		: (_value < kStringLinkIndexShift));
 }
 
 std::optional<TextBlockFlags> Parser::StartedEntity::flags() const {
-	if (_value < int(kStringLinkIndexShift)) {
+	if (_value < int(kStringLinkIndexShift) && (_type == Type::Flags)) {
 		return TextBlockFlags(_value);
 	}
 	return std::nullopt;
 }
 
 std::optional<uint16> Parser::StartedEntity::lnkIndex() const {
-	if (_value >= int(kStringLinkIndexShift)) {
+	if (_value >= int(kStringLinkIndexShift) && (_type == Type::Link)) {
+		return uint16(_value);
+	}
+	return std::nullopt;
+}
+
+std::optional<uint16> Parser::StartedEntity::spoilerIndex() const {
+	if (_value < int(kStringLinkIndexShift) && (_type == Type::Spoiler)) {
 		return uint16(_value);
 	}
 	return std::nullopt;
@@ -437,6 +484,9 @@ void Parser::createBlock(int32 skipBack) {
 	if (_lnkIndex < kStringLinkIndexShift && _lnkIndex > _maxLnkIndex) {
 		_maxLnkIndex = _lnkIndex;
 	}
+	if (_spoilerIndex > _maxSpoilerIndex) {
+		_maxSpoilerIndex = _spoilerIndex;
+	}
 
 	int32 len = int32(_t->_text.size()) + skipBack - _blockStart;
 	if (len > 0) {
@@ -450,13 +500,13 @@ void Parser::createBlock(int32 skipBack) {
 		}
 		_lastSkipped = false;
 		if (_emoji) {
-			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, 0/*spoilerIndex*/, _emoji));
+			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _spoilerIndex, _emoji));
 			_emoji = nullptr;
 			_lastSkipped = true;
 		} else if (newline) {
-			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, 0/*spoilerIndex*/));
+			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _spoilerIndex));
 		} else {
-			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex, 0/*spoilerIndex*/));
+			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex, _spoilerIndex));
 		}
 		_blockStart += len;
 		blockCreated();
@@ -466,7 +516,7 @@ void Parser::createBlock(int32 skipBack) {
 void Parser::createSkipBlock(int32 w, int32 h) {
 	createBlock();
 	_t->_text.push_back('_');
-	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex, 0/*spoilerIndex*/));
+	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex, _spoilerIndex));
 	blockCreated();
 }
 
@@ -508,6 +558,11 @@ void Parser::finishEntities() {
 				if (_lnkIndex == *lnkIndex) {
 					createBlock();
 					_lnkIndex = 0;
+				}
+			} else if (const auto spoilerIndex = list.back().spoilerIndex()) {
+				if (_spoilerIndex == *spoilerIndex && (_spoilerIndex != 0)) {
+					createBlock();
+					_spoilerIndex = 0;
 				}
 			}
 			list.pop_back();
@@ -594,6 +649,16 @@ bool Parser::checkEntities() {
 			_flags |= flags;
 			_startedEntities[entityEnd].emplace_back(flags);
 		}
+	} else if (entityType == EntityType::Spoiler) {
+		createBlock();
+
+		_spoilers.push_back(EntityLinkData{
+			.data = QString::number(_spoilers.size() + 1),
+			.type = entityType,
+		});
+		_spoilerIndex = _spoilers.size();
+
+		_startedEntities[entityEnd].emplace_back(_spoilerIndex, false);
 	}
 
 	++_waitingEntity;
@@ -918,7 +983,16 @@ void Parser::checkForElidedSkipBlock() {
 
 void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.resize(_maxLnkIndex);
+	_t->_spoilers.resize(_maxSpoilerIndex);
 	for (auto &block : _t->_blocks) {
+		const auto spoilerIndex = block->spoilerIndex();
+		if (spoilerIndex) {
+			_t->_spoilers.resize(spoilerIndex);
+			const auto handler = (options.flags & TextParseLinks)
+				? std::make_shared<String::SpoilerClickHandler>()
+				: nullptr;
+			_t->_spoilers[spoilerIndex - 1] = std::move(handler);
+		}
 		const auto shiftedIndex = block->lnkIndex();
 		if (shiftedIndex <= kStringLinkIndexShift) {
 			continue;
@@ -939,6 +1013,7 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 	}
 	_t->_links.squeeze();
+	_t->_spoilers.squeeze();
 	_t->_blocks.squeeze();
 	_t->_text.squeeze();
 }
@@ -1591,8 +1666,14 @@ private:
 				TextBlockType _type = currentBlock->type();
 				if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
 					if (_lookupLink) {
-						if (currentBlock->lnkIndex() && _lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
-							_lookupResult.link = _t->_links.at(currentBlock->lnkIndex() - 1);
+						if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
+							const auto spoilerLink = _t->spoilerLink(currentBlock->spoilerIndex());
+							const auto resultLink = (spoilerLink || !currentBlock->lnkIndex())
+								? spoilerLink
+								: _t->_links.at(currentBlock->lnkIndex() - 1);
+							if (resultLink) {
+								_lookupResult.link = resultLink;
+							}
 						}
 					}
 					if (_type != TextBlockTSkip) {
@@ -1664,12 +1745,35 @@ private:
 							}
 						}
 					}
-					Emoji::Draw(
-						*_p,
-						static_cast<const EmojiBlock*>(currentBlock)->_emoji,
-						Emoji::GetSizeNormal(),
-						(glyphX + st::emojiPadding).toInt(),
-						_y + _yDelta + emojiY);
+					if (_background.brush) {
+						const auto from = currentBlock->from();
+						const auto to = currentBlock->from() + currentBlock->width();
+						if (_localFrom + si.position < to) {
+							auto chFrom = _str + currentBlock->from();
+							auto chTo = chFrom + ((nextBlock ? nextBlock->from() : _t->_text.size()) - currentBlock->from());
+							if (_localFrom + si.position >= from) { // could be without space
+								if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || to >= (chTo - _str)) {
+									fillSpoilerRange(x, si.width, blockIndex);
+								} else { // or with space
+									fillSpoilerRange(glyphX, currentBlock->f_width(), blockIndex);
+								}
+							} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= from) {
+								if (rtl) { // rtl space only
+									fillSpoilerRange(x, glyphX - x, blockIndex);
+								} else { // ltr space only
+									fillSpoilerRange(x + currentBlock->f_width(), si.width, blockIndex);
+								}
+							}
+						}
+					}
+					if (!_background.inFront) {
+						Emoji::Draw(
+							*_p,
+							static_cast<const EmojiBlock*>(currentBlock)->_emoji,
+							Emoji::GetSizeNormal(),
+							(glyphX + st::emojiPadding).toInt(),
+							_y + _yDelta + emojiY);
+					}
 //				} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
 //					_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
 				}
@@ -1697,8 +1801,14 @@ private:
 
 			if (!_p && _lookupX >= x && _lookupX < x + itemWidth) { // _lookupRequest
 				if (_lookupLink) {
-					if (currentBlock->lnkIndex() && _lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
-						_lookupResult.link = _t->_links.at(currentBlock->lnkIndex() - 1);
+					if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
+						const auto spoilerLink = _t->spoilerLink(currentBlock->spoilerIndex());
+						const auto resultLink = (spoilerLink || !currentBlock->lnkIndex())
+							? spoilerLink
+							: _t->_links.at(currentBlock->lnkIndex() - 1);
+						if (resultLink) {
+							_lookupResult.link = resultLink;
+						}
 					}
 				}
 				_lookupResult.uponSymbol = true;
@@ -1751,6 +1861,10 @@ private:
 				gf.width = itemWidth;
 				gf.justified = false;
 				gf.initWithScriptItem(si);
+
+				if (!_background.inFront) {
+					fillSpoilerRange(x, si.width, blockIndex);
+				}
 
 				auto hasSelected = false;
 				auto hasNotSelected = true;
@@ -1823,6 +1937,10 @@ private:
 					_p->setPen(*_currentPen);
 					_p->drawTextItem(QPointF(x.toReal(), textY), gf);
 				}
+
+				if (_background.inFront) {
+					fillSpoilerRange(x, si.width, blockIndex);
+				}
 			}
 
 			x += itemWidth;
@@ -1833,6 +1951,22 @@ private:
 		auto left = from.toInt();
 		auto width = to.toInt() - left;
 		_p->fillRect(left, _y + _yDelta, width, _fontHeight, _textPalette->selectBg);
+	}
+
+	void fillSpoilerRange(QFixed x, QFixed width, int currentBlockIndex) {
+		if (_background.brush) {
+			const auto elideOffset =
+				(_indexOfElidedBlock == currentBlockIndex)
+					? (_elideRemoveFromEnd + _f->elidew)
+					: 0;
+
+			_p->fillRect(
+				x.toInt(),
+				_y + _yDelta,
+				width.toInt() - elideOffset,
+				_fontHeight,
+				*_background.brush);
+		}
 	}
 
 	void elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock, int32 elideStart, int32 elideWidth) {
@@ -1900,6 +2034,7 @@ private:
 					lineText = lineText.mid(0, currentBlock->from() - _localFrom) + _Elide;
 					lineLength = currentBlock->from() + _Elide.size() - _lineStart;
 					_selection.to = qMin(_selection.to, currentBlock->from());
+					_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
 					setElideBidi(currentBlock->from(), _Elide.size());
 					elideSaveBlock(blockIndex - 1, _endBlock, currentBlock->from(), elideWidth);
 					return;
@@ -1932,6 +2067,7 @@ private:
 							lineText += _Elide;
 							lineLength = _localFrom + pos + _Elide.size() - _lineStart;
 							_selection.to = qMin(_selection.to, uint16(_localFrom + pos));
+							_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
 							setElideBidi(_localFrom + pos, _Elide.size());
 							_blocksSize = blockIndex;
 							_endBlock = nextBlock;
@@ -1952,6 +2088,7 @@ private:
 
 		int32 elideStart = _localFrom + lineText.size();
 		_selection.to = qMin(_selection.to, uint16(elideStart));
+		_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
 		setElideBidi(elideStart, _Elide.size());
 
 		lineText += _Elide;
@@ -2611,6 +2748,18 @@ private:
 	void applyBlockProperties(const AbstractBlock *block) {
 		eSetFont(block);
 		if (_p) {
+			const auto handler = !block->spoilerIndex()
+				? nullptr
+				: _t->_spoilers.at(block->spoilerIndex() - 1);
+			if (!block->spoilerIndex()) {
+				_background = {};
+			} else {
+				const auto inBack = (handler && handler->shown());
+				_background.inFront = !inBack;
+				_background.brush = inBack
+					? &_textPalette->spoilerActiveBg->b
+					: &_textPalette->spoilerBg->b;
+			}
 			if (block->lnkIndex()) {
 				_currentPen = &_textPalette->linkFg->p;
 				_currentPenSelected = &_textPalette->selectLinkFg->p;
@@ -2635,12 +2784,18 @@ private:
 	QPen _originalPenSelected;
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
+	struct {
+		const QBrush *brush = nullptr;
+		bool inFront = false;
+	} _background;
 	int _yFrom = 0;
 	int _yTo = 0;
 	int _yToElide = 0;
 	TextSelection _selection = { 0, 0 };
 	bool _fullWidthSelection = true;
 	const QChar *_str = nullptr;
+
+	int _indexOfElidedBlock = -1; // For spoilers.
 
 	// current paragraph data
 	String::TextBlocks::const_iterator _parStartBlock;
@@ -3248,7 +3403,7 @@ TextForMimeData String::toText(
 			{ TextBlockFUnderline, EntityType::Underline },
 			{ TextBlockFStrikeOut, EntityType::StrikeOut },
 			{ TextBlockFCode, EntityType::Code }, // #TODO entities
-			{ TextBlockFPre, EntityType::Pre }
+			{ TextBlockFPre, EntityType::Pre },
 		} : std::vector<MarkdownTagTracker>();
 	const auto flagsChangeCallback = [&](int32 oldFlags, int32 newFlags) {
 		if (!composeEntities) {
@@ -3368,8 +3523,17 @@ void String::clear() {
 void String::clearFields() {
 	_blocks.clear();
 	_links.clear();
+	_spoilers.clear();
 	_maxWidth = _minHeight = 0;
 	_startDir = Qt::LayoutDirectionAuto;
+}
+
+ClickHandlerPtr String::spoilerLink(uint16 spoilerIndex) const {
+	if (spoilerIndex) {
+		const auto &handler = _spoilers.at(spoilerIndex - 1);
+		return (handler && !handler->shown()) ? handler : nullptr;
+	}
+	return nullptr;
 }
 
 bool IsWordSeparator(QChar ch) {
