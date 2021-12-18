@@ -346,9 +346,11 @@ AbstractBlock::AbstractBlock(
 	uint16 from,
 	uint16 length,
 	uchar flags,
-	uint16 lnkIndex)
+	uint16 lnkIndex,
+	uint16 spoilerIndex)
 : _from(from)
-, _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12)) {
+, _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12))
+, _spoilerIndex(spoilerIndex) {
 }
 
 uint16 AbstractBlock::from() const {
@@ -379,12 +381,20 @@ void AbstractBlock::setLnkIndex(uint16 lnkIndex) {
 	_flags = (_flags & ~(0xFFFF << 12)) | (lnkIndex << 12);
 }
 
+uint16 AbstractBlock::spoilerIndex() const {
+	return _spoilerIndex;
+}
+
+void AbstractBlock::setSpoilerIndex(uint16 spoilerIndex) {
+	_spoilerIndex = spoilerIndex;
+}
+
 TextBlockType AbstractBlock::type() const {
 	return TextBlockType((_flags >> 8) & 0x0F);
 }
 
 int32 AbstractBlock::flags() const {
-	return (_flags & 0xFF);
+	return (_flags & 0xFFF);
 }
 
 QFixed AbstractBlock::f_rbearing() const {
@@ -400,8 +410,9 @@ TextBlock::TextBlock(
 	uint16 from,
 	uint16 length,
 	uchar flags,
-	uint16 lnkIndex)
-: AbstractBlock(font, str, from, length, flags, lnkIndex) {
+	uint16 lnkIndex,
+	uint16 spoilerIndex)
+: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
 	_flags |= ((TextBlockTText & 0x0F) << 8);
 	if (length) {
 		style::font blockFont = font;
@@ -442,8 +453,9 @@ EmojiBlock::EmojiBlock(
 	uint16 length,
 	uchar flags,
 	uint16 lnkIndex,
+	uint16 spoilerIndex,
 	EmojiPtr emoji)
-: AbstractBlock(font, str, from, length, flags, lnkIndex)
+: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex)
 , _emoji(emoji) {
 	_flags |= ((TextBlockTEmoji & 0x0F) << 8);
 	_width = int(st::emojiSize + 2 * st::emojiPadding);

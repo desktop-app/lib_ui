@@ -450,13 +450,13 @@ void Parser::createBlock(int32 skipBack) {
 		}
 		_lastSkipped = false;
 		if (_emoji) {
-			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _emoji));
+			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, 0/*spoilerIndex*/, _emoji));
 			_emoji = nullptr;
 			_lastSkipped = true;
 		} else if (newline) {
-			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex));
+			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, 0/*spoilerIndex*/));
 		} else {
-			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex));
+			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex, 0/*spoilerIndex*/));
 		}
 		_blockStart += len;
 		blockCreated();
@@ -466,7 +466,7 @@ void Parser::createBlock(int32 skipBack) {
 void Parser::createSkipBlock(int32 w, int32 h) {
 	createBlock();
 	_t->_text.push_back('_');
-	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex));
+	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex, 0/*spoilerIndex*/));
 	blockCreated();
 }
 
@@ -1843,7 +1843,7 @@ private:
 		_elideSavedIndex = blockIndex;
 		auto mutableText = const_cast<String*>(_t);
 		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
-		mutableText->_blocks[blockIndex] = Block::Text(_t->_st->font, _t->_text, QFIXED_MAX, elideStart, 0, (*_elideSavedBlock)->flags(), (*_elideSavedBlock)->lnkIndex());
+		mutableText->_blocks[blockIndex] = Block::Text(_t->_st->font, _t->_text, QFIXED_MAX, elideStart, 0, (*_elideSavedBlock)->flags(), (*_elideSavedBlock)->lnkIndex(), (*_elideSavedBlock)->spoilerIndex());
 		_blocksSize = blockIndex + 1;
 		_endBlock = (blockIndex + 1 < _t->_blocks.size() ? _t->_blocks[blockIndex + 1].get() : nullptr);
 	}
@@ -2889,6 +2889,7 @@ bool String::updateSkipBlock(int width, int height) {
 		_text.size() - 1,
 		width,
 		height,
+		0,
 		0));
 	recountNaturalSize(false);
 	return true;

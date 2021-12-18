@@ -46,6 +46,9 @@ public:
 	uint16 lnkIndex() const;
 	void setLnkIndex(uint16 lnkIndex);
 
+	uint16 spoilerIndex() const;
+	void setSpoilerIndex(uint16 spoilerIndex);
+
 	TextBlockType type() const;
 	int32 flags() const;
 
@@ -56,11 +59,14 @@ protected:
 		uint16 from,
 		uint16 length,
 		uchar flags,
-		uint16 lnkIndex);
+		uint16 lnkIndex,
+		uint16 spoilerIndex);
 
 	uint16 _from = 0;
 
 	uint32 _flags = 0; // 4 bits empty, 16 bits lnkIndex, 4 bits type, 8 bits flags
+
+	uint16 _spoilerIndex = 0;
 
 	QFixed _width = 0;
 
@@ -81,8 +87,9 @@ public:
 		uint16 from,
 		uint16 length,
 		uchar flags,
-		uint16 lnkIndex)
-	: AbstractBlock(font, str, from, length, flags, lnkIndex) {
+		uint16 lnkIndex,
+		uint16 spoilerIndex)
+	: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
 		_flags |= ((TextBlockTNewline & 0x0F) << 8);
 	}
 
@@ -142,7 +149,8 @@ public:
 		uint16 from,
 		uint16 length,
 		uchar flags,
-		uint16 lnkIndex);
+		uint16 lnkIndex,
+		uint16 spoilerIndex);
 
 private:
 	QFixed real_f_rbearing() const {
@@ -168,6 +176,7 @@ public:
 		uint16 length,
 		uchar flags,
 		uint16 lnkIndex,
+		uint16 spoilerIndex,
 		EmojiPtr emoji);
 
 private:
@@ -187,8 +196,9 @@ public:
 		uint16 from,
 		int32 w,
 		int32 h,
-		uint16 lnkIndex)
-	: AbstractBlock(font, str, from, 1, 0, lnkIndex)
+		uint16 lnkIndex,
+		uint16 spoilerIndex)
+	: AbstractBlock(font, str, from, 1, 0, lnkIndex, spoilerIndex)
 	, _height(h) {
 		_flags |= ((TextBlockTSkip & 0x0F) << 8);
 		_width = w;
@@ -304,8 +314,9 @@ public:
 			uint16 from,
 			uint16 length,
 			uchar flags,
-			uint16 lnkIndex) {
-		return New<NewlineBlock>(font, str, from, length, flags, lnkIndex);
+			uint16 lnkIndex,
+			uint16 spoilerIndex) {
+		return New<NewlineBlock>(font, str, from, length, flags, lnkIndex, spoilerIndex);
 	}
 
 	[[nodiscard]] static Block Text(
@@ -315,7 +326,8 @@ public:
 			uint16 from,
 			uint16 length,
 			uchar flags,
-			uint16 lnkIndex) {
+			uint16 lnkIndex,
+			uint16 spoilerIndex) {
 		return New<TextBlock>(
 			font,
 			str,
@@ -323,7 +335,8 @@ public:
 			from,
 			length,
 			flags,
-			lnkIndex);
+			lnkIndex,
+			spoilerIndex);
 	}
 
 	[[nodiscard]] static Block Emoji(
@@ -333,6 +346,7 @@ public:
 			uint16 length,
 			uchar flags,
 			uint16 lnkIndex,
+			uint16 spoilerIndex,
 			EmojiPtr emoji) {
 		return New<EmojiBlock>(
 			font,
@@ -341,6 +355,7 @@ public:
 			length,
 			flags,
 			lnkIndex,
+			spoilerIndex,
 			emoji);
 	}
 
@@ -350,8 +365,9 @@ public:
 			uint16 from,
 			int32 w,
 			int32 h,
-			uint16 lnkIndex) {
-		return New<SkipBlock>(font, str, from, w, h, lnkIndex);
+			uint16 lnkIndex,
+			uint16 spoilerIndex) {
+		return New<SkipBlock>(font, str, from, w, h, lnkIndex, spoilerIndex);
 	}
 
 	template <typename FinalBlock>
