@@ -3339,9 +3339,14 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 
 	int lnkIndex = 0;
 	uint16 lnkFrom = 0;
+
+	int spoilerIndex = 0;
+	uint16 spoilerFrom = 0;
+
 	int32 flags = 0;
 	for (auto i = _blocks.cbegin(), e = _blocks.cend(); true; ++i) {
 		int blockLnkIndex = (i == e) ? 0 : (*i)->lnkIndex();
+		int blockSpoilerIndex = (i == e) ? 0 : (*i)->spoilerIndex();
 		uint16 blockFrom = (i == e) ? _text.size() : (*i)->from();
 		int32 blockFlags = (i == e) ? 0 : (*i)->flags();
 
@@ -3354,18 +3359,43 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 				auto rangeTo = qMin(selection.to, blockFrom);
 				if (rangeTo > rangeFrom) { // handle click handler
 					const auto r = base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom);
-					if (lnkFrom != rangeFrom || blockFrom != rangeTo) {
-						// Ignore links that are partially copied.
-						clickHandlerFinishCallback(r, nullptr);
-					} else {
-						clickHandlerFinishCallback(r, _links.at(lnkIndex - 1));
-					}
+					// Ignore links that are partially copied.
+					const auto handler = (lnkFrom != rangeFrom || blockFrom != rangeTo)
+						? nullptr
+						: _links.at(lnkIndex - 1);
+					const auto type = handler
+						? handler->getTextEntity().type
+						: EntityType::Invalid;
+					clickHandlerFinishCallback(r, handler, type);
 				}
 			}
 			lnkIndex = blockLnkIndex;
 			if (lnkIndex) {
 				lnkFrom = blockFrom;
-				clickHandlerStartCallback();
+				const auto handler = _links.at(lnkIndex - 1);
+				clickHandlerStartCallback(handler
+					? handler->getTextEntity().type
+					: EntityType::Invalid);
+			}
+		}
+		if (blockSpoilerIndex != spoilerIndex) {
+			if (spoilerIndex) {
+				auto rangeFrom = qMax(selection.from, spoilerFrom);
+				auto rangeTo = qMin(selection.to, blockFrom);
+				if (rangeTo > rangeFrom) { // handle click handler
+					const auto r = base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom);
+					// Ignore links that are partially copied.
+					const auto handler = (spoilerFrom != rangeFrom || blockFrom != rangeTo)
+						? nullptr
+						: _spoilers.at(spoilerIndex - 1);
+					const auto type = EntityType::Spoiler;
+					clickHandlerFinishCallback(r, handler, type);
+				}
+			}
+			spoilerIndex = blockSpoilerIndex;
+			if (spoilerIndex) {
+				spoilerFrom = blockFrom;
+				clickHandlerStartCallback(EntityType::Spoiler);
 			}
 		}
 
@@ -3427,6 +3457,7 @@ TextForMimeData String::toText(
 		result.rich.entities.insert(i, std::move(entity));
 	};
 	auto linkStart = 0;
+	auto spoilerStart = 0;
 	auto markdownTrackers = composeEntities
 		? std::vector<MarkdownTagTracker>{
 			{ TextBlockFItalic, EntityType::Italic },
@@ -3453,12 +3484,26 @@ TextForMimeData String::toText(
 			}
 		}
 	};
-	const auto clickHandlerStartCallback = [&] {
-		linkStart = result.rich.text.size();
+	const auto clickHandlerStartCallback = [&](EntityType type) {
+		if (type == EntityType::Spoiler) {
+			spoilerStart = result.rich.text.size();
+		} else {
+			linkStart = result.rich.text.size();
+		}
 	};
 	const auto clickHandlerFinishCallback = [&](
 			QStringView inText,
-			const ClickHandlerPtr &handler) {
+			const ClickHandlerPtr &handler,
+			EntityType type) {
+		if (type == EntityType::Spoiler) {
+			insertEntity({
+				type,
+				spoilerStart,
+				int(result.rich.text.size() - spoilerStart),
+				QString(),
+			});
+			return;
+		}
 		if (!handler || (!composeExpanded && !composeEntities)) {
 			return;
 		}
