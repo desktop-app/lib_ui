@@ -30,6 +30,8 @@ enum TextCommands {
 	TextCommandLinkIndex   = 0x0B, // 0 - NoLink
 	TextCommandLinkText    = 0x0C,
 	TextCommandSkipBlock   = 0x0D,
+	TextCommandSpoiler     = 0x0E,
+	TextCommandNoSpoiler   = 0x0F,
 
 	TextCommandLangTag     = 0x20,
 };
@@ -269,4 +271,8 @@ QString textcmdLink(ushort lnkIndex, const QString &text);
 QString textcmdLink(const QString &url, const QString &text);
 QString textcmdStartSemibold();
 QString textcmdStopSemibold();
+
+QString textcmdStartSpoiler();
+QString textcmdStopSpoiler();
+
 const QChar *textSkipCommand(const QChar *from, const QChar *end, bool canLink = true);

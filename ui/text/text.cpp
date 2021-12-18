@@ -195,6 +195,18 @@ QString textcmdStopSemibold() {
 	return result.append(TextCommand).append(QChar(TextCommandNoSemibold)).append(TextCommand);
 }
 
+QString textcmdStartSpoiler() {
+	QString result;
+	result.reserve(3);
+	return result.append(TextCommand).append(QChar(TextCommandSpoiler)).append(TextCommand);
+}
+
+QString textcmdStopSpoiler() {
+	QString result;
+	result.reserve(3);
+	return result.append(TextCommand).append(QChar(TextCommandNoSpoiler)).append(TextCommand);
+}
+
 const QChar *textSkipCommand(const QChar *from, const QChar *end, bool canLink) {
 	const QChar *result = from + 1;
 	if (*from != TextCommand || result >= end) return from;
@@ -212,6 +224,8 @@ const QChar *textSkipCommand(const QChar *from, const QChar *end, bool canLink) 
 	case TextCommandNoItalic:
 	case TextCommandUnderline:
 	case TextCommandNoUnderline:
+	case TextCommandSpoiler:
+	case TextCommandNoSpoiler:
 		break;
 
 	case TextCommandLinkIndex:
@@ -802,6 +816,24 @@ bool Parser::readCommand() {
 		});
 		_lnkIndex = kStringLinkIndexShift + _links.size();
 	} break;
+
+	case TextCommandSpoiler: {
+		if (!_spoilerIndex) {
+			createBlock();
+			_spoilers.push_back(EntityLinkData{
+				.data = QString::number(_spoilers.size() + 1),
+				.type = EntityType::Spoiler,
+			});
+			_spoilerIndex = _spoilers.size();
+		}
+	} break;
+
+	case TextCommandNoSpoiler:
+		if (_spoilerIndex == _spoilers.size()) {
+			createBlock();
+			_spoilerIndex = 0;
+		}
+	break;
 
 	case TextCommandSkipBlock:
 		createSkipBlock(_ptr->unicode(), (_ptr + 1)->unicode());
