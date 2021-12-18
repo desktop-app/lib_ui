@@ -340,6 +340,53 @@ bool BlockParser::isLineBreak(
 	return lineBreak;
 }
 
+AbstractBlock::AbstractBlock(
+	const style::font &font,
+	const QString &str,
+	uint16 from,
+	uint16 length,
+	uchar flags,
+	uint16 lnkIndex)
+: _from(from)
+, _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12)) {
+}
+
+uint16 AbstractBlock::from() const {
+	return _from;
+}
+
+int AbstractBlock::width() const {
+	return _width.toInt();
+}
+
+int AbstractBlock::rpadding() const {
+	return _rpadding.toInt();
+}
+
+QFixed AbstractBlock::f_width() const {
+	return _width;
+}
+
+QFixed AbstractBlock::f_rpadding() const {
+	return _rpadding;
+}
+
+uint16 AbstractBlock::lnkIndex() const {
+	return (_flags >> 12) & 0xFFFF;
+}
+
+void AbstractBlock::setLnkIndex(uint16 lnkIndex) {
+	_flags = (_flags & ~(0xFFFF << 12)) | (lnkIndex << 12);
+}
+
+TextBlockType AbstractBlock::type() const {
+	return TextBlockType((_flags >> 8) & 0x0F);
+}
+
+int32 AbstractBlock::flags() const {
+	return (_flags & 0xFF);
+}
+
 QFixed AbstractBlock::f_rbearing() const {
 	return (type() == TextBlockTText)
 		? static_cast<const TextBlock*>(this)->real_f_rbearing()

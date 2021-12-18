@@ -34,38 +34,20 @@ enum TextBlockFlags {
 
 class AbstractBlock {
 public:
-	uint16 from() const {
-		return _from;
-	}
-	int width() const {
-		return _width.toInt();
-	}
-	int rpadding() const {
-		return _rpadding.toInt();
-	}
-	QFixed f_width() const {
-		return _width;
-	}
-	QFixed f_rpadding() const {
-		return _rpadding;
-	}
+	uint16 from() const;
+	int width() const;
+	int rpadding() const;
+	QFixed f_width() const;
+	QFixed f_rpadding() const;
 
 	// Should be virtual, but optimized throught type() call.
 	QFixed f_rbearing() const;
 
-	uint16 lnkIndex() const {
-		return (_flags >> 12) & 0xFFFF;
-	}
-	void setLnkIndex(uint16 lnkIndex) {
-		_flags = (_flags & ~(0xFFFF << 12)) | (lnkIndex << 12);
-	}
+	uint16 lnkIndex() const;
+	void setLnkIndex(uint16 lnkIndex);
 
-	TextBlockType type() const {
-		return TextBlockType((_flags >> 8) & 0x0F);
-	}
-	int32 flags() const {
-		return (_flags & 0xFF);
-	}
+	TextBlockType type() const;
+	int32 flags() const;
 
 protected:
 	AbstractBlock(
@@ -74,10 +56,7 @@ protected:
 		uint16 from,
 		uint16 length,
 		uchar flags,
-		uint16 lnkIndex)
-	: _from(from)
-	, _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12)) {
-	}
+		uint16 lnkIndex);
 
 	uint16 _from = 0;
 
