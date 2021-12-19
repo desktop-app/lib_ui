@@ -125,7 +125,7 @@ bool IsNewline(QChar ch) {
 			return QString();
 		}
 		auto found = false;
-		for (const auto &single : QStringView(existing.id).split('|')) {
+		for (const auto &single : TextUtilities::SplitTags(existing.id)) {
 			const auto normalized = (single == QStringView(kTagPre))
 				? QStringView(kTagCode)
 				: single;
@@ -718,7 +718,7 @@ QTextCharFormat PrepareTagFormat(
 			font = font->monospace();
 		}
 	};
-	for (const auto &tag : QStringView(tag).split('|')) {
+	for (const auto &tag : TextUtilities::SplitTags(tag)) {
 		applyOne(tag);
 	}
 	result.setFont(font);
@@ -2903,8 +2903,8 @@ auto InputField::selectionEditLinkData(EditLinkSelection selection) const
 	};
 	const auto stateTagHasLink = [&](const State &state) {
 		const auto tag = stateTag(state);
-		return (tag == link) || QStringView(tag).split('|').contains(
-			QStringView(link));
+		return (tag == link)
+			|| TextUtilities::SplitTags(tag).contains(QStringView(link));
 	};
 	const auto stateStart = [&](const State &state) {
 		return state.i.fragment().position();
@@ -3112,7 +3112,7 @@ void InputField::commitInstantReplacement(
 		const auto currentTag = cursor.charFormat().property(
 			kTagProperty
 		).toString();
-		const auto currentTags = QStringView(currentTag).split('|');
+		const auto currentTags = TextUtilities::SplitTags(currentTag);
 		if (currentTags.contains(QStringView(kTagPre))
 			|| currentTags.contains(QStringView(kTagCode))) {
 			return;

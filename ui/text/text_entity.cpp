@@ -22,6 +22,8 @@
 namespace TextUtilities {
 namespace {
 
+constexpr auto kTagSeparator = '|';
+
 using namespace Ui::Text;
 
 QString ExpressionMailNameAtEnd() {
@@ -2041,17 +2043,21 @@ QString JoinTag(const QList<QStringView> &list) {
 	result.append(list.front());
 	for (auto i = 1, count = int(list.size()); i != count; ++i) {
 		if (!IsSeparateTag(list[i])) {
-			result.append('|').append(list[i]);
+			result.append(kTagSeparator).append(list[i]);
 		}
 	}
 	return result;
+}
+
+QList<QStringView> SplitTags(const QString &tag) {
+	return QStringView(tag).split(kTagSeparator);
 }
 
 QString TagWithRemoved(const QString &tag, const QString &removed) {
 	if (tag == removed) {
 		return QString();
 	}
-	auto list = QStringView(tag).split('|');
+	auto list = SplitTags(tag);
 	list.erase(ranges::remove(list, QStringView(removed)), list.end());
 	return JoinTag(list);
 }
@@ -2060,7 +2066,7 @@ QString TagWithAdded(const QString &tag, const QString &added) {
 	if (tag.isEmpty() || tag == added) {
 		return added;
 	}
-	auto list = QStringView(tag).split('|');
+	auto list = SplitTags(tag);
 	const auto ref = QStringView(added);
 	if (list.contains(ref)) {
 		return tag;
@@ -2173,7 +2179,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 	};
 	const auto stateForTag = [&](const QString &tag) {
 		auto result = State();
-		const auto list = QStringView(tag).split('|');
+		const auto list = SplitTags(tag);
 		for (const auto &single : list) {
 			if (single == Ui::InputField::kTagBold) {
 				result.set(EntityType::Bold);
