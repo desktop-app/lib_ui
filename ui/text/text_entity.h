@@ -291,6 +291,8 @@ QString MarkdownCodeGoodBefore();
 QString MarkdownCodeBadAfter();
 QString MarkdownPreGoodBefore();
 QString MarkdownPreBadAfter();
+QString MarkdownSpoilerGoodBefore();
+QString MarkdownSpoilerBadAfter();
 
 // Text preprocess.
 QString Clean(const QString &text);

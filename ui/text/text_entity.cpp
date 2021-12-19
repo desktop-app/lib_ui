@@ -70,6 +70,10 @@ QString SeparatorsMono() {
 	return Separators(QString::fromUtf8("*~/"));
 }
 
+QString SeparatorsSpoiler() {
+	return Separators(QString::fromUtf8("|*~/"));
+}
+
 QString ExpressionHashtag() {
 	return QString::fromUtf8("(^|[") + ExpressionSeparators(QString::fromUtf8("`\\*/")) + QString::fromUtf8("])#[\\w]{2,64}([\\W]|$)");
 }
@@ -1271,6 +1275,14 @@ QString MarkdownPreBadAfter() {
 	return QString::fromLatin1("`");
 }
 
+QString MarkdownSpoilerGoodBefore() {
+	return SeparatorsSpoiler();
+}
+
+QString MarkdownSpoilerBadAfter() {
+	return QString::fromLatin1("|");
+}
+
 bool IsValidProtocol(const QString &protocol) {
 	static const auto list = CreateValidProtocols();
 	return list.contains(base::crc32(protocol.constData(), protocol.size() * sizeof(QChar)));
@@ -2087,6 +2099,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		EntityType::Italic,
 		EntityType::Underline,
 		EntityType::StrikeOut,
+		EntityType::Spoiler,
 		EntityType::Code,
 		EntityType::Pre,
 	};
@@ -2193,6 +2206,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				result.set(EntityType::Code);
 			} else if (single == Ui::InputField::kTagPre) {
 				result.set(EntityType::Pre);
+			} else if (single == Ui::InputField::kTagSpoiler) {
+				result.set(EntityType::Spoiler);
 			} else {
 				result.link = single.toString();
 			}
@@ -2281,6 +2296,7 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 			break;
 		case EntityType::Code: push(Ui::InputField::kTagCode); break; // #TODO entities
 		case EntityType::Pre: push(Ui::InputField::kTagPre); break;
+		case EntityType::Spoiler: push(Ui::InputField::kTagSpoiler); break;
 		}
 	}
 	if (!toRemove.empty()) {
