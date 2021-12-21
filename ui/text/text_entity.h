@@ -381,4 +381,7 @@ void SetClipboardText(
 	const TextForMimeData &text,
 	QClipboard::Mode mode = QClipboard::Clipboard);
 
+[[nodiscard]] QString TextWithSpoilerCommands(
+	const TextWithEntities &textWithEntities);
+
 } // namespace TextUtilities

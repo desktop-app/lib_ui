@@ -2332,6 +2332,22 @@ void SetClipboardText(
 	}
 }
 
+QString TextWithSpoilerCommands(const TextWithEntities &textWithEntities) {
+	auto text = textWithEntities.text;
+	auto offset = 0;
+	const auto start = textcmdStartSpoiler();
+	const auto stop = textcmdStopSpoiler();
+	for (const auto &e : textWithEntities.entities) {
+		if (e.type() == EntityType::Spoiler) {
+			text.insert(e.offset() + offset, start);
+			offset += start.size();
+			text.insert(e.offset() + e.length() + offset, stop);
+			offset += stop.size();
+		}
+	}
+	return text;
+}
+
 } // namespace TextUtilities
 
 EntityInText::EntityInText(
