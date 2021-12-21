@@ -295,7 +295,7 @@ QString MarkdownSpoilerGoodBefore();
 QString MarkdownSpoilerBadAfter();
 
 // Text preprocess.
-QString Clean(const QString &text);
+QString Clean(const QString &text, bool keepSpoilers = false);
 QString EscapeForRichParsing(const QString &text);
 QString SingleLine(const QString &text);
 TextWithEntities SingleLine(const TextWithEntities &text);

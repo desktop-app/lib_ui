@@ -1293,9 +1293,17 @@ bool IsValidTopDomain(const QString &protocol) {
 	return list.contains(base::crc32(protocol.constData(), protocol.size() * sizeof(QChar)));
 }
 
-QString Clean(const QString &text) {
+QString Clean(const QString &text, bool keepSpoilers) {
 	auto result = text;
 	for (auto s = text.unicode(), ch = s, e = text.unicode() + text.size(); ch != e; ++ch) {
+		if (keepSpoilers && (*ch == TextCommand)) {
+			if ((*(ch + 1) == TextCommandSpoiler)
+				|| (*(ch - 1) == TextCommandSpoiler)
+				|| (*(ch + 1) == TextCommandNoSpoiler)
+				|| (*(ch - 1) == TextCommandNoSpoiler)) {
+				continue;
+			}
+		}
 		if (*ch == TextCommand) {
 			result[int(ch - s)] = QChar::Space;
 		}
