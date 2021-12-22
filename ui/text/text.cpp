@@ -27,6 +27,7 @@ namespace {
 
 constexpr auto kStringLinkIndexShift = uint16(0x8000);
 constexpr auto kMaxDiacAfterSymbol = 2;
+constexpr auto kSelectedSpoilerOpacity = 0.5;
 
 Qt::LayoutDirection StringDirection(
 		const QString &str,
@@ -1762,20 +1763,28 @@ private:
 					if (rtl) {
 						glyphX += spacesWidth;
 					}
+					struct {
+						QFixed from;
+						QFixed to;
+					} fillSelect;
+					struct {
+						QFixed from;
+						QFixed width;
+					} fillSpoiler;
 					if (_localFrom + si.position < _selection.to) {
 						auto chFrom = _str + currentBlock->from();
 						auto chTo = chFrom + ((nextBlock ? nextBlock->from() : _t->_text.size()) - currentBlock->from());
 						if (_localFrom + si.position >= _selection.from) { // could be without space
 							if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || _selection.to >= (chTo - _str)) {
-								fillSelectRange(x, x + si.width);
+								fillSelect = { x, x + si.width };
 							} else { // or with space
-								fillSelectRange(glyphX, glyphX + currentBlock->f_width());
+								fillSelect = { glyphX, glyphX + currentBlock->f_width() };
 							}
 						} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= _selection.from) {
 							if (rtl) { // rtl space only
-								fillSelectRange(x, glyphX);
+								fillSelect = { x, glyphX };
 							} else { // ltr space only
-								fillSelectRange(x + currentBlock->f_width(), x + si.width);
+								fillSelect = { x + currentBlock->f_width(), x + si.width };
 							}
 						}
 					}
@@ -1787,18 +1796,31 @@ private:
 							auto chTo = chFrom + ((nextBlock ? nextBlock->from() : _t->_text.size()) - currentBlock->from());
 							if (_localFrom + si.position >= from) { // could be without space
 								if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || to >= (chTo - _str)) {
-									fillSpoilerRange(x, si.width, blockIndex);
+									fillSpoiler = { x, si.width };
 								} else { // or with space
-									fillSpoilerRange(glyphX, currentBlock->f_width(), blockIndex);
+									fillSpoiler = { glyphX, currentBlock->f_width() };
 								}
 							} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= from) {
 								if (rtl) { // rtl space only
-									fillSpoilerRange(x, glyphX - x, blockIndex);
+									fillSpoiler = { x, glyphX - x };
 								} else { // ltr space only
-									fillSpoilerRange(x + currentBlock->f_width(), si.width, blockIndex);
+									fillSpoiler = { x + currentBlock->f_width(), si.width };
 								}
 							}
 						}
+					}
+					const auto hasSpoiler = fillSpoiler.width != QFixed();
+					const auto hasSelect = fillSelect.to != QFixed();
+					if (hasSpoiler && !_background.inFront) {
+						fillSpoilerRange(fillSpoiler.from, fillSpoiler.width, blockIndex);
+					}
+					if (hasSelect) {
+						const auto opacity = _p->opacity();
+						if (hasSpoiler && !_background.inFront) {
+							_p->setOpacity(kSelectedSpoilerOpacity);
+						}
+						fillSelectRange(fillSelect.from, fillSelect.to);
+						_p->setOpacity(opacity);
 					}
 					if (!_background.inFront) {
 						Emoji::Draw(
@@ -1807,6 +1829,9 @@ private:
 							Emoji::GetSizeNormal(),
 							(glyphX + st::emojiPadding).toInt(),
 							_y + _yDelta + emojiY);
+					}
+					if (hasSpoiler && _background.inFront) {
+						fillSpoilerRange(fillSpoiler.from, fillSpoiler.width, blockIndex);
 					}
 //				} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
 //					_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
@@ -1896,7 +1921,9 @@ private:
 				gf.justified = false;
 				gf.initWithScriptItem(si);
 
-				if (!_background.inFront) {
+				const auto hasBackground = !_background.inFront
+					&& _background.color;
+				if (hasBackground) {
 					fillSpoilerRange(x, si.width, blockIndex);
 				}
 
@@ -1904,6 +1931,11 @@ private:
 				auto hasNotSelected = true;
 				auto selectedRect = QRect();
 				if (_localFrom + itemStart < _selection.to && _localFrom + itemEnd > _selection.from) {
+					const auto opacity = _p->opacity();
+					if (hasBackground) {
+						_p->setOpacity(kSelectedSpoilerOpacity);
+					}
+
 					hasSelected = true;
 					auto selX = x;
 					auto selWidth = itemWidth;
@@ -1946,6 +1978,7 @@ private:
 					if (rtl) selX = x + itemWidth - (selX - x) - selWidth;
 					selectedRect = QRect(selX.toInt(), _y + _yDelta, (selX + selWidth).toInt() - selX.toInt(), _fontHeight);
 					fillSelectRange(selX, selX + selWidth);
+					_p->setOpacity(opacity);
 				}
 				if (Q_UNLIKELY(hasSelected)) {
 					if (Q_UNLIKELY(hasNotSelected)) {
@@ -2842,6 +2875,11 @@ private:
 						ImageRoundRadius::Small,
 						*_background.color);
 					mutableCache.color = (*_background.color)->c;
+				}
+				if (inBack) {
+					_currentPen = &_textPalette->spoilerActiveFg->p;
+					_currentPenSelected = &_textPalette->spoilerActiveFg->p;
+					return;
 				}
 			} else {
 				_background = {};

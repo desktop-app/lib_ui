@@ -17,6 +17,7 @@ TextPalette {
 	linkAlwaysActive: int;
 	spoilerBg: color;
 	spoilerActiveBg: color;
+	spoilerActiveFg: color;
 }
 
 TextStyle {
@@ -48,6 +49,7 @@ defaultTextPalette: TextPalette {
 	selectOverlay: msgSelectOverlay;
 	spoilerBg: msgInDateFg;
 	spoilerActiveBg: msgInDateFg;
+	spoilerActiveFg: msgInBg;
 }
 defaultTextStyle: TextStyle {
 	font: normalFont;
@@ -145,6 +147,7 @@ inTextPalette: TextPalette(defaultTextPalette) {
 	selectOverlay: msgSelectOverlay;
 	spoilerBg: msgInDateFg;
 	spoilerActiveBg: msgInDateFg;
+	spoilerActiveFg: msgInBg;
 }
 inTextPaletteSelected: TextPalette(inTextPalette) {
 	linkFg: historyLinkInFgSelected;
@@ -160,6 +163,7 @@ outTextPalette: TextPalette(defaultTextPalette) {
 	selectOverlay: msgSelectOverlay;
 	spoilerBg: msgOutDateFg;
 	spoilerActiveBg: msgOutDateFg;
+	spoilerActiveFg: msgOutBg;
 }
 outTextPaletteSelected: TextPalette(outTextPalette) {
 	linkFg: historyLinkOutFgSelected;
