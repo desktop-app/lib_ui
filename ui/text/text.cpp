@@ -11,6 +11,8 @@
 #include "ui/text/text_isolated_emoji.h"
 #include "ui/emoji_config.h"
 #include "ui/integration.h"
+#include "ui/round_rect.h"
+#include "ui/image/image_prepare.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_adapters.h"
 
@@ -1777,7 +1779,7 @@ private:
 							}
 						}
 					}
-					if (_background.brush) {
+					if (_background.color) {
 						const auto from = currentBlock->from();
 						const auto to = currentBlock->from() + currentBlock->width();
 						if (_localFrom + si.position < to) {
@@ -1986,19 +1988,58 @@ private:
 	}
 
 	void fillSpoilerRange(QFixed x, QFixed width, int currentBlockIndex) {
-		if (_background.brush) {
-			const auto elideOffset =
-				(_indexOfElidedBlock == currentBlockIndex)
-					? (_elideRemoveFromEnd + _f->elidew)
-					: 0;
-
-			_p->fillRect(
-				x.toInt(),
-				_y + _yDelta,
-				width.toInt() - elideOffset,
-				_fontHeight,
-				*_background.brush);
+		if (!_background.color) {
+			return;
 		}
+		const auto elideOffset = (_indexOfElidedBlock == currentBlockIndex)
+			? (_elideRemoveFromEnd + _f->elidew)
+			: 0;
+		const auto rect = QRect(
+			x.toInt(),
+			_y + _yDelta,
+			width.toInt() - elideOffset,
+			_fontHeight);
+		if (!rect.isValid()) {
+			return;
+		}
+
+		const auto parts = [&] {
+			const auto blockIndex = currentBlockIndex - 1;
+			const auto now = _t->_blocks[blockIndex]->spoilerIndex();
+			const auto was = (blockIndex > 0)
+				? _t->_blocks[blockIndex - 1]->spoilerIndex()
+				: 0;
+			const auto will = (blockIndex < _t->_blocks.size() - 1)
+				? _t->_blocks[blockIndex + 1]->spoilerIndex()
+				: 0;
+			return RectPart::None
+				| ((now != was) ? (RectPart::FullLeft) : RectPart::None)
+				| ((now != will) ? (RectPart::FullRight) : RectPart::None);
+		}();
+
+		const auto &cache = _background.inFront
+			? _t->_spoilerCache
+			: _t->_spoilerShownCache;
+		if (parts != RectPart::None) {
+			DrawRoundedRect(
+				*_p,
+				rect,
+				*_background.color,
+				cache.corners,
+				parts);
+		}
+		const auto hasLeft = (parts & RectPart::Left) != 0;
+		const auto hasRight = (parts & RectPart::Right) != 0;
+		const auto cornerWidth = cache.corners[0].width()
+			/ style::DevicePixelRatio();
+		_p->fillRect(
+			rect.left() + (hasLeft ? cornerWidth : 0),
+			rect.top(),
+			rect.width()
+				- (hasRight ? cornerWidth : 0)
+				- (hasLeft ? cornerWidth : 0),
+			rect.height(),
+			*_background.color);
 	}
 
 	void elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock, int32 elideStart, int32 elideWidth) {
@@ -2780,17 +2821,30 @@ private:
 	void applyBlockProperties(const AbstractBlock *block) {
 		eSetFont(block);
 		if (_p) {
-			const auto handler = !block->spoilerIndex()
-				? nullptr
-				: _t->_spoilers.at(block->spoilerIndex() - 1);
-			if (!block->spoilerIndex()) {
-				_background = {};
-			} else {
+			if (block->spoilerIndex()) {
+				const auto handler
+					= _t->_spoilers.at(block->spoilerIndex() - 1);
 				const auto inBack = (handler && handler->shown());
 				_background.inFront = !inBack;
-				_background.brush = inBack
-					? &_textPalette->spoilerActiveBg->b
-					: &_textPalette->spoilerBg->b;
+				_background.color = inBack
+					? &_textPalette->spoilerActiveBg
+					: &_textPalette->spoilerBg;
+
+				const auto &cache = _background.inFront
+					? _t->_spoilerCache
+					: _t->_spoilerShownCache;
+				if (cache.color != (*_background.color)->c) {
+					auto mutableText = const_cast<String*>(_t);
+					auto &mutableCache = _background.inFront
+						? mutableText->_spoilerCache
+						: mutableText->_spoilerShownCache;
+					mutableCache.corners = Images::PrepareCorners(
+						ImageRoundRadius::Small,
+						*_background.color);
+					mutableCache.color = (*_background.color)->c;
+				}
+			} else {
+				_background = {};
 			}
 			if (block->lnkIndex()) {
 				_currentPen = &_textPalette->linkFg->p;
@@ -2817,7 +2871,7 @@ private:
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
 	struct {
-		const QBrush *brush = nullptr;
+		const style::color *color = nullptr;
 		bool inFront = false;
 	} _background;
 	int _yFrom = 0;

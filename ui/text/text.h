@@ -229,6 +229,11 @@ private:
 
 	Qt::LayoutDirection _startDir = Qt::LayoutDirectionAuto;
 
+	struct {
+		std::array<QImage, 4> corners;
+		QColor color;
+	} _spoilerCache, _spoilerShownCache;
+
 	friend class Parser;
 	friend class Renderer;
 
