@@ -740,7 +740,7 @@ HWND GetWindowHandle(not_null<QWidget*> widget) {
 }
 
 HWND GetWindowHandle(not_null<QWindow*> window) {
-	return static_cast<HWND>(window->winId());
+	return reinterpret_cast<HWND>(window->winId());
 }
 
 void SendWMPaintForce(not_null<QWidget*> widget) {
