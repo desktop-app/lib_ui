@@ -15,6 +15,8 @@
 #include <private/qfixed_p.h>
 #include <any>
 
+class SpoilerClickHandler;
+
 static const QChar TextCommand(0x0010);
 enum TextCommands {
 	TextCommandBold        = 0x01,
@@ -133,6 +135,7 @@ public:
 
 	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
 	bool hasLinks() const;
+	void setSpoiler(uint16 lnkIndex, const std::shared_ptr<SpoilerClickHandler> &lnk);
 
 	bool hasSkipBlock() const;
 	bool updateSkipBlock(int width, int height);
@@ -224,7 +227,6 @@ private:
 	TextBlocks _blocks;
 	TextLinks _links;
 
-	class SpoilerClickHandler;
 	QVector<std::shared_ptr<SpoilerClickHandler>> _spoilers;
 
 	Qt::LayoutDirection _startDir = Qt::LayoutDirectionAuto;

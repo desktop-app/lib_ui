@@ -230,6 +230,8 @@ PRIVATE
     ui/rect_part.h
     ui/round_rect.cpp
     ui/round_rect.h
+    ui/spoiler_click_handler.cpp
+    ui/spoiler_click_handler.h
     ui/rp_widget.cpp
     ui/rp_widget.h
     ui/ui_utility.cpp

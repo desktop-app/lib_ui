@@ -13,6 +13,7 @@
 #include "ui/integration.h"
 #include "ui/round_rect.h"
 #include "ui/image/image_prepare.h"
+#include "ui/spoiler_click_handler.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_adapters.h"
 
@@ -269,30 +270,6 @@ const TextParseOptions _textPlainOptions = {
 
 namespace Ui {
 namespace Text {
-
-class String::SpoilerClickHandler final : public ClickHandler {
-public:
-	SpoilerClickHandler() = default;
-
-	TextEntity getTextEntity() const override {
-		return { EntityType::Spoiler };
-	}
-
-	void onClick(ClickContext context) const override {
-		if (!_shown) {
-			const auto nonconst = const_cast<SpoilerClickHandler*>(this);
-			nonconst->_shown = true;
-		}
-	}
-
-	[[nodiscard]] bool shown() const {
-		return _shown;
-	}
-
-private:
-	bool _shown = false;
-
-};
 
 class Parser {
 public:
@@ -1024,9 +1001,9 @@ void Parser::finalize(const TextParseOptions &options) {
 		if (spoilerIndex) {
 			_t->_spoilers.resize(spoilerIndex);
 			const auto handler = (options.flags & TextParseLinks)
-				? std::make_shared<String::SpoilerClickHandler>()
+				? std::make_shared<SpoilerClickHandler>()
 				: nullptr;
-			_t->_spoilers[spoilerIndex - 1] = std::move(handler);
+			_t->setSpoiler(spoilerIndex, std::move(handler));
 		}
 		const auto shiftedIndex = block->lnkIndex();
 		if (shiftedIndex <= kStringLinkIndexShift) {
