@@ -1807,8 +1807,15 @@ private:
 							(glyphX + st::emojiPadding).toInt(),
 							_y + _yDelta + emojiY);
 					}
-					if (hasSpoiler && _background.inFront) {
+					if ((hasSpoiler && _background.inFront)
+						|| _background.startMs) {
+						const auto opacity = _p->opacity();
+						const auto fillOpacity = fillSpoilerOpacity();
+						if (fillOpacity != opacity) {
+							_p->setOpacity(fillOpacity);
+						}
 						fillSpoilerRange(fillSpoiler.from, fillSpoiler.width, blockIndex);
+						_p->setOpacity(opacity);
 					}
 //				} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
 //					_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
@@ -1982,8 +1989,14 @@ private:
 					_p->drawTextItem(QPointF(x.toReal(), textY), gf);
 				}
 
-				if (_background.inFront) {
+				if (_background.inFront || _background.startMs) {
+					const auto opacity = _p->opacity();
+					const auto fillOpacity = fillSpoilerOpacity();
+					if (fillOpacity != opacity) {
+						_p->setOpacity(fillOpacity);
+					}
 					fillSpoilerRange(x, si.width, blockIndex);
+					_p->setOpacity(opacity);
 				}
 			}
 
@@ -1995,6 +2008,21 @@ private:
 		auto left = from.toInt();
 		auto width = to.toInt() - left;
 		_p->fillRect(left, _y + _yDelta, width, _fontHeight, _textPalette->selectBg);
+	}
+
+	float fillSpoilerOpacity() {
+		if (!_background.startMs) {
+			return 1.;
+		}
+		const auto progress = float64(crl::now() - _background.startMs)
+			/ st::fadeWrapDuration;
+		if ((progress > 1.) && _background.spoilerIndex) {
+			const auto link = _t->_spoilers.at(_background.spoilerIndex - 1);
+			if (link) {
+				link->setStartMs(0);
+			}
+		}
+		return (1. - std::min(progress, 1.));
 	}
 
 	void fillSpoilerRange(QFixed x, QFixed width, int currentBlockIndex) {
@@ -2839,6 +2867,8 @@ private:
 				_background.color = inBack
 					? &_textPalette->spoilerActiveBg
 					: &_textPalette->spoilerBg;
+				_background.startMs = handler ? handler->startMs() : 0;
+				_background.spoilerIndex = block->spoilerIndex();
 
 				const auto &cache = _background.inFront
 					? _t->_spoilerCache
@@ -2888,6 +2918,8 @@ private:
 	struct {
 		const style::color *color = nullptr;
 		bool inFront = false;
+		crl::time startMs = 0;
+		uint16 spoilerIndex = 0;
 	} _background;
 	int _yFrom = 0;
 	int _yTo = 0;
@@ -3119,6 +3151,13 @@ void String::setRichText(const style::TextStyle &st, const QString &text, TextPa
 void String::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {
 	if (!lnkIndex || lnkIndex > _links.size()) return;
 	_links[lnkIndex - 1] = lnk;
+}
+
+void String::setSpoiler(
+		uint16 lnkIndex,
+		const std::shared_ptr<SpoilerClickHandler> &lnk) {
+	if (!lnkIndex || lnkIndex > _spoilers.size()) return;
+	_spoilers[lnkIndex - 1] = lnk;
 }
 
 bool String::hasLinks() const {
