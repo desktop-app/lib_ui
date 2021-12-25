@@ -135,7 +135,11 @@ public:
 
 	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
 	bool hasLinks() const;
-	void setSpoiler(uint16 lnkIndex, const std::shared_ptr<SpoilerClickHandler> &lnk);
+	void setSpoiler(
+		uint16 lnkIndex,
+		const std::shared_ptr<SpoilerClickHandler> &lnk);
+	void setSpoilerShown(uint16 lnkIndex, bool shown);
+	int spoilersCount() const;
 
 	bool hasSkipBlock() const;
 	bool updateSkipBlock(int width, int height);

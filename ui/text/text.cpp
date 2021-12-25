@@ -3156,12 +3156,27 @@ void String::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {
 void String::setSpoiler(
 		uint16 lnkIndex,
 		const std::shared_ptr<SpoilerClickHandler> &lnk) {
-	if (!lnkIndex || lnkIndex > _spoilers.size()) return;
+	if (!lnkIndex || lnkIndex > _spoilers.size()) {
+		return;
+	}
 	_spoilers[lnkIndex - 1] = lnk;
+}
+
+void String::setSpoilerShown(uint16 lnkIndex, bool shown) {
+	if (!lnkIndex
+		|| (lnkIndex > _spoilers.size())
+		|| !_spoilers[lnkIndex - 1]) {
+		return;
+	}
+	_spoilers[lnkIndex - 1]->setShown(shown);
 }
 
 bool String::hasLinks() const {
 	return !_links.isEmpty();
+}
+
+int String::spoilersCount() const {
+	return _spoilers.size();
 }
 
 bool String::hasSkipBlock() const {

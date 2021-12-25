@@ -30,3 +30,7 @@ crl::time SpoilerClickHandler::startMs() const {
 void SpoilerClickHandler::setStartMs(crl::time value) {
 	_startMs = value;
 }
+
+void SpoilerClickHandler::setShown(bool value) {
+	_shown = value;
+}

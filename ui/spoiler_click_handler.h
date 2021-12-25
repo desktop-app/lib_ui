@@ -19,6 +19,7 @@ public:
 	void onClick(ClickContext context) const override;
 
 	[[nodiscard]] bool shown() const;
+	void setShown(bool value);
 	[[nodiscard]] crl::time startMs() const;
 	void setStartMs(crl::time value);
 
