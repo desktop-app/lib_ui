@@ -380,7 +380,22 @@ Checkbox::Checkbox(
 	const style::Check &checkSt)
 : Checkbox(
 	parent,
-	text,
+	rpl::single(text) | rpl::map(TextWithEntities::Simple),
+	st,
+	std::make_unique<CheckView>(
+		checkSt,
+		checked)) {
+}
+
+Checkbox::Checkbox(
+	QWidget *parent,
+	const TextWithEntities &text,
+	bool checked,
+	const style::Checkbox &st,
+	const style::Check &checkSt)
+: Checkbox(
+	parent,
+	rpl::single(text),
 	st,
 	std::make_unique<CheckView>(
 		checkSt,
@@ -395,7 +410,7 @@ Checkbox::Checkbox(
 	const style::Toggle &toggleSt)
 : Checkbox(
 	parent,
-	rpl::single(text),
+	rpl::single(text) | rpl::map(TextWithEntities::Simple),
 	st,
 	std::make_unique<ToggleView>(
 		toggleSt,
@@ -410,7 +425,7 @@ Checkbox::Checkbox(
 	const style::Check &checkSt)
 : Checkbox(
 	parent,
-	std::move(text),
+	std::move(text) | rpl::map(TextWithEntities::Simple),
 	st,
 	std::make_unique<CheckView>(
 		checkSt,
@@ -425,7 +440,7 @@ Checkbox::Checkbox(
 	const style::Toggle &toggleSt)
 : Checkbox(
 	parent,
-	std::move(text),
+	std::move(text) | rpl::map(TextWithEntities::Simple),
 	st,
 	std::make_unique<ToggleView>(
 		toggleSt,
@@ -439,14 +454,14 @@ Checkbox::Checkbox(
 	std::unique_ptr<AbstractCheckView> check)
 : Checkbox(
 	parent,
-	rpl::single(text),
+	rpl::single(text) | rpl::map(TextWithEntities::Simple),
 	st,
 	std::move(check)) {
 }
 
 Checkbox::Checkbox(
 	QWidget *parent,
-	rpl::producer<QString> &&text,
+	rpl::producer<TextWithEntities> &&text,
 	const style::Checkbox &st,
 	std::unique_ptr<AbstractCheckView> check)
 : RippleButton(parent, st.ripple)
@@ -462,8 +477,17 @@ Checkbox::Checkbox(
 	setCursor(style::cur_pointer);
 	std::move(
 		text
-	) | rpl::start_with_next([=](QString &&value) {
-		setText(std::move(value));
+	) | rpl::start_with_next([=](TextWithEntities &&value) {
+		if (value.entities.empty()) {
+			setText(base::take(value.text));
+		} else {
+			_text.setMarkedText(
+				_st.style,
+				std::move(value),
+				_checkboxRichOptions);
+			resizeToText();
+			update();
+		}
 	}, lifetime());
 }
 

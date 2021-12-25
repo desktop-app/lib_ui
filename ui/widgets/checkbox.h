@@ -142,6 +142,12 @@ public:
 		const style::Check &checkSt = st::defaultCheck);
 	Checkbox(
 		QWidget *parent,
+		const TextWithEntities &text,
+		bool checked = false,
+		const style::Checkbox &st = st::defaultCheckbox,
+		const style::Check &checkSt = st::defaultCheck);
+	Checkbox(
+		QWidget *parent,
 		const QString &text,
 		bool checked,
 		const style::Checkbox &st,
@@ -165,7 +171,7 @@ public:
 		std::unique_ptr<AbstractCheckView> check);
 	Checkbox(
 		QWidget *parent,
-		rpl::producer<QString> &&text,
+		rpl::producer<TextWithEntities> &&text,
 		const style::Checkbox &st,
 		std::unique_ptr<AbstractCheckView> check);
 
