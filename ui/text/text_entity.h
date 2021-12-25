@@ -383,5 +383,10 @@ void SetClipboardText(
 
 [[nodiscard]] QString TextWithSpoilerCommands(
 	const TextWithEntities &textWithEntities);
+[[nodiscard]] QString CutTextWithCommands(
+	QString text,
+	int length,
+	const QString &start,
+	const QString &stop);
 
 } // namespace TextUtilities

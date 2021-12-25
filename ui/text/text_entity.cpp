@@ -2348,6 +2348,20 @@ QString TextWithSpoilerCommands(const TextWithEntities &textWithEntities) {
 	return text;
 }
 
+QString CutTextWithCommands(
+		QString text,
+		int length,
+		const QString &start,
+		const QString &stop) {
+	text = text.mid(0, length);
+	const auto lastStart = text.lastIndexOf(start);
+	const auto lastStop = text.lastIndexOf(stop);
+	const auto additional = ((lastStart == -1) || (lastStart < lastStop))
+		? QString()
+		: stop;
+	return text + additional + qstr("...");
+}
+
 } // namespace TextUtilities
 
 EntityInText::EntityInText(
