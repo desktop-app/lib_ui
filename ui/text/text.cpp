@@ -2104,8 +2104,6 @@ private:
 	}
 
 	void prepareElidedLine(QString &lineText, int32 lineStart, int32 &lineLength, const AbstractBlock *&_endBlock, int repeat = 0) {
-		static const auto _Elide = QString::fromLatin1("...");
-
 		_f = _t->_st->font;
 		QStackTextEngine engine(lineText, _f->f);
 		engine.option.setTextDirection(_parDirection);
@@ -2142,11 +2140,11 @@ private:
 			}
 			if (_type == TextBlockTEmoji || _type == TextBlockTSkip || _type == TextBlockTNewline) {
 				if (_wLeft < si.width) {
-					lineText = lineText.mid(0, currentBlock->from() - _localFrom) + _Elide;
-					lineLength = currentBlock->from() + _Elide.size() - _lineStart;
+					lineText = lineText.mid(0, currentBlock->from() - _localFrom) + kQEllipsis;
+					lineLength = currentBlock->from() + kQEllipsis.size() - _lineStart;
 					_selection.to = qMin(_selection.to, currentBlock->from());
 					_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
-					setElideBidi(currentBlock->from(), _Elide.size());
+					setElideBidi(currentBlock->from(), kQEllipsis.size());
 					elideSaveBlock(blockIndex - 1, _endBlock, currentBlock->from(), elideWidth);
 					return;
 				}
@@ -2175,11 +2173,11 @@ private:
 						}
 
 						if (lineText.size() <= pos || repeat > 3) {
-							lineText += _Elide;
-							lineLength = _localFrom + pos + _Elide.size() - _lineStart;
+							lineText += kQEllipsis;
+							lineLength = _localFrom + pos + kQEllipsis.size() - _lineStart;
 							_selection.to = qMin(_selection.to, uint16(_localFrom + pos));
 							_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
-							setElideBidi(_localFrom + pos, _Elide.size());
+							setElideBidi(_localFrom + pos, kQEllipsis.size());
 							_blocksSize = blockIndex;
 							_endBlock = nextBlock;
 						} else {
@@ -2200,10 +2198,10 @@ private:
 		int32 elideStart = _localFrom + lineText.size();
 		_selection.to = qMin(_selection.to, uint16(elideStart));
 		_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
-		setElideBidi(elideStart, _Elide.size());
+		setElideBidi(elideStart, kQEllipsis.size());
 
-		lineText += _Elide;
-		lineLength += _Elide.size();
+		lineText += kQEllipsis;
+		lineLength += kQEllipsis.size();
 
 		if (!repeat) {
 			for (; blockIndex < _blocksSize && _t->_blocks[blockIndex].get() != _endBlock && _t->_blocks[blockIndex]->from() < elideStart; ++blockIndex) {

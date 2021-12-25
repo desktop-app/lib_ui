@@ -2359,7 +2359,7 @@ QString CutTextWithCommands(
 	const auto additional = ((lastStart == -1) || (lastStart < lastStop))
 		? QString()
 		: stop;
-	return text + additional + qstr("...");
+	return text + additional + Ui::kQEllipsis;
 }
 
 } // namespace TextUtilities

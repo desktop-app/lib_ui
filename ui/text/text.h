@@ -17,6 +17,10 @@
 
 class SpoilerClickHandler;
 
+namespace Ui {
+static const auto kQEllipsis = QStringLiteral("...");
+} // namespace Ui
+
 static const QChar TextCommand(0x0010);
 enum TextCommands {
 	TextCommandBold        = 0x01,
