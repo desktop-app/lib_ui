@@ -65,5 +65,13 @@ inline constexpr auto Upper = details::ToUpperType{};
 	return rpl::map(WithEntities);
 }
 
+[[nodiscard]] TextWithEntities Mid(
+	const TextWithEntities &text,
+	int position,
+	int n = -1);
+[[nodiscard]] TextWithEntities Filtered(
+	const TextWithEntities &result,
+	const std::vector<EntityType> &types);
+
 } // namespace Text
 } // namespace Ui
