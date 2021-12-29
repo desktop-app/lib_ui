@@ -367,8 +367,19 @@ void Menu::mouseReleaseEvent(QMouseEvent *e) {
 
 void Menu::handleMousePress(QPoint globalPosition) {
 	handleMouseMove(globalPosition);
-	if (_mousePressDelegate) {
-		_mousePressDelegate(globalPosition);
+	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
+	const auto inner = rect().marginsRemoved(margins);
+	const auto localPosition = mapFromGlobal(globalPosition);
+	const auto pressed = (inner.contains(localPosition)
+		&& _lastSelectedByMouse)
+		? findSelectedAction()
+		: nullptr;
+	if (pressed) {
+		pressed->setClicked();
+	} else {
+		if (_mousePressDelegate) {
+			_mousePressDelegate(globalPosition);
+		}
 	}
 }
 
