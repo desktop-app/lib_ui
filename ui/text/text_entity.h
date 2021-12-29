@@ -25,6 +25,7 @@ enum class EntityType : uchar {
 	MentionName,
 	BotCommand,
 	MediaTimestamp,
+	PlainLink, // Senders in chat list, attachements in chat list, etc.
 
 	Bold,
 	Semibold,
@@ -241,6 +242,7 @@ enum {
 	TextParseHashtags = 0x010,
 	TextParseBotCommands = 0x020,
 	TextParseMarkdown = 0x040,
+	TextParsePlainLinks = 0x080,
 };
 
 struct TextWithTags {

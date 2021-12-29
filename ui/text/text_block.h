@@ -30,6 +30,7 @@ enum TextBlockFlags {
 	TextBlockFSemibold = 0x20,
 	TextBlockFCode = 0x40,
 	TextBlockFPre = 0x80,
+	TextBlockFPlainLink = 0x100,
 };
 
 class AbstractBlock {
@@ -58,13 +59,13 @@ protected:
 		const QString &str,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex);
 
 	uint16 _from = 0;
 
-	uint32 _flags = 0; // 4 bits empty, 16 bits lnkIndex, 4 bits type, 8 bits flags
+	uint32 _flags = 0; // 2 bits empty, 16 bits lnkIndex, 4 bits type, 10 bits flags
 
 	uint16 _spoilerIndex = 0;
 
@@ -86,7 +87,7 @@ public:
 		const QString &str,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex);
 
@@ -126,7 +127,7 @@ public:
 		QFixed minResizeWidth,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex);
 
@@ -150,7 +151,7 @@ public:
 		const QString &str,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex,
 		EmojiPtr emoji);
@@ -200,7 +201,7 @@ public:
 			const QString &str,
 			uint16 from,
 			uint16 length,
-			uchar flags,
+			uint16 flags,
 			uint16 lnkIndex,
 			uint16 spoilerIndex);
 
@@ -210,7 +211,7 @@ public:
 			QFixed minResizeWidth,
 			uint16 from,
 			uint16 length,
-			uchar flags,
+			uint16 flags,
 			uint16 lnkIndex,
 			uint16 spoilerIndex);
 
@@ -219,7 +220,7 @@ public:
 			const QString &str,
 			uint16 from,
 			uint16 length,
-			uchar flags,
+			uint16 flags,
 			uint16 lnkIndex,
 			uint16 spoilerIndex,
 			EmojiPtr emoji);

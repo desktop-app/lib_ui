@@ -42,6 +42,10 @@ TextWithEntities Link(const QString &text, const QString &url) {
 	return WithSingleEntity(text, EntityType::CustomUrl, url);
 }
 
+TextWithEntities PlainLink(const QString &text) {
+	return WithSingleEntity(text, EntityType::PlainLink);
+}
+
 TextWithEntities RichLangValue(const QString &text) {
 	static const auto kStart = QRegularExpression("(\\*\\*|__)");
 

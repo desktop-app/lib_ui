@@ -77,7 +77,9 @@ TextWithEntities PrepareRichFromRich(
 		const TextParseOptions &options) {
 	auto result = text;
 	const auto &preparsed = text.entities;
-	if ((options.flags & TextParseLinks) && !preparsed.isEmpty()) {
+	const bool parseLinks = (options.flags & TextParseLinks);
+	const bool parsePlainLinks = (options.flags & TextParsePlainLinks);
+	if (!preparsed.isEmpty() && (parseLinks || parsePlainLinks)) {
 		bool parseMentions = (options.flags & TextParseMentions);
 		bool parseHashtags = (options.flags & TextParseHashtags);
 		bool parseBotCommands = (options.flags & TextParseBotCommands);
@@ -91,6 +93,12 @@ TextWithEntities PrepareRichFromRich(
 				if (((type == EntityType::Mention || type == EntityType::MentionName) && !parseMentions) ||
 					(type == EntityType::Hashtag && !parseHashtags) ||
 					(type == EntityType::Cashtag && !parseHashtags) ||
+					(type == EntityType::PlainLink
+						&& !parsePlainLinks
+						&& !parseMarkdown) ||
+					(!parseLinks
+						&& (type == EntityType::Url
+							|| type == EntityType::CustomUrl)) ||
 					(type == EntityType::BotCommand && !parseBotCommands) || // #TODO entities
 					(!parseMarkdown && (type == EntityType::Bold
 						|| type == EntityType::Semibold
@@ -601,6 +609,8 @@ bool Parser::checkEntities() {
 		flags = TextBlockFItalic;
 	} else if (entityType == EntityType::Underline) {
 		flags = TextBlockFUnderline;
+	} else if (entityType == EntityType::PlainLink) {
+		flags = TextBlockFPlainLink;
 	} else if (entityType == EntityType::StrikeOut) {
 		flags = TextBlockFStrikeOut;
 	} else if (entityType == EntityType::Code) { // #TODO entities
@@ -2880,7 +2890,7 @@ private:
 			} else {
 				_background = {};
 			}
-			if (block->lnkIndex()) {
+			if (block->lnkIndex() || (block->flags() & TextBlockFPlainLink)) {
 				_currentPen = &_textPalette->linkFg->p;
 				_currentPenSelected = &_textPalette->selectLinkFg->p;
 			} else if ((block->flags() & TextBlockFCode) || (block->flags() & TextBlockFPre)) {
@@ -3576,6 +3586,7 @@ TextForMimeData String::toText(
 			{ TextBlockFBold, EntityType::Bold },
 			{ TextBlockFSemibold, EntityType::Semibold },
 			{ TextBlockFUnderline, EntityType::Underline },
+			{ TextBlockFPlainLink, EntityType::PlainLink },
 			{ TextBlockFStrikeOut, EntityType::StrikeOut },
 			{ TextBlockFCode, EntityType::Code }, // #TODO entities
 			{ TextBlockFPre, EntityType::Pre },

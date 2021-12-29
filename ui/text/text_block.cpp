@@ -345,11 +345,11 @@ AbstractBlock::AbstractBlock(
 	const QString &str,
 	uint16 from,
 	uint16 length,
-	uchar flags,
+	uint16 flags,
 	uint16 lnkIndex,
 	uint16 spoilerIndex)
 : _from(from)
-, _flags((flags & 0xFF) | ((lnkIndex & 0xFFFF) << 12))
+, _flags((flags & 0b1111111111) | ((lnkIndex & 0xFFFF) << 14))
 , _spoilerIndex(spoilerIndex) {
 }
 
@@ -374,11 +374,11 @@ QFixed AbstractBlock::f_rpadding() const {
 }
 
 uint16 AbstractBlock::lnkIndex() const {
-	return (_flags >> 12) & 0xFFFF;
+	return (_flags >> 14) & 0xFFFF;
 }
 
 void AbstractBlock::setLnkIndex(uint16 lnkIndex) {
-	_flags = (_flags & ~(0xFFFF << 12)) | (lnkIndex << 12);
+	_flags = (_flags & ~(0xFFFF << 14)) | (lnkIndex << 14);
 }
 
 uint16 AbstractBlock::spoilerIndex() const {
@@ -390,11 +390,11 @@ void AbstractBlock::setSpoilerIndex(uint16 spoilerIndex) {
 }
 
 TextBlockType AbstractBlock::type() const {
-	return TextBlockType((_flags >> 8) & 0x0F);
+	return TextBlockType((_flags >> 10) & 0x0F);
 }
 
 int32 AbstractBlock::flags() const {
-	return (_flags & 0xFFF);
+	return (_flags & 0b1111111111);
 }
 
 QFixed AbstractBlock::f_rbearing() const {
@@ -409,11 +409,11 @@ TextBlock::TextBlock(
 	QFixed minResizeWidth,
 	uint16 from,
 	uint16 length,
-	uchar flags,
+	uint16 flags,
 	uint16 lnkIndex,
 	uint16 spoilerIndex)
 : AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
-	_flags |= ((TextBlockTText & 0x0F) << 8);
+	_flags |= ((TextBlockTText & 0x0F) << 10);
 	if (length) {
 		style::font blockFont = font;
 		if (!flags && lnkIndex) {
@@ -455,13 +455,13 @@ EmojiBlock::EmojiBlock(
 	const QString &str,
 	uint16 from,
 	uint16 length,
-	uchar flags,
+	uint16 flags,
 	uint16 lnkIndex,
 	uint16 spoilerIndex,
 	EmojiPtr emoji)
 : AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex)
 , _emoji(emoji) {
-	_flags |= ((TextBlockTEmoji & 0x0F) << 8);
+	_flags |= ((TextBlockTEmoji & 0x0F) << 10);
 	_width = int(st::emojiSize + 2 * st::emojiPadding);
 	_rpadding = 0;
 	for (auto i = length; i != 0;) {
@@ -479,11 +479,11 @@ NewlineBlock::NewlineBlock(
 	const QString &str,
 	uint16 from,
 	uint16 length,
-	uchar flags,
+	uint16 flags,
 	uint16 lnkIndex,
 	uint16 spoilerIndex)
 : AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
-	_flags |= ((TextBlockTNewline & 0x0F) << 8);
+	_flags |= ((TextBlockTNewline & 0x0F) << 10);
 }
 
 Qt::LayoutDirection NewlineBlock::nextDirection() const {
@@ -500,7 +500,7 @@ SkipBlock::SkipBlock(
 	uint16 spoilerIndex)
 : AbstractBlock(font, str, from, 1, 0, lnkIndex, spoilerIndex)
 , _height(h) {
-	_flags |= ((TextBlockTSkip & 0x0F) << 8);
+	_flags |= ((TextBlockTSkip & 0x0F) << 10);
 	_width = w;
 }
 
@@ -641,7 +641,7 @@ Block Block::Newline(
 		const QString &str,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex) {
 	return New<NewlineBlock>(
@@ -660,7 +660,7 @@ Block Block::Text(
 		QFixed minResizeWidth,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex) {
 	return New<TextBlock>(
@@ -679,7 +679,7 @@ Block Block::Emoji(
 		const QString &str,
 		uint16 from,
 		uint16 length,
-		uchar flags,
+		uint16 flags,
 		uint16 lnkIndex,
 		uint16 spoilerIndex,
 		EmojiPtr emoji) {
