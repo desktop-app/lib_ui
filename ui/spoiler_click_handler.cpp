@@ -6,6 +6,7 @@
 //
 #include "ui/spoiler_click_handler.h"
 
+#include "ui/effects/animation_value.h"
 #include "ui/text/text_entity.h"
 
 ClickHandler::TextEntity SpoilerClickHandler::getTextEntity() const {
@@ -28,6 +29,9 @@ crl::time SpoilerClickHandler::startMs() const {
 }
 
 void SpoilerClickHandler::setStartMs(crl::time value) {
+	if (anim::Disabled()) {
+		return;
+	}
 	_startMs = value;
 }
 
