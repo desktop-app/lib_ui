@@ -3696,7 +3696,8 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 	auto result = IsolatedEmoji();
 	const auto skip = (_blocks.empty()
 		|| _blocks.back()->type() != TextBlockTSkip) ? 0 : 1;
-	if (_blocks.size() > kIsolatedEmojiLimit + skip) {
+	if ((_blocks.size() > kIsolatedEmojiLimit + skip)
+		|| !_spoilers.empty()) {
 		return IsolatedEmoji();
 	}
 	auto index = 0;
