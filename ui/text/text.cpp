@@ -1767,7 +1767,7 @@ private:
 					}
 					if (_background.color) {
 						const auto from = currentBlock->from();
-						const auto to = currentBlock->from() + currentBlock->width();
+						const auto to = (nextBlock ? nextBlock->from() : _t->_text.size());
 						if (_localFrom + si.position < to) {
 							auto chFrom = _str + currentBlock->from();
 							auto chTo = chFrom + ((nextBlock ? nextBlock->from() : _t->_text.size()) - currentBlock->from());
@@ -1781,7 +1781,7 @@ private:
 								if (rtl) { // rtl space only
 									fillSpoiler = { x, glyphX - x };
 								} else { // ltr space only
-									fillSpoiler = { x + currentBlock->f_width(), si.width };
+									fillSpoiler = { x + currentBlock->f_width(), si.width - currentBlock->f_width() };
 								}
 							}
 						}
@@ -1995,7 +1995,7 @@ private:
 					if (fillOpacity != opacity) {
 						_p->setOpacity(fillOpacity);
 					}
-					fillSpoilerRange(x, si.width, blockIndex);
+					fillSpoilerRange(x, itemWidth, blockIndex);
 					_p->setOpacity(opacity);
 				}
 			}
