@@ -2032,10 +2032,15 @@ private:
 		const auto elideOffset = (_indexOfElidedBlock == currentBlockIndex)
 			? (_elideRemoveFromEnd + _f->elidew)
 			: 0;
+		const auto &cache = _background.inFront
+			? _t->_spoilerCache
+			: _t->_spoilerShownCache;
+		const auto cornerWidth = cache.corners[0].width()
+			/ style::DevicePixelRatio();
 		const auto rect = QRect(
 			x.toInt(),
 			_y + _yDelta,
-			width.toInt() - elideOffset,
+			std::max(width.toInt() - elideOffset, cornerWidth * 2),
 			_fontHeight);
 		if (!rect.isValid()) {
 			return;
@@ -2055,9 +2060,6 @@ private:
 				| ((now != will) ? (RectPart::FullRight) : RectPart::None);
 		}();
 
-		const auto &cache = _background.inFront
-			? _t->_spoilerCache
-			: _t->_spoilerShownCache;
 		if (parts != RectPart::None) {
 			DrawRoundedRect(
 				*_p,
@@ -2068,8 +2070,6 @@ private:
 		}
 		const auto hasLeft = (parts & RectPart::Left) != 0;
 		const auto hasRight = (parts & RectPart::Right) != 0;
-		const auto cornerWidth = cache.corners[0].width()
-			/ style::DevicePixelRatio();
 		_p->fillRect(
 			rect.left() + (hasLeft ? cornerWidth : 0),
 			rect.top(),
