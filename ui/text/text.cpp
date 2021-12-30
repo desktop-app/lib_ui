@@ -1765,33 +1765,23 @@ private:
 							}
 						}
 					}
-					if (_background.color) {
-						const auto from = currentBlock->from();
-						const auto to = (nextBlock ? nextBlock->from() : _t->_text.size());
-						if (_localFrom + si.position < to) {
-							auto chFrom = _str + currentBlock->from();
-							auto chTo = chFrom + ((nextBlock ? nextBlock->from() : _t->_text.size()) - currentBlock->from());
-							if (_localFrom + si.position >= from) { // could be without space
-								if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || to >= (chTo - _str)) {
-									fillSpoiler = { x, si.width };
-								} else { // or with space
-									fillSpoiler = { glyphX, currentBlock->f_width() };
-								}
-							} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= from) {
-								if (rtl) { // rtl space only
-									fillSpoiler = { x, glyphX - x };
-								} else { // ltr space only
-									fillSpoiler = { x + currentBlock->f_width(), si.width - currentBlock->f_width() };
-								}
-							}
-						}
+					const auto hasSpoiler = _background.color &&
+						(_background.inFront || _background.startMs);
+					if (hasSpoiler) {
+						fillSpoiler = { x, si.width };
 					}
-					const auto hasSpoiler = fillSpoiler.width != QFixed();
+					const auto spoilerOpacity = hasSpoiler
+						? fillSpoilerOpacity()
+						: 0.;
 					const auto hasSelect = fillSelect.to != QFixed();
 					if (hasSelect) {
 						fillSelectRange(fillSelect.from, fillSelect.to);
 					}
-					if (!_background.inFront) {
+					const auto opacity = _p->opacity();
+					if (spoilerOpacity < 1.) {
+						if (hasSpoiler) {
+							_p->setOpacity(opacity * (1. - spoilerOpacity));
+						}
 						Emoji::Draw(
 							*_p,
 							static_cast<const EmojiBlock*>(currentBlock)->_emoji,
@@ -1799,14 +1789,14 @@ private:
 							(glyphX + st::emojiPadding).toInt(),
 							_y + _yDelta + emojiY);
 					}
-					if ((hasSpoiler && _background.inFront)
-						|| _background.startMs) {
-						const auto opacity = _p->opacity();
-						const auto fillOpacity = fillSpoilerOpacity();
-						if (fillOpacity != opacity) {
-							_p->setOpacity(fillOpacity);
-						}
-						fillSpoilerRange(fillSpoiler.from, fillSpoiler.width, blockIndex);
+					if (hasSpoiler) {
+						_p->setOpacity(opacity * spoilerOpacity);
+						fillSpoilerRange(
+							fillSpoiler.from,
+							fillSpoiler.width,
+							blockIndex,
+							currentBlock->from(),
+							(nextBlock ? nextBlock->from() : _t->_text.size()));
 						_p->setOpacity(opacity);
 					}
 //				} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
@@ -1944,7 +1934,15 @@ private:
 					selectedRect = QRect(selX.toInt(), _y + _yDelta, (selX + selWidth).toInt() - selX.toInt(), _fontHeight);
 					fillSelectRange(selX, selX + selWidth);
 				}
-				if (!_background.inFront || _background.startMs) {
+				const auto hasSpoiler = (_background.inFront || _background.startMs);
+				const auto spoilerOpacity = hasSpoiler
+					? fillSpoilerOpacity()
+					: 0.;
+				const auto opacity = _p->opacity();
+				if (spoilerOpacity < 1.) {
+					if (hasSpoiler) {
+						_p->setOpacity(opacity * (1. - spoilerOpacity));
+					}
 					if (Q_UNLIKELY(hasSelected)) {
 						if (Q_UNLIKELY(hasNotSelected)) {
 							auto clippingEnabled = _p->hasClipping();
@@ -1971,13 +1969,14 @@ private:
 					}
 				}
 
-				if (_background.inFront || _background.startMs) {
-					const auto opacity = _p->opacity();
-					const auto fillOpacity = fillSpoilerOpacity();
-					if (fillOpacity != opacity) {
-						_p->setOpacity(fillOpacity);
-					}
-					fillSpoilerRange(x, itemWidth, blockIndex);
+				if (hasSpoiler) {
+					_p->setOpacity(opacity * spoilerOpacity);
+					fillSpoilerRange(
+						x,
+						itemWidth,
+						blockIndex,
+						_localFrom + itemStart,
+						_localFrom + itemEnd);
 					_p->setOpacity(opacity);
 				}
 			}
@@ -2007,7 +2006,12 @@ private:
 		return (1. - std::min(progress, 1.));
 	}
 
-	void fillSpoilerRange(QFixed x, QFixed width, int currentBlockIndex) {
+	void fillSpoilerRange(
+			QFixed x,
+			QFixed width,
+			int currentBlockIndex,
+			int positionFrom,
+			int positionTill) {
 		if (!_background.color) {
 			return;
 		}
@@ -2019,10 +2023,11 @@ private:
 			: _t->_spoilerShownCache;
 		const auto cornerWidth = cache.corners[0].width()
 			/ style::DevicePixelRatio();
+		const auto useWidth = (x + width).toInt() - x.toInt();
 		const auto rect = QRect(
 			x.toInt(),
 			_y + _yDelta,
-			std::max(width.toInt() - elideOffset, cornerWidth * 2),
+			std::max(useWidth - elideOffset, cornerWidth * 2),
 			_fontHeight);
 		if (!rect.isValid()) {
 			return;
@@ -2030,12 +2035,21 @@ private:
 
 		const auto parts = [&] {
 			const auto blockIndex = currentBlockIndex - 1;
-			const auto now = _t->_blocks[blockIndex]->spoilerIndex();
-			const auto was = (blockIndex > 0)
+			const auto block = _t->_blocks[blockIndex].get();
+			const auto nextBlock = (blockIndex + 1 < _t->_blocks.size())
+				? _t->_blocks[blockIndex + 1].get()
+				: nullptr;
+			const auto blockEnd = nextBlock ? nextBlock->from() : _t->_text.size();
+			const auto now = block->spoilerIndex();
+			const auto was = (positionFrom > block->from())
+				? now
+				: (blockIndex > 0)
 				? _t->_blocks[blockIndex - 1]->spoilerIndex()
 				: 0;
-			const auto will = (blockIndex < _t->_blocks.size() - 1)
-				? _t->_blocks[blockIndex + 1]->spoilerIndex()
+			const auto will = (positionTill < blockEnd)
+				? now
+				: nextBlock
+				? nextBlock->spoilerIndex()
 				: 0;
 			return RectPart::None
 				| ((now != was) ? (RectPart::FullLeft) : RectPart::None)
