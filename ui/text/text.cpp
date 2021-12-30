@@ -1788,16 +1788,8 @@ private:
 					}
 					const auto hasSpoiler = fillSpoiler.width != QFixed();
 					const auto hasSelect = fillSelect.to != QFixed();
-					if (hasSpoiler && !_background.inFront) {
-						fillSpoilerRange(fillSpoiler.from, fillSpoiler.width, blockIndex);
-					}
 					if (hasSelect) {
-						const auto opacity = _p->opacity();
-						if (hasSpoiler && !_background.inFront) {
-							_p->setOpacity(kSelectedSpoilerOpacity);
-						}
 						fillSelectRange(fillSelect.from, fillSelect.to);
-						_p->setOpacity(opacity);
 					}
 					if (!_background.inFront) {
 						Emoji::Draw(
@@ -1905,21 +1897,10 @@ private:
 				gf.justified = false;
 				gf.initWithScriptItem(si);
 
-				const auto hasBackground = !_background.inFront
-					&& _background.color;
-				if (hasBackground) {
-					fillSpoilerRange(x, si.width, blockIndex);
-				}
-
 				auto hasSelected = false;
 				auto hasNotSelected = true;
 				auto selectedRect = QRect();
 				if (_localFrom + itemStart < _selection.to && _localFrom + itemEnd > _selection.from) {
-					const auto opacity = _p->opacity();
-					if (hasBackground) {
-						_p->setOpacity(kSelectedSpoilerOpacity);
-					}
-
 					hasSelected = true;
 					auto selX = x;
 					auto selWidth = itemWidth;
@@ -1962,31 +1943,32 @@ private:
 					if (rtl) selX = x + itemWidth - (selX - x) - selWidth;
 					selectedRect = QRect(selX.toInt(), _y + _yDelta, (selX + selWidth).toInt() - selX.toInt(), _fontHeight);
 					fillSelectRange(selX, selX + selWidth);
-					_p->setOpacity(opacity);
 				}
-				if (Q_UNLIKELY(hasSelected)) {
-					if (Q_UNLIKELY(hasNotSelected)) {
-						auto clippingEnabled = _p->hasClipping();
-						auto clippingRegion = _p->clipRegion();
-						_p->setClipRect(selectedRect, Qt::IntersectClip);
-						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(QPointF(x.toReal(), textY), gf);
-						auto externalClipping = clippingEnabled ? clippingRegion : QRegion(QRect((_x - _w).toInt(), _y - _lineHeight, (_x + 2 * _w).toInt(), _y + 2 * _lineHeight));
-						_p->setClipRegion(externalClipping - selectedRect);
-						_p->setPen(*_currentPen);
-						_p->drawTextItem(QPointF(x.toReal(), textY), gf);
-						if (clippingEnabled) {
-							_p->setClipRegion(clippingRegion);
+				if (!_background.inFront || _background.startMs) {
+					if (Q_UNLIKELY(hasSelected)) {
+						if (Q_UNLIKELY(hasNotSelected)) {
+							auto clippingEnabled = _p->hasClipping();
+							auto clippingRegion = _p->clipRegion();
+							_p->setClipRect(selectedRect, Qt::IntersectClip);
+							_p->setPen(*_currentPenSelected);
+							_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+							auto externalClipping = clippingEnabled ? clippingRegion : QRegion(QRect((_x - _w).toInt(), _y - _lineHeight, (_x + 2 * _w).toInt(), _y + 2 * _lineHeight));
+							_p->setClipRegion(externalClipping - selectedRect);
+							_p->setPen(*_currentPen);
+							_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+							if (clippingEnabled) {
+								_p->setClipRegion(clippingRegion);
+							} else {
+								_p->setClipping(false);
+							}
 						} else {
-							_p->setClipping(false);
+							_p->setPen(*_currentPenSelected);
+							_p->drawTextItem(QPointF(x.toReal(), textY), gf);
 						}
 					} else {
-						_p->setPen(*_currentPenSelected);
+						_p->setPen(*_currentPen);
 						_p->drawTextItem(QPointF(x.toReal(), textY), gf);
 					}
-				} else {
-					_p->setPen(*_currentPen);
-					_p->drawTextItem(QPointF(x.toReal(), textY), gf);
 				}
 
 				if (_background.inFront || _background.startMs) {
@@ -2880,11 +2862,6 @@ private:
 						ImageRoundRadius::Small,
 						*_background.color);
 					mutableCache.color = (*_background.color)->c;
-				}
-				if (inBack) {
-					_currentPen = &_textPalette->spoilerActiveFg->p;
-					_currentPenSelected = &_textPalette->spoilerActiveFg->p;
-					return;
 				}
 			} else {
 				_background = {};
