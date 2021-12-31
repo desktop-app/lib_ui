@@ -857,7 +857,7 @@ defaultMenu: Menu {
 
 	arrow: defaultMenuArrow;
 
-	widthMin: 180px;
+	widthMin: 140px;
 	widthMax: 300px;
 
 	ripple: defaultRippleAnimation;
