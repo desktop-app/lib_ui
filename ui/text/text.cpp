@@ -156,112 +156,6 @@ bool IsBad(QChar ch) {
 } // namespace Text
 } // namespace Ui
 
-QString textcmdSkipBlock(ushort w, ushort h) {
-	static QString cmd(5, TextCommand);
-	cmd[1] = QChar(TextCommandSkipBlock);
-	cmd[2] = QChar(w);
-	cmd[3] = QChar(h);
-	return cmd;
-}
-
-QString textcmdStartLink(ushort lnkIndex) {
-	static QString cmd(4, TextCommand);
-	cmd[1] = QChar(TextCommandLinkIndex);
-	cmd[2] = QChar(lnkIndex);
-	return cmd;
-}
-
-QString textcmdStartLink(const QString &url) {
-	if (url.size() >= 4096) return QString();
-
-	QString result;
-	result.reserve(url.size() + 4);
-	return result.append(TextCommand).append(QChar(TextCommandLinkText)).append(QChar(int(url.size()))).append(url).append(TextCommand);
-}
-
-QString textcmdStopLink() {
-	return textcmdStartLink(0);
-}
-
-QString textcmdLink(ushort lnkIndex, const QString &text) {
-	QString result;
-	result.reserve(4 + text.size() + 4);
-	return result.append(textcmdStartLink(lnkIndex)).append(text).append(textcmdStopLink());
-}
-
-QString textcmdLink(const QString &url, const QString &text) {
-	QString result;
-	result.reserve(4 + url.size() + text.size() + 4);
-	return result.append(textcmdStartLink(url)).append(text).append(textcmdStopLink());
-}
-
-QString textcmdStartSemibold() {
-	QString result;
-	result.reserve(3);
-	return result.append(TextCommand).append(QChar(TextCommandSemibold)).append(TextCommand);
-}
-
-QString textcmdStopSemibold() {
-	QString result;
-	result.reserve(3);
-	return result.append(TextCommand).append(QChar(TextCommandNoSemibold)).append(TextCommand);
-}
-
-QString textcmdStartSpoiler() {
-	QString result;
-	result.reserve(3);
-	return result.append(TextCommand).append(QChar(TextCommandSpoiler)).append(TextCommand);
-}
-
-QString textcmdStopSpoiler() {
-	QString result;
-	result.reserve(3);
-	return result.append(TextCommand).append(QChar(TextCommandNoSpoiler)).append(TextCommand);
-}
-
-const QChar *textSkipCommand(const QChar *from, const QChar *end, bool canLink) {
-	const QChar *result = from + 1;
-	if (*from != TextCommand || result >= end) return from;
-
-	ushort cmd = result->unicode();
-	++result;
-	if (result >= end) return from;
-
-	switch (cmd) {
-	case TextCommandBold:
-	case TextCommandNoBold:
-	case TextCommandSemibold:
-	case TextCommandNoSemibold:
-	case TextCommandItalic:
-	case TextCommandNoItalic:
-	case TextCommandUnderline:
-	case TextCommandNoUnderline:
-	case TextCommandSpoiler:
-	case TextCommandNoSpoiler:
-		break;
-
-	case TextCommandLinkIndex:
-		if (result->unicode() > 0x7FFF) return from;
-		++result;
-		break;
-
-	case TextCommandLinkText: {
-		ushort len = result->unicode();
-		if (len >= 4096 || !canLink) return from;
-		result += len + 1;
-	} break;
-
-	case TextCommandSkipBlock:
-		result += 2;
-		break;
-
-	case TextCommandLangTag:
-		result += 1;
-		break;
-	}
-	return (result < end && *result == TextCommand) ? (result + 1) : from;
-}
-
 const TextParseOptions _defaultOptions = {
 	TextParseLinks | TextParseMultiline, // flags
 	0, // maxw
@@ -328,15 +222,11 @@ private:
 	void createBlock(int32 skipBack = 0);
 	void createSkipBlock(int32 w, int32 h);
 	void createNewlineBlock();
-	bool checkCommand();
 
 	// Returns true if at least one entity was parsed in the current position.
 	bool checkEntities();
-	bool readSkipBlockCommand();
-	bool readCommand();
 	void parseCurrentChar();
 	void parseEmojiFromCurrent();
-	void checkForElidedSkipBlock();
 	void finalize(const TextParseOptions &options);
 
 	void finishEntities();
@@ -528,17 +418,6 @@ void Parser::createNewlineBlock() {
 	createBlock();
 }
 
-bool Parser::checkCommand() {
-	bool result = false;
-	for (QChar c = ((_ptr < _end) ? *_ptr : 0); c == TextCommand; c = ((_ptr < _end) ? *_ptr : 0)) {
-		if (!readCommand()) {
-			break;
-		}
-		result = true;
-	}
-	return result;
-}
-
 void Parser::finishEntities() {
 	while (!_startedEntities.empty()
 		&& (_ptr >= _startedEntities.begin()->first || _ptr >= _end)) {
@@ -691,149 +570,6 @@ void Parser::skipBadEntities() {
 	}
 }
 
-bool Parser::readSkipBlockCommand() {
-	const QChar *afterCmd = textSkipCommand(_ptr, _end, _links.size() < 0x7FFF);
-	if (afterCmd == _ptr) {
-		return false;
-	}
-
-	ushort cmd = (++_ptr)->unicode();
-	++_ptr;
-
-	switch (cmd) {
-	case TextCommandSkipBlock:
-		createSkipBlock(_ptr->unicode(), (_ptr + 1)->unicode());
-	break;
-	}
-
-	_ptr = afterCmd;
-	return true;
-}
-
-bool Parser::readCommand() {
-	const QChar *afterCmd = textSkipCommand(_ptr, _end, _links.size() < 0x7FFF);
-	if (afterCmd == _ptr) {
-		return false;
-	}
-
-	ushort cmd = (++_ptr)->unicode();
-	++_ptr;
-
-	switch (cmd) {
-	case TextCommandBold:
-		if (!(_flags & TextBlockFBold)) {
-			createBlock();
-			_flags |= TextBlockFBold;
-		}
-	break;
-
-	case TextCommandNoBold:
-		if (_flags & TextBlockFBold) {
-			createBlock();
-			_flags &= ~TextBlockFBold;
-		}
-	break;
-
-	case TextCommandSemibold:
-	if (!(_flags & TextBlockFSemibold)) {
-		createBlock();
-		_flags |= TextBlockFSemibold;
-	}
-	break;
-
-	case TextCommandNoSemibold:
-	if (_flags & TextBlockFSemibold) {
-		createBlock();
-		_flags &= ~TextBlockFSemibold;
-	}
-	break;
-
-	case TextCommandItalic:
-		if (!(_flags & TextBlockFItalic)) {
-			createBlock();
-			_flags |= TextBlockFItalic;
-		}
-	break;
-
-	case TextCommandNoItalic:
-		if (_flags & TextBlockFItalic) {
-			createBlock();
-			_flags &= ~TextBlockFItalic;
-		}
-	break;
-
-	case TextCommandUnderline:
-		if (!(_flags & TextBlockFUnderline)) {
-			createBlock();
-			_flags |= TextBlockFUnderline;
-		}
-	break;
-
-	case TextCommandNoUnderline:
-		if (_flags & TextBlockFUnderline) {
-			createBlock();
-			_flags &= ~TextBlockFUnderline;
-		}
-	break;
-
-	case TextCommandStrikeOut:
-		if (!(_flags & TextBlockFStrikeOut)) {
-			createBlock();
-			_flags |= TextBlockFStrikeOut;
-		}
-		break;
-
-	case TextCommandNoStrikeOut:
-		if (_flags & TextBlockFStrikeOut) {
-			createBlock();
-			_flags &= ~TextBlockFStrikeOut;
-		}
-		break;
-
-	case TextCommandLinkIndex:
-		if (_ptr->unicode() != _lnkIndex) {
-			createBlock();
-			_lnkIndex = _ptr->unicode();
-		}
-	break;
-
-	case TextCommandLinkText: {
-		createBlock();
-		int32 len = _ptr->unicode();
-		_links.push_back(EntityLinkData{
-			.data = QString(++_ptr, len),
-			.type = EntityType::CustomUrl
-		});
-		_lnkIndex = kStringLinkIndexShift + _links.size();
-	} break;
-
-	case TextCommandSpoiler: {
-		if (!_spoilerIndex) {
-			createBlock();
-			_spoilers.push_back(EntityLinkData{
-				.data = QString::number(_spoilers.size() + 1),
-				.type = EntityType::Spoiler,
-			});
-			_spoilerIndex = _spoilers.size();
-		}
-	} break;
-
-	case TextCommandNoSpoiler:
-		if (_spoilerIndex == _spoilers.size()) {
-			createBlock();
-			_spoilerIndex = 0;
-		}
-	break;
-
-	case TextCommandSkipBlock:
-		createSkipBlock(_ptr->unicode(), (_ptr + 1)->unicode());
-	break;
-	}
-
-	_ptr = afterCmd;
-	return true;
-}
-
 void Parser::parseCurrentChar() {
 	_ch = ((_ptr < _end) ? *_ptr : 0);
 	_emojiLookback = 0;
@@ -964,7 +700,7 @@ void Parser::parse(const TextParseOptions &options) {
 	_t->_text.reserve(_end - _ptr);
 
 	for (; _ptr <= _end; ++_ptr) {
-		while (checkEntities() || (_rich && checkCommand())) {
+		while (checkEntities()) {
 		}
 		parseCurrentChar();
 		parseEmojiFromCurrent();
@@ -974,7 +710,6 @@ void Parser::parse(const TextParseOptions &options) {
 		}
 	}
 	createBlock();
-	checkForElidedSkipBlock();
 	finalize(options);
 }
 
@@ -983,25 +718,25 @@ void Parser::trimSourceRange() {
 		_source.entities,
 		_end - _start);
 
-	while (_ptr != _end && IsTrimmed(*_ptr, _rich) && _ptr != _start + firstMonospaceOffset) {
+	while (_ptr != _end && IsTrimmed(*_ptr) && _ptr != _start + firstMonospaceOffset) {
 		++_ptr;
 	}
-	while (_ptr != _end && IsTrimmed(*(_end - 1), _rich)) {
+	while (_ptr != _end && IsTrimmed(*(_end - 1))) {
 		--_end;
 	}
 }
 
-void Parser::checkForElidedSkipBlock() {
-	if (!_sumFinished || !_rich) {
-		return;
-	}
-	// We could've skipped the final skip block command.
-	for (; _ptr < _end; ++_ptr) {
-		if (*_ptr == TextCommand && readSkipBlockCommand()) {
-			break;
-		}
-	}
-}
+// void Parser::checkForElidedSkipBlock() {
+// 	if (!_sumFinished || !_rich) {
+// 		return;
+// 	}
+// 	// We could've skipped the final skip block command.
+// 	for (; _ptr < _end; ++_ptr) {
+// 		if (*_ptr == TextCommand && readSkipBlockCommand()) {
+// 			break;
+// 		}
+// 	}
+// }
 
 void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.resize(_maxLnkIndex);
@@ -3795,8 +3530,7 @@ bool IsAlmostLinkEnd(QChar ch) {
 }
 
 bool IsLinkEnd(QChar ch) {
-	return (ch == TextCommand)
-		|| IsBad(ch)
+	return IsBad(ch)
 		|| IsSpace(ch)
 		|| IsNewline(ch)
 		|| ch.isLowSurrogate()
@@ -3808,9 +3542,9 @@ bool IsNewline(QChar ch) {
 		|| (ch == 156);
 }
 
-bool IsSpace(QChar ch, bool rich) {
+bool IsSpace(QChar ch) {
 	return ch.isSpace()
-		|| (ch < 32 && !(rich && ch == TextCommand))
+		|| (ch < 32)
 		|| (ch == QChar::ParagraphSeparator)
 		|| (ch == QChar::LineSeparator)
 		|| (ch == QChar::ObjectReplacementCharacter)
@@ -3840,9 +3574,8 @@ bool IsReplacedBySpace(QChar ch) {
 		|| (ch >= 8232 && ch <= 8237);
 }
 
-bool IsTrimmed(QChar ch, bool rich) {
-	return (!rich || ch != TextCommand)
-		&& (IsSpace(ch) || IsBad(ch));
+bool IsTrimmed(QChar ch) {
+	return (IsSpace(ch) || IsBad(ch));
 }
 
 } // namespace Text

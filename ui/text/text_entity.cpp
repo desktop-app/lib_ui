@@ -1293,35 +1293,17 @@ bool IsValidTopDomain(const QString &protocol) {
 	return list.contains(base::crc32(protocol.constData(), protocol.size() * sizeof(QChar)));
 }
 
-QString Clean(const QString &text, bool keepSpoilers) {
-	auto result = text;
-	for (auto s = text.unicode(), ch = s, e = text.unicode() + text.size(); ch != e; ++ch) {
-		if (keepSpoilers && (*ch == TextCommand)) {
-			if ((*(ch + 1) == TextCommandSpoiler)
-				|| (*(ch - 1) == TextCommandSpoiler)
-				|| (*(ch + 1) == TextCommandNoSpoiler)
-				|| (*(ch - 1) == TextCommandNoSpoiler)) {
-				continue;
-			}
-		}
-		if (*ch == TextCommand) {
-			result[int(ch - s)] = QChar::Space;
-		}
-	}
-	return result;
-}
-
 QString EscapeForRichParsing(const QString &text) {
 	QString result;
 	result.reserve(text.size());
 	auto s = text.constData(), ch = s;
 	for (const QChar *e = s + text.size(); ch != e; ++ch) {
-		if (*ch == TextCommand) {
-			if (ch > s) result.append(s, ch - s);
-			result.append(QChar::Space);
-			s = ch + 1;
-			continue;
-		}
+		// if (*ch == TextCommand) {
+		// 	if (ch > s) result.append(s, ch - s);
+		// 	result.append(QChar::Space);
+		// 	s = ch + 1;
+		// 	continue;
+		// }
 		if (ch->unicode() == '\\' || ch->unicode() == '[') {
 			if (ch > s) result.append(s, ch - s);
 			result.append('\\');
@@ -1349,7 +1331,7 @@ QString SingleLine(const QString &text) {
 	}
 
 	for (auto ch = s; ch != e; ++ch) {
-		if (IsNewline(*ch) || *ch == TextCommand) {
+		if (IsNewline(*ch)/* || *ch == TextCommand*/) {
 			result[int(ch - s)] = QChar::Space;
 		}
 	}
@@ -1545,47 +1527,6 @@ bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
 	return true;
 }
 
-bool textcmdStartsLink(const QChar *start, int32 len, int32 commandOffset) {
-	if (commandOffset + 2 < len) {
-		if (*(start + commandOffset + 1) == TextCommandLinkIndex) {
-			return (*(start + commandOffset + 2) != 0);
-		}
-		return (*(start + commandOffset + 1) != TextCommandLinkText);
-	}
-	return false;
-}
-
-bool checkTagStartInCommand(const QChar *start, int32 len, int32 tagStart, int32 &commandOffset, bool &commandIsLink, bool &inLink) {
-	bool inCommand = false;
-	const QChar *commandEnd = start + commandOffset;
-	while (commandOffset < len && tagStart > commandOffset) { // skip commands, evaluating are we in link or not
-		commandEnd = textSkipCommand(start + commandOffset, start + len);
-		if (commandEnd > start + commandOffset) {
-			if (tagStart < (commandEnd - start)) {
-				inCommand = true;
-				break;
-			}
-			for (commandOffset = commandEnd - start; commandOffset < len; ++commandOffset) {
-				if (*(start + commandOffset) == TextCommand) {
-					inLink = commandIsLink;
-					commandIsLink = textcmdStartsLink(start, len, commandOffset);
-					break;
-				}
-			}
-			if (commandOffset >= len) {
-				inLink = commandIsLink;
-				commandIsLink = false;
-			}
-		} else {
-			break;
-		}
-	}
-	if (inCommand) {
-		commandOffset = commandEnd - start;
-	}
-	return inCommand;
-}
-
 TextWithEntities ParseEntities(const QString &text, int32 flags) {
 	const auto rich = ((flags & TextParseRichText) != 0);
 	auto result = TextWithEntities{ text, EntitiesInText() };
@@ -1605,20 +1546,10 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 	int existingEntityIndex = 0, existingEntitiesCount = result.entities.size();
 	int existingEntityEnd = 0;
 
-	int32 len = result.text.size(), commandOffset = rich ? 0 : len;
-	bool inLink = false, commandIsLink = false;
+	int32 len = result.text.size();
 	const auto start = result.text.constData();
 	const auto end = start + result.text.size();
 	for (int32 offset = 0, matchOffset = offset, mentionSkip = 0; offset < len;) {
-		if (commandOffset <= offset) {
-			for (commandOffset = offset; commandOffset < len; ++commandOffset) {
-				if (*(start + commandOffset) == TextCommand) {
-					inLink = commandIsLink;
-					commandIsLink = textcmdStartsLink(start, len, commandOffset);
-					break;
-				}
-			}
-		}
 		auto mDomain = qthelp::RegExpDomain().match(result.text, matchOffset);
 		auto mExplicitDomain = qthelp::RegExpDomainExplicit().match(result.text, matchOffset);
 		auto mHashtag = withHashtags ? RegExpHashtag().match(result.text, matchOffset) : QRegularExpressionMatch();
@@ -1706,17 +1637,6 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 				offset = matchOffset = mentionEnd;
 				continue;
 			}
-			const auto inCommand = checkTagStartInCommand(
-				start,
-				len,
-				mentionStart,
-				commandOffset,
-				commandIsLink,
-				inLink);
-			if (inCommand || inLink) {
-				offset = matchOffset = commandOffset;
-				continue;
-			}
 
 			lnkType = EntityType::Mention;
 			lnkStart = mentionStart;
@@ -1727,50 +1647,15 @@ void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
 				offset = matchOffset = hashtagEnd;
 				continue;
 			}
-			const auto inCommand = checkTagStartInCommand(
-				start,
-				len,
-				hashtagStart,
-				commandOffset,
-				commandIsLink,
-				inLink);
-			if (inCommand || inLink) {
-				offset = matchOffset = commandOffset;
-				continue;
-			}
 
 			lnkType = EntityType::Hashtag;
 			lnkStart = hashtagStart;
 			lnkLength = hashtagEnd - hashtagStart;
 		} else if (botCommandStart < domainStart) {
-			const auto inCommand = checkTagStartInCommand(
-				start,
-				len,
-				botCommandStart,
-				commandOffset,
-				commandIsLink,
-				inLink);
-			if (inCommand || inLink) {
-				offset = matchOffset = commandOffset;
-				continue;
-			}
-
 			lnkType = EntityType::BotCommand;
 			lnkStart = botCommandStart;
 			lnkLength = botCommandEnd - botCommandStart;
 		} else {
-			const auto inCommand = checkTagStartInCommand(
-				start,
-				len,
-				domainStart,
-				commandOffset,
-				commandIsLink,
-				inLink);
-			if (inCommand || inLink) {
-				offset = matchOffset = commandOffset;
-				continue;
-			}
-
 			auto protocol = mDomain.captured(1).toLower();
 			auto topDomain = mDomain.captured(3).toLower();
 			auto isProtocolValid = protocol.isEmpty() || IsValidProtocol(protocol);
@@ -2330,36 +2215,6 @@ void SetClipboardText(
 	if (auto data = MimeDataFromText(text)) {
 		QGuiApplication::clipboard()->setMimeData(data.release(), mode);
 	}
-}
-
-QString TextWithSpoilerCommands(const TextWithEntities &textWithEntities) {
-	auto text = textWithEntities.text;
-	auto offset = 0;
-	const auto start = textcmdStartSpoiler();
-	const auto stop = textcmdStopSpoiler();
-	for (const auto &e : textWithEntities.entities) {
-		if (e.type() == EntityType::Spoiler) {
-			text.insert(e.offset() + offset, start);
-			offset += start.size();
-			text.insert(e.offset() + e.length() + offset, stop);
-			offset += stop.size();
-		}
-	}
-	return text;
-}
-
-QString CutTextWithCommands(
-		QString text,
-		int length,
-		const QString &start,
-		const QString &stop) {
-	text = text.mid(0, length);
-	const auto lastStart = text.lastIndexOf(start);
-	const auto lastStop = text.lastIndexOf(stop);
-	const auto additional = ((lastStart == -1) || (lastStart < lastStop))
-		? QString()
-		: stop;
-	return text + additional + Ui::kQEllipsis;
 }
 
 } // namespace TextUtilities

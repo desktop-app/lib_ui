@@ -297,7 +297,6 @@ QString MarkdownSpoilerGoodBefore();
 QString MarkdownSpoilerBadAfter();
 
 // Text preprocess.
-QString Clean(const QString &text, bool keepSpoilers = false);
 QString EscapeForRichParsing(const QString &text);
 QString SingleLine(const QString &text);
 TextWithEntities SingleLine(const TextWithEntities &text);
@@ -382,13 +381,5 @@ std::unique_ptr<QMimeData> MimeDataFromText(TextWithTags &&text);
 void SetClipboardText(
 	const TextForMimeData &text,
 	QClipboard::Mode mode = QClipboard::Clipboard);
-
-[[nodiscard]] QString TextWithSpoilerCommands(
-	const TextWithEntities &textWithEntities);
-[[nodiscard]] QString CutTextWithCommands(
-	QString text,
-	int length,
-	const QString &start,
-	const QString &stop);
 
 } // namespace TextUtilities

@@ -22,25 +22,6 @@ static const auto kQEllipsis = QStringLiteral("...");
 } // namespace Ui
 
 static const QChar TextCommand(0x0010);
-enum TextCommands {
-	TextCommandBold        = 0x01,
-	TextCommandNoBold      = 0x02,
-	TextCommandItalic      = 0x03,
-	TextCommandNoItalic    = 0x04,
-	TextCommandUnderline   = 0x05,
-	TextCommandNoUnderline = 0x06,
-	TextCommandStrikeOut   = 0x07,
-	TextCommandNoStrikeOut = 0x08,
-	TextCommandSemibold    = 0x09,
-	TextCommandNoSemibold  = 0x0A,
-	TextCommandLinkIndex   = 0x0B, // 0 - NoLink
-	TextCommandLinkText    = 0x0C,
-	TextCommandSkipBlock   = 0x0D,
-	TextCommandSpoiler     = 0x0E,
-	TextCommandNoSpoiler   = 0x0F,
-
-	TextCommandLangTag     = 0x20,
-};
 
 struct TextParseOptions {
 	int32 flags;
@@ -253,10 +234,10 @@ private:
 [[nodiscard]] bool IsAlmostLinkEnd(QChar ch);
 [[nodiscard]] bool IsLinkEnd(QChar ch);
 [[nodiscard]] bool IsNewline(QChar ch);
-[[nodiscard]] bool IsSpace(QChar ch, bool rich = false);
+[[nodiscard]] bool IsSpace(QChar ch);
 [[nodiscard]] bool IsDiac(QChar ch);
 [[nodiscard]] bool IsReplacedBySpace(QChar ch);
-[[nodiscard]] bool IsTrimmed(QChar ch, bool rich = false);
+[[nodiscard]] bool IsTrimmed(QChar ch);
 
 } // namespace Text
 } // namespace Ui
@@ -276,18 +257,3 @@ inline TextSelection shiftSelection(TextSelection selection, const Ui::Text::Str
 inline TextSelection unshiftSelection(TextSelection selection, const Ui::Text::String &byText) {
 	return unshiftSelection(selection, byText.length());
 }
-
-// textcmd
-QString textcmdSkipBlock(ushort w, ushort h);
-QString textcmdStartLink(ushort lnkIndex);
-QString textcmdStartLink(const QString &url);
-QString textcmdStopLink();
-QString textcmdLink(ushort lnkIndex, const QString &text);
-QString textcmdLink(const QString &url, const QString &text);
-QString textcmdStartSemibold();
-QString textcmdStopSemibold();
-
-QString textcmdStartSpoiler();
-QString textcmdStopSpoiler();
-
-const QChar *textSkipCommand(const QChar *from, const QChar *end, bool canLink = true);
