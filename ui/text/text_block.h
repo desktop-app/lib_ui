@@ -88,14 +88,9 @@ public:
 		uint16 length,
 		uchar flags,
 		uint16 lnkIndex,
-		uint16 spoilerIndex)
-	: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
-		_flags |= ((TextBlockTNewline & 0x0F) << 8);
-	}
+		uint16 spoilerIndex);
 
-	Qt::LayoutDirection nextDirection() const {
-		return _nextDir;
-	}
+	Qt::LayoutDirection nextDirection() const;
 
 private:
 	Qt::LayoutDirection _nextDir = Qt::LayoutDirectionAuto;
@@ -109,29 +104,12 @@ private:
 class TextWord final {
 public:
 	TextWord() = default;
-	TextWord(uint16 from, QFixed width, QFixed rbearing, QFixed rpadding = 0)
-	: _from(from)
-	, _rbearing((rbearing.value() > 0x7FFF)
-		? 0x7FFF
-		: (rbearing.value() < -0x7FFF ? -0x7FFF : rbearing.value()))
-	, _width(width)
-	, _rpadding(rpadding) {
-	}
-	uint16 from() const {
-		return _from;
-	}
-	QFixed f_rbearing() const {
-		return QFixed::fromFixed(_rbearing);
-	}
-	QFixed f_width() const {
-		return _width;
-	}
-	QFixed f_rpadding() const {
-		return _rpadding;
-	}
-	void add_rpadding(QFixed padding) {
-		_rpadding += padding;
-	}
+	TextWord(uint16 from, QFixed width, QFixed rbearing, QFixed rpadding = 0);
+	uint16 from() const;
+	QFixed f_rbearing() const;
+	QFixed f_width() const;
+	QFixed f_rpadding() const;
+	void add_rpadding(QFixed padding);
 
 private:
 	uint16 _from = 0;
@@ -153,9 +131,7 @@ public:
 		uint16 spoilerIndex);
 
 private:
-	QFixed real_f_rbearing() const {
-		return _words.isEmpty() ? 0 : _words.back().f_rbearing();
-	}
+	QFixed real_f_rbearing() const;
 
 	QVector<TextWord> _words;
 
@@ -197,16 +173,9 @@ public:
 		int32 w,
 		int32 h,
 		uint16 lnkIndex,
-		uint16 spoilerIndex)
-	: AbstractBlock(font, str, from, 1, 0, lnkIndex, spoilerIndex)
-	, _height(h) {
-		_flags |= ((TextBlockTSkip & 0x0F) << 8);
-		_width = w;
-	}
+		uint16 spoilerIndex);
 
-	int height() const {
-		return _height;
-	}
+	int height() const;
 
 private:
 	int _height = 0;
@@ -219,94 +188,12 @@ private:
 
 class Block final {
 public:
-	Block() {
-		Unexpected("Should not be called.");
-	}
-	Block(const Block &other) {
-		switch (other->type()) {
-		case TextBlockTNewline:
-			emplace<NewlineBlock>(other.unsafe<NewlineBlock>());
-			break;
-		case TextBlockTText:
-			emplace<TextBlock>(other.unsafe<TextBlock>());
-			break;
-		case TextBlockTEmoji:
-			emplace<EmojiBlock>(other.unsafe<EmojiBlock>());
-			break;
-		case TextBlockTSkip:
-			emplace<SkipBlock>(other.unsafe<SkipBlock>());
-			break;
-		default:
-			Unexpected("Bad text block type in Block(const Block&).");
-		}
-	}
-	Block(Block &&other) {
-		switch (other->type()) {
-		case TextBlockTNewline:
-			emplace<NewlineBlock>(std::move(other.unsafe<NewlineBlock>()));
-			break;
-		case TextBlockTText:
-			emplace<TextBlock>(std::move(other.unsafe<TextBlock>()));
-			break;
-		case TextBlockTEmoji:
-			emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
-			break;
-		case TextBlockTSkip:
-			emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
-			break;
-		default:
-			Unexpected("Bad text block type in Block(Block&&).");
-		}
-	}
-	Block &operator=(const Block &other) {
-		if (&other == this) {
-			return *this;
-		}
-		destroy();
-		switch (other->type()) {
-		case TextBlockTNewline:
-			emplace<NewlineBlock>(other.unsafe<NewlineBlock>());
-			break;
-		case TextBlockTText:
-			emplace<TextBlock>(other.unsafe<TextBlock>());
-			break;
-		case TextBlockTEmoji:
-			emplace<EmojiBlock>(other.unsafe<EmojiBlock>());
-			break;
-		case TextBlockTSkip:
-			emplace<SkipBlock>(other.unsafe<SkipBlock>());
-			break;
-		default:
-			Unexpected("Bad text block type in operator=(const Block&).");
-		}
-		return *this;
-	}
-	Block &operator=(Block &&other) {
-		if (&other == this) {
-			return *this;
-		}
-		destroy();
-		switch (other->type()) {
-		case TextBlockTNewline:
-			emplace<NewlineBlock>(std::move(other.unsafe<NewlineBlock>()));
-			break;
-		case TextBlockTText:
-			emplace<TextBlock>(std::move(other.unsafe<TextBlock>()));
-			break;
-		case TextBlockTEmoji:
-			emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
-			break;
-		case TextBlockTSkip:
-			emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
-			break;
-		default:
-			Unexpected("Bad text block type in operator=(Block&&).");
-		}
-		return *this;
-	}
-	~Block() {
-		destroy();
-	}
+	Block();
+	Block(const Block &other);
+	Block(Block &&other);
+	Block &operator=(const Block &other);
+	Block &operator=(Block &&other);
+	~Block();
 
 	[[nodiscard]] static Block Newline(
 			const style::font &font,
@@ -315,9 +202,7 @@ public:
 			uint16 length,
 			uchar flags,
 			uint16 lnkIndex,
-			uint16 spoilerIndex) {
-		return New<NewlineBlock>(font, str, from, length, flags, lnkIndex, spoilerIndex);
-	}
+			uint16 spoilerIndex);
 
 	[[nodiscard]] static Block Text(
 			const style::font &font,
@@ -327,17 +212,7 @@ public:
 			uint16 length,
 			uchar flags,
 			uint16 lnkIndex,
-			uint16 spoilerIndex) {
-		return New<TextBlock>(
-			font,
-			str,
-			minResizeWidth,
-			from,
-			length,
-			flags,
-			lnkIndex,
-			spoilerIndex);
-	}
+			uint16 spoilerIndex);
 
 	[[nodiscard]] static Block Emoji(
 			const style::font &font,
@@ -347,17 +222,7 @@ public:
 			uchar flags,
 			uint16 lnkIndex,
 			uint16 spoilerIndex,
-			EmojiPtr emoji) {
-		return New<EmojiBlock>(
-			font,
-			str,
-			from,
-			length,
-			flags,
-			lnkIndex,
-			spoilerIndex,
-			emoji);
-	}
+			EmojiPtr emoji);
 
 	[[nodiscard]] static Block Skip(
 			const style::font &font,
@@ -366,9 +231,7 @@ public:
 			int32 w,
 			int32 h,
 			uint16 lnkIndex,
-			uint16 spoilerIndex) {
-		return New<SkipBlock>(font, str, from, w, h, lnkIndex, spoilerIndex);
-	}
+			uint16 spoilerIndex);
 
 	template <typename FinalBlock>
 	[[nodiscard]] FinalBlock &unsafe() {
@@ -380,29 +243,14 @@ public:
 		return *reinterpret_cast<const FinalBlock*>(&_data);
 	}
 
-	[[nodiscard]] AbstractBlock *get() {
-		return &unsafe<AbstractBlock>();
-	}
+	[[nodiscard]] AbstractBlock *get();
+	[[nodiscard]] const AbstractBlock *get() const;
 
-	[[nodiscard]] const AbstractBlock *get() const {
-		return &unsafe<AbstractBlock>();
-	}
+	[[nodiscard]] AbstractBlock *operator->();
+	[[nodiscard]] const AbstractBlock *operator->() const;
 
-	[[nodiscard]] AbstractBlock *operator->() {
-		return get();
-	}
-
-	[[nodiscard]] const AbstractBlock *operator->() const {
-		return get();
-	}
-
-	[[nodiscard]] AbstractBlock &operator*() {
-		return *get();
-	}
-
-	[[nodiscard]] const AbstractBlock &operator*() const {
-		return *get();
-	}
+	[[nodiscard]] AbstractBlock &operator*();
+	[[nodiscard]] const AbstractBlock &operator*() const;
 
 private:
 	struct Tag {
@@ -423,24 +271,7 @@ private:
 		new (&_data) FinalType(std::forward<Args>(args)...);
 	}
 
-	void destroy() {
-		switch (get()->type()) {
-		case TextBlockTNewline:
-			unsafe<NewlineBlock>().~NewlineBlock();
-			break;
-		case TextBlockTText:
-			unsafe<TextBlock>().~TextBlock();
-			break;
-		case TextBlockTEmoji:
-			unsafe<EmojiBlock>().~EmojiBlock();
-			break;
-		case TextBlockTSkip:
-			unsafe<SkipBlock>().~SkipBlock();
-			break;
-		default:
-			Unexpected("Bad text block type in Block(Block&&).");
-		}
-	}
+	void destroy();
 
 	static_assert(sizeof(NewlineBlock) <= sizeof(TextBlock));
 	static_assert(alignof(NewlineBlock) <= alignof(void*));
