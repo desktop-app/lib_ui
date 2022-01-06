@@ -46,6 +46,13 @@ TextWithEntities PlainLink(const QString &text) {
 	return WithSingleEntity(text, EntityType::PlainLink);
 }
 
+TextWithEntities Wrapped(TextWithEntities text, EntityType type) {
+	text.entities.insert(
+		text.entities.begin(),
+		{ type, 0, int(text.text.size()), {} });
+	return text;
+}
+
 TextWithEntities RichLangValue(const QString &text) {
 	static const auto kStart = QRegularExpression("(\\*\\*|__)");
 
