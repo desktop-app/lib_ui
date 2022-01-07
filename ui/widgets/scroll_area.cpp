@@ -284,6 +284,10 @@ void ScrollBar::resizeEvent(QResizeEvent *e) {
 	updateBar();
 }
 
+void ScrollBar::wheelEvent(QWheelEvent *e) {
+	static_cast<ScrollArea*>(parentWidget())->viewportEvent(e);
+}
+
 auto ScrollBar::shadowVisibilityChanged() const
 -> rpl::producer<ScrollBar::ShadowVisibility> {
 	return _shadowVisibilityChanged.events();
