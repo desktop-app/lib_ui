@@ -59,19 +59,6 @@ Qt::LayoutDirection StringDirection(
 	return Qt::LayoutDirectionAuto;
 }
 
-TextWithEntities PrepareRichFromPlain(
-		const QString &text,
-		const TextParseOptions &options) {
-	auto result = TextWithEntities{ text };
-	if (options.flags & TextParseLinks) {
-		TextUtilities::ParseEntities(
-			result,
-			options.flags,
-			(options.flags & TextParseRichText));
-	}
-	return result;
-}
-
 TextWithEntities PrepareRichFromRich(
 		const TextWithEntities &text,
 		const TextParseOptions &options) {
@@ -177,11 +164,6 @@ class Parser {
 public:
 	Parser(
 		not_null<String*> string,
-		const QString &text,
-		const TextParseOptions &options,
-		const std::any &context);
-	Parser(
-		not_null<String*> string,
 		const TextWithEntities &textWithEntities,
 		const TextParseOptions &options,
 		const std::any &context);
@@ -250,7 +232,6 @@ private:
 	const QChar *_ptr = nullptr;
 	const EntitiesInText::const_iterator _entitiesEnd;
 	EntitiesInText::const_iterator _waitingEntity;
-	const bool _rich = false;
 	const bool _multiline = false;
 
 	const QFixed _stopAfterWidth; // summary width of all added words
@@ -320,19 +301,6 @@ std::optional<uint16> Parser::StartedEntity::spoilerIndex() const {
 
 Parser::Parser(
 	not_null<String*> string,
-	const QString &text,
-	const TextParseOptions &options,
-	const std::any &context)
-: Parser(
-	string,
-	PrepareRichFromPlain(text, options),
-	options,
-	context,
-	ReadyToken()) {
-}
-
-Parser::Parser(
-	not_null<String*> string,
 	const TextWithEntities &textWithEntities,
 	const TextParseOptions &options,
 	const std::any &context)
@@ -358,7 +326,6 @@ Parser::Parser(
 , _ptr(_start)
 , _entitiesEnd(_source.entities.end())
 , _waitingEntity(_source.entities.begin())
-, _rich(options.flags & TextParseRichText)
 , _multiline(options.flags & TextParseMultiline)
 , _stopAfterWidth(ComputeStopAfter(options, *_t->_st))
 , _checkTilde(ComputeCheckTilde(*_t->_st)) {
@@ -2700,20 +2667,16 @@ private:
 String::String(int32 minResizeWidth) : _minResizeWidth(minResizeWidth) {
 }
 
-String::String(const style::TextStyle &st, const QString &text, const TextParseOptions &options, int32 minResizeWidth, bool richText)
+String::String(const style::TextStyle &st, const QString &text, const TextParseOptions &options, int32 minResizeWidth)
 : _minResizeWidth(minResizeWidth) {
-	if (richText) {
-		setRichText(st, text, options);
-	} else {
-		setText(st, text, options);
-	}
+	setText(st, text, options);
 }
 
 void String::setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options) {
 	_st = &st;
 	clear();
 	{
-		Parser parser(this, text, options, {});
+		Parser parser(this, { text }, options, {});
 	}
 	recountNaturalSize(true, options.dir);
 }
@@ -2875,11 +2838,6 @@ void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &t
 		Parser parser(this, textWithEntities, options, context);
 	}
 	recountNaturalSize(true, options.dir);
-}
-
-void String::setRichText(const style::TextStyle &st, const QString &text, TextParseOptions options) {
-	options.flags |= TextParseRichText;
-	setText(st, text, options);
 }
 
 void String::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {

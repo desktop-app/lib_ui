@@ -32,7 +32,7 @@ TextParseOptions _labelOptions = {
 };
 
 TextParseOptions _labelMarkedOptions = {
-	TextParseMultiline | TextParseRichText | TextParseLinks | TextParseHashtags | TextParseMentions | TextParseBotCommands | TextParseMarkdown, // flags
+	TextParseMultiline | TextParseLinks | TextParseHashtags | TextParseMentions | TextParseBotCommands | TextParseMarkdown, // flags
 	0, // maxw
 	0, // maxh
 	Qt::LayoutDirectionAuto, // dir
@@ -254,11 +254,6 @@ void FlatLabel::textUpdated() {
 
 void FlatLabel::setText(const QString &text) {
 	_text.setText(_st.style, text, _labelOptions);
-	textUpdated();
-}
-
-void FlatLabel::setRichText(const QString &text) {
-	_text.setRichText(_st.style, text, _labelOptions);
 	textUpdated();
 }
 

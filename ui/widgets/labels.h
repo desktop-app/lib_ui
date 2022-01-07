@@ -116,7 +116,6 @@ public:
 	void setTextColorOverride(std::optional<QColor> color);
 
 	void setText(const QString &text);
-	void setRichText(const QString &text);
 	void setMarkedText(const TextWithEntities &textWithEntities);
 	void setSelectable(bool selectable);
 	void setDoubleClickSelectsParagraph(bool doubleClickSelectsParagraph);

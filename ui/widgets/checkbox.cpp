@@ -22,7 +22,7 @@ TextParseOptions _checkboxOptions = {
 };
 
 TextParseOptions _checkboxRichOptions = {
-	TextParseMultiline | TextParseRichText, // flags
+	TextParseMultiline, // flags
 	0, // maxw
 	0, // maxh
 	Qt::LayoutDirectionAuto, // dir

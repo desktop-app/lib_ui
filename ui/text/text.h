@@ -103,8 +103,7 @@ public:
 		const style::TextStyle &st,
 		const QString &text,
 		const TextParseOptions &options = _defaultOptions,
-		int32 minResizeWidth = QFIXED_MAX,
-		bool richText = false);
+		int32 minResizeWidth = QFIXED_MAX);
 	String(const String &other) = default;
 	String(String &&other) = default;
 	String &operator=(const String &other) = default;
@@ -115,7 +114,6 @@ public:
 	int countHeight(int width, bool breakEverywhere = false) const;
 	void countLineWidths(int width, QVector<int> *lineWidths, bool breakEverywhere = false) const;
 	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = _defaultOptions);
-	void setRichText(const style::TextStyle &st, const QString &text, TextParseOptions options = _defaultOptions);
 	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = _defaultOptions, const std::any &context = {});
 
 	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);

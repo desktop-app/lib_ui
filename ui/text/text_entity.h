@@ -237,12 +237,11 @@ struct TextForMimeData {
 enum {
 	TextParseMultiline = 0x001,
 	TextParseLinks = 0x002,
-	TextParseRichText = 0x004,
-	TextParseMentions = 0x008,
-	TextParseHashtags = 0x010,
-	TextParseBotCommands = 0x020,
-	TextParseMarkdown = 0x040,
-	TextParsePlainLinks = 0x080,
+	TextParseMentions = 0x004,
+	TextParseHashtags = 0x008,
+	TextParseBotCommands = 0x010,
+	TextParseMarkdown = 0x020,
+	TextParsePlainLinks = 0x040,
 };
 
 struct TextWithTags {
@@ -335,7 +334,7 @@ inline QString MentionNameDataFromFields(const MentionNameFields &fields) {
 // New entities are added to the ones that are already in result.
 // Changes text if (flags & TextParseMarkdown).
 TextWithEntities ParseEntities(const QString &text, int32 flags);
-void ParseEntities(TextWithEntities &result, int32 flags, bool rich = false);
+void ParseEntities(TextWithEntities &result, int32 flags);
 
 void PrepareForSending(TextWithEntities &result, int32 flags);
 void Trim(TextWithEntities &result);

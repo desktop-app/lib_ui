@@ -1528,14 +1528,13 @@ bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
 }
 
 TextWithEntities ParseEntities(const QString &text, int32 flags) {
-	const auto rich = ((flags & TextParseRichText) != 0);
 	auto result = TextWithEntities{ text, EntitiesInText() };
-	ParseEntities(result, flags, rich);
+	ParseEntities(result, flags);
 	return result;
 }
 
 // Some code is duplicated in message_field.cpp!
-void ParseEntities(TextWithEntities &result, int32 flags, bool rich) {
+void ParseEntities(TextWithEntities &result, int32 flags) {
 	constexpr auto kNotFound = std::numeric_limits<int>::max();
 
 	auto newEntities = EntitiesInText();
