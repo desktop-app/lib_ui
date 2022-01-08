@@ -1510,7 +1510,9 @@ private:
 						QFixed from;
 						QFixed width;
 					} fillSpoiler;
-					if (_localFrom + si.position < _selection.to) {
+					if (_background.selectActiveBlock) {
+						fillSelect = { x, x + si.width };
+					} else if (_localFrom + si.position < _selection.to) {
 						auto chFrom = _str + currentBlock->from();
 						auto chTo = chFrom + ((nextBlock ? nextBlock->from() : _t->_text.size()) - currentBlock->from());
 						if (_localFrom + si.position >= _selection.from) { // could be without space
@@ -1652,7 +1654,9 @@ private:
 				auto hasSelected = false;
 				auto hasNotSelected = true;
 				auto selectedRect = QRect();
-				if (_localFrom + itemStart < _selection.to && _localFrom + itemEnd > _selection.from) {
+				if (_background.selectActiveBlock) {
+					fillSelectRange(x, x + itemWidth);
+				} else if (_localFrom + itemStart < _selection.to && _localFrom + itemEnd > _selection.from) {
 					hasSelected = true;
 					auto selX = x;
 					auto selWidth = itemWidth;
@@ -2615,6 +2619,7 @@ private:
 	void applyBlockProperties(const AbstractBlock *block) {
 		eSetFont(block);
 		if (_p) {
+			const auto isMono = IsMono(block->flags());
 			if (block->spoilerIndex()) {
 				const auto handler
 					= _t->_spoilers.at(block->spoilerIndex() - 1);
@@ -2639,10 +2644,15 @@ private:
 						*_background.color);
 					mutableCache.color = (*_background.color)->c;
 				}
+			} else if (isMono && block->lnkIndex()) {
+				_background = {
+					.selectActiveBlock = ClickHandler::showAsPressed(
+						_t->_links.at(block->lnkIndex() - 1)),
+				};
 			} else {
 				_background = {};
 			}
-			if (IsMono(block->flags())) {
+			if (isMono) {
 				_currentPen = &_textPalette->monoFg->p;
 				_currentPenSelected = &_textPalette->selectMonoFg->p;
 			} else if (block->lnkIndex()
@@ -2672,6 +2682,8 @@ private:
 		bool inFront = false;
 		crl::time startMs = 0;
 		uint16 spoilerIndex = 0;
+
+		bool selectActiveBlock = false; // For monospace.
 	} _background;
 	int _yFrom = 0;
 	int _yTo = 0;
