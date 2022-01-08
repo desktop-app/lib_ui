@@ -30,6 +30,10 @@ constexpr auto kStringLinkIndexShift = uint16(0x8000);
 constexpr auto kMaxDiacAfterSymbol = 2;
 constexpr auto kSelectedSpoilerOpacity = 0.5;
 
+inline bool IsMono(int32 flags) {
+	return (flags & TextBlockFPre) || (flags & TextBlockFCode);
+}
+
 Qt::LayoutDirection StringDirection(
 		const QString &str,
 		int from,
@@ -239,11 +243,13 @@ private:
 
 	std::vector<EntityLinkData> _links;
 	std::vector<EntityLinkData> _spoilers;
+	std::vector<EntityLinkData> _monos;
 	base::flat_map<
 		const QChar*,
 		std::vector<StartedEntity>> _startedEntities;
 
 	uint16 _maxLnkIndex = 0;
+	uint16 _maxShiftedLnkIndex = 0;
 	uint16 _maxSpoilerIndex = 0;
 
 	// current state
@@ -342,6 +348,11 @@ void Parser::blockCreated() {
 void Parser::createBlock(int32 skipBack) {
 	if (_lnkIndex < kStringLinkIndexShift && _lnkIndex > _maxLnkIndex) {
 		_maxLnkIndex = _lnkIndex;
+	}
+	if (_lnkIndex > kStringLinkIndexShift) {
+		_maxShiftedLnkIndex = std::max(
+			uint16(_lnkIndex - kStringLinkIndexShift),
+			_maxShiftedLnkIndex);
 	}
 	if (_spoilerIndex > _maxSpoilerIndex) {
 		_maxSpoilerIndex = _spoilerIndex;
@@ -459,14 +470,24 @@ bool Parser::checkEntities() {
 		flags = TextBlockFPlainLink;
 	} else if (entityType == EntityType::StrikeOut) {
 		flags = TextBlockFStrikeOut;
-	} else if (entityType == EntityType::Code) { // #TODO entities
-		flags = TextBlockFCode;
-	} else if (entityType == EntityType::Pre) {
-		flags = TextBlockFPre;
-		createBlock();
-		if (!_t->_blocks.empty() && _t->_blocks.back()->type() != TextBlockTNewline) {
-			createNewlineBlock();
+	} else if ((entityType == EntityType::Code) // #TODO entities
+		|| (entityType == EntityType::Pre)) {
+		if (entityType == EntityType::Code) {
+			flags = TextBlockFCode;
+		} else {
+			flags = TextBlockFPre;
+			createBlock();
+			if (!_t->_blocks.empty()
+				&& _t->_blocks.back()->type() != TextBlockTNewline) {
+				createNewlineBlock();
+			}
 		}
+		const auto end = _waitingEntity->offset() + entityLength;
+		_monos.push_back({
+			.text = QString(entityBegin, entityLength),
+			.data = QString(QChar(end)),
+			.type = entityType,
+		});
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
 		|| entityType == EntityType::Mention
@@ -706,8 +727,13 @@ void Parser::trimSourceRange() {
 // }
 
 void Parser::finalize(const TextParseOptions &options) {
-	_t->_links.resize(_maxLnkIndex);
+	_t->_links.resize(_maxLnkIndex + _maxShiftedLnkIndex);
 	_t->_spoilers.resize(_maxSpoilerIndex);
+	auto monoLnk = uint16(1);
+	struct {
+		uint16 mono = 0;
+		uint16 lnk = 0;
+	} lastHandlerIndex;
 	for (auto &block : _t->_blocks) {
 		const auto spoilerIndex = block->spoilerIndex();
 		if (spoilerIndex) {
@@ -719,22 +745,46 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 		const auto shiftedIndex = block->lnkIndex();
 		if (shiftedIndex <= kStringLinkIndexShift) {
+			if (IsMono(block->flags())) {
+				const auto entityEnd = int(
+					_monos[monoLnk - 1].data.constData()->unicode());
+				if (block->from() >= entityEnd) {
+					monoLnk++;
+				}
+				const auto monoIndex = _maxLnkIndex
+					+ _maxShiftedLnkIndex
+					+ monoLnk;
+				block->setLnkIndex(monoIndex);
+
+				if (lastHandlerIndex.mono == monoIndex) {
+					continue; // Optimization.
+				}
+				const auto handler = Integration::Instance().createLinkHandler(
+					_monos[monoLnk - 1],
+					_context);
+				_t->_links.resize(monoIndex);
+				if (handler) {
+					_t->setLink(monoIndex, handler);
+				}
+				lastHandlerIndex.mono = monoIndex;
+			}
 			continue;
 		}
 		const auto realIndex = (shiftedIndex - kStringLinkIndexShift);
 		const auto index = _maxLnkIndex + realIndex;
 		block->setLnkIndex(index);
-		if (_t->_links.size() >= index) {
-			continue;
+		if (lastHandlerIndex.lnk == index) {
+			continue; // Optimization.
 		}
 
-		_t->_links.resize(index);
+		// _t->_links.resize(index);
 		const auto handler = Integration::Instance().createLinkHandler(
 			_links[realIndex - 1],
 			_context);
 		if (handler) {
 			_t->setLink(index, handler);
 		}
+		lastHandlerIndex.lnk = index;
 	}
 	_t->_links.squeeze();
 	_t->_spoilers.squeeze();
@@ -1953,7 +2003,7 @@ private:
 			return f;
 		}
 		auto result = f;
-		if ((flags & TextBlockFPre) || (flags & TextBlockFCode)) {
+		if (IsMono(flags)) {
 			result = result->monospace();
 		} else {
 			if (flags & TextBlockFBold) {
@@ -2592,12 +2642,13 @@ private:
 			} else {
 				_background = {};
 			}
-			if (block->lnkIndex() || (block->flags() & TextBlockFPlainLink)) {
-				_currentPen = &_textPalette->linkFg->p;
-				_currentPenSelected = &_textPalette->selectLinkFg->p;
-			} else if ((block->flags() & TextBlockFCode) || (block->flags() & TextBlockFPre)) {
+			if (IsMono(block->flags())) {
 				_currentPen = &_textPalette->monoFg->p;
 				_currentPenSelected = &_textPalette->selectMonoFg->p;
+			} else if (block->lnkIndex()
+				|| (block->flags() & TextBlockFPlainLink)) {
+				_currentPen = &_textPalette->linkFg->p;
+				_currentPenSelected = &_textPalette->selectLinkFg->p;
 			} else {
 				_currentPen = &_originalPen;
 				_currentPenSelected = &_originalPenSelected;
