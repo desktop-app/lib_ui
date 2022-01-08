@@ -250,7 +250,6 @@ private:
 
 	uint16 _maxLnkIndex = 0;
 	uint16 _maxShiftedLnkIndex = 0;
-	uint16 _maxSpoilerIndex = 0;
 
 	// current state
 	int32 _flags = 0;
@@ -353,9 +352,6 @@ void Parser::createBlock(int32 skipBack) {
 		_maxShiftedLnkIndex = std::max(
 			uint16(_lnkIndex - kStringLinkIndexShift),
 			_maxShiftedLnkIndex);
-	}
-	if (_spoilerIndex > _maxSpoilerIndex) {
-		_maxSpoilerIndex = _spoilerIndex;
 	}
 
 	int32 len = int32(_t->_text.size()) + skipBack - _blockStart;
@@ -728,7 +724,6 @@ void Parser::trimSourceRange() {
 
 void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.resize(_maxLnkIndex + _maxShiftedLnkIndex);
-	_t->_spoilers.resize(_maxSpoilerIndex);
 	auto monoLnk = uint16(1);
 	struct {
 		uint16 mono = 0;
@@ -736,7 +731,7 @@ void Parser::finalize(const TextParseOptions &options) {
 	} lastHandlerIndex;
 	for (auto &block : _t->_blocks) {
 		const auto spoilerIndex = block->spoilerIndex();
-		if (spoilerIndex) {
+		if (spoilerIndex && (_t->_spoilers.size() < spoilerIndex)) {
 			_t->_spoilers.resize(spoilerIndex);
 			const auto handler = (options.flags & TextParseLinks)
 				? std::make_shared<SpoilerClickHandler>()
