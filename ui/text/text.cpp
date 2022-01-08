@@ -1700,8 +1700,10 @@ private:
 					? fillSpoilerOpacity()
 					: 0.;
 				const auto opacity = _p->opacity();
-				if (spoilerOpacity < 1.) {
-					if (hasSpoiler) {
+				const auto isElidedBlock = (!rtl)
+					&& (_indexOfElidedBlock == blockIndex);
+				if ((spoilerOpacity < 1.) || isElidedBlock) {
+					if (hasSpoiler && !isElidedBlock) {
 						_p->setOpacity(opacity * (1. - spoilerOpacity));
 					}
 					if (Q_UNLIKELY(hasSelected)) {
@@ -1807,7 +1809,9 @@ private:
 				: (blockIndex > 0)
 				? _t->_blocks[blockIndex - 1]->spoilerIndex()
 				: 0;
-			const auto will = (positionTill < blockEnd)
+			const auto will = elideOffset
+				? 0
+				: (positionTill < blockEnd)
 				? now
 				: nextBlock
 				? nextBlock->spoilerIndex()
