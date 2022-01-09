@@ -3182,6 +3182,36 @@ TextSelection String::adjustSelection(TextSelection selection, TextSelectType se
 	if (from < _text.size() && from <= to) {
 		if (to > _text.size()) to = _text.size();
 		if (selectType == TextSelectType::Paragraphs) {
+
+			// Full selection of monospace entity.
+			for (const auto &b : _blocks) {
+				if (b->from() < from) {
+					continue;
+				}
+				if (!IsMono(b->flags())) {
+					break;
+				}
+				const auto &entities = toTextWithEntities().entities;
+				const auto eIt = ranges::find_if(entities, [&](
+						const EntityInText &e) {
+					return (e.type() == EntityType::Pre
+							|| e.type() == EntityType::Code)
+						&& (from >= e.offset())
+						&& ((e.offset() + e.length()) >= to);
+				});
+				if (eIt != entities.end()) {
+					from = eIt->offset();
+					to = eIt->offset() + eIt->length();
+					while (to > 0 && IsSpace(_text.at(to - 1))) {
+						--to;
+					}
+					if (to >= from) {
+						return { from, to };
+					}
+				}
+				break;
+			}
+
 			if (!IsParagraphSeparator(_text.at(from))) {
 				while (from > 0 && !IsParagraphSeparator(_text.at(from - 1))) {
 					--from;
