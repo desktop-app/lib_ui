@@ -478,10 +478,23 @@ bool Parser::checkEntities() {
 				createNewlineBlock();
 			}
 		}
-		const auto end = _waitingEntity->offset() + entityLength;
+		const auto text = QString(entityBegin, entityLength);
+		auto data = QString(2, QChar(0));
+
+		// End of an entity.
+		data[0] = QChar(_waitingEntity->offset() + entityLength);
+
+		{
+			// It is better to trim the text to identify "Sample\n" as inline.
+			const auto trimmed = text.trimmed();
+			const auto isSingleLine = !trimmed.isEmpty()
+				&& ranges::none_of(trimmed, IsNewline);
+			data[1] = QChar(isSingleLine ? 1 : 2);
+		}
+
 		_monos.push_back({
-			.text = QString(entityBegin, entityLength),
-			.data = QString(QChar(end)),
+			.text = text,
+			.data = std::move(data),
 			.type = entityType,
 		});
 	} else if (entityType == EntityType::Url
@@ -740,11 +753,18 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 		const auto shiftedIndex = block->lnkIndex();
 		if (shiftedIndex <= kStringLinkIndexShift) {
-			if (IsMono(block->flags())) {
-				const auto entityEnd = int(
-					_monos[monoLnk - 1].data.constData()->unicode());
-				if (block->from() >= entityEnd) {
-					monoLnk++;
+			if (IsMono(block->flags()) && (monoLnk <= _monos.size())) {
+				{
+					const auto ptr = _monos[monoLnk - 1].data.constData();
+					const auto entityEnd = int(ptr->unicode());
+					const auto singleLine = (int((ptr + 1)->unicode()) == 1);
+					if (!singleLine) {
+						monoLnk++;
+						continue;
+					}
+					if (block->from() >= entityEnd) {
+						monoLnk++;
+					}
 				}
 				const auto monoIndex = _maxLnkIndex
 					+ _maxShiftedLnkIndex
