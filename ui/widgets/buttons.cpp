@@ -741,19 +741,35 @@ void SettingsButton::setColorOverride(std::optional<QColor> textColorOverride) {
 	update();
 }
 
+const style::SettingsButton &SettingsButton::st() const {
+	return _st;
+}
+
 void SettingsButton::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
-	auto paintOver = (isOver() || isDown()) && !isDisabled();
-	p.fillRect(e->rect(), paintOver ? _st.textBgOver : _st.textBg);
+	const auto paintOver = (isOver() || isDown()) && !isDisabled();
+	paintBg(p, e->rect(), paintOver);
 
 	paintRipple(p, 0, 0);
 
-	auto outerw = width();
+	const auto outerw = width();
+	paintText(p, paintOver, outerw);
+
+	if (_toggle) {
+		paintToggle(p, outerw);
+	}
+}
+
+void SettingsButton::paintBg(Painter &p, const QRect &rect, bool over) const {
+	p.fillRect(rect, over ? _st.textBgOver : _st.textBg);
+}
+
+void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
 	p.setFont(_st.font);
 	p.setPen(_textColorOverride
 		? QPen(*_textColorOverride)
-		: paintOver
+		: over
 		? _st.textFgOver
 		: _st.textFg);
 	p.drawTextLeft(
@@ -762,7 +778,9 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
 		outerw,
 		_text,
 		_textWidth);
+}
 
+void SettingsButton::paintToggle(Painter &p, int outerw) const {
 	if (_toggle) {
 		auto rect = toggleRect();
 		_toggle->paint(p, rect.left(), rect.top(), outerw);

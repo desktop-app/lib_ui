@@ -13,6 +13,8 @@
 
 #include <memory>
 
+class Painter;
+
 namespace Ui {
 
 class RippleAnimation;
@@ -272,6 +274,11 @@ protected:
 		StateChangeSource source) override;
 
 	void paintEvent(QPaintEvent *e) override;
+
+	const style::SettingsButton &st() const;
+	void paintBg(Painter &p, const QRect &rect, bool over) const;
+	void paintText(Painter &p, bool over, int outerw) const;
+	void paintToggle(Painter &p, int outerw) const;
 
 private:
 	void setText(QString &&text);
