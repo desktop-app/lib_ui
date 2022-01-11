@@ -351,6 +351,8 @@ QPainterPath path(QPointF (&from)[N]) {
 rpl::producer<bool> Disables();
 bool Disabled();
 void SetDisabled(bool disabled);
+int SlowMultiplier();
+void SetSlowMultiplier(int multiplier); // 1 - default, 10 - slow x10.
 
 void DrawStaticLoading(
 	QPainter &p,

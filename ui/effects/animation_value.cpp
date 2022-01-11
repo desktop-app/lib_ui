@@ -14,6 +14,7 @@ namespace anim {
 namespace {
 
 rpl::variable<bool> AnimationsDisabled = false;
+int SlowMultiplierMinusOne/* = 0*/;
 
 } // namespace
 
@@ -74,6 +75,16 @@ bool Disabled() {
 
 void SetDisabled(bool disabled) {
 	AnimationsDisabled = disabled;
+}
+
+int SlowMultiplier() {
+	return (SlowMultiplierMinusOne + 1);
+}
+
+void SetSlowMultiplier(int multiplier) {
+	Expects(multiplier > 0);
+
+	SlowMultiplierMinusOne = multiplier - 1;
 }
 
 void DrawStaticLoading(
