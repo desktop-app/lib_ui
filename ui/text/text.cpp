@@ -2639,6 +2639,7 @@ private:
 		eSetFont(block);
 		if (_p) {
 			const auto isMono = IsMono(block->flags());
+			_background = {};
 			if (block->spoilerIndex()) {
 				const auto handler
 					= _t->_spoilers.at(block->spoilerIndex() - 1);
@@ -2663,14 +2664,12 @@ private:
 						*_background.color);
 					mutableCache.color = (*_background.color)->c;
 				}
-			} else if (isMono && block->lnkIndex()) {
-				_background = {
-					.selectActiveBlock = ClickHandler::showAsPressed(
-						_t->_links.at(block->lnkIndex() - 1)),
-				};
-			} else {
-				_background = {};
 			}
+			if (isMono && block->lnkIndex() && !_background.inFront) {
+				_background.selectActiveBlock = ClickHandler::showAsPressed(
+					_t->_links.at(block->lnkIndex() - 1));
+			}
+
 			if (isMono) {
 				_currentPen = &_textPalette->monoFg->p;
 				_currentPenSelected = &_textPalette->selectMonoFg->p;
