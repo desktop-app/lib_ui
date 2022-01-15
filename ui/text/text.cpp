@@ -3276,6 +3276,9 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 		uint16 blockFrom = (i == e) ? _text.size() : (*i)->from();
 		int32 blockFlags = (i == e) ? 0 : (*i)->flags();
 
+		if (IsMono(blockFlags)) {
+			blockLnkIndex = 0;
+		}
 		if (blockLnkIndex && !_links.at(blockLnkIndex - 1)) { // ignore empty links
 			blockLnkIndex = 0;
 		}
