@@ -255,6 +255,7 @@ private:
 	int32 _flags = 0;
 	uint16 _lnkIndex = 0;
 	uint16 _spoilerIndex = 0;
+	uint16 _monoIndex = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
 	int32 _blockStart = 0; // offset in result, from which current parsed block is started
 	int32 _diacs = 0; // diac chars skipped without good char
@@ -365,14 +366,15 @@ void Parser::createBlock(int32 skipBack) {
 			}
 		}
 		_lastSkipped = false;
+		const auto lnkIndex = _monoIndex ? _monoIndex : _lnkIndex;
 		if (_emoji) {
-			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _spoilerIndex, _emoji));
+			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex, _emoji));
 			_emoji = nullptr;
 			_lastSkipped = true;
 		} else if (newline) {
-			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, _lnkIndex, _spoilerIndex));
+			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex));
 		} else {
-			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, _lnkIndex, _spoilerIndex));
+			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, lnkIndex, _spoilerIndex));
 		}
 		_blockStart += len;
 		blockCreated();
@@ -382,7 +384,7 @@ void Parser::createBlock(int32 skipBack) {
 void Parser::createSkipBlock(int32 w, int32 h) {
 	createBlock();
 	_t->_text.push_back('_');
-	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _lnkIndex, _spoilerIndex));
+	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _monoIndex ? _monoIndex : _lnkIndex, _spoilerIndex));
 	blockCreated();
 }
 
@@ -407,6 +409,9 @@ void Parser::finishEntities() {
 						&& !_t->_blocks.empty()
 						&& _t->_blocks.back()->type() != TextBlockTNewline) {
 						_newlineAwaited = true;
+					}
+					if (IsMono(*flags)) {
+						_monoIndex = 0;
 					}
 				}
 			} else if (const auto lnkIndex = list.back().lnkIndex()) {
@@ -479,24 +484,16 @@ bool Parser::checkEntities() {
 			}
 		}
 		const auto text = QString(entityBegin, entityLength);
-		auto data = QString(2, QChar(0));
 
-		// End of an entity.
-		data[0] = QChar(_waitingEntity->offset() + entityLength);
+		// It is better to trim the text to identify "Sample\n" as inline.
+		const auto trimmed = text.trimmed();
+		const auto isSingleLine = !trimmed.isEmpty()
+			&& ranges::none_of(trimmed, IsNewline);
 
-		{
-			// It is better to trim the text to identify "Sample\n" as inline.
-			const auto trimmed = text.trimmed();
-			const auto isSingleLine = !trimmed.isEmpty()
-				&& ranges::none_of(trimmed, IsNewline);
-			data[1] = QChar(isSingleLine ? 1 : 2);
+		if (isSingleLine) {
+			_monos.push_back({ .text = text, .type = entityType });
+			_monoIndex = _monos.size();
 		}
-
-		_monos.push_back({
-			.text = text,
-			.data = std::move(data),
-			.type = entityType,
-		});
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
 		|| entityType == EntityType::Mention
@@ -737,7 +734,7 @@ void Parser::trimSourceRange() {
 
 void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.resize(_maxLnkIndex + _maxShiftedLnkIndex);
-	auto monoLnk = uint16(1);
+	auto currentIndex = uint16(0); // Current the latest index of _t->_links.
 	struct {
 		uint16 mono = 0;
 		uint16 lnk = 0;
@@ -753,53 +750,44 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 		const auto shiftedIndex = block->lnkIndex();
 		if (shiftedIndex <= kStringLinkIndexShift) {
-			if (IsMono(block->flags()) && (monoLnk <= _monos.size())) {
-				{
-					const auto ptr = _monos[monoLnk - 1].data.constData();
-					const auto entityEnd = int(ptr->unicode());
-					const auto singleLine = (int((ptr + 1)->unicode()) == 1);
-					if (!singleLine) {
-						monoLnk++;
-						continue;
-					}
-					if (block->from() >= entityEnd) {
-						monoLnk++;
-					}
-				}
-				const auto monoIndex = _maxLnkIndex
-					+ _maxShiftedLnkIndex
-					+ monoLnk;
-				block->setLnkIndex(monoIndex);
+			if (IsMono(block->flags()) && shiftedIndex) {
+				const auto monoIndex = shiftedIndex;
 
 				if (lastHandlerIndex.mono == monoIndex) {
+					block->setLnkIndex(currentIndex);
 					continue; // Optimization.
+				} else {
+					currentIndex++;
 				}
+				block->setLnkIndex(currentIndex);
 				const auto handler = Integration::Instance().createLinkHandler(
-					_monos[monoLnk - 1],
+					_monos[monoIndex - 1],
 					_context);
-				_t->_links.resize(monoIndex);
+				_t->_links.resize(currentIndex);
 				if (handler) {
-					_t->setLink(monoIndex, handler);
+					_t->setLink(currentIndex, handler);
 				}
 				lastHandlerIndex.mono = monoIndex;
 			}
 			continue;
 		}
 		const auto realIndex = (shiftedIndex - kStringLinkIndexShift);
-		const auto index = _maxLnkIndex + realIndex;
-		block->setLnkIndex(index);
-		if (lastHandlerIndex.lnk == index) {
+		if (lastHandlerIndex.lnk == realIndex) {
+			block->setLnkIndex(currentIndex);
 			continue; // Optimization.
+		} else {
+			currentIndex++;
 		}
+		block->setLnkIndex(currentIndex);
 
-		// _t->_links.resize(index);
+		_t->_links.resize(currentIndex);
 		const auto handler = Integration::Instance().createLinkHandler(
 			_links[realIndex - 1],
 			_context);
 		if (handler) {
-			_t->setLink(index, handler);
+			_t->setLink(currentIndex, handler);
 		}
-		lastHandlerIndex.lnk = index;
+		lastHandlerIndex.lnk = realIndex;
 	}
 	_t->_links.squeeze();
 	_t->_spoilers.squeeze();
