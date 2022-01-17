@@ -1433,7 +1433,7 @@ shakeShift: 4px;
 
 // Windows specific title
 
-windowTitleButtonWidth: 28px;
+windowTitleButtonWidth: 36px;
 windowTitleHeight: 24px;
 windowTitleButton: IconButton {
 	width: windowTitleButtonWidth;
