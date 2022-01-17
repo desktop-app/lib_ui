@@ -491,7 +491,8 @@ bool Parser::checkEntities() {
 		const auto isSingleLine = !trimmed.isEmpty()
 			&& ranges::none_of(trimmed, IsNewline);
 
-		if (isSingleLine) {
+		// TODO: remove trimming.
+		if (isSingleLine && (entityType == EntityType::Code)) {
 			_monos.push_back({ .text = text, .type = entityType });
 			monoIndex = _monos.size();
 		}
