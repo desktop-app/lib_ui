@@ -9,6 +9,7 @@
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/ui_utility.h"
+#include "base/debug_log.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 
@@ -59,20 +60,29 @@ void TitleWidget::init(int height) {
 	}, lifetime());
 
 	const auto families = QStringList{
-		QString(".SF NS Text"),
-		QString("Helvetica Neue")
+		u".AppleSystemUIFont"_q,
+		u".SF NS Text"_q,
+		u"Helvetica Neue"_q,
 	};
 	for (auto family : families) {
 		_font.setFamily(family);
 		if (QFontInfo(_font).family() == _font.family()) {
+			static const auto logged = [&] {
+				LOG(("Title Font: %1").arg(family));
+				return true;
+			}();
 			break;
 		}
 	}
 
-	if (QFontInfo(_font).family() == _font.family()) {
-		_font.setPixelSize((height * 15) / 24);
+	if (QFontInfo(_font).family() != _font.family()) {
+		_font = st::semiboldFont;
+		_font.setPixelSize(13);
+	} else if (_font.family() == u".AppleSystemUIFont"_q) {
+		_font.setBold(true);
+		_font.setPixelSize(13);
 	} else {
-		_font = st::normalFont;
+		_font.setPixelSize((height * 15) / 24);
 	}
 }
 
