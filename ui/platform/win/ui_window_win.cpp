@@ -9,7 +9,6 @@
 #include "ui/inactive_press.h"
 #include "ui/platform/win/ui_window_title_win.h"
 #include "base/platform/base_platform_info.h"
-#include "base/platform/win/base_windows_safe_library.h"
 #include "base/integration.h"
 #include "base/debug_log.h"
 #include "styles/palette.h"
@@ -409,11 +408,16 @@ bool WindowHelper::handleNativeEvent(
 	case WM_WINDOWPOSCHANGING:
 	case WM_WINDOWPOSCHANGED: {
 		if (_shadow) {
-			WINDOWPLACEMENT wp;
-			wp.length = sizeof(WINDOWPLACEMENT);
-			if (GetWindowPlacement(_handle, &wp)
-				&& (wp.showCmd == SW_SHOWMAXIMIZED
-					|| wp.showCmd == SW_SHOWMINIMIZED)) {
+			auto placement = WINDOWPLACEMENT{
+				.length = sizeof(WINDOWPLACEMENT),
+			};
+			if (!GetWindowPlacement(_handle, &placement)) {
+				LOG(("System Error: GetWindowPlacement failed."));
+				return false;
+			}
+			_title->refreshAdditionalPaddings(_handle, placement);
+			if (placement.showCmd == SW_SHOWMAXIMIZED
+				|| placement.showCmd == SW_SHOWMINIMIZED) {
 				_shadow->update(WindowShadow::Change::Hidden);
 			} else {
 				_shadow->update(
@@ -439,6 +443,7 @@ bool WindowHelper::handleNativeEvent(
 			}
 			updateMargins();
 			if (_shadow) {
+				_title->refreshAdditionalPaddings(_handle);
 				const auto changes = (wParam == SIZE_MINIMIZED
 					|| wParam == SIZE_MAXIMIZED)
 					? WindowShadow::Change::Hidden
@@ -462,6 +467,7 @@ bool WindowHelper::handleNativeEvent(
 
 	case WM_MOVE: {
 		if (_shadow) {
+			_title->refreshAdditionalPaddings(_handle);
 			_shadow->update(WindowShadow::Change::Moved);
 		}
 	} return false;

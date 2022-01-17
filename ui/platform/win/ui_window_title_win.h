@@ -13,6 +13,8 @@
 #include <QtCore/QRect>
 #include <QtCore/QPoint>
 
+#include <Windows.h> // HWND, WINDOWPLACEMENT
+
 namespace style {
 struct WindowTitle;
 } // namespace style
@@ -42,6 +44,7 @@ enum class HitTestResult {
 class TitleWidget : public RpWidget {
 public:
 	explicit TitleWidget(not_null<RpWidget*> parent);
+	~TitleWidget();
 
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
@@ -49,15 +52,32 @@ public:
 	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
 	void setResizeEnabled(bool enabled);
 
+	void refreshAdditionalPaddings();
+	void refreshAdditionalPaddings(HWND handle);
+	void refreshAdditionalPaddings(
+		HWND handle,
+		const WINDOWPLACEMENT &placement);
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 
+	void setVisibleHook(bool visible) override;
+
 private:
+	struct PaddingHelper;
+
+	[[nodiscard]] bool additionalPaddingRequired() const;
+	void refreshGeometryWithWidth(int width);
+	void setAdditionalPadding(int padding);
+
+	std::unique_ptr<PaddingHelper> _paddingHelper;
 	TitleControls _controls;
 	object_ptr<Ui::PlainShadow> _shadow;
 
 };
+
+[[nodiscard]] bool CheckTitlePaddingRequired();
 
 } // namespace Platform
 } // namespace Ui
