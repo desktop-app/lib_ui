@@ -441,6 +441,7 @@ bool Parser::checkEntities() {
 
 	auto flags = TextBlockFlags();
 	auto link = EntityLinkData();
+	auto monoIndex = 0;
 	const auto entityType = _waitingEntity->type();
 	const auto entityLength = _waitingEntity->length();
 	const auto entityBegin = _start + _waitingEntity->offset();
@@ -492,7 +493,7 @@ bool Parser::checkEntities() {
 
 		if (isSingleLine) {
 			_monos.push_back({ .text = text, .type = entityType });
-			_monoIndex = _monos.size();
+			monoIndex = _monos.size();
 		}
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
@@ -525,6 +526,7 @@ bool Parser::checkEntities() {
 			createBlock();
 			_flags |= flags;
 			_startedEntities[entityEnd].emplace_back(flags);
+			_monoIndex = monoIndex;
 		}
 	} else if (entityType == EntityType::Spoiler) {
 		createBlock();
