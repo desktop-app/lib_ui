@@ -80,6 +80,11 @@ protected:
 		ByHover = 0x02,
 	};
 	void setOver(bool over, StateChangeSource source = StateChangeSource::ByUser);
+	bool setDown(
+		bool down,
+		StateChangeSource source,
+		Qt::KeyboardModifiers modifiers,
+		Qt::MouseButton button);
 
 	virtual void onStateChanged(State was, StateChangeSource source) {
 	}

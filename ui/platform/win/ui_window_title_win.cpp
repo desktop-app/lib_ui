@@ -113,8 +113,9 @@ void TitleWidget::resizeEvent(QResizeEvent *e) {
 }
 
 HitTestResult TitleWidget::hitTest(QPoint point) const {
-	if (_controls.geometry().contains(point)) {
-		return HitTestResult::SysButton;
+	const auto titleResult = _controls.hitTest(point);
+	if (titleResult != HitTestResult::None) {
+		return titleResult;
 	} else if (rect().contains(point)) {
 		return HitTestResult::Caption;
 	}
@@ -123,6 +124,14 @@ HitTestResult TitleWidget::hitTest(QPoint point) const {
 
 bool TitleWidget::additionalPaddingRequired() const {
 	return _paddingHelper && !isHidden();
+}
+
+void TitleWidget::sysButtonOver(HitTestResult testResult) {
+	_controls.buttonOver(testResult);
+}
+
+void TitleWidget::sysButtonDown(HitTestResult testResult, bool down) {
+	_controls.buttonDown(testResult, down);
 }
 
 void TitleWidget::refreshAdditionalPaddings() {

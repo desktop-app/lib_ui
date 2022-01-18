@@ -35,6 +35,22 @@ void RemoveDuplicates(std::vector<T> &v) {
 
 } // namespace
 
+class TitleControls::Button final : public IconButton {
+public:
+	using IconButton::IconButton;
+
+	void setOver(bool over) {
+		IconButton::setOver(over, StateChangeSource::ByPress);
+	}
+	void setDown(bool down) {
+		IconButton::setDown(
+			down,
+			StateChangeSource::ByPress,
+			{},
+			Qt::LeftButton);
+	}
+};
+
 TitleControls::TitleControls(
 	not_null<RpWidget*> parent,
 	const style::WindowTitle &st,
@@ -172,7 +188,47 @@ void TitleControls::raise() {
 	_close->raise();
 }
 
-Ui::IconButton *TitleControls::controlWidget(Control control) const {
+HitTestResult TitleControls::hitTest(QPoint point) const {
+	const auto test = [&](const object_ptr<Button> &button) {
+		return button && button->geometry().contains(point);
+	};
+	if (test(_minimize)) {
+		return HitTestResult::Minimize;
+	} else if (test(_maximizeRestore)) {
+		return HitTestResult::MaximizeRestore;
+	} else if (test(_close)) {
+		return HitTestResult::Close;
+	}
+	return HitTestResult::None;
+}
+
+void TitleControls::buttonOver(HitTestResult testResult) {
+	const auto update = [&](
+			const object_ptr<Button> &button,
+			HitTestResult buttonTestResult) {
+		if (const auto raw = button.data()) {
+			raw->setOver(testResult == buttonTestResult);
+		}
+	};
+	update(_minimize, HitTestResult::Minimize);
+	update(_maximizeRestore, HitTestResult::MaximizeRestore);
+	update(_close, HitTestResult::Close);
+}
+
+void TitleControls::buttonDown(HitTestResult testResult, bool down) {
+	const auto update = [&](
+			const object_ptr<Button> &button,
+			HitTestResult buttonTestResult) {
+		if (const auto raw = button.data()) {
+			raw->setDown(testResult == buttonTestResult && down);
+		}
+	};
+	update(_minimize, HitTestResult::Minimize);
+	update(_maximizeRestore, HitTestResult::MaximizeRestore);
+	update(_close, HitTestResult::Close);
+}
+
+TitleControls::Button *TitleControls::controlWidget(Control control) const {
 	switch (control) {
 	case Control::Minimize: return _minimize;
 	case Control::Maximize: return _maximizeRestore;

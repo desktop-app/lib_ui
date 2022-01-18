@@ -26,21 +26,6 @@ class PlainShadow;
 
 namespace Platform {
 
-enum class HitTestResult {
-	None = 0,
-	Client,
-	SysButton,
-	Caption,
-	Top,
-	TopRight,
-	Right,
-	BottomRight,
-	Bottom,
-	BottomLeft,
-	Left,
-	TopLeft,
-};
-
 class TitleWidget : public RpWidget {
 public:
 	explicit TitleWidget(not_null<RpWidget*> parent);
@@ -57,6 +42,9 @@ public:
 	void refreshAdditionalPaddings(
 		HWND handle,
 		const WINDOWPLACEMENT &placement);
+
+	void sysButtonOver(HitTestResult testResult);
+	void sysButtonDown(HitTestResult testResult, bool down);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;

@@ -15,6 +15,7 @@ namespace Ui {
 namespace Platform {
 
 class TitleWidget;
+enum class HitTestResult;
 
 class WindowHelper final : public BasicWindowHelper {
 public:
@@ -49,7 +50,15 @@ private:
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result);
+	[[nodiscard]] bool handleSysButtonEvent(
+		UINT msg,
+		WPARAM wParam,
+		LPARAM lParam,
+		LRESULT *result);
 	[[nodiscard]] bool fixedSize() const;
+	[[nodiscard]] bool complexSysButtonProcessing() const;
+	[[nodiscard]] int sysButtonHitTest(HitTestResult result) const;
+	[[nodiscard]] HitTestResult sysButtonHitTest(int result) const;
 
 	[[nodiscard]] int titleHeight() const;
 	static not_null<NativeFilter*> GetNativeFilter();

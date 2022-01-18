@@ -26,7 +26,9 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {
-	if (_state & StateFlag::Down) return;
+	if (_state & StateFlag::Down) {
+		return;
+	}
 
 	setOver(false, StateChangeSource::ByHover);
 	return TWidget::leaveEventHook(e);
@@ -48,12 +50,13 @@ void AbstractButton::checkIfOver(QPoint localPos) {
 
 void AbstractButton::mousePressEvent(QMouseEvent *e) {
 	checkIfOver(e->pos());
-	if (_acceptBoth || (e->buttons() & Qt::LeftButton)) {
-		if ((_state & StateFlag::Over) && !(_state & StateFlag::Down)) {
-			auto was = _state;
-			_state |= StateFlag::Down;
-			onStateChanged(was, StateChangeSource::ByPress);
-
+	if (_state & StateFlag::Over) {
+		const auto set = setDown(
+			true,
+			StateChangeSource::ByPress,
+			e->modifiers(),
+			e->button());
+		if (set) {
 			e->accept();
 		}
 	}
@@ -68,21 +71,13 @@ void AbstractButton::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void AbstractButton::mouseReleaseEvent(QMouseEvent *e) {
-	if (_state & StateFlag::Down) {
-		const auto was = _state;
-		_state &= ~State(StateFlag::Down);
-
-		const auto weak = MakeWeak(this);
-		onStateChanged(was, StateChangeSource::ByPress);
-		if (!weak) {
-			return;
-		}
-
-		if (was & StateFlag::Over) {
-			clicked(e->modifiers(), e->button());
-		} else {
-			setOver(false, StateChangeSource::ByHover);
-		}
+	const auto set = setDown(
+		false,
+		StateChangeSource::ByPress,
+		e->modifiers(),
+		e->button());
+	if (set) {
+		e->accept();
 	}
 }
 
@@ -121,6 +116,36 @@ void AbstractButton::setOver(bool over, StateChangeSource source) {
 		onStateChanged(was, source);
 	}
 	updateCursor();
+}
+
+bool AbstractButton::setDown(
+		bool down,
+		StateChangeSource source,
+		Qt::KeyboardModifiers modifiers,
+		Qt::MouseButton button) {
+	if (down
+		&& !(_state & StateFlag::Down)
+		&& (_acceptBoth || button == Qt::LeftButton)) {
+		auto was = _state;
+		_state |= StateFlag::Down;
+		onStateChanged(was, source);
+		return true;
+	} else if (!down && (_state & StateFlag::Down)) {
+		const auto was = _state;
+		_state &= ~State(StateFlag::Down);
+
+		const auto weak = MakeWeak(this);
+		onStateChanged(was, source);
+		if (weak) {
+			if (was & StateFlag::Over) {
+				clicked(modifiers, button);
+			} else {
+				setOver(false, source);
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
 void AbstractButton::updateCursor() {
