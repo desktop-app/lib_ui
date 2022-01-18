@@ -34,7 +34,7 @@ public:
 		return _window;
 	}
 
-	[[nodiscard]] virtual void initInWindow(not_null<RpWindow*> window);
+	virtual void initInWindow(not_null<RpWindow*> window);
 	[[nodiscard]] virtual not_null<RpWidget*> body();
 	[[nodiscard]] virtual QMargins frameMargins();
 	[[nodiscard]] virtual int additionalContentPadding() const;
