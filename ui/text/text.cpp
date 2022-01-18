@@ -1719,20 +1719,39 @@ private:
 					}
 					if (Q_UNLIKELY(hasSelected)) {
 						if (Q_UNLIKELY(hasNotSelected)) {
-							auto clippingEnabled = _p->hasClipping();
-							auto clippingRegion = _p->clipRegion();
+							// There is a bug in retina QPainter clipping stack.
+							// You can see glitches in rendering in such text:
+							// aA
+							// Aa
+							// Where selection is both 'A'-s.
+							// I can't debug it right now, this is a workaround.
+#ifdef Q_OS_MAC
+							_p->save();
+#endif // Q_OS_MAC
+							const auto clippingEnabled = _p->hasClipping();
+							const auto clippingRegion = _p->clipRegion();
 							_p->setClipRect(selectedRect, Qt::IntersectClip);
 							_p->setPen(*_currentPenSelected);
 							_p->drawTextItem(QPointF(x.toReal(), textY), gf);
-							auto externalClipping = clippingEnabled ? clippingRegion : QRegion(QRect((_x - _w).toInt(), _y - _lineHeight, (_x + 2 * _w).toInt(), _y + 2 * _lineHeight));
+							const auto externalClipping = clippingEnabled
+								? clippingRegion
+								: QRegion(QRect(
+									(_x - _w).toInt(),
+									_y - _lineHeight,
+									(_x + 2 * _w).toInt(),
+									_y + 2 * _lineHeight));
 							_p->setClipRegion(externalClipping - selectedRect);
 							_p->setPen(*_currentPen);
 							_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+#ifdef Q_OS_MAC
+							_p->restore();
+#else // Q_OS_MAC
 							if (clippingEnabled) {
 								_p->setClipRegion(clippingRegion);
 							} else {
 								_p->setClipping(false);
 							}
+#endif // Q_OS_MAC
 						} else {
 							_p->setPen(*_currentPenSelected);
 							_p->drawTextItem(QPointF(x.toReal(), textY), gf);
