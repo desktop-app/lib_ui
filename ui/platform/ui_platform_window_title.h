@@ -24,6 +24,8 @@ class RpWindow;
 
 namespace Platform {
 
+class TitleControls;
+
 enum class HitTestResult {
 	None = 0,
 	Client,
@@ -41,6 +43,18 @@ enum class HitTestResult {
 	TopLeft,
 };
 
+struct HitTestRequest {
+	QPoint point;
+	HitTestResult result = HitTestResult::Client;
+};
+
+[[nodiscard]] bool SemiNativeSystemButtonProcessing();
+void SetupSemiNativeSystemButtons(
+	not_null<TitleControls*> controls,
+	not_null<RpWindow*> window,
+	rpl::lifetime &lifetime,
+	Fn<bool()> filter = nullptr);
+
 class TitleControls final {
 public:
 	TitleControls(
@@ -57,7 +71,7 @@ public:
 	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
 
 	void buttonOver(HitTestResult testResult);
-	void buttonDown(HitTestResult testResult, bool down);
+	void buttonDown(HitTestResult testResult);
 
 	enum class Control {
 		Unknown,

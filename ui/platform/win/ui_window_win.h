@@ -15,6 +15,7 @@ namespace Ui {
 namespace Platform {
 
 class TitleWidget;
+struct HitTestRequest;
 enum class HitTestResult;
 
 class WindowHelper final : public BasicWindowHelper {
@@ -22,6 +23,7 @@ public:
 	explicit WindowHelper(not_null<RpWidget*> window);
 	~WindowHelper();
 
+	void initInWindow(not_null<RpWindow*> window) override;
 	not_null<RpWidget*> body() override;
 	QMargins frameMargins() override;
 	int additionalContentPadding() const override;
@@ -34,6 +36,13 @@ public:
 	void setGeometry(QRect rect) override;
 	void showFullScreen() override;
 	void showNormal() override;
+
+	[[nodiscard]] auto hitTestRequests() const
+		-> rpl::producer<not_null<HitTestRequest*>> override;
+	[[nodiscard]] auto systemButtonOver() const
+		-> rpl::producer<HitTestResult> override;
+	[[nodiscard]] auto systemButtonDown() const
+		-> rpl::producer<HitTestResult> override;
 
 private:
 	class NativeFilter;
@@ -53,15 +62,14 @@ private:
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result);
-	[[nodiscard]] bool handleSysButtonEvent(
+	[[nodiscard]] bool handleSystemButtonEvent(
 		UINT msg,
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result);
 	[[nodiscard]] bool fixedSize() const;
-	[[nodiscard]] bool complexSysButtonProcessing() const;
-	[[nodiscard]] int sysButtonHitTest(HitTestResult result) const;
-	[[nodiscard]] HitTestResult sysButtonHitTest(int result) const;
+	[[nodiscard]] int systemButtonHitTest(HitTestResult result) const;
+	[[nodiscard]] HitTestResult systemButtonHitTest(int result) const;
 
 	[[nodiscard]] int titleHeight() const;
 	static not_null<NativeFilter*> GetNativeFilter();
@@ -69,10 +77,13 @@ private:
 	const HWND _handle = nullptr;
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;
+	rpl::event_stream<not_null<HitTestRequest*>> _hitTestRequests;
+	rpl::event_stream<HitTestResult> _systemButtonOver;
+	rpl::event_stream<HitTestResult> _systemButtonDown;
 	std::optional<WindowShadow> _shadow;
-	bool _updatingMargins = false;
 	QMargins _marginsDelta;
 	HMENU _menu = nullptr;
+	bool _updatingMargins = false;
 	bool _isFullScreen = false;
 
 };

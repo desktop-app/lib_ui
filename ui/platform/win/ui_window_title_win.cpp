@@ -9,6 +9,7 @@
 #include "ui/platform/win/ui_window_win.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
+#include "ui/widgets/rp_window.h"
 #include "ui/ui_utility.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/win/base_windows_safe_library.h"
@@ -68,6 +69,19 @@ TitleWidget::TitleWidget(not_null<RpWidget*> parent)
 	}, lifetime());
 }
 
+void TitleWidget::initInWindow(not_null<RpWindow*> window) {
+	window->hitTestRequests(
+	) | rpl::filter([=](not_null<HitTestRequest*> request) {
+		return !isHidden() && geometry().contains(request->point);
+	}) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+		request->result = hitTest(request->point);
+	}, lifetime());
+
+	SetupSemiNativeSystemButtons(&_controls, window, lifetime(), [=] {
+		return !isHidden() && (_controls.st()->height > 0);
+	});
+}
+
 TitleWidget::~TitleWidget() = default;
 
 void TitleWidget::setText(const QString &text) {
@@ -113,25 +127,17 @@ void TitleWidget::resizeEvent(QResizeEvent *e) {
 }
 
 HitTestResult TitleWidget::hitTest(QPoint point) const {
-	const auto titleResult = _controls.hitTest(point);
-	if (titleResult != HitTestResult::None) {
-		return titleResult;
-	} else if (rect().contains(point)) {
-		return HitTestResult::Caption;
-	}
-	return HitTestResult::None;
+	const auto origin = _paddingHelper
+		? _paddingHelper->controlsParent.pos()
+		: QPoint();
+	const auto controlsResult = _controls.hitTest(point - origin);
+	return (controlsResult != HitTestResult::None)
+		? controlsResult
+		: HitTestResult::Caption;
 }
 
 bool TitleWidget::additionalPaddingRequired() const {
 	return _paddingHelper && !isHidden();
-}
-
-void TitleWidget::sysButtonOver(HitTestResult testResult) {
-	_controls.buttonOver(testResult);
-}
-
-void TitleWidget::sysButtonDown(HitTestResult testResult, bool down) {
-	_controls.buttonDown(testResult, down);
 }
 
 void TitleWidget::refreshAdditionalPaddings() {

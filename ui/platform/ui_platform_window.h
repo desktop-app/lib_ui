@@ -15,11 +15,14 @@ struct WindowTitle;
 namespace Ui {
 
 class RpWidget;
+class RpWindow;
 enum class WindowTitleHitTestFlag;
 using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 
 namespace Platform {
 
+struct HitTestRequest;
+enum class HitTestResult;
 class DefaultTitleWidget;
 
 class BasicWindowHelper {
@@ -27,11 +30,22 @@ public:
 	explicit BasicWindowHelper(not_null<RpWidget*> window);
 	virtual ~BasicWindowHelper() = default;
 
+	[[nodiscard]] not_null<RpWidget*> window() const {
+		return _window;
+	}
+
+	[[nodiscard]] virtual void initInWindow(not_null<RpWindow*> window);
 	[[nodiscard]] virtual not_null<RpWidget*> body();
 	[[nodiscard]] virtual QMargins frameMargins();
 	[[nodiscard]] virtual int additionalContentPadding() const;
 	[[nodiscard]] virtual auto additionalContentPaddingValue() const
 		-> rpl::producer<int>;
+	[[nodiscard]] virtual auto hitTestRequests() const
+		-> rpl::producer<not_null<HitTestRequest*>>;
+	[[nodiscard]] virtual auto systemButtonOver() const
+		-> rpl::producer<HitTestResult>;
+	[[nodiscard]] virtual auto systemButtonDown() const
+		-> rpl::producer<HitTestResult>;
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);
@@ -46,9 +60,6 @@ public:
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
 protected:
-	[[nodiscard]] not_null<RpWidget*> window() const {
-		return _window;
-	}
 	[[nodiscard]] WindowTitleHitTestFlags bodyTitleAreaHit(
 			QPoint point) const {
 		return _bodyTitleAreaTestMethod
@@ -111,7 +122,7 @@ private:
 	return std::make_unique<DefaultWindowHelper>(window);
 }
 
-bool NativeWindowFrameSupported();
+[[nodiscard]] bool NativeWindowFrameSupported();
 
 } // namespace Platform
 } // namespace Ui

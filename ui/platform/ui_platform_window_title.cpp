@@ -15,6 +15,7 @@
 #include "styles/palette.h"
 #include "base/algorithm.h"
 #include "base/event_filter.h"
+#include "base/platform/base_platform_info.h"
 
 #include <QtGui/QPainter>
 #include <QtGui/QtEvents>
@@ -35,6 +36,34 @@ void RemoveDuplicates(std::vector<T> &v) {
 }
 
 } // namespace
+
+bool SemiNativeSystemButtonProcessing() {
+	return ::Platform::IsWindows11OrGreater();
+}
+
+void SetupSemiNativeSystemButtons(
+		not_null<TitleControls*> controls,
+		not_null<RpWindow*> window,
+		rpl::lifetime &lifetime,
+		Fn<bool()> filter) {
+	if (!SemiNativeSystemButtonProcessing()) {
+		return;
+	}
+
+	window->systemButtonOver(
+	) | rpl::filter([=](HitTestResult button) {
+		return !filter || filter() || (button == HitTestResult::None);
+	}) | rpl::start_with_next([=](HitTestResult button) {
+		controls->buttonOver(button);
+	}, lifetime);
+
+	window->systemButtonDown(
+	) | rpl::filter([=](HitTestResult button) {
+		return !filter || filter() || (button == HitTestResult::None);
+	}) | rpl::start_with_next([=](HitTestResult button) {
+		controls->buttonDown(button);
+	}, lifetime);
+}
 
 class TitleControls::Button final : public IconButton {
 public:
@@ -216,12 +245,12 @@ void TitleControls::buttonOver(HitTestResult testResult) {
 	update(_close, HitTestResult::Close);
 }
 
-void TitleControls::buttonDown(HitTestResult testResult, bool down) {
+void TitleControls::buttonDown(HitTestResult testResult) {
 	const auto update = [&](
 			const object_ptr<Button> &button,
 			HitTestResult buttonTestResult) {
 		if (const auto raw = button.data()) {
-			raw->setDown(testResult == buttonTestResult && down);
+			raw->setDown(testResult == buttonTestResult);
 		}
 	};
 	update(_minimize, HitTestResult::Minimize);
@@ -456,16 +485,30 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 		st,
 		std::move(maximize));
 
+	const auto raw = result.get();
+	auto &lifetime = raw->wrap.lifetime();
 	rpl::combine(
 		window->body()->widthValue(),
 		window->additionalContentPaddingValue()
-	) | rpl::start_with_next([raw = result.get()](int width, int padding) {
+	) | rpl::start_with_next([=](int width, int padding) {
 		raw->wrap.setGeometry(
 			padding,
 			0,
 			width - 2 * padding,
 			raw->controls.geometry().height());
-	}, result->wrap.lifetime());
+	}, lifetime);
+
+	window->hitTestRequests(
+	) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+		const auto origin = raw->wrap.pos();
+		const auto relative = request->point - origin;
+		const auto controlsResult = raw->controls.hitTest(relative);
+		if (controlsResult != HitTestResult::None) {
+			request->result = controlsResult;
+		}
+	}, lifetime);
+
+	SetupSemiNativeSystemButtons(&raw->controls, window, lifetime);
 
 	return result;
 }

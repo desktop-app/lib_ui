@@ -15,6 +15,7 @@ RpWindow::RpWindow(QWidget *parent)
 , _helper(Platform::CreateWindowHelper(this)) {
 	Expects(_helper != nullptr);
 
+	_helper->initInWindow(this);
 	hide();
 }
 
@@ -38,6 +39,19 @@ int RpWindow::additionalContentPadding() const {
 
 rpl::producer<int> RpWindow::additionalContentPaddingValue() const {
 	return _helper->additionalContentPaddingValue();
+}
+
+auto RpWindow::hitTestRequests() const
+-> rpl::producer<not_null<Platform::HitTestRequest*>> {
+	return _helper->hitTestRequests();
+}
+
+rpl::producer<Platform::HitTestResult> RpWindow::systemButtonOver() const {
+	return _helper->systemButtonOver();
+}
+
+rpl::producer<Platform::HitTestResult> RpWindow::systemButtonDown() const {
+	return _helper->systemButtonDown();
 }
 
 void RpWindow::setTitle(const QString &title) {

@@ -8,6 +8,7 @@
 
 #include "ui/inactive_press.h"
 #include "ui/platform/win/ui_window_title_win.h"
+#include "ui/widgets/rp_window.h"
 #include "base/platform/base_platform_info.h"
 #include "base/integration.h"
 #include "base/debug_log.h"
@@ -170,6 +171,10 @@ WindowHelper::~WindowHelper() {
 	GetNativeFilter()->unregisterWindow(_handle);
 }
 
+void WindowHelper::initInWindow(not_null<RpWindow*> window) {
+	_title->initInWindow(window);
+}
+
 not_null<RpWidget*> WindowHelper::body() {
 	return _body;
 }
@@ -280,6 +285,19 @@ void WindowHelper::showNormal() {
 	}
 }
 
+auto WindowHelper::hitTestRequests() const
+-> rpl::producer<not_null<HitTestRequest*>> {
+	return _hitTestRequests.events();
+}
+
+rpl::producer<HitTestResult> WindowHelper::systemButtonOver() const {
+	return _systemButtonOver.events();
+}
+
+rpl::producer<HitTestResult> WindowHelper::systemButtonDown() const {
+	return _systemButtonDown.events();
+}
+
 void WindowHelper::init() {
 	_title->show();
 	GetNativeFilter()->registerWindow(_handle, this);
@@ -341,7 +359,7 @@ bool WindowHelper::handleNativeEvent(
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result) {
-	if (handleSysButtonEvent(msg, wParam, lParam, result)) {
+	if (handleSystemButtonEvent(msg, wParam, lParam, result)) {
 		return true;
 	}
 
@@ -405,16 +423,6 @@ bool WindowHelper::handleNativeEvent(
 		if (result) *result = 0;
 		return true;
 	}
-
-	case WM_NCLBUTTONDBLCLK:
-	case WM_NCMBUTTONDBLCLK:
-	case WM_NCRBUTTONDBLCLK:
-	case WM_NCXBUTTONDBLCLK: {
-		if (!fixedSize()) {
-			return false;
-		}
-		if (result) *result = 0;
-	} return true;
 
 	case WM_NCRBUTTONUP: {
 		if (_title->isHidden()) {
@@ -518,14 +526,13 @@ bool WindowHelper::handleNativeEvent(
 		*result = [&] {
 			if (!window()->rect().contains(mapped)) {
 				return HTTRANSPARENT;
-			} else if (_title->isHidden()
-				|| !_title->geometry().contains(mapped)) {
-				return HTCLIENT;
-			} else switch (const auto test = _title->hitTest(mapped)) {
+			}
+			auto request = HitTestRequest{
+				.point = mapped,
+			};
+			_hitTestRequests.fire(&request);
+			switch (const auto result = request.result) {
 			case HitTestResult::Client:      return HTCLIENT;
-			case HitTestResult::Minimize:
-			case HitTestResult::MaximizeRestore:
-			case HitTestResult::Close:       return sysButtonHitTest(test);
 			case HitTestResult::Caption:     return HTCAPTION;
 			case HitTestResult::Top:         return HTTOP;
 			case HitTestResult::TopRight:    return HTTOPRIGHT;
@@ -535,13 +542,16 @@ bool WindowHelper::handleNativeEvent(
 			case HitTestResult::BottomLeft:  return HTBOTTOMLEFT;
 			case HitTestResult::Left:        return HTLEFT;
 			case HitTestResult::TopLeft:     return HTTOPLEFT;
+
+			case HitTestResult::Minimize:
+			case HitTestResult::MaximizeRestore:
+			case HitTestResult::Close: return systemButtonHitTest(result);
+
 			case HitTestResult::None:
-			default:                         return HTTRANSPARENT;
+			default: return HTTRANSPARENT;
 			};
 		}();
-		if (complexSysButtonProcessing()) {
-			_title->sysButtonOver(sysButtonHitTest(*result));
-		}
+		_systemButtonOver.fire(systemButtonHitTest(*result));
 	} return true;
 
 	case WM_SYSCOMMAND: {
@@ -591,12 +601,12 @@ bool WindowHelper::fixedSize() const {
 	return window()->minimumSize() == window()->maximumSize();
 }
 
-bool WindowHelper::handleSysButtonEvent(
+bool WindowHelper::handleSystemButtonEvent(
 		UINT msg,
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result) {
-	if (!complexSysButtonProcessing()) {
+	if (_title->isHidden()) {
 		return false;
 	}
 	const auto testResult = LOWORD(wParam);
@@ -616,9 +626,9 @@ bool WindowHelper::handleSysButtonEvent(
 
 	case WM_NCLBUTTONDOWN:
 	case WM_NCLBUTTONUP:
-		_title->sysButtonDown(
-			sysButtonHitTest(testResult),
-			(msg == WM_NCLBUTTONDOWN));
+		_systemButtonDown.fire((msg == WM_NCLBUTTONDOWN)
+			? systemButtonHitTest(testResult)
+			: HitTestResult::None);
 		if (overSysButton) {
 			if (result) *result = 0;
 		}
@@ -636,20 +646,20 @@ bool WindowHelper::handleSysButtonEvent(
 		return true;
 	case WM_NCMOUSEHOVER:
 	case WM_NCMOUSEMOVE:
-		_title->sysButtonOver(sysButtonHitTest(testResult));
+		_systemButtonOver.fire(systemButtonHitTest(testResult));
 		if (overSysButton) {
 			if (result) *result = 0;
 		}
 		return overSysButton;
 	case WM_NCMOUSELEAVE:
-		_title->sysButtonOver(HitTestResult::None);
+		_systemButtonOver.fire(HitTestResult::None);
 		return false;
 	}
 	return false;
 }
 
-int WindowHelper::sysButtonHitTest(HitTestResult result) const {
-	if (!complexSysButtonProcessing()) {
+int WindowHelper::systemButtonHitTest(HitTestResult result) const {
+	if (!SemiNativeSystemButtonProcessing()) {
 		return HTCLIENT;
 	}
 	switch (result) {
@@ -660,9 +670,9 @@ int WindowHelper::sysButtonHitTest(HitTestResult result) const {
 	return HTTRANSPARENT;
 }
 
-HitTestResult WindowHelper::sysButtonHitTest(int result) const {
-	if (!complexSysButtonProcessing()) {
-		return HitTestResult::Client;
+HitTestResult WindowHelper::systemButtonHitTest(int result) const {
+	if (!SemiNativeSystemButtonProcessing()) {
+		return HitTestResult::None;
 	}
 	switch (result) {
 	case HTMINBUTTON: return HitTestResult::Minimize;
@@ -670,15 +680,6 @@ HitTestResult WindowHelper::sysButtonHitTest(int result) const {
 	case HTCLOSE: return HitTestResult::Close;
 	}
 	return HitTestResult::None;
-}
-
-bool WindowHelper::complexSysButtonProcessing() const {
-	if (_title->isHidden()) {
-		return false;
-	} else if (!::Platform::IsWindows11OrGreater()) {
-		return false;
-	}
-	return true;
 }
 
 int WindowHelper::titleHeight() const {

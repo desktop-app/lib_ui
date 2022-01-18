@@ -21,6 +21,7 @@ struct WindowTitle;
 
 namespace Ui {
 
+class RpWindow;
 class IconButton;
 class PlainShadow;
 
@@ -31,10 +32,10 @@ public:
 	explicit TitleWidget(not_null<RpWidget*> parent);
 	~TitleWidget();
 
+	void initInWindow(not_null<RpWindow*> window);
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
-	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
 	void setResizeEnabled(bool enabled);
 
 	void refreshAdditionalPaddings();
@@ -45,9 +46,6 @@ public:
 	[[nodiscard]] int additionalPadding() const;
 	[[nodiscard]] rpl::producer<int> additionalPaddingValue() const;
 
-	void sysButtonOver(HitTestResult testResult);
-	void sysButtonDown(HitTestResult testResult, bool down);
-
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
@@ -57,6 +55,7 @@ protected:
 private:
 	struct PaddingHelper;
 
+	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
 	[[nodiscard]] bool additionalPaddingRequired() const;
 	void refreshGeometryWithWidth(int width);
 	void setAdditionalPadding(int padding);
