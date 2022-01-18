@@ -30,6 +30,7 @@ namespace Platform {
 namespace {
 
 constexpr auto kDWMWCP_ROUND = DWORD(2);
+constexpr auto kDWMWCP_DONOTROUND = DWORD(1);
 constexpr auto kDWMWA_WINDOW_CORNER_PREFERENCE = DWORD(33);
 constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
 constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
@@ -230,15 +231,19 @@ void WindowHelper::initialShadowUpdate() {
 	} else {
 		_shadow->update(Change::Moved | Change::Resized | Change::Shown);
 	}
+	updateCornersRounding();
+}
 
-	if (::Platform::IsWindows11OrGreater()) {
-		auto preference = kDWMWCP_ROUND;
-		DwmSetWindowAttribute(
-			_handle,
-			kDWMWA_WINDOW_CORNER_PREFERENCE,
-			&preference,
-			sizeof(preference));
+void WindowHelper::updateCornersRounding() {
+	if (!::Platform::IsWindows11OrGreater()) {
+		return;
 	}
+	auto preference = _isFullScreen ? kDWMWCP_DONOTROUND : kDWMWCP_ROUND;
+	DwmSetWindowAttribute(
+		_handle,
+		kDWMWA_WINDOW_CORNER_PREFERENCE,
+		&preference,
+		sizeof(preference));
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
@@ -261,6 +266,7 @@ void WindowHelper::showFullScreen() {
 	if (!_isFullScreen) {
 		_isFullScreen = true;
 		updateMargins();
+		updateCornersRounding();
 	}
 	window()->showFullScreen();
 }
@@ -270,6 +276,7 @@ void WindowHelper::showNormal() {
 	if (_isFullScreen) {
 		_isFullScreen = false;
 		updateMargins();
+		updateCornersRounding();
 	}
 }
 

@@ -46,6 +46,7 @@ private:
 	void updateSystemMenu();
 	void updateSystemMenu(Qt::WindowState state);
 	void initialShadowUpdate();
+	void updateCornersRounding();
 	void fixMaximizedWindow();
 	[[nodiscard]] bool handleNativeEvent(
 		UINT msg,
