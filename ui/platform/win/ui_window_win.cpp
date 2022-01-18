@@ -179,6 +179,19 @@ QMargins WindowHelper::frameMargins() {
 		: QMargins{ 0, _title->height(), 0, 0 };
 }
 
+int WindowHelper::additionalContentPadding() const {
+	return _title->isHidden() ? 0 : _title->additionalPadding();
+}
+
+rpl::producer<int> WindowHelper::additionalContentPaddingValue() const {
+	return rpl::combine(
+		_title->shownValue(),
+		_title->additionalPaddingValue()
+	) | rpl::map([](bool shown, int padding) {
+		return shown ? padding : 0;
+	}) | rpl::distinct_until_changed();
+}
+
 void WindowHelper::setTitle(const QString &title) {
 	_title->setText(title);
 	window()->setWindowTitle(title);

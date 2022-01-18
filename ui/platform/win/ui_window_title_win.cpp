@@ -48,7 +48,7 @@ struct TitleWidget::PaddingHelper {
 	}
 
 	RpWidget controlsParent;
-	int padding = 0;
+	rpl::variable<int> padding = 0;
 };
 
 TitleWidget::TitleWidget(not_null<RpWidget*> parent)
@@ -80,7 +80,7 @@ void TitleWidget::setStyle(const style::WindowTitle &st) {
 }
 
 void TitleWidget::refreshGeometryWithWidth(int width) {
-	const auto add = _paddingHelper ? _paddingHelper->padding : 0;
+	const auto add = additionalPadding();
 	setGeometry(0, 0, width, _controls.st()->height + add);
 	if (_paddingHelper) {
 		_paddingHelper->controlsParent.setGeometry(
@@ -201,10 +201,18 @@ void TitleWidget::refreshAdditionalPaddings(
 	setAdditionalPadding(padding);
 }
 
+int TitleWidget::additionalPadding() const {
+	return _paddingHelper ? _paddingHelper->padding.current() : 0;
+}
+
+rpl::producer<int> TitleWidget::additionalPaddingValue() const {
+	return _paddingHelper ? _paddingHelper->padding.value() : rpl::single(0);
+}
+
 void TitleWidget::setAdditionalPadding(int padding) {
 	Expects(_paddingHelper != nullptr);
 
-	if (_paddingHelper->padding == padding) {
+	if (_paddingHelper->padding.current() == padding) {
 		return;
 	}
 	_paddingHelper->padding = padding;

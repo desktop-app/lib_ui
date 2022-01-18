@@ -10,6 +10,7 @@
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/ui_utility.h"
+#include "ui/widgets/rp_window.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 #include "base/algorithm.h"
@@ -436,6 +437,37 @@ void DefaultTitleWidget::mouseDoubleClickEvent(QMouseEvent *e) {
 	} else {
 		window()->setWindowState(state | Qt::WindowMaximized);
 	}
+}
+
+SeparateTitleControls::SeparateTitleControls(
+	QWidget *parent,
+	const style::WindowTitle &st,
+	Fn<void(bool maximized)> maximize)
+: wrap(parent)
+, controls(&wrap, st, std::move(maximize)) {
+}
+
+std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
+		not_null<RpWindow*> window,
+		const style::WindowTitle &st,
+		Fn<void(bool maximized)> maximize) {
+	auto result = std::make_unique<SeparateTitleControls>(
+		window->body(),
+		st,
+		std::move(maximize));
+
+	rpl::combine(
+		window->body()->widthValue(),
+		window->additionalContentPaddingValue()
+	) | rpl::start_with_next([raw = result.get()](int width, int padding) {
+		raw->wrap.setGeometry(
+			padding,
+			0,
+			width - 2 * padding,
+			raw->controls.geometry().height());
+	}, result->wrap.lifetime());
+
+	return result;
 }
 
 } // namespace Platform

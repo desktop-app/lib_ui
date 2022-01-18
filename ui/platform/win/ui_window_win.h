@@ -24,6 +24,8 @@ public:
 
 	not_null<RpWidget*> body() override;
 	QMargins frameMargins() override;
+	int additionalContentPadding() const override;
+	rpl::producer<int> additionalContentPaddingValue() const override;
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;
 	void setNativeFrame(bool enabled) override;

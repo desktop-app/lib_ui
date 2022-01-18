@@ -41,6 +41,14 @@ QMargins BasicWindowHelper::frameMargins() {
 	return nativeFrameMargins();
 }
 
+int BasicWindowHelper::additionalContentPadding() const {
+	return 0;
+}
+
+rpl::producer<int> BasicWindowHelper::additionalContentPaddingValue() const {
+	return rpl::single(0);
+}
+
 void BasicWindowHelper::setTitle(const QString &title) {
 	_window->setWindowTitle(title);
 }

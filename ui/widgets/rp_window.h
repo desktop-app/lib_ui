@@ -38,6 +38,14 @@ public:
 	[[nodiscard]] not_null<const RpWidget*> body() const;
 	[[nodiscard]] QMargins frameMargins() const;
 
+	// In Windows 11 the window rounding shadow takes about
+	// round(1px * system_scale) from the window geometry on each side.
+	//
+	// Top shift is made by the TitleWidget height, but the rest of the
+	// side shifts are left for the RpWindow client to consider.
+	[[nodiscard]] int additionalContentPadding() const;
+	[[nodiscard]] rpl::producer<int> additionalContentPaddingValue() const;
+
 	void setTitle(const QString &title);
 	void setTitleStyle(const style::WindowTitle &st);
 	void setNativeFrame(bool enabled);

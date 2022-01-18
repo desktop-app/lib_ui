@@ -42,6 +42,8 @@ public:
 	void refreshAdditionalPaddings(
 		HWND handle,
 		const WINDOWPLACEMENT &placement);
+	[[nodiscard]] int additionalPadding() const;
+	[[nodiscard]] rpl::producer<int> additionalPaddingValue() const;
 
 	void sysButtonOver(HitTestResult testResult);
 	void sysButtonDown(HitTestResult testResult, bool down);

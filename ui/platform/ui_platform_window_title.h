@@ -20,6 +20,7 @@ namespace Ui {
 
 class IconButton;
 class PlainShadow;
+class RpWindow;
 
 namespace Platform {
 
@@ -121,6 +122,22 @@ private:
 	bool _mousePressed = false;
 
 };
+
+struct SeparateTitleControls {
+	SeparateTitleControls(
+		QWidget *parent,
+		const style::WindowTitle &st,
+		Fn<void(bool maximized)> maximize);
+
+	RpWidget wrap;
+	TitleControls controls;
+};
+
+[[nodiscard]] auto SetupSeparateTitleControls(
+	not_null<RpWindow*> window,
+	const style::WindowTitle &st,
+	Fn<void(bool maximized)> maximize = nullptr)
+-> std::unique_ptr<SeparateTitleControls>;
 
 } // namespace Platform
 } // namespace Ui

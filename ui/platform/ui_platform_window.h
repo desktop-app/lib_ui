@@ -29,6 +29,9 @@ public:
 
 	[[nodiscard]] virtual not_null<RpWidget*> body();
 	[[nodiscard]] virtual QMargins frameMargins();
+	[[nodiscard]] virtual int additionalContentPadding() const;
+	[[nodiscard]] virtual auto additionalContentPaddingValue() const
+		-> rpl::producer<int>;
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);

@@ -32,6 +32,14 @@ QMargins RpWindow::frameMargins() const {
 	return _helper->frameMargins();
 }
 
+int RpWindow::additionalContentPadding() const {
+	return _helper->additionalContentPadding();
+}
+
+rpl::producer<int> RpWindow::additionalContentPaddingValue() const {
+	return _helper->additionalContentPaddingValue();
+}
+
 void RpWindow::setTitle(const QString &title) {
 	_helper->setTitle(title);
 }
