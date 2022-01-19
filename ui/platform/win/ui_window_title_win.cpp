@@ -169,6 +169,9 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
 void TitleWidget::refreshAdditionalPaddings(
 		HWND handle,
 		const WINDOWPLACEMENT &placement) {
+	if (!additionalPaddingRequired()) {
+		return;
+	}
 	auto geometry = RECT();
 	if (!GetWindowRect(handle, &geometry)) {
 		LOG(("System Error: GetWindowRect failed."));
