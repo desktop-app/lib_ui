@@ -22,7 +22,7 @@
 namespace TextUtilities {
 namespace {
 
-constexpr auto kTagSeparator = '$';
+constexpr auto kTagSeparator = '\\';
 
 using namespace Ui::Text;
 
