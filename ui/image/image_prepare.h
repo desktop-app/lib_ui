@@ -26,8 +26,8 @@ enum class ImageRoundRadius {
 namespace Images {
 
 [[nodiscard]] QPixmap PixmapFast(QImage &&image);
-[[nodiscard]] QImage BlurLargeImage(QImage image, int radius);
-[[nodiscard]] QImage DitherImage(QImage image);
+[[nodiscard]] QImage BlurLargeImage(QImage &&image, int radius);
+[[nodiscard]] QImage DitherImage(const QImage &image);
 
 [[nodiscard]] QImage GenerateGradient(
 	QSize size,
@@ -79,44 +79,78 @@ struct ReadResult {
 };
 [[nodiscard]] ReadResult Read(ReadArgs &&args);
 
-QImage prepareBlur(QImage image);
-void prepareRound(
-	QImage &image,
-	ImageRoundRadius radius,
-	RectParts corners = RectPart::AllCorners,
-	QRect target = QRect());
-void prepareRound(
-	QImage &image,
-	gsl::span<const QImage, 4> cornerMasks,
-	RectParts corners = RectPart::AllCorners,
-	QRect target = QRect());
-void prepareCircle(QImage &image);
-QImage prepareColored(style::color add, QImage image);
-QImage prepareColored(QColor add, QImage image);
-QImage prepareOpaque(QImage image);
-
 enum class Option {
 	None                  = 0,
-	Smooth                = (1 << 0),
-	Blurred               = (1 << 1),
-	Circled               = (1 << 2),
-	RoundedLarge          = (1 << 3),
-	RoundedSmall          = (1 << 4),
-	RoundedTopLeft        = (1 << 5),
-	RoundedTopRight       = (1 << 6),
-	RoundedBottomLeft     = (1 << 7),
-	RoundedBottomRight    = (1 << 8),
-	RoundedAll            = (None
-		| RoundedTopLeft
-		| RoundedTopRight
-		| RoundedBottomLeft
-		| RoundedBottomRight),
-	Colored               = (1 << 9),
+	FastTransform         = (1 << 0),
+	Blur                  = (1 << 1),
+	RoundCircle           = (1 << 2),
+	RoundLarge            = (1 << 3),
+	RoundSmall            = (1 << 4),
+	RoundSkipTopLeft      = (1 << 5),
+	RoundSkipTopRight     = (1 << 6),
+	RoundSkipBottomLeft   = (1 << 7),
+	RoundSkipBottomRight  = (1 << 8),
+	Colorize              = (1 << 9),
 	TransparentBackground = (1 << 10),
 };
 using Options = base::flags<Option>;
 inline constexpr auto is_flag_type(Option) { return true; };
 
-QImage prepare(QImage img, int w, int h, Options options, int outerw, int outerh, const style::color *colored = nullptr);
+[[nodiscard]] Options RoundOptions(
+	ImageRoundRadius radius,
+	RectParts corners = RectPart::AllCorners);
+
+[[nodiscard]] QImage Blur(QImage &&image);
+[[nodiscard]] QImage Round(
+	QImage &&image,
+	ImageRoundRadius radius,
+	RectParts corners = RectPart::AllCorners,
+	QRect target = QRect());
+[[nodiscard]] QImage Round(
+	QImage &&image,
+	gsl::span<const QImage, 4> cornerMasks,
+	RectParts corners = RectPart::AllCorners,
+	QRect target = QRect());
+[[nodiscard]] QImage Round(
+	QImage &&image,
+	Options options,
+	QRect target = QRect());
+
+[[nodiscard]] QImage Circle(QImage &&image, QRect target = QRect());
+[[nodiscard]] QImage Colored(QImage &&image, style::color add);
+[[nodiscard]] QImage Colored(QImage &&image, QColor add);
+[[nodiscard]] QImage Opaque(QImage &&image);
+
+struct PrepareArgs {
+	const style::color *colored = nullptr;
+	Options options;
+	QSize outer;
+
+	[[nodiscard]] PrepareArgs blurred() const {
+		auto result = *this;
+		result.options |= Option::Blur;
+		return result;
+	}
+};
+
+[[nodiscard]] QImage Prepare(
+	QImage image,
+	int w,
+	int h,
+	const PrepareArgs &args);
+
+[[nodiscard]] inline QImage Prepare(
+		QImage image,
+		int w,
+		const PrepareArgs &args) {
+	return Prepare(std::move(image), w, 0, args);
+}
+
+[[nodiscard]] inline QImage Prepare(
+		QImage image,
+		QSize size,
+		const PrepareArgs &args) {
+	return Prepare(std::move(image), size.width(), size.height(), args);
+}
 
 } // namespace Images

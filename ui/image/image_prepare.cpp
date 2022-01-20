@@ -18,6 +18,7 @@
 #include "zlib.h"
 #include <QtCore/QFile>
 #include <QtCore/QBuffer>
+#include <QtCore/QMutex>
 #include <QtGui/QImageReader>
 #include <QtSvg/QSvgRenderer>
 
@@ -27,19 +28,26 @@ namespace {
 // They should be smaller.
 constexpr auto kMaxGzipFileSize = 5 * 1024 * 1024;
 
-TG_FORCE_INLINE uint64 blurGetColors(const uchar *p) {
-	return (uint64)p[0] + ((uint64)p[1] << 16) + ((uint64)p[2] << 32) + ((uint64)p[3] << 48);
+TG_FORCE_INLINE uint64 BlurGetColors(const uchar *p) {
+	return (uint64)p[0]
+		+ ((uint64)p[1] << 16)
+		+ ((uint64)p[2] << 32)
+		+ ((uint64)p[3] << 48);
 }
 
-const QImage &circleMask(QSize size) {
-	uint64 key = (uint64(uint32(size.width())) << 32)
+const QImage &CircleMask(QSize size) {
+	const auto key = (uint64(uint32(size.width())) << 32)
 		| uint64(uint32(size.height()));
 
-	static auto masks = base::flat_map<uint64, QImage>();
-	const auto i = masks.find(key);
-	if (i != end(masks)) {
+	static auto Masks = base::flat_map<uint64, QImage>();
+	static auto Mutex = QMutex();
+	auto lock = QMutexLocker(&Mutex);
+	const auto i = Masks.find(key);
+	if (i != end(Masks)) {
 		return i->second;
 	}
+	lock.unlock();
+
 	auto mask = QImage(
 		size,
 		QImage::Format_ARGB32_Premultiplied);
@@ -51,7 +59,9 @@ const QImage &circleMask(QSize size) {
 		p.setPen(Qt::NoPen);
 		p.drawEllipse(QRect(QPoint(), size));
 	}
-	return masks.emplace(key, std::move(mask)).first->second;
+
+	lock.relock();
+	return Masks.emplace(key, std::move(mask)).first->second;
 }
 
 std::array<QImage, 4> PrepareCornersMask(int radius) {
@@ -280,7 +290,10 @@ template <int kBits> // 4 means 16x16, 3 means 8x8
 	auto exact = GenerateSmallComplexGradient(colors, rotation, progress);
 	return (exact.size() == size)
 		? exact
-		: exact.scaled(size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+		: exact.scaled(
+			size,
+			Qt::IgnoreAspectRatio,
+			Qt::SmoothTransformation);
 }
 
 } // namespace
@@ -449,101 +462,135 @@ ReadResult Read(ReadArgs &&args) {
 	if (args.forceOpaque
 		&& result.format != qstr("jpg")
 		&& result.format != qstr("jpeg")) {
-		result.image = prepareOpaque(std::move(result.image));
+		result.image = Opaque(std::move(result.image));
 	}
 	return result;
 }
 
-QImage prepareBlur(QImage img) {
-	if (img.isNull()) {
-		return img;
+[[nodiscard]] Options RoundOptions(
+		ImageRoundRadius radius,
+		RectParts corners) {
+	const auto withCorners = [&](Option rounding) {
+		if (rounding == Option::None) {
+			return Options();
+		}
+		const auto corner = [&](RectPart part, Option skip) {
+			return !(corners & part) ? skip : Option();
+		};
+		return rounding
+			| corner(RectPart::TopLeft, Option::RoundSkipTopLeft)
+			| corner(RectPart::TopRight, Option::RoundSkipTopRight)
+			| corner(RectPart::BottomLeft, Option::RoundSkipBottomLeft)
+			| corner(RectPart::BottomRight, Option::RoundSkipBottomRight);
+	};
+	return withCorners((radius == ImageRoundRadius::Large)
+		? Option::RoundLarge
+		: (radius == ImageRoundRadius::Small)
+		? Option::RoundSmall
+		: (radius == ImageRoundRadius::Ellipse)
+		? Option::RoundCircle
+		: Option::None);
+}
+
+QImage Blur(QImage &&image) {
+	if (image.isNull()) {
+		return std::move(image);
 	}
-	const auto ratio = img.devicePixelRatio();
-	const auto fmt = img.format();
-	if (fmt != QImage::Format_RGB32 && fmt != QImage::Format_ARGB32_Premultiplied) {
-		img = std::move(img).convertToFormat(QImage::Format_ARGB32_Premultiplied);
-		img.setDevicePixelRatio(ratio);
+	const auto ratio = image.devicePixelRatio();
+	const auto format = image.format();
+	if (format != QImage::Format_RGB32
+		&& format != QImage::Format_ARGB32_Premultiplied) {
+		image = std::move(image).convertToFormat(
+			QImage::Format_ARGB32_Premultiplied);
+		image.setDevicePixelRatio(ratio);
 	}
 
-	uchar *pix = img.bits();
-	if (pix) {
-		int w = img.width(), h = img.height();
-		const int radius = 3;
-		const int r1 = radius + 1;
-		const int div = radius * 2 + 1;
-		const int stride = w * 4;
-		if (radius < 16 && div < w && div < h && stride <= w * 4) {
-			bool withalpha = img.hasAlphaChannel();
-			if (withalpha) {
-				QImage imgsmall(w, h, img.format());
-				{
-					QPainter p(&imgsmall);
-					PainterHighQualityEnabler hq(p);
+	auto pix = image.bits();
+	if (!pix) {
+		return std::move(image);
+	}
+	const auto w = image.width();
+	const auto h = image.height();
+	const auto radius = 3;
+	const auto r1 = radius + 1;
+	const auto div = radius * 2 + 1;
+	const auto stride = w * 4;
+	if (radius >= 16 || div >= w || div >= h || stride > w * 4) {
+		return std::move(image);
+	}
+	const auto withalpha = image.hasAlphaChannel();
+	if (withalpha) {
+		auto smaller = QImage(image.size(), image.format());
+		{
+			QPainter p(&smaller);
+			PainterHighQualityEnabler hq(p);
 
-					p.setCompositionMode(QPainter::CompositionMode_Source);
-					p.fillRect(0, 0, w, h, Qt::transparent);
-					p.drawImage(QRect(radius, radius, w - 2 * radius, h - 2 * radius), img, QRect(0, 0, w, h));
-				}
-				imgsmall.setDevicePixelRatio(ratio);
-				auto was = img;
-				img = std::move(imgsmall);
-				imgsmall = QImage();
-				Assert(!img.isNull());
+			p.setCompositionMode(QPainter::CompositionMode_Source);
+			p.fillRect(0, 0, w, h, Qt::transparent);
+			p.drawImage(
+				QRect(radius, radius, w - 2 * radius, h - 2 * radius),
+				image,
+				QRect(0, 0, w, h));
+		}
+		smaller.setDevicePixelRatio(ratio);
+		auto was = std::exchange(image, base::take(smaller));
+		Assert(!image.isNull());
 
-				pix = img.bits();
-				if (!pix) return was;
-			}
-			uint64 *rgb = new uint64[w * h];
+		pix = image.bits();
+		if (!pix) return was;
+	}
+	const auto buffer = std::make_unique<uint64[]>(w * h);
+	const auto rgb = buffer.get();
 
-			int x, y, i;
+	int x, y, i;
 
-			int yw = 0;
-			const int we = w - r1;
-			for (y = 0; y < h; y++) {
-				uint64 cur = blurGetColors(&pix[yw]);
-				uint64 rgballsum = -radius * cur;
-				uint64 rgbsum = cur * ((r1 * (r1 + 1)) >> 1);
+	int yw = 0;
+	const int we = w - r1;
+	for (y = 0; y < h; y++) {
+		uint64 cur = BlurGetColors(&pix[yw]);
+		uint64 rgballsum = -radius * cur;
+		uint64 rgbsum = cur * ((r1 * (r1 + 1)) >> 1);
 
-				for (i = 1; i <= radius; i++) {
-					uint64 cur = blurGetColors(&pix[yw + i * 4]);
-					rgbsum += cur * (r1 - i);
-					rgballsum += cur;
-				}
+		for (i = 1; i <= radius; i++) {
+			uint64 cur = BlurGetColors(&pix[yw + i * 4]);
+			rgbsum += cur * (r1 - i);
+			rgballsum += cur;
+		}
 
-				x = 0;
+		x = 0;
 
 #define update(start, middle, end) \
 rgb[y * w + x] = (rgbsum >> 4) & 0x00FF00FF00FF00FFLL; \
-rgballsum += blurGetColors(&pix[yw + (start) * 4]) - 2 * blurGetColors(&pix[yw + (middle) * 4]) + blurGetColors(&pix[yw + (end) * 4]); \
+rgballsum += BlurGetColors(&pix[yw + (start) * 4]) - 2 * BlurGetColors(&pix[yw + (middle) * 4]) + BlurGetColors(&pix[yw + (end) * 4]); \
 rgbsum += rgballsum; \
 x++;
 
-				while (x < r1) {
-					update(0, x, x + r1);
-				}
-				while (x < we) {
-					update(x - r1, x, x + r1);
-				}
-				while (x < w) {
-					update(x - r1, x, w - 1);
-				}
+		while (x < r1) {
+			update(0, x, x + r1);
+		}
+		while (x < we) {
+			update(x - r1, x, x + r1);
+		}
+		while (x < w) {
+			update(x - r1, x, w - 1);
+		}
 
 #undef update
 
-				yw += stride;
-			}
+		yw += stride;
+	}
 
-			const int he = h - r1;
-			for (x = 0; x < w; x++) {
-				uint64 rgballsum = -radius * rgb[x];
-				uint64 rgbsum = rgb[x] * ((r1 * (r1 + 1)) >> 1);
-				for (i = 1; i <= radius; i++) {
-					rgbsum += rgb[i * w + x] * (r1 - i);
-					rgballsum += rgb[i * w + x];
-				}
+	const int he = h - r1;
+	for (x = 0; x < w; x++) {
+		uint64 rgballsum = -radius * rgb[x];
+		uint64 rgbsum = rgb[x] * ((r1 * (r1 + 1)) >> 1);
+		for (i = 1; i <= radius; i++) {
+			rgbsum += rgb[i * w + x] * (r1 - i);
+			rgballsum += rgb[i * w + x];
+		}
 
-				y = 0;
-				int yi = x * 4;
+		y = 0;
+		int yi = x * 4;
 
 #define update(start, middle, end) \
 uint64 res = rgbsum >> 4; \
@@ -556,30 +603,28 @@ rgbsum += rgballsum; \
 y++; \
 yi += stride;
 
-				while (y < r1) {
-					update(0, y, y + r1);
-				}
-				while (y < he) {
-					update(y - r1, y, y + r1);
-				}
-				while (y < h) {
-					update(y - r1, y, h - 1);
-				}
+		while (y < r1) {
+			update(0, y, y + r1);
+		}
+		while (y < he) {
+			update(y - r1, y, y + r1);
+		}
+		while (y < h) {
+			update(y - r1, y, h - 1);
+		}
 
 #undef update
-			}
-
-			delete[] rgb;
-		}
 	}
-	return img;
+
+	delete[] rgb;
+	return std::move(image);
 }
 
-QImage BlurLargeImage(QImage image, int radius) {
+[[nodiscard]] QImage BlurLargeImage(QImage &&image, int radius) {
 	const auto width = image.width();
 	const auto height = image.height();
 	if (width <= radius || height <= radius || radius < 1) {
-		return image;
+		return std::move(image);
 	}
 
 	if (image.format() != QImage::Format_RGB32
@@ -790,7 +835,7 @@ QImage BlurLargeImage(QImage image, int radius) {
 	return image;
 }
 
-[[nodiscard]] QImage DitherImage(QImage image) {
+[[nodiscard]] QImage DitherImage(const QImage &image) {
 	Expects(image.bytesPerLine() == image.width() * 4);
 
 	const auto width = image.width();
@@ -925,21 +970,32 @@ QImage GenerateShadow(
 	return result;
 }
 
-void prepareCircle(QImage &img) {
-	Assert(!img.isNull());
+QImage Circle(QImage &&image, QRect target) {
+	Expects(!image.isNull());
 
-	img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-	Assert(!img.isNull());
+	if (target.isNull()) {
+		target = QRect(QPoint(), image.size());
+	} else {
+		Assert(QRect(QPoint(), image.size()).contains(target));
+	}
 
-	QPainter p(&img);
+	image = std::move(image).convertToFormat(
+		QImage::Format_ARGB32_Premultiplied);
+	Assert(!image.isNull());
+
+	const auto ratio = image.devicePixelRatio();
+	auto p = QPainter(&image);
 	p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 	p.drawImage(
-		QRect(QPoint(), img.size() / img.devicePixelRatio()),
-		circleMask(img.size()));
+		QRectF(target.topLeft() / ratio, target.size() / ratio),
+		CircleMask(target.size()));
+	p.end();
+
+	return std::move(image);
 }
 
-void prepareRound(
-		QImage &image,
+QImage Round(
+		QImage &&image,
 		gsl::span<const QImage, 4> cornerMasks,
 		RectParts corners,
 		QRect target) {
@@ -953,7 +1009,7 @@ void prepareRound(
 	auto targetWidth = target.width();
 	auto targetHeight = target.height();
 	if (targetWidth < cornerWidth || targetHeight < cornerHeight) {
-		return;
+		return std::move(image);
 	}
 
 	// We need to detach image first (if it is shared), before we
@@ -996,20 +1052,20 @@ void prepareRound(
 	if (corners & RectPart::TopRight) maskCorner(intsTopRight, cornerMasks[1]);
 	if (corners & RectPart::BottomLeft) maskCorner(intsBottomLeft, cornerMasks[2]);
 	if (corners & RectPart::BottomRight) maskCorner(intsBottomRight, cornerMasks[3]);
+
+	return std::move(image);
 }
 
-void prepareRound(
-		QImage &image,
+QImage Round(
+		QImage &&image,
 		ImageRoundRadius radius,
 		RectParts corners,
 		QRect target) {
 	if (!static_cast<int>(corners)) {
-		return;
+		return std::move(image);
 	} else if (radius == ImageRoundRadius::Ellipse) {
 		Assert((corners & RectPart::AllCorners) == RectPart::AllCorners);
-		Assert(target.isNull());
-		prepareCircle(image);
-		return;
+		return Circle(std::move(image), target);
 	}
 	Assert(!image.isNull());
 
@@ -1018,17 +1074,40 @@ void prepareRound(
 	Assert(!image.isNull());
 
 	const auto masks = CornersMask(radius);
-	prepareRound(image, masks, corners, target);
+	return Round(std::move(image), masks, corners, target);
 }
 
-QImage prepareColored(style::color add, QImage image) {
-	return prepareColored(add->c, std::move(image));
+QImage Round(QImage &&image, Options options, QRect target) {
+	if (options & Option::RoundCircle) {
+		return Circle(std::move(image), target);
+	} else if (!(options & (Option::RoundLarge | Option::RoundSmall))) {
+		return std::move(image);
+	}
+	const auto corner = [&](Option skip, RectPart part) {
+		return !(options & skip) ? part : RectPart::None;
+	};
+	return Round(
+		std::move(image),
+		((options & Option::RoundLarge)
+			? ImageRoundRadius::Large
+			: ImageRoundRadius::Small),
+		(corner(Option::RoundSkipTopLeft, RectPart::TopLeft)
+			| corner(Option::RoundSkipTopRight, RectPart::TopRight)
+			| corner(Option::RoundSkipBottomLeft, RectPart::BottomLeft)
+			| corner(Option::RoundSkipBottomRight, RectPart::BottomRight)),
+		target);
 }
 
-QImage prepareColored(QColor add, QImage image) {
+QImage Colored(QImage &&image, style::color add) {
+	return Colored(std::move(image), add->c);
+}
+
+QImage Colored(QImage &&image, QColor add) {
 	const auto format = image.format();
-	if (format != QImage::Format_RGB32 && format != QImage::Format_ARGB32_Premultiplied) {
-		image = std::move(image).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+	if (format != QImage::Format_RGB32
+		&& format != QImage::Format_ARGB32_Premultiplied) {
+		image = std::move(image).convertToFormat(
+			QImage::Format_ARGB32_Premultiplied);
 	}
 
 	if (const auto pix = image.bits()) {
@@ -1040,28 +1119,34 @@ QImage prepareColored(QColor add, QImage image) {
 		const auto h = image.height();
 		const auto size = w * h * 4;
 		for (auto i = index_type(); i != size; i += 4) {
-			int b = pix[i], g = pix[i + 1], r = pix[i + 2], a = pix[i + 3], aca = a * ca;
+			const auto b = pix[i];
+			const auto g = pix[i + 1];
+			const auto r = pix[i + 2];
+			const auto a = pix[i + 3];
+			const auto aca = a * ca;
 			pix[i + 0] = uchar(b + ((aca * (cb - b)) >> 16));
 			pix[i + 1] = uchar(g + ((aca * (cg - g)) >> 16));
 			pix[i + 2] = uchar(r + ((aca * (cr - r)) >> 16));
 			pix[i + 3] = uchar(a + ((aca * (0xFF - a)) >> 16));
 		}
 	}
-	return image;
+	return std::move(image);
 }
 
-QImage prepareOpaque(QImage image) {
+QImage Opaque(QImage &&image) {
 	if (image.hasAlphaChannel()) {
-		image = std::move(image).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+		image = std::move(image).convertToFormat(
+			QImage::Format_ARGB32_Premultiplied);
 		auto ints = reinterpret_cast<uint32*>(image.bits());
-		auto bg = anim::shifted(st::imageBgTransparent->c);
-		auto width = image.width();
-		auto height = image.height();
-		auto addPerLine = (image.bytesPerLine() / sizeof(uint32)) - width;
+		const auto bg = anim::shifted(QColor(Qt::white));
+		const auto width = image.width();
+		const auto height = image.height();
+		const auto addPerLine = (image.bytesPerLine() / sizeof(uint32)) - width;
 		for (auto y = 0; y != height; ++y) {
 			for (auto x = 0; x != width; ++x) {
-				auto components = anim::shifted(*ints);
-				*ints++ = anim::unshifted(components * 256 + bg * (256 - anim::getAlpha(components)));
+				const auto components = anim::shifted(*ints);
+				*ints++ = anim::unshifted(components * 256
+					+ bg * (256 - anim::getAlpha(components)));
 			}
 			ints += addPerLine;
 		}
@@ -1069,66 +1154,72 @@ QImage prepareOpaque(QImage image) {
 	return image;
 }
 
-QImage prepare(QImage img, int w, int h, Images::Options options, int outerw, int outerh, const style::color *colored) {
-	Assert(!img.isNull());
-	if (options & Images::Option::Blurred) {
-		img = prepareBlur(std::move(img));
-		Assert(!img.isNull());
+QImage Prepare(QImage image, int w, int h, const PrepareArgs &args) {
+	Expects(!image.isNull());
+
+	if (args.options & Option::Blur) {
+		image = Blur(std::move(image));
+		Assert(!image.isNull());
 	}
-	if (w <= 0 || (w == img.width() && (h <= 0 || h == img.height()))) {
+	if (w <= 0
+		|| (w == image.width() && (h <= 0 || h == image.height()))) {
 	} else if (h <= 0) {
-		img = img.scaledToWidth(w, (options & Images::Option::Smooth) ? Qt::SmoothTransformation : Qt::FastTransformation);
-		Assert(!img.isNull());
+		image = image.scaledToWidth(
+			w,
+			((args.options & Images::Option::FastTransform)
+				? Qt::FastTransformation
+				: Qt::SmoothTransformation));
+		Assert(!image.isNull());
 	} else {
-		img = img.scaled(w, h, Qt::IgnoreAspectRatio, (options & Images::Option::Smooth) ? Qt::SmoothTransformation : Qt::FastTransformation);
-		Assert(!img.isNull());
+		image = image.scaled(
+			w,
+			h,
+			Qt::IgnoreAspectRatio,
+			((args.options & Images::Option::FastTransform)
+				? Qt::FastTransformation
+				: Qt::SmoothTransformation));
+		Assert(!image.isNull());
 	}
-	if (outerw > 0 && outerh > 0) {
-		const auto pixelRatio = style::DevicePixelRatio();
-		outerw *= pixelRatio;
-		outerh *= pixelRatio;
-		if (outerw != w || outerh != h) {
-			img.setDevicePixelRatio(pixelRatio);
-			auto result = QImage(outerw, outerh, QImage::Format_ARGB32_Premultiplied);
-			result.setDevicePixelRatio(pixelRatio);
-			if (options & Images::Option::TransparentBackground) {
+	auto outer = args.outer;
+	if (!outer.isEmpty()) {
+		const auto ratio = style::DevicePixelRatio();
+		outer *= ratio;
+		if (outer != QSize(w, h)) {
+			image.setDevicePixelRatio(ratio);
+			auto result = QImage(outer, QImage::Format_ARGB32_Premultiplied);
+			result.setDevicePixelRatio(ratio);
+			if (args.options & Images::Option::TransparentBackground) {
 				result.fill(Qt::transparent);
 			}
 			{
 				QPainter p(&result);
-				if (!(options & Images::Option::TransparentBackground)) {
-					if (w < outerw || h < outerh) {
-						p.fillRect(0, 0, result.width(), result.height(), st::imageBg);
+				if (!(args.options & Images::Option::TransparentBackground)) {
+					if (w < outer.width() || h < outer.height()) {
+						p.fillRect(
+							QRect({}, result.size() / ratio),
+							Qt::black);
 					}
 				}
-				p.drawImage((result.width() - img.width()) / (2 * pixelRatio), (result.height() - img.height()) / (2 * pixelRatio), img);
+				p.drawImage(
+					(result.width() - image.width()) / (2 * ratio),
+					(result.height() - image.height()) / (2 * ratio),
+					image);
 			}
-			img = result;
-			Assert(!img.isNull());
+			image = std::move(result);
+			Assert(!image.isNull());
 		}
 	}
-	auto corners = [](Images::Options options) {
-		return ((options & Images::Option::RoundedTopLeft) ? RectPart::TopLeft : RectPart::None)
-			| ((options & Images::Option::RoundedTopRight) ? RectPart::TopRight : RectPart::None)
-			| ((options & Images::Option::RoundedBottomLeft) ? RectPart::BottomLeft : RectPart::None)
-			| ((options & Images::Option::RoundedBottomRight) ? RectPart::BottomRight : RectPart::None);
-	};
-	if (options & Images::Option::Circled) {
-		prepareCircle(img);
-		Assert(!img.isNull());
-	} else if (options & Images::Option::RoundedLarge) {
-		prepareRound(img, ImageRoundRadius::Large, corners(options));
-		Assert(!img.isNull());
-	} else if (options & Images::Option::RoundedSmall) {
-		prepareRound(img, ImageRoundRadius::Small, corners(options));
-		Assert(!img.isNull());
+
+	if (args.options
+		& (Option::RoundCircle | Option::RoundLarge | Option::RoundSmall)) {
+		image = Round(std::move(image), args.options);
+		Assert(!image.isNull());
 	}
-	if (options & Images::Option::Colored) {
-		Assert(colored != nullptr);
-		img = prepareColored(*colored, std::move(img));
+	if (args.colored) {
+		image = Colored(std::move(image), *args.colored);
 	}
-	img.setDevicePixelRatio(style::DevicePixelRatio());
-	return img;
+	image.setDevicePixelRatio(style::DevicePixelRatio());
+	return image;
 }
 
 } // namespace Images
