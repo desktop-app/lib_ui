@@ -616,7 +616,6 @@ yi += stride;
 #undef update
 	}
 
-	delete[] rgb;
 	return std::move(image);
 }
 
