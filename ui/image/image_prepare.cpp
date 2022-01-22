@@ -831,7 +831,7 @@ yi += stride;
 			}
 		}
 	}
-	return image;
+	return std::move(image);
 }
 
 [[nodiscard]] QImage DitherImage(const QImage &image) {
@@ -1150,7 +1150,7 @@ QImage Opaque(QImage &&image) {
 			ints += addPerLine;
 		}
 	}
-	return image;
+	return std::move(image);
 }
 
 QImage Prepare(QImage image, int w, int h, const PrepareArgs &args) {
