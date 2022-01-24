@@ -25,12 +25,22 @@ void DrawRoundedRect(
 	const auto h = rect.height();
 	const auto cornerWidth = corners[0].width() / pixelRatio;
 	const auto cornerHeight = corners[0].height() / pixelRatio;
-	if (w < 2 * cornerWidth || h < 2 * cornerHeight) return;
+
+	const auto hasLeft = (parts & RectPart::Left) != 0;
+	const auto hasRight = (parts & RectPart::Right) != 0;
+	const auto hasTop = (parts & RectPart::Top) != 0;
+	const auto hasBottom = (parts & RectPart::Bottom) != 0;
+	if (w < ((hasLeft ? cornerWidth : 0) + (hasRight ? cornerWidth : 0))) {
+		return;
+	}
+	if (h < ((hasTop ? cornerHeight : 0) + (hasBottom ? cornerHeight : 0))) {
+		return;
+	}
 	if (w > 2 * cornerWidth) {
-		if (parts & RectPart::Top) {
+		if (hasTop) {
 			p.fillRect(x + cornerWidth, y, w - 2 * cornerWidth, cornerHeight, brush);
 		}
-		if (parts & RectPart::Bottom) {
+		if (hasBottom) {
 			p.fillRect(x + cornerWidth, y + h - cornerHeight, w - 2 * cornerWidth, cornerHeight, brush);
 		}
 	}
@@ -38,13 +48,13 @@ void DrawRoundedRect(
 		if ((parts & RectPart::NoTopBottom) == RectPart::NoTopBottom) {
 			p.fillRect(x, y + cornerHeight, w, h - 2 * cornerHeight, brush);
 		} else {
-			if (parts & RectPart::Left) {
+			if (hasLeft) {
 				p.fillRect(x, y + cornerHeight, cornerWidth, h - 2 * cornerHeight, brush);
 			}
 			if ((parts & RectPart::Center) && w > 2 * cornerWidth) {
 				p.fillRect(x + cornerWidth, y + cornerHeight, w - 2 * cornerWidth, h - 2 * cornerHeight, brush);
 			}
-			if (parts & RectPart::Right) {
+			if (hasRight) {
 				p.fillRect(x + w - cornerWidth, y + cornerHeight, cornerWidth, h - 2 * cornerHeight, brush);
 			}
 		}
