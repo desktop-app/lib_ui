@@ -15,7 +15,7 @@
 #include "ui/image/image_prepare.h"
 #include "ui/spoiler_click_handler.h"
 #include "base/platform/base_platform_info.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_common_adapters.h"
 
 #include <private/qfontengine_p.h>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

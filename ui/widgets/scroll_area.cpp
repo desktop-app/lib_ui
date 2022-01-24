@@ -8,7 +8,7 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_common_adapters.h"
 
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QApplication>

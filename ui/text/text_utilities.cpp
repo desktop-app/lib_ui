@@ -7,7 +7,7 @@
 #include "ui/text/text_utilities.h"
 
 #include "base/algorithm.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_string_view.h"
 
 #include <QtCore/QRegularExpression>
 

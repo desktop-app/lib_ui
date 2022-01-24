@@ -8,7 +8,7 @@
 
 #include "base/basic_types.h"
 #include "base/binary_guard.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_string_view.h"
 #include "emoji.h"
 
 #include <QtGui/QPainter>

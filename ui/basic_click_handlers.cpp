@@ -10,7 +10,7 @@
 #include "ui/text/text_entity.h"
 #include "ui/integration.h"
 #include "base/qthelp_url.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_string_view.h"
 
 #include <QtCore/QUrl>
 #include <QtCore/QRegularExpression>

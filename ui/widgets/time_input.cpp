@@ -8,7 +8,7 @@
 
 #include "ui/widgets/input_fields.h"
 #include "ui/ui_utility.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_common_adapters.h"
 
 #include <QtCore/QRegularExpression>
 #include <QTime>

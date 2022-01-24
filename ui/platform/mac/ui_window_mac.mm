@@ -8,7 +8,7 @@
 
 #include "ui/platform/mac/ui_window_title_mac.h"
 #include "ui/widgets/rp_window.h"
-#include "base/qt_adapters.h"
+#include "base/qt/qt_common_adapters.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/palette.h"
 
