@@ -31,6 +31,7 @@ public:
 	VerticalLayoutReorder(
 		not_null<VerticalLayout*> layout,
 		not_null<ScrollArea*> scroll);
+	VerticalLayoutReorder(not_null<VerticalLayout*> layout);
 
 	void start();
 	void cancel();
@@ -68,7 +69,7 @@ private:
 	int deltaFromEdge();
 
 	const not_null<Ui::VerticalLayout*> _layout;
-	const not_null<Ui::ScrollArea*> _scroll;
+	Ui::ScrollArea *_scroll = nullptr;
 
 	Ui::Animations::Basic _scrollAnimation;
 

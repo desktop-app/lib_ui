@@ -28,6 +28,10 @@ VerticalLayoutReorder::VerticalLayoutReorder(
 , _scrollAnimation([=] { updateScrollCallback(); }) {
 }
 
+VerticalLayoutReorder::VerticalLayoutReorder(not_null<VerticalLayout*> layout)
+: _layout(layout) {
+}
+
 void VerticalLayoutReorder::cancel() {
 	if (_currentWidget) {
 		cancelCurrent(indexOf(_currentWidget));
@@ -183,7 +187,9 @@ void VerticalLayoutReorder::cancelCurrent(int index) {
 }
 
 void VerticalLayoutReorder::finishReordering() {
-	_scrollAnimation.stop();
+	if (_scroll) {
+		_scrollAnimation.stop();
+	}
 	finishCurrent();
 }
 
@@ -281,6 +287,9 @@ auto VerticalLayoutReorder::updates() const -> rpl::producer<Single> {
 }
 
 void VerticalLayoutReorder::updateScrollCallback() {
+	if (!_scroll) {
+		return;
+	}
 	const auto delta = deltaFromEdge();
 	const auto oldTop = _scroll->scrollTop();
 	_scroll->scrollToY(oldTop + delta);
@@ -293,7 +302,7 @@ void VerticalLayoutReorder::updateScrollCallback() {
 }
 
 void VerticalLayoutReorder::checkForScrollAnimation() {
-	if (!deltaFromEdge() || _scrollAnimation.animating()) {
+	if (!_scroll || !deltaFromEdge() || _scrollAnimation.animating()) {
 		return;
 	}
 	_scrollAnimation.start();
@@ -301,6 +310,7 @@ void VerticalLayoutReorder::checkForScrollAnimation() {
 
 int VerticalLayoutReorder::deltaFromEdge() {
 	Expects(_currentWidget != nullptr);
+	Expects(_scroll);
 
 	const auto globalPosition = _currentWidget->mapToGlobal(QPoint(0, 0));
 	const auto localTop = _scroll->mapFromGlobal(globalPosition).y();
