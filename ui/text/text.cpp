@@ -1845,7 +1845,6 @@ private:
 		const auto cornerWidth = cache.corners[0].width()
 			/ style::DevicePixelRatio();
 		const auto useWidth = ((x + width).toInt() - x.toInt()) - elideOffset;
-		const auto minWidth = cornerWidth * 2;
 		const auto rect = QRect(
 			x.toInt(),
 			_y + _yDelta,
