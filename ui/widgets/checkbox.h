@@ -203,6 +203,10 @@ public:
 	}
 	QRect checkRect() const;
 
+	not_null<AbstractCheckView*> checkView() const {
+		return _check.get();
+	}
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
