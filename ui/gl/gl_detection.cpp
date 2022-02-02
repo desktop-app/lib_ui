@@ -9,6 +9,7 @@
 #include "ui/gl/gl_shader.h"
 #include "ui/integration.h"
 #include "base/debug_log.h"
+#include "base/options.h"
 
 #include <QtCore/QSet>
 #include <QtCore/QFile>
@@ -34,6 +35,14 @@ bool ForceDisabled/* = false*/;
 ANGLE ResolvedANGLE = ANGLE::Auto;
 #endif // Q_OS_WIN
 
+base::options::toggle AllowLinuxNvidiaOpenGL({
+	.id = kOptionAllowLinuxNvidiaOpenGL,
+	.name = "Allow OpenGL on the NVIDIA drivers (Linux)",
+	.description = "Qt+OpenGL have problems on Linux with NVIDIA drivers.",
+	.scope = base::options::linux,
+	.restartRequired = true,
+});
+
 void CrashCheckStart() {
 	auto f = QFile(Integration::Instance().openglCheckFilePath());
 	if (f.open(QIODevice::WriteOnly)) {
@@ -43,6 +52,8 @@ void CrashCheckStart() {
 }
 
 } // namespace
+
+const char kOptionAllowLinuxNvidiaOpenGL[] = "allow-linux-nvidia-opengl";
 
 Capabilities CheckCapabilities(QWidget *widget) {
 	if (ForceDisabled) {
@@ -169,8 +180,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
 #ifdef Q_OS_LINUX
 		if (version && QByteArray(version).contains("NVIDIA")) {
 			// https://github.com/telegramdesktop/tdesktop/issues/16830
-			LOG_ONCE(("OpenGL: Disable on NVIDIA driver on Linux."));
-			return false;
+			if (AllowLinuxNvidiaOpenGL.value()) {
+				LOG_ONCE(("OpenGL: Allow on NVIDIA driver (experimental)."));
+			} else {
+				LOG_ONCE(("OpenGL: Disable on NVIDIA driver on Linux."));
+				return false;
+			}
 		}
 #endif // Q_OS_LINUX
 

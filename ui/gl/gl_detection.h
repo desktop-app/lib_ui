@@ -12,6 +12,8 @@ class QOpenGLContext;
 
 namespace Ui::GL {
 
+extern const char kOptionAllowLinuxNvidiaOpenGL[];
+
 enum class Backend {
 	Raster,
 	OpenGL,
