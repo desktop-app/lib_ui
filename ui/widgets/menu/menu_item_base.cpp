@@ -63,7 +63,7 @@ rpl::producer<CallbackData> ItemBase::clicks() const {
 		AbstractButton::clicks() | rpl::to_empty,
 		_clicks.events()
 	) | rpl::filter([=] {
-		return isEnabled();
+		return isEnabled() && !AbstractButton::isDisabled();
 	}) | rpl::map([=]() -> CallbackData {
 		return { action(), y(), _lastTriggeredSource, _index, true };
 	});
