@@ -178,19 +178,21 @@ private:
 
 	class StartedEntity {
 	public:
+		enum class Type {
+			Flags,
+			Link,
+			IndexedLink,
+			Spoiler,
+		};
+
 		explicit StartedEntity(TextBlockFlags flags);
-		explicit StartedEntity(uint16 index, bool isLnk = true);
+		explicit StartedEntity(uint16 index, Type type);
 
 		std::optional<TextBlockFlags> flags() const;
 		std::optional<uint16> lnkIndex() const;
 		std::optional<uint16> spoilerIndex() const;
 
 	private:
-		enum class Type {
-			Flags,
-			Link,
-			Spoiler,
-		};
 		const int _value = 0;
 		const Type _type;
 
@@ -222,6 +224,8 @@ private:
 	bool isInvalidEntity(const EntityInText &entity) const;
 	bool isLinkEntity(const EntityInText &entity) const;
 
+	bool processCustomIndex(uint16 index);
+
 	void parse(const TextParseOptions &options);
 	void computeLinkText(
 		const QString &linkData,
@@ -240,6 +244,8 @@ private:
 
 	const QFixed _stopAfterWidth; // summary width of all added words
 	const bool _checkTilde = false; // do we need a special text block for tilde symbol
+
+	std::vector<uint16> _linksIndexes;
 
 	std::vector<EntityLinkData> _links;
 	std::vector<EntityLinkData> _spoilers;
@@ -276,9 +282,9 @@ Parser::StartedEntity::StartedEntity(TextBlockFlags flags)
 	Expects(_value >= 0 && _value < int(kStringLinkIndexShift));
 }
 
-Parser::StartedEntity::StartedEntity(uint16 index, bool isLnk)
+Parser::StartedEntity::StartedEntity(uint16 index, Type type)
 : _value(index)
-, _type(isLnk ? Type::Link : Type::Spoiler) {
+, _type(type) {
 	Expects((_type == Type::Link)
 		? (_value >= kStringLinkIndexShift)
 		: (_value < kStringLinkIndexShift));
@@ -292,7 +298,8 @@ std::optional<TextBlockFlags> Parser::StartedEntity::flags() const {
 }
 
 std::optional<uint16> Parser::StartedEntity::lnkIndex() const {
-	if (_value >= int(kStringLinkIndexShift) && (_type == Type::Link)) {
+	if ((_value < int(kStringLinkIndexShift) && (_type == Type::IndexedLink))
+		|| (_value >= int(kStringLinkIndexShift) && (_type == Type::Link))) {
 		return uint16(_value);
 	}
 	return std::nullopt;
@@ -515,13 +522,18 @@ bool Parser::checkEntities() {
 		pushComplexUrl();
 	}
 
+	using Type = StartedEntity::Type;
+
 	if (link.type != EntityType::Invalid) {
 		createBlock();
 
 		_links.push_back(link);
-		_lnkIndex = kStringLinkIndexShift + _links.size();
-
-		_startedEntities[entityEnd].emplace_back(_lnkIndex);
+		const auto tempIndex = _links.size();
+		const auto useCustom = processCustomIndex(tempIndex);
+		_lnkIndex = tempIndex + (useCustom ? 0 : kStringLinkIndexShift);
+		_startedEntities[entityEnd].emplace_back(
+			_lnkIndex,
+			useCustom ? Type::IndexedLink : Type::Link);
 	} else if (flags) {
 		if (!(_flags & flags)) {
 			createBlock();
@@ -538,12 +550,30 @@ bool Parser::checkEntities() {
 		});
 		_spoilerIndex = _spoilers.size();
 
-		_startedEntities[entityEnd].emplace_back(_spoilerIndex, false);
+		_startedEntities[entityEnd].emplace_back(
+			_spoilerIndex,
+			Type::Spoiler);
 	}
 
 	++_waitingEntity;
 	skipBadEntities();
 	return true;
+}
+
+bool Parser::processCustomIndex(uint16 index) {
+	auto &url = _links[index - 1].data;
+	if (url.isEmpty()) {
+		return false;
+	}
+	if (url.startsWith("internal:index") && url.back().isDigit()) {
+		const auto customIndex = uint16(url.back().unicode() - '0');
+		// if (customIndex != index) {
+			url = QString();
+			_linksIndexes.push_back(customIndex);
+			return true;
+		// }
+	}
+	return false;
 }
 
 void Parser::skipPassedEntities() {
@@ -737,11 +767,17 @@ void Parser::trimSourceRange() {
 
 void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.resize(_maxLnkIndex + _maxShiftedLnkIndex);
+	auto counterCustomIndex = uint16(0);
 	auto currentIndex = uint16(0); // Current the latest index of _t->_links.
 	struct {
 		uint16 mono = 0;
 		uint16 lnk = 0;
 	} lastHandlerIndex;
+	const auto avoidIntersectionsWithCustom = [&] {
+		while (ranges::contains(_linksIndexes, currentIndex)) {
+			currentIndex++;
+		}
+	};
 	for (auto &block : _t->_blocks) {
 		const auto spoilerIndex = block->spoilerIndex();
 		if (spoilerIndex && (_t->_spoilers.size() < spoilerIndex)) {
@@ -752,6 +788,7 @@ void Parser::finalize(const TextParseOptions &options) {
 			_t->setSpoiler(spoilerIndex, std::move(handler));
 		}
 		const auto shiftedIndex = block->lnkIndex();
+		auto useCustomIndex = false;
 		if (shiftedIndex <= kStringLinkIndexShift) {
 			if (IsMono(block->flags()) && shiftedIndex) {
 				const auto monoIndex = shiftedIndex;
@@ -762,6 +799,7 @@ void Parser::finalize(const TextParseOptions &options) {
 				} else {
 					currentIndex++;
 				}
+				avoidIntersectionsWithCustom();
 				block->setLnkIndex(currentIndex);
 				const auto handler = Integration::Instance().createLinkHandler(
 					_monos[monoIndex - 1],
@@ -771,24 +809,38 @@ void Parser::finalize(const TextParseOptions &options) {
 					_t->setLink(currentIndex, handler);
 				}
 				lastHandlerIndex.mono = monoIndex;
+				continue;
+			} else if (shiftedIndex) {
+				useCustomIndex = true;
+			} else {
+				continue;
 			}
-			continue;
 		}
-		const auto realIndex = (shiftedIndex - kStringLinkIndexShift);
+		const auto usedIndex = [&] {
+			return useCustomIndex
+				? _linksIndexes[counterCustomIndex - 1]
+				: currentIndex;
+		};
+		const auto realIndex = useCustomIndex
+			? shiftedIndex
+			: (shiftedIndex - kStringLinkIndexShift);
 		if (lastHandlerIndex.lnk == realIndex) {
-			block->setLnkIndex(currentIndex);
+			block->setLnkIndex(usedIndex());
 			continue; // Optimization.
 		} else {
-			currentIndex++;
+			(useCustomIndex ? counterCustomIndex : currentIndex)++;
 		}
-		block->setLnkIndex(currentIndex);
+		if (!useCustomIndex) {
+			avoidIntersectionsWithCustom();
+		}
+		block->setLnkIndex(usedIndex());
 
-		_t->_links.resize(currentIndex);
+		_t->_links.resize(std::max(usedIndex(), uint16(_t->_links.size())));
 		const auto handler = Integration::Instance().createLinkHandler(
 			_links[realIndex - 1],
 			_context);
 		if (handler) {
-			_t->setLink(currentIndex, handler);
+			_t->setLink(usedIndex(), handler);
 		}
 		lastHandlerIndex.lnk = realIndex;
 	}

@@ -42,14 +42,22 @@ TextWithEntities Link(const QString &text, const QString &url) {
 	return WithSingleEntity(text, EntityType::CustomUrl, url);
 }
 
+TextWithEntities Link(const QString &text, int index) {
+	Expects(index > 0 && index < 10);
+	return Link(text, QString("internal:index") + QChar('0' + index));
+}
+
 TextWithEntities PlainLink(const QString &text) {
 	return WithSingleEntity(text, EntityType::PlainLink);
 }
 
-TextWithEntities Wrapped(TextWithEntities text, EntityType type) {
+TextWithEntities Wrapped(
+		TextWithEntities text,
+		EntityType type,
+		const QString &data) {
 	text.entities.insert(
 		text.entities.begin(),
-		{ type, 0, int(text.text.size()), {} });
+		{ type, 0, int(text.text.size()), data });
 	return text;
 }
 
