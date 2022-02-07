@@ -7,24 +7,10 @@
 #include "ui/paint/arcs.h"
 
 #include "ui/effects/animation_value.h"
+#include "ui/effects/animation_value_f.h"
 #include "ui/painter.h"
 
 namespace Ui::Paint {
-namespace {
-
-inline float64 InterpolateF(float a, float b, float64 b_ratio) {
-	return a + float64(b - a) * b_ratio;
-};
-
-QRectF InterpolatedRect(const QRectF &r1, const QRectF &r2, float64 ratio) {
-	return QRectF(
-		InterpolateF(r1.x(), r2.x(), ratio),
-		InterpolateF(r1.y(), r2.y(), ratio),
-		InterpolateF(r1.width(), r2.width(), ratio),
-		InterpolateF(r1.height(), r2.height(), ratio));
-}
-
-} // namespace
 
 ArcsAnimation::ArcsAnimation(
 	const style::ArcsAnimation &st,
@@ -221,7 +207,7 @@ void ArcsAnimation::paint(Painter &p, std::optional<QColor> colorOverride) {
 			? arc.rect
 			: (progress == 1.)
 			? previousRect
-			: InterpolatedRect(arc.rect, previousRect, progress);
+			: anim::interpolatedRectF(arc.rect, previousRect, progress);
 		p.drawArc(rect, _startAngle, _spanAngle);
 	}
 	p.setOpacity(1.);

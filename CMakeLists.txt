@@ -38,6 +38,7 @@ PRIVATE
 
     ui/effects/animation_value.cpp
     ui/effects/animation_value.h
+    ui/effects/animation_value_f.h
     ui/effects/animations.cpp
     ui/effects/animations.h
     ui/effects/cross_animation.cpp
