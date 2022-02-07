@@ -32,13 +32,14 @@ Box {
 }
 
 boxDuration: 200;
-boxRadius: 3px;
+boxRadius: 8px;
 
 boxButtonFont: font(boxFontSize semibold);
 defaultBoxButton: RoundButton(defaultLightButton) {
-	width: -24px;
-	height: 36px;
-	font: boxButtonFont;
+	width: -30px;
+	height: 34px;
+	textTop: 7px;
+	font: font(14px semibold);
 }
 
 boxLabelStyle: TextStyle(boxTextStyle) {
@@ -74,25 +75,25 @@ boxRoundShadow: Shadow {
 	fallback: windowShadowFgFallback;
 }
 
-boxTitleFont: font(17px semibold);
+boxTitleFont: font(16px semibold);
 boxTitle: FlatLabel(defaultFlatLabel) {
 	textFg: boxTitleFg;
 	maxHeight: 24px;
 	style: TextStyle(defaultTextStyle) {
 		font: boxTitleFont;
 		linkFont: boxTitleFont;
-		linkFontOver: font(17px semibold underline);
+		linkFontOver: font(16px semibold underline);
 	}
 }
-boxTitlePosition: point(22px, 16px);
-boxTitleHeight: 56px;
+boxTitlePosition: point(24px, 18px);
+boxTitleHeight: 48px;
 boxTitleAdditionalSkip: 9px;
 boxTitleAdditionalFont: normalFont;
 boxScroll: defaultSolidScroll;
 
-boxRowPadding: margins(22px, 0px, 22px, 0px);
+boxRowPadding: margins(24px, 0px, 24px, 0px);
 
-boxTopMargin: 6px;
+boxTopMargin: 8px;
 
 boxTitleClose: IconButton(defaultIconButton) {
 	width: boxTitleHeight;
@@ -119,14 +120,14 @@ boxOptionInputSkip: 6px;
 
 boxWidth: 320px;
 boxWideWidth: 364px;
-boxPadding: margins(22px, 30px, 22px, 8px);
+boxPadding: margins(24px, 30px, 24px, 8px);
 boxMaxListHeight: 492px;
 boxLittleSkip: 10px;
 boxMediumSkip: 20px;
 
 defaultBox: Box {
-	buttonPadding: margins(8px, 12px, 13px, 12px);
-	buttonHeight: 36px;
+	buttonPadding: margins(6px, 10px, 10px, 10px);
+	buttonHeight: 34px;
 	button: defaultBoxButton;
 	margin: margins(0px, 10px, 0px, 10px);
 	bg: boxBg;
@@ -134,7 +135,6 @@ defaultBox: Box {
 	titleAdditionalFg: boxTitleAdditionalFg;
 }
 layerBox: Box(defaultBox) {
-	buttonPadding: margins(8px, 8px, 8px, 8px);
 }
 boxLabel: FlatLabel(defaultFlatLabel) {
 	minWidth: 274px;

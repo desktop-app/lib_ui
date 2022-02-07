@@ -86,7 +86,7 @@ private:
 
 LayerStackWidget::BackgroundWidget::BackgroundWidget(QWidget *parent)
 : TWidget(parent)
-, _roundRect(ImageRoundRadius::Small, st::boxBg) {
+, _roundRect(st::boxRadius, st::boxBg) {
 }
 
 void LayerStackWidget::BackgroundWidget::setCacheImages(
