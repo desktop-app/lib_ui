@@ -1011,6 +1011,10 @@ QImage Round(
 		return std::move(image);
 	}
 
+	image = std::move(image).convertToFormat(
+		QImage::Format_ARGB32_Premultiplied);
+	Assert(!image.isNull());
+
 	// We need to detach image first (if it is shared), before we
 	// count some offsets using QImage::bytesPerLine etc, because
 	// bytesPerLine may change on detach, this leads to crashes:
@@ -1066,10 +1070,6 @@ QImage Round(
 		Assert((corners & RectPart::AllCorners) == RectPart::AllCorners);
 		return Circle(std::move(image), target);
 	}
-	Assert(!image.isNull());
-
-	image = std::move(image).convertToFormat(
-		QImage::Format_ARGB32_Premultiplied);
 	Assert(!image.isNull());
 
 	const auto masks = CornersMask(radius);
