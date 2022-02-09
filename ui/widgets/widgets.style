@@ -525,6 +525,7 @@ SettingsButton {
 
 	height: pixels;
 	padding: margins;
+	iconLeft: pixels;
 
 	toggle: Toggle;
 	toggleOver: Toggle;
