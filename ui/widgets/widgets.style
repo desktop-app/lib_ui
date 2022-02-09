@@ -1005,6 +1005,7 @@ SettingsSlider {
 	barTop: pixels;
 	barSkip: pixels;
 	barStroke: pixels;
+	barRadius: pixels;
 	barFg: color;
 	barFgActive: color;
 	labelTop: pixels;
@@ -1023,6 +1024,7 @@ defaultSettingsSlider: SettingsSlider {
 	barTop: 5px;
 	barSkip: 3px;
 	barStroke: 3px;
+	barRadius: 1px;
 	barFg: sliderBgInactive;
 	barFgActive: sliderBgActive;
 	labelTop: 17px;
