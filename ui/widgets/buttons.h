@@ -266,6 +266,9 @@ public:
 	rpl::producer<bool> toggledValue() const;
 
 	void setColorOverride(std::optional<QColor> textColorOverride);
+	void setPaddingOverride(style::margins padding);
+
+	[[nodiscard]] const style::SettingsButton &st() const;
 
 protected:
 	int resizeGetHeight(int newWidth) override;
@@ -275,7 +278,6 @@ protected:
 
 	void paintEvent(QPaintEvent *e) override;
 
-	const style::SettingsButton &st() const;
 	void paintBg(Painter &p, const QRect &rect, bool over) const;
 	void paintText(Painter &p, bool over, int outerw) const;
 	void paintToggle(Painter &p, int outerw) const;
@@ -286,6 +288,7 @@ private:
 	void updateVisibleText(int newWidth);
 
 	const style::SettingsButton &_st;
+	style::margins _padding;
 	QString _original;
 	QString _text;
 	int _originalWidth = 0;

@@ -690,7 +690,8 @@ SettingsButton::SettingsButton(
 	rpl::producer<QString> &&text,
 	const style::SettingsButton &st)
 : RippleButton(parent, st.ripple)
-, _st(st) {
+, _st(st)
+, _padding(_st.padding) {
 	std::move(
 		text
 	) | rpl::start_with_next([this](QString &&value) {
@@ -736,9 +737,15 @@ rpl::producer<bool> SettingsButton::toggledValue() const {
 	return nullptr;
 }
 
-void SettingsButton::setColorOverride(std::optional<QColor> textColorOverride) {
+void SettingsButton::setColorOverride(
+		std::optional<QColor> textColorOverride) {
 	_textColorOverride = textColorOverride;
 	update();
+}
+
+void SettingsButton::setPaddingOverride(style::margins padding) {
+	_padding = padding;
+	resizeToWidth(widthNoMargins());
 }
 
 const style::SettingsButton &SettingsButton::st() const {
@@ -773,8 +780,8 @@ void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
 		? _st.textFgOver
 		: _st.textFg);
 	p.drawTextLeft(
-		_st.padding.left(),
-		_st.padding.top(),
+		_padding.left(),
+		_padding.top(),
 		outerw,
 		_text,
 		_textWidth);
@@ -798,7 +805,7 @@ QRect SettingsButton::toggleRect() const {
 
 int SettingsButton::resizeGetHeight(int newWidth) {
 	updateVisibleText(newWidth);
-	return _st.padding.top() + _st.height + _st.padding.bottom();
+	return _padding.top() + _st.height + _padding.bottom();
 }
 
 void SettingsButton::onStateChanged(
@@ -821,8 +828,8 @@ void SettingsButton::setText(QString &&text) {
 
 void SettingsButton::updateVisibleText(int newWidth) {
 	auto availableWidth = newWidth
-		- _st.padding.left()
-		- _st.padding.right();
+		- _padding.left()
+		- _padding.right();
 	if (_toggle) {
 		availableWidth -= (width() - toggleRect().x());
 	}
