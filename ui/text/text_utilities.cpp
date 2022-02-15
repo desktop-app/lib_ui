@@ -43,8 +43,7 @@ TextWithEntities Link(const QString &text, const QString &url) {
 }
 
 TextWithEntities Link(const QString &text, int index) {
-	Expects(index > 0 && index < 10);
-	return Link(text, QString("internal:index") + QChar('0' + index));
+	return Link(text, QString("internal:index") + QChar(index));
 }
 
 TextWithEntities PlainLink(const QString &text) {

@@ -565,8 +565,8 @@ bool Parser::processCustomIndex(uint16 index) {
 	if (url.isEmpty()) {
 		return false;
 	}
-	if (url.startsWith("internal:index") && url.back().isDigit()) {
-		const auto customIndex = uint16(url.back().unicode() - '0');
+	if (url.startsWith("internal:index")) {
+		const auto customIndex = uint16(url.back().unicode());
 		// if (customIndex != index) {
 			url = QString();
 			_linksIndexes.push_back(customIndex);
