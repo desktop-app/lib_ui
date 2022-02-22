@@ -46,6 +46,11 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::setDuration(int duration) {
 	return this;
 }
 
+SlideWrap<RpWidget> *SlideWrap<RpWidget>::setDirectionUp(bool up) {
+	_up = up;
+	return this;
+}
+
 SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggle(
 		bool shown,
 		anim::type animated) {
@@ -92,22 +97,28 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggleOn(
 }
 
 void SlideWrap<RpWidget>::animationStep() {
-	auto newWidth = width();
-	if (auto weak = wrapped()) {
-		auto margins = getMargins();
+	const auto weak = wrapped();
+	if (weak && !_up) {
+		const auto margins = getMargins();
 		weak->moveToLeft(margins.left(), margins.top());
-		newWidth = weak->width();
 	}
-	auto current = _animation.value(_toggled ? 1. : 0.);
-	auto newHeight = wrapped()
+	const auto newWidth = weak ? weak->width() : width();
+	const auto current = _animation.value(_toggled ? 1. : 0.);
+	const auto newHeight = weak
 		? (_animation.animating()
-		? anim::interpolate(0, wrapped()->heightNoMargins(), current)
-		: (_toggled ? wrapped()->height() : 0))
+			? anim::interpolate(0, weak->heightNoMargins(), current)
+			: (_toggled ? weak->height() : 0))
 		: 0;
+	if (weak && _up) {
+		const auto margins = getMargins();
+		weak->moveToLeft(
+			margins.left(),
+			margins.top() - (weak->height() - newHeight));
+	}
 	if (newWidth != width() || newHeight != height()) {
 		resize(newWidth, newHeight);
 	}
-	auto shouldBeHidden = !_toggled && !_animation.animating();
+	const auto shouldBeHidden = !_toggled && !_animation.animating();
 	if (shouldBeHidden != isHidden()) {
 		const auto guard = MakeWeak(this);
 		setVisible(!shouldBeHidden);
