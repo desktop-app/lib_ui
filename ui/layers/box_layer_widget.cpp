@@ -217,6 +217,10 @@ void BoxLayerWidget::showBox(
 	_layer->showBox(std::move(box), options, animated);
 }
 
+void BoxLayerWidget::hideLayer() {
+	_layer->hideLayers(anim::type::normal);
+}
+
 void BoxLayerWidget::updateSize() {
 	setDimensions(width(), _maxContentHeight);
 }

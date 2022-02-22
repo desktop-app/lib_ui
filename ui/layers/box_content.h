@@ -79,6 +79,7 @@ public:
 	virtual void setNoContentMargin(bool noContentMargin) = 0;
 	virtual bool isBoxShown() const = 0;
 	virtual void closeBox() = 0;
+	virtual void hideLayer() = 0;
 	virtual void triggerButton(int index) = 0;
 
 	template <typename BoxType>

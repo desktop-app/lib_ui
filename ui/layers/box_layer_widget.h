@@ -91,6 +91,7 @@ public:
 	void closeBox() override {
 		closeLayer();
 	}
+	void hideLayer() override;
 	void triggerButton(int index) override;
 
 	void setCloseByOutsideClick(bool close) override;
