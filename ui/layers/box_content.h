@@ -214,7 +214,7 @@ public:
 
 	void scrollByDraggingDelta(int delta);
 
-	void onScrollToY(int top, int bottom = -1);
+	void scrollToY(int top, int bottom = -1);
 
 protected:
 	virtual void prepare() = 0;

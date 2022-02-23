@@ -110,7 +110,7 @@ RectParts BoxContent::customCornersFilling() {
 	return {};
 }
 
-void BoxContent::onScrollToY(int top, int bottom) {
+void BoxContent::scrollToY(int top, int bottom) {
 	if (_scroll) {
 		_scroll->scrollToY(top, bottom);
 	}
