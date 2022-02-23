@@ -18,6 +18,10 @@
 enum class RectPart;
 using RectParts = base::flags<RectPart>;
 
+namespace base {
+class Timer;
+} // namespace base
+
 namespace style {
 struct RoundButton;
 struct IconButton;
@@ -97,7 +101,6 @@ public:
 };
 
 class BoxContent : public RpWidget {
-	Q_OBJECT
 
 public:
 	BoxContent() {
@@ -211,7 +214,6 @@ public:
 
 	void scrollByDraggingDelta(int delta);
 
-public Q_SLOTS:
 	void onScrollToY(int top, int bottom = -1);
 
 protected:
@@ -274,12 +276,6 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 	void keyPressEvent(QKeyEvent *e) override;
 
-private Q_SLOTS:
-	void onScroll();
-	void onInnerResize();
-
-	void onDraggingScrollTimer();
-
 private:
 	void finishPrepare();
 	void finishScrollCreate();
@@ -289,6 +285,8 @@ private:
 	void updateInnerVisibleTopBottom();
 	void updateShadowsVisibility();
 	object_ptr<TWidget> doTakeInnerWidget();
+
+	void draggingScrollTimerCallback();
 
 	BoxContentDelegate *_delegate = nullptr;
 
@@ -301,7 +299,7 @@ private:
 	object_ptr<FadeShadow> _topShadow = { nullptr };
 	object_ptr<FadeShadow> _bottomShadow = { nullptr };
 
-	object_ptr<QTimer> _draggingScrollTimer = { nullptr };
+	std::unique_ptr<base::Timer> _draggingScrollTimer;
 	int _draggingScrollDelta = 0;
 
 	rpl::event_stream<> _boxClosingStream;
