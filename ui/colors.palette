@@ -309,15 +309,15 @@ historyPeerUserpicFg: windowFgActive; // default userpic initials
 historyPeerSavedMessagesBg: historyPeer4UserpicBg; // saved messages userpic background
 historyPeerArchiveUserpicBg: dialogsUnreadBgMuted; // archive folder userpic background
 
-settingsIconBg1: #f06964 | historyPeer1UserpicBg; // red settings icon background
-settingsIconBg2: #6dc534 | historyPeer2UserpicBg; // green settings icon background
-settingsIconBg3: #ed9f20 | historyPeer3UserpicBg; // light-orange settings icon background
-settingsIconBg4: #56b3f5 | historyPeer4UserpicBg; // light-blue settings icon background
-settingsIconBg5: #7595ff | historyPeer5UserpicBg; // dark-blue settings icon background
-settingsIconBg6: #b580e2 | historyPeer6UserpicBg; // purple settings icon background
-settingsIconBg8: #f2925b | historyPeer8UserpicBg; // dark-orange settings icon background
-settingsIconBgArchive: #9da2b0 | historyPeerArchiveUserpicBg; // archive main menu icon background
-settingsIconFg: #ffffff | historyPeerUserpicFg; // settings icon shape
+settingsIconBg1: #f06964; // red settings icon background
+settingsIconBg2: #6dc534; // green settings icon background
+settingsIconBg3: #ed9f20; // light-orange settings icon background
+settingsIconBg4: #56b3f5; // light-blue settings icon background
+settingsIconBg5: #7595ff; // dark-blue settings icon background
+settingsIconBg6: #b580e2; // purple settings icon background
+settingsIconBg8: #f2925b; // dark-orange settings icon background
+settingsIconBgArchive: #9da2b0; // archive main menu icon background
+settingsIconFg: #ffffff; // settings icon shape
 
 // Some values are marked as (adjusted), it means they're adjusted by
 // hue and saturation of the average background color if user chooses
