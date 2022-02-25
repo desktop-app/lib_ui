@@ -44,6 +44,18 @@ template <typename T>
 	return ConvertScale(value, Scale());
 }
 
+template <typename T>
+[[nodiscard]] inline T ConvertScaleExact(T value, int scale) {
+	return (value < 0.)
+		? (-ConvertScale(-value, scale))
+		: T(double(value) * scale / 100.);
+}
+
+template <typename T>
+[[nodiscard]] inline T ConvertScaleExact(T value) {
+	return ConvertScaleExact(value, Scale());
+}
+
 [[nodiscard]] inline QSize ConvertScale(QSize size) {
 	return QSize(ConvertScale(size.width()), ConvertScale(size.height()));
 }

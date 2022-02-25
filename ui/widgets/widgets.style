@@ -386,7 +386,7 @@ CrossAnimation {
 	fg: color;
 	size: pixels;
 	skip: pixels;
-	stroke: pixels;
+	stroke: double;
 	minScale: double;
 }
 
@@ -923,7 +923,7 @@ defaultMultiSelectItem: MultiSelectItem {
 	deleteCross: CrossAnimation {
 		size: 32px;
 		skip: 10px;
-		stroke: 2px;
+		stroke: 1.5;
 		minScale: 0.3;
 	}
 	duration: 150;
@@ -959,7 +959,7 @@ defaultMultiSelectSearchCancel: CrossButton {
 	cross: CrossAnimation {
 		size: 36px;
 		skip: 12px;
-		stroke: 2px;
+		stroke: 1.5;
 		minScale: 0.3;
 	}
 	crossFg: boxTitleCloseFg;

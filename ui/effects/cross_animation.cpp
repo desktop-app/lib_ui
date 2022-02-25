@@ -120,14 +120,18 @@ void CrossAnimation::paint(
 		float64 loading) {
 	PainterHighQualityEnabler hq(p);
 
-	auto sqrt2 = sqrt(2.);
-	auto deleteScale = shown + st.minScale * (1. - shown);
-	auto deleteSkip = (deleteScale * st.skip) + (1. - deleteScale) * (st.size / 2);
-	auto deleteLeft = style::rtlpoint(x + deleteSkip, 0, outerWidth).x() + 0.;
-	auto deleteTop = y + deleteSkip + 0.;
-	auto deleteWidth = st.size - 2 * deleteSkip;
-	auto deleteHeight = st.size - 2 * deleteSkip;
-	auto deleteStroke = st.stroke / sqrt2;
+	const auto stroke = style::ConvertScaleExact(st.stroke);
+
+	const auto sqrt2 = sqrt(2.);
+	const auto deleteScale = shown + st.minScale * (1. - shown);
+	const auto deleteSkip = (deleteScale * st.skip)
+		+ (1. - deleteScale) * (st.size / 2);
+	const auto deleteLeft = 0.
+		+ style::rtlpoint(x + deleteSkip, 0, outerWidth).x();
+	const auto deleteTop = y + deleteSkip + 0.;
+	const auto deleteWidth = st.size - 2 * deleteSkip;
+	const auto deleteHeight = st.size - 2 * deleteSkip;
+	const auto deleteStroke = stroke / sqrt2;
 	std::array<QPointF, kPointCount> pathDelete = { {
 		{ deleteLeft, deleteTop + deleteStroke },
 		{ deleteLeft + deleteStroke, deleteTop },
@@ -176,10 +180,10 @@ void CrossAnimation::paint(
 		p.fillPath(path, color);
 	}
 	if (loadingArcLength != 0) {
-		auto roundSkip = (st.size * (1 - sqrt2) + 2 * sqrt2 * deleteSkip + st.stroke) / 2;
+		auto roundSkip = (st.size * (1 - sqrt2) + 2 * sqrt2 * deleteSkip + stroke) / 2;
 		auto roundPart = QRectF(x + roundSkip, y + roundSkip, st.size - 2 * roundSkip, st.size - 2 * roundSkip);
 		if (staticLoading) {
-			anim::DrawStaticLoading(p, roundPart, st.stroke, color);
+			anim::DrawStaticLoading(p, roundPart, stroke, color);
 		} else {
 			auto loadingArcStart = kFullArcLength / 8;
 			if (shown < 1.) {
@@ -192,7 +196,7 @@ void CrossAnimation::paint(
 
 			p.setBrush(Qt::NoBrush);
 			auto pen = color->p;
-			pen.setWidthF(st.stroke);
+			pen.setWidthF(stroke);
 			pen.setCapStyle(Qt::RoundCap);
 			p.setPen(pen);
 			p.drawArc(roundPart, loadingArcStart, loadingArcLength);
