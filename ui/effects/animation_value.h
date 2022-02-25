@@ -357,7 +357,7 @@ void SetSlowMultiplier(int multiplier); // 1 - default, 10 - slow x10.
 void DrawStaticLoading(
 	QPainter &p,
 	QRectF rect,
-	int stroke,
+	float64 stroke,
 	QPen pen,
 	QBrush brush = Qt::NoBrush);
 

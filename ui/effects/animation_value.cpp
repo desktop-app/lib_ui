@@ -90,7 +90,7 @@ void SetSlowMultiplier(int multiplier) {
 void DrawStaticLoading(
 		QPainter &p,
 		QRectF rect,
-		int stroke,
+		float64 stroke,
 		QPen pen,
 		QBrush brush) {
 	PainterHighQualityEnabler hq(p);
