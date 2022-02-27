@@ -29,7 +29,9 @@ struct TextParseOptions {
 	int32 maxh;
 	Qt::LayoutDirection dir;
 };
-extern const TextParseOptions _defaultOptions, _textPlainOptions;
+extern const TextParseOptions kDefaultTextOptions;
+extern const TextParseOptions kMarkupTextOptions;
+extern const TextParseOptions kPlainTextOptions;
 
 enum class TextSelectType {
 	Letters    = 0x01,
@@ -102,7 +104,7 @@ public:
 	String(
 		const style::TextStyle &st,
 		const QString &text,
-		const TextParseOptions &options = _defaultOptions,
+		const TextParseOptions &options = kDefaultTextOptions,
 		int32 minResizeWidth = QFIXED_MAX);
 	String(const String &other) = default;
 	String(String &&other) = default;
@@ -113,8 +115,8 @@ public:
 	int countWidth(int width, bool breakEverywhere = false) const;
 	int countHeight(int width, bool breakEverywhere = false) const;
 	void countLineWidths(int width, QVector<int> *lineWidths, bool breakEverywhere = false) const;
-	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = _defaultOptions);
-	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = _defaultOptions, const std::any &context = {});
+	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = kDefaultTextOptions);
+	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = kMarkupTextOptions, const std::any &context = {});
 
 	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
 	bool hasLinks() const;
