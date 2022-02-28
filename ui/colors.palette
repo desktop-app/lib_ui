@@ -53,9 +53,9 @@ attentionButtonBgRipple: #f4c3c2; // default attention button ripple effect
 menuBg: windowBg; // default popup menu background
 menuBgOver: windowBgOver; // default popup menu item background with mouse over
 menuBgRipple: windowBgRipple; // default popup menu item ripple effect
-menuIconFg: #a8a8a8; // default popup menu item icon (like main menu)
-menuIconFgOver: #999999; // default popup menu item icon with mouse over
-menuSubmenuArrowFg: #666B72; // default popup menu submenu arrow icon (like in message field context menu in case of RTL system language)
+menuIconFg: #999999; // default popup menu item icon (like main menu)
+menuIconFgOver: #8a8a8a; // default popup menu item icon with mouse over
+menuSubmenuArrowFg: #373737; // default popup menu submenu arrow icon (like in message field context menu in case of RTL system language)
 menuFgDisabled: #cccccc; // default popup menu item disabled text (like unavailable items in message field context menu)
 menuSeparatorFg: #f1f1f1; // default popup menu separator (like in message field context menu)
 
@@ -243,7 +243,7 @@ emojiPanBg: windowBg; // emoji panel background
 emojiPanCategories: #f7f7f7 | windowBg; // emoji panel categories background
 emojiPanHeaderFg: windowSubTextFg; // emoji panel section header text
 emojiPanHeaderBg: #fffffff2 | emojiPanBg; // emoji panel section header background
-emojiIconFg: checkboxFg; // emoji category icon
+emojiIconFg: #999999; // emoji category icon
 emojiIconFgActive: windowBgActive; // active emoji category icon
 stickerPanDeleteBg: #000000ff; // delete X button background for custom sent stickers in stickers panel (legacy)
 stickerPanDeleteFg: windowFgActive; // delete X button icon for custom sent stickers in stickers panel (legacy)
