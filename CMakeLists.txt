@@ -149,6 +149,8 @@ PRIVATE
     ui/text/text_isolated_emoji.h
     ui/text/text_utilities.cpp
     ui/text/text_utilities.h
+    ui/text/text_variant.cpp
+    ui/text/text_variant.h
     ui/toast/toast.cpp
     ui/toast/toast.h
     ui/toast/toast_manager.cpp
