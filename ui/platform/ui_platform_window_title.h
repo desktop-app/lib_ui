@@ -68,7 +68,7 @@ public:
 	void setResizeEnabled(bool enabled);
 	void raise();
 
-	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
+	[[nodiscard]] HitTestResult hitTest(QPoint point, int padding) const;
 
 	void buttonOver(HitTestResult testResult);
 	void buttonDown(HitTestResult testResult);

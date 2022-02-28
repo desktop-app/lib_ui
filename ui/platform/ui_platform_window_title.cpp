@@ -218,15 +218,18 @@ void TitleControls::raise() {
 	_close->raise();
 }
 
-HitTestResult TitleControls::hitTest(QPoint point) const {
-	const auto test = [&](const object_ptr<Button> &button) {
-		return button && button->geometry().contains(point);
+HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
+	const auto parent = _close->parentWidget()->geometry();
+	const auto test = [&](const object_ptr<Button> &button, bool close) {
+		return button && button->geometry().marginsAdded(
+			{ close ? padding : 0, padding, close ? padding : 0, 0 }
+		).contains(point);
 	};
-	if (test(_minimize)) {
+	if (test(_minimize, false)) {
 		return HitTestResult::Minimize;
-	} else if (test(_maximizeRestore)) {
+	} else if (test(_maximizeRestore, false)) {
 		return HitTestResult::MaximizeRestore;
-	} else if (test(_close)) {
+	} else if (test(_close, true)) {
 		return HitTestResult::Close;
 	}
 	return HitTestResult::None;
@@ -502,7 +505,8 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 	) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
 		const auto origin = raw->wrap.pos();
 		const auto relative = request->point - origin;
-		const auto controlsResult = raw->controls.hitTest(relative);
+		const auto padding = window->additionalContentPadding();
+		const auto controlsResult = raw->controls.hitTest(relative, padding);
 		if (controlsResult != HitTestResult::None) {
 			request->result = controlsResult;
 		}

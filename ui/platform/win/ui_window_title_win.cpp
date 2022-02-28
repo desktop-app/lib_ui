@@ -130,7 +130,10 @@ HitTestResult TitleWidget::hitTest(QPoint point) const {
 	const auto origin = _paddingHelper
 		? _paddingHelper->controlsParent.pos()
 		: QPoint();
-	const auto controlsResult = _controls.hitTest(point - origin);
+	const auto padding = _paddingHelper
+		? _paddingHelper->padding.current()
+		: 0;
+	const auto controlsResult = _controls.hitTest(point - origin, padding);
 	return (controlsResult != HitTestResult::None)
 		? controlsResult
 		: HitTestResult::Caption;
