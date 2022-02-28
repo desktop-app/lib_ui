@@ -219,7 +219,6 @@ void TitleControls::raise() {
 }
 
 HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
-	const auto parent = _close->parentWidget()->geometry();
 	const auto test = [&](const object_ptr<Button> &button, bool close) {
 		return button && button->geometry().marginsAdded(
 			{ close ? padding : 0, padding, close ? padding : 0, 0 }
