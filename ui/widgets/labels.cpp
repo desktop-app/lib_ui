@@ -263,8 +263,12 @@ void FlatLabel::setMarkedText(const TextWithEntities &textWithEntities) {
 }
 
 void FlatLabel::setSelectable(bool selectable) {
-	_selectable = selectable;
-	setMouseTracking(_selectable || _text.hasLinks());
+	if (_selectable != selectable) {
+		_selection = { 0, 0 };
+		_savedSelection = { 0, 0 };
+		_selectable = selectable;
+		setMouseTracking(_selectable || _text.hasLinks());
+	}
 }
 
 void FlatLabel::setDoubleClickSelectsParagraph(bool doubleClickSelectsParagraph) {
