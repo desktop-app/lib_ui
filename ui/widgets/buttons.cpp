@@ -703,6 +703,7 @@ SettingsButton::~SettingsButton() = default;
 
 SettingsButton *SettingsButton::toggleOn(rpl::producer<bool> &&toggled) {
 	Expects(_toggle == nullptr);
+
 	_toggle = std::make_unique<Ui::ToggleView>(
 		isOver() ? _st.toggleOver : _st.toggle,
 		false,
@@ -773,18 +774,24 @@ void SettingsButton::paintBg(Painter &p, const QRect &rect, bool over) const {
 }
 
 void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
-	p.setFont(_st.font);
+	auto available = outerw - _padding.left() - _padding.right();
+	if (_toggle) {
+		available -= (width() - toggleRect().x());
+	}
+	if (available <= 0) {
+		return;
+	}
 	p.setPen(_textColorOverride
 		? QPen(*_textColorOverride)
 		: over
 		? _st.textFgOver
 		: _st.textFg);
-	p.drawTextLeft(
+	_text.drawLeftElided(
+		p,
 		_padding.left(),
 		_padding.top(),
-		outerw,
-		_text,
-		_textWidth);
+		available,
+		outerw);
 }
 
 void SettingsButton::paintToggle(Painter &p, int outerw) const {
@@ -804,7 +811,6 @@ QRect SettingsButton::toggleRect() const {
 }
 
 int SettingsButton::resizeGetHeight(int newWidth) {
-	updateVisibleText(newWidth);
 	return _padding.top() + _st.height + _padding.bottom();
 }
 
@@ -821,26 +827,7 @@ void SettingsButton::onStateChanged(
 }
 
 void SettingsButton::setText(QString &&text) {
-	_original = std::move(text);
-	_originalWidth = _st.font->width(_original);
-	updateVisibleText(width());
-}
-
-void SettingsButton::updateVisibleText(int newWidth) {
-	auto availableWidth = newWidth
-		- _padding.left()
-		- _padding.right();
-	if (_toggle) {
-		availableWidth -= (width() - toggleRect().x());
-	}
-	accumulate_max(availableWidth, 0);
-	if (availableWidth < _originalWidth) {
-		_text = _st.font->elided(_original, availableWidth);
-		_textWidth = _st.font->width(_text);
-	} else {
-		_text = _original;
-		_textWidth = _originalWidth;
-	}
+	_text.setText(_st.style, text);
 	update();
 }
 

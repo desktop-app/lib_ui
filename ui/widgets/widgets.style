@@ -520,7 +520,7 @@ SettingsButton {
 	textBg: color;
 	textBgOver: color;
 
-	font: font;
+	style: TextStyle;
 	rightLabel: FlatLabel;
 
 	height: pixels;
@@ -1393,7 +1393,7 @@ defaultSettingsButton: SettingsButton {
 	textBg: windowBg;
 	textBgOver: windowBgOver;
 
-	font: boxTextFont;
+	style: boxTextStyle;
 	rightLabel: defaultSettingsRightLabel;
 
 	height: 20px;

@@ -9,6 +9,7 @@
 #include "ui/abstract_button.h"
 #include "ui/round_rect.h"
 #include "ui/effects/animations.h"
+#include "ui/text/text.h"
 #include "styles/style_widgets.h"
 
 #include <memory>
@@ -285,14 +286,10 @@ protected:
 private:
 	void setText(QString &&text);
 	QRect toggleRect() const;
-	void updateVisibleText(int newWidth);
 
 	const style::SettingsButton &_st;
 	style::margins _padding;
-	QString _original;
-	QString _text;
-	int _originalWidth = 0;
-	int _textWidth = 0;
+	Ui::Text::String _text;
 	std::unique_ptr<Ui::ToggleView> _toggle;
 	std::optional<QColor> _textColorOverride;
 
