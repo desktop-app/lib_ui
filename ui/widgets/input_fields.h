@@ -56,7 +56,6 @@ enum class InputSubmitSettings {
 };
 
 class FlatInput : public RpWidgetBase<QLineEdit> {
-	// The Q_OBJECT meta info is used for qobject_cast!
 	Q_OBJECT
 
 	using Parent = RpWidgetBase<QLineEdit>;
@@ -74,7 +73,6 @@ public:
 	void finishAnimations();
 
 	void setTextMrg(const QMargins &textMrg);
-	QRect getTextRect() const;
 
 	QSize sizeHint() const override;
 	QSize minimumSizeHint() const override;
@@ -557,7 +555,6 @@ private:
 };
 
 class MaskedInputField : public RpWidgetBase<QLineEdit> {
-	// The Q_OBJECT meta info is used for qobject_cast!
 	Q_OBJECT
 
 	using Parent = RpWidgetBase<QLineEdit>;
@@ -571,8 +568,6 @@ public:
 	void showError();
 	void showErrorNoFocus();
 	void hideError();
-
-	QRect getTextRect() const;
 
 	QSize sizeHint() const override;
 	QSize minimumSizeHint() const override;

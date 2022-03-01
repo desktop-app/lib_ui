@@ -617,7 +617,6 @@ private:
 
 };
 
-template <typename InputClass>
 class InputStyle : public QCommonStyle {
 public:
 	InputStyle() {
@@ -626,22 +625,13 @@ public:
 
 	void drawPrimitive(PrimitiveElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = nullptr) const override {
 	}
-	QRect subElementRect(SubElement r, const QStyleOption *opt, const QWidget *widget = nullptr) const override {
-		switch (r) {
-			case SE_LineEditContents:
-				const auto w = widget ? qobject_cast<const InputClass*>(widget) : nullptr;
-				return w ? w->getTextRect() : QCommonStyle::subElementRect(r, opt, widget);
-			break;
-		}
-		return QCommonStyle::subElementRect(r, opt, widget);
-	}
 
-	static InputStyle<InputClass> *instance() {
+	static InputStyle *instance() {
 		if (!_instance) {
 			if (!QGuiApplication::instance()) {
 				return nullptr;
 			}
-			_instance = new InputStyle<InputClass>();
+			_instance = new InputStyle();
 		}
 		return _instance;
 	}
@@ -651,12 +641,11 @@ public:
 	}
 
 private:
-	static InputStyle<InputClass> *_instance;
+	static InputStyle *_instance;
 
 };
 
-template <typename InputClass>
-InputStyle<InputClass> *InputStyle<InputClass>::_instance = nullptr;
+InputStyle *InputStyle::_instance = nullptr;
 
 template <typename Iterator>
 QString AccumulateText(Iterator begin, Iterator end) {
@@ -1000,9 +989,10 @@ FlatInput::FlatInput(
 		Integration::Instance().textActionsUpdated();
 	});
 
-	setStyle(InputStyle<FlatInput>::instance());
+	setStyle(InputStyle::instance());
 	QLineEdit::setTextMargins(0, 0, 0, 0);
-	setContentsMargins(0, 0, 0, 0);
+	setContentsMargins(_textMrg + QMargins(-2, -1, -2, -1));
+	setFrame(false);
 
 	setAttribute(Qt::WA_AcceptTouchEvents);
 	_touchTimer.setSingleShot(true);
@@ -1083,12 +1073,9 @@ void FlatInput::touchEvent(QTouchEvent *e) {
 
 void FlatInput::setTextMrg(const QMargins &textMrg) {
 	_textMrg = textMrg;
+	setContentsMargins(_textMrg + QMargins(-2, -1, -2, -1));
 	refreshPlaceholder(_placeholderFull.current());
 	update();
-}
-
-QRect FlatInput::getTextRect() const {
-	return rect().marginsRemoved(_textMrg + QMargins(-2, -1, -2, -1));
 }
 
 void FlatInput::finishAnimations() {
@@ -3787,9 +3774,10 @@ MaskedInputField::MaskedInputField(
 		Integration::Instance().textActionsUpdated();
 	});
 
-	setStyle(InputStyle<MaskedInputField>::instance());
+	setStyle(InputStyle::instance());
 	QLineEdit::setTextMargins(0, 0, 0, 0);
-	setContentsMargins(0, 0, 0, 0);
+	setContentsMargins(_textMargins + QMargins(-2, -1, -2, -1));
+	setFrame(false);
 
 	setAttribute(Qt::WA_AcceptTouchEvents);
 	_touchTimer.setSingleShot(true);
@@ -3837,6 +3825,7 @@ int MaskedInputField::borderAnimationStart() const {
 
 void MaskedInputField::setTextMargins(const QMargins &mrg) {
 	_textMargins = mrg;
+	setContentsMargins(_textMargins + QMargins(-2, -1, -2, -1));
 	refreshPlaceholder(_placeholderFull.current());
 }
 
@@ -3899,10 +3888,6 @@ void MaskedInputField::touchEvent(QTouchEvent *e) {
 		_touchTimer.stop();
 	} break;
 	}
-}
-
-QRect MaskedInputField::getTextRect() const {
-	return rect().marginsRemoved(_textMargins + QMargins(-2, -1, -2, -1));
 }
 
 void MaskedInputField::paintEvent(QPaintEvent *e) {
