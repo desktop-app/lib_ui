@@ -191,20 +191,26 @@ void LabelSimple::paintEvent(QPaintEvent *e) {
 	p.drawTextLeft(0, 0, width(), _text, _textWidth);
 }
 
-FlatLabel::FlatLabel(QWidget *parent, const style::FlatLabel &st)
+FlatLabel::FlatLabel(
+	QWidget *parent,
+	const style::FlatLabel &st,
+	const style::PopupMenu &stMenu)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : QFIXED_MAX)
-, _st(st) {
+, _st(st)
+, _stMenu(stMenu) {
 	init();
 }
 
 FlatLabel::FlatLabel(
 	QWidget *parent,
 	const QString &text,
-	const style::FlatLabel &st)
+	const style::FlatLabel &st,
+	const style::PopupMenu &stMenu)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : QFIXED_MAX)
-, _st(st) {
+, _st(st)
+, _stMenu(stMenu) {
 	setText(text);
 	init();
 }
@@ -212,10 +218,12 @@ FlatLabel::FlatLabel(
 FlatLabel::FlatLabel(
 	QWidget *parent,
 	rpl::producer<QString> &&text,
-	const style::FlatLabel &st)
+	const style::FlatLabel &st,
+	const style::PopupMenu &stMenu)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : QFIXED_MAX)
-, _st(st) {
+, _st(st)
+, _stMenu(stMenu) {
 	textUpdated();
 	std::move(
 		text
@@ -228,10 +236,12 @@ FlatLabel::FlatLabel(
 FlatLabel::FlatLabel(
 	QWidget *parent,
 	rpl::producer<TextWithEntities> &&text,
-	const style::FlatLabel &st)
+	const style::FlatLabel &st,
+	const style::PopupMenu &stMenu)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : QFIXED_MAX)
 , _st(st)
+, _stMenu(stMenu)
 , _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
 	std::move(
@@ -629,7 +639,7 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	const auto fullSelection = _selectable
 		&& _text.isFullSelection(_selection);
 
-	_contextMenu = base::make_unique_q<PopupMenu>(this);
+	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
 
 	if (fullSelection && !_contextCopyText.isEmpty()) {
 		_contextMenu->addAction(

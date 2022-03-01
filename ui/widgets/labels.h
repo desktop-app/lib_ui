@@ -96,21 +96,27 @@ private:
 class FlatLabel : public RpWidget, public ClickHandlerHost {
 
 public:
-	FlatLabel(QWidget *parent, const style::FlatLabel &st = st::defaultFlatLabel);
+	FlatLabel(
+		QWidget *parent,
+		const style::FlatLabel &st = st::defaultFlatLabel,
+		const style::PopupMenu &stMenu = st::defaultPopupMenu);
 
 	FlatLabel(
 		QWidget *parent,
 		const QString &text,
-		const style::FlatLabel &st = st::defaultFlatLabel);
+		const style::FlatLabel &st = st::defaultFlatLabel,
+		const style::PopupMenu &stMenu = st::defaultPopupMenu);
 
 	FlatLabel(
 		QWidget *parent,
 		rpl::producer<QString> &&text,
-		const style::FlatLabel &st = st::defaultFlatLabel);
+		const style::FlatLabel &st = st::defaultFlatLabel,
+		const style::PopupMenu &stMenu = st::defaultPopupMenu);
 	FlatLabel(
 		QWidget *parent,
 		rpl::producer<TextWithEntities> &&text,
-		const style::FlatLabel &st = st::defaultFlatLabel);
+		const style::FlatLabel &st = st::defaultFlatLabel,
+		const style::PopupMenu &stMenu = st::defaultPopupMenu);
 
 	void setOpacity(float64 o);
 	void setTextColorOverride(std::optional<QColor> color);
@@ -194,6 +200,7 @@ private:
 
 	Text::String _text;
 	const style::FlatLabel &_st;
+	const style::PopupMenu &_stMenu;
 	std::optional<QColor> _textColorOverride;
 	float64 _opacity = 1.;
 
