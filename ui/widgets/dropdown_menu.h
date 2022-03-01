@@ -13,8 +13,6 @@
 namespace Ui {
 
 class DropdownMenu : public InnerDropdown {
-	Q_OBJECT
-
 public:
 	DropdownMenu(QWidget *parent, const style::DropdownMenu &st = st::defaultDropdownMenu);
 
@@ -42,11 +40,6 @@ protected:
 	void keyPressEvent(QKeyEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
-
-private Q_SLOTS:
-	void onHidden() {
-		hideFinish();
-	}
 
 private:
 	// Not ready with submenus yet.
