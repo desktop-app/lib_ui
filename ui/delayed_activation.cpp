@@ -7,19 +7,35 @@
 #include "ui/delayed_activation.h"
 
 #include "ui/ui_utility.h"
+#include "base/call_delayed.h"
+#include "base/invoke_queued.h"
 
 #include <QtCore/QPointer>
+#include <QtCore/QCoreApplication>
 
 namespace Ui {
 namespace {
 
-auto Paused = false;
+constexpr auto kPreventTimeout = crl::time(100);
+
+bool Paused/* = false*/;
+bool Attempted/* = false*/;
 auto Window = QPointer<QWidget>();
+
+bool Unpause(bool force = false) {
+	if (force || Attempted) {
+		Attempted = false;
+		Paused = false;
+		return true;
+	}
+	return false;
+}
 
 } // namespace
 
 void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	if (Paused) {
+		Attempted = true;
 		return;
 	} else if (std::exchange(Window, widget.get())) {
 		return;
@@ -40,7 +56,22 @@ void PreventDelayedActivation() {
 	Window = nullptr;
 	Paused = true;
 	PostponeCall([] {
-		Paused = false;
+		if (Unpause()) {
+			return;
+		}
+		InvokeQueued(qApp, [] {
+			if (Unpause()) {
+				return;
+			}
+			crl::on_main([] {
+				if (Unpause()) {
+					return;
+				}
+				base::call_delayed(kPreventTimeout, [] {
+					Unpause(true);
+				});
+			});
+		});
 	});
 }
 
