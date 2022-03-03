@@ -86,6 +86,7 @@ PRIVATE
     ui/layers/layer_manager.h
     ui/layers/layer_widget.cpp
     ui/layers/layer_widget.h
+    ui/layers/show.h
     ui/paint/arcs.cpp
     ui/paint/arcs.h
     ui/paint/blob.cpp
