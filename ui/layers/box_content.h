@@ -11,6 +11,7 @@
 #include "ui/wrap/padding_wrap.h"
 #include "ui/widgets/labels.h"
 #include "ui/layers/layer_widget.h"
+#include "ui/layers/show.h"
 #include "ui/effects/animation_value.h"
 #include "ui/text/text_entity.h"
 #include "ui/rp_widget.h"
@@ -361,6 +362,22 @@ private:
 
 	QPointer<BoxContent> _value;
 
+};
+
+class BoxShow : public Show {
+public:
+	explicit BoxShow(not_null<Ui::BoxContent*> box);
+	~BoxShow();
+	void showBox(
+		object_ptr<BoxContent> content,
+		LayerOptions options = LayerOption::KeepOther) const override;
+	void hideLayer() const override;
+	[[nodiscard]] not_null<QWidget*> toastParent() const override;
+	[[nodiscard]] bool valid() const override;
+	operator bool() const override;
+private:
+	mutable QPointer<QWidget> _toastParent;
+	const QPointer<Ui::BoxContent> _weak;
 };
 
 } // namespace Ui

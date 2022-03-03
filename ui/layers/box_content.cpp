@@ -271,4 +271,41 @@ void BoxContent::paintEvent(QPaintEvent *e) {
 	}
 }
 
+BoxShow::BoxShow(not_null<Ui::BoxContent*> box)
+: Show()
+, _weak(Ui::MakeWeak(box.get())) {
+}
+
+BoxShow::~BoxShow() = default;
+
+void BoxShow::showBox(
+		object_ptr<BoxContent> content,
+		LayerOptions options) const {
+	if (_weak && _weak->isBoxShown()) {
+		_weak->getDelegate()->show(std::move(content), options);
+	}
+}
+
+void BoxShow::hideLayer() const {
+	if (_weak && _weak->isBoxShown()) {
+		_weak->getDelegate()->hideLayer();
+	}
+}
+
+not_null<QWidget*> BoxShow::toastParent() const {
+	if (!_toastParent) {
+		Assert(_weak != nullptr);
+		_toastParent = Ui::MakeWeak(_weak->window()); // =(
+	}
+	return _toastParent.data();
+}
+
+bool BoxShow::valid() const {
+	return _weak;
+}
+
+BoxShow::operator bool() const {
+	return valid();
+}
+
 } // namespace Ui
