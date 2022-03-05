@@ -337,14 +337,21 @@ inline void Simple::start(
 		that = _data.get(),
 		callback = Prepare(std::forward<Callback>(callback))
 	](crl::time now) {
+		Assert(!std::isnan(double(now - that->animation.started())));
 		const auto time = anim::Disabled()
 			? that->duration
 			: (now - that->animation.started());
+		Assert(!std::isnan(time));
+		Assert(!std::isnan(that->delta));
+		Assert(!std::isnan(that->duration));
 		const auto finished = (time >= that->duration);
 		const auto progress = finished
 			? that->delta
 			: that->transition(that->delta, time / that->duration);
+		Assert(!std::isnan(that->from));
+		Assert(!std::isnan(progress));
 		that->value = that->from + progress;
+		Assert(!std::isnan(that->value));
 
 		if (finished) {
 			that->animation.stop();
@@ -401,7 +408,12 @@ inline bool Simple::animating() const {
 }
 
 TG_FORCE_INLINE float64 Simple::value(float64 final) const {
-	return animating() ? _data->value : final;
+	if (animating()) {
+		Assert(!std::isnan(_data->value));
+		return _data->value;
+	}
+	Assert(!std::isnan(final));
+	return final;
 }
 
 inline void Simple::startPrepared(
