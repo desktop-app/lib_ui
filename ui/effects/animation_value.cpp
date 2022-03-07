@@ -19,7 +19,12 @@ int SlowMultiplierMinusOne/* = 0*/;
 } // namespace
 
 transition linear = [](const float64 &delta, const float64 &dt) {
-	return delta * dt;
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto result = delta * dt;
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition sineInOut = [](const float64 &delta, const float64 &dt) {

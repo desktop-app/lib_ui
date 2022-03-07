@@ -345,9 +345,12 @@ inline void Simple::start(
 		Assert(!std::isnan(that->delta));
 		Assert(!std::isnan(that->duration));
 		const auto finished = (time >= that->duration);
+		Assert(finished || that->duration > 0);
+		const auto progressRatio = finished ? 1. : time / that->duration;
+		Assert(!std::isnan(progressRatio));
 		const auto progress = finished
 			? that->delta
-			: that->transition(that->delta, time / that->duration);
+			: that->transition(that->delta, progressRatio);
 		Assert(!std::isnan(that->from));
 		Assert(!std::isnan(progress));
 		that->value = that->from + progress;
