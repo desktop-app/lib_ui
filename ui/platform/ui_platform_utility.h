@@ -29,6 +29,8 @@ void BringToBack(not_null<QWidget*> widget);
 void IgnoreAllActivation(not_null<QWidget*> widget);
 void ClearTransientParent(not_null<QWidget*> widget);
 
+void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio);
+
 [[nodiscard]] std::optional<bool> IsOverlapped(
     not_null<QWidget*> widget,
     const QRect &rect);

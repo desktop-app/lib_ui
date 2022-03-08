@@ -38,6 +38,9 @@ inline void BringToBack(not_null<QWidget*> widget) {
 inline void ClearTransientParent(not_null<QWidget*> widget) {
 }
 
+inline void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio) {
+}
+
 inline constexpr bool UseMainQueueGeneric() {
 	return true;
 }

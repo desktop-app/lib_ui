@@ -91,6 +91,15 @@ void DrainMainQueue() {
 void IgnoreAllActivation(not_null<QWidget*> widget) {
 }
 
+void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio) {
+	const auto winId = widget->window()->winId();
+	if (const auto view = reinterpret_cast<NSView*>(winId)) {
+		if (const auto window = [view window]) {
+			window.styleMask &= ~NSWindowStyleMaskResizable;
+		}
+	}
+}
+
 std::optional<bool> IsOverlapped(
 		not_null<QWidget*> widget,
 		const QRect &rect) {
