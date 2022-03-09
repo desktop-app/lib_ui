@@ -278,4 +278,5 @@ PUBLIC
     desktop-app::lib_base
 PRIVATE
     desktop-app::external_zlib
+    desktop-app::external_jpeg
 )

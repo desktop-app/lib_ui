@@ -22,6 +22,21 @@
 #include <QtGui/QImageReader>
 #include <QtSvg/QSvgRenderer>
 
+#include <jpeglib.h>
+
+struct my_error_mgr : public jpeg_error_mgr {
+	jmp_buf setjmp_buffer;
+};
+
+extern "C" {
+
+static void my_error_exit(j_common_ptr cinfo) {
+	my_error_mgr* myerr = (my_error_mgr*)cinfo->err;
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
+} // extern "C"
+
 namespace Images {
 namespace {
 
@@ -420,12 +435,12 @@ std::array<QImage, 4> PrepareCorners(
 		return {};
 	}
 	auto result = ReadResult();
+	result.format = reader.format().toLower();
+	result.animated = reader.supportsAnimation()
+		&& (reader.imageCount() > 1);
 	if (!reader.read(&result.image) || result.image.isNull()) {
 		return {};
 	}
-	result.animated = reader.supportsAnimation()
-		&& (reader.imageCount() > 1);
-	result.format = reader.format().toLower();
 	return result;
 }
 
@@ -459,9 +474,7 @@ ReadResult Read(ReadArgs &&args) {
 			Qt::KeepAspectRatio,
 			Qt::SmoothTransformation);
 	}
-	if (args.forceOpaque
-		&& result.format != qstr("jpg")
-		&& result.format != qstr("jpeg")) {
+	if (args.forceOpaque && result.format != qstr("jpeg")) {
 		result.image = Opaque(std::move(result.image));
 	}
 	return result;
@@ -1219,6 +1232,31 @@ QImage Prepare(QImage image, int w, int h, const PrepareArgs &args) {
 	}
 	image.setDevicePixelRatio(style::DevicePixelRatio());
 	return image;
+}
+
+bool IsProgressiveJpeg(const QByteArray &bytes) {
+	struct jpeg_decompress_struct info;
+	struct my_error_mgr jerr;
+
+	info.err = jpeg_std_error(&jerr);
+	jerr.error_exit = my_error_exit;
+	if (setjmp(jerr.setjmp_buffer)) {
+		return false;
+	}
+
+	jpeg_create_decompress(&info);
+	jpeg_mem_src(
+		&info,
+		reinterpret_cast<const unsigned char*>(bytes.data()),
+		bytes.size());
+	if (jpeg_read_header(&info, TRUE) != 1) {
+		return false;
+	}
+
+	const auto result = (info.progressive_mode > 0);
+	jpeg_destroy_decompress(&info);
+
+	return result;
 }
 
 } // namespace Images

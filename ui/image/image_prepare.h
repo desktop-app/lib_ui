@@ -153,4 +153,6 @@ struct PrepareArgs {
 	return Prepare(std::move(image), size.width(), size.height(), args);
 }
 
+[[nodiscard]] bool IsProgressiveJpeg(const QByteArray &bytes);
+
 } // namespace Images
