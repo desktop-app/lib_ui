@@ -23,6 +23,7 @@
 #include <QtSvg/QSvgRenderer>
 
 #include <jpeglib.h>
+#include <setjmp.h>
 
 struct my_error_mgr : public jpeg_error_mgr {
 	jmp_buf setjmp_buffer;
