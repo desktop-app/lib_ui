@@ -17,6 +17,7 @@ class DraggingScrollManager final {
 public:
 	DraggingScrollManager();
 
+	void checkDeltaScroll(int delta);
 	void checkDeltaScroll(const QPoint &point, int top, int bottom);
 	void cancel();
 

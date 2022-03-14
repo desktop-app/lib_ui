@@ -22,21 +22,25 @@ void DraggingScrollManager::scrollByTimer() {
 	_scrolls.fire_copy(d);
 }
 
-void DraggingScrollManager::checkDeltaScroll(
-		const QPoint &point,
-		int top,
-		int bottom) {
-	const auto diff = point.y() - top;
-	_delta = (diff < 0)
-		? diff
-		: (point.y() >= bottom)
-		? (point.y() - bottom + 1)
-		: 0;
+void DraggingScrollManager::checkDeltaScroll(int delta) {
+	_delta = delta;
 	if (_delta) {
 		_timer.callEach(15);
 	} else {
 		_timer.cancel();
 	}
+}
+
+void DraggingScrollManager::checkDeltaScroll(
+		const QPoint &point,
+		int top,
+		int bottom) {
+	const auto diff = point.y() - top;
+	checkDeltaScroll((diff < 0)
+		? diff
+		: (point.y() >= bottom)
+		? (point.y() - bottom + 1)
+		: 0);
 }
 
 void DraggingScrollManager::cancel() {
