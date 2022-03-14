@@ -219,6 +219,8 @@ PRIVATE
     ui/click_handler.h
     ui/delayed_activation.cpp
     ui/delayed_activation.h
+    ui/dragging_scroll_manager.cpp
+    ui/dragging_scroll_manager.h
     ui/emoji_config.cpp
     ui/emoji_config.h
     ui/focus_persister.h
