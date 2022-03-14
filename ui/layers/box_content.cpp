@@ -98,6 +98,12 @@ void BoxContent::finishScrollCreate() {
 		updateInnerVisibleTopBottom();
 		updateShadowsVisibility();
 	}, lifetime());
+	_draggingScroll.scrolls(
+	) | rpl::start_with_next([=](int delta) {
+		if (_scroll) {
+			_scroll->scrollToY(_scroll->scrollTop() + delta);
+		}
+	}, lifetime());
 }
 
 void BoxContent::scrollToWidget(not_null<QWidget*> widget) {
@@ -117,24 +123,7 @@ void BoxContent::scrollToY(int top, int bottom) {
 }
 
 void BoxContent::scrollByDraggingDelta(int delta) {
-	_draggingScrollDelta = _scroll ? delta : 0;
-	if (_draggingScrollDelta) {
-		if (!_draggingScrollTimer) {
-			_draggingScrollTimer = std::make_unique<base::Timer>([=] {
-				draggingScrollTimerCallback();
-			});
-		}
-		_draggingScrollTimer->callEach(15);
-	} else {
-		_draggingScrollTimer = nullptr;
-	}
-}
-
-void BoxContent::draggingScrollTimerCallback() {
-	const auto delta = (_draggingScrollDelta > 0)
-		? qMin(_draggingScrollDelta * 3 / 20 + 1, int32(kMaxScrollSpeed))
-		: qMax(_draggingScrollDelta * 3 / 20 - 1, -int32(kMaxScrollSpeed));
-	_scroll->scrollToY(_scroll->scrollTop() + delta);
+	_draggingScroll.checkDeltaScroll(_scroll ? delta : 0);
 }
 
 void BoxContent::updateInnerVisibleTopBottom() {

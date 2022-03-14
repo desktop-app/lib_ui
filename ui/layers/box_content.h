@@ -8,6 +8,7 @@
 
 #include "base/unique_qptr.h"
 #include "base/flags.h"
+#include "ui/dragging_scroll_manager.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/widgets/labels.h"
 #include "ui/layers/layer_widget.h"
@@ -287,8 +288,6 @@ private:
 	void updateShadowsVisibility();
 	object_ptr<TWidget> doTakeInnerWidget();
 
-	void draggingScrollTimerCallback();
-
 	BoxContentDelegate *_delegate = nullptr;
 
 	bool _preparing = false;
@@ -300,8 +299,7 @@ private:
 	object_ptr<FadeShadow> _topShadow = { nullptr };
 	object_ptr<FadeShadow> _bottomShadow = { nullptr };
 
-	std::unique_ptr<base::Timer> _draggingScrollTimer;
-	int _draggingScrollDelta = 0;
+	Ui::DraggingScrollManager _draggingScroll;
 
 	rpl::event_stream<> _boxClosingStream;
 
