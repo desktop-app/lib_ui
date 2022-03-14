@@ -8,9 +8,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/dragging_scroll_manager.h"
 
 #include "base/timer.h"
-#include "ui/widgets/scroll_area.h" // kMaxScrollSpeed.
 
 namespace Ui {
+namespace {
+
+// 37px per 15ms while select-by-drag.
+inline constexpr auto kMaxScrollSpeed = 37;
+
+} // namespace
 
 DraggingScrollManager::DraggingScrollManager() = default;
 
