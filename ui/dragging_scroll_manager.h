@@ -7,11 +7,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "base/timer.h"
+namespace base {
+class Timer;
+} // namespace base
 
 namespace Ui {
-
-class ScrollArea;
 
 class DraggingScrollManager final {
 public:
@@ -21,12 +21,12 @@ public:
 	void checkDeltaScroll(const QPoint &point, int top, int bottom);
 	void cancel();
 
-	rpl::producer<int> scrolls();
+	[[nodiscard]] rpl::producer<int> scrolls() const;
 
 private:
 	void scrollByTimer();
 
-	base::Timer _timer;
+	std::unique_ptr<base::Timer> _timer;
 	int _delta = 0;
 	rpl::event_stream<int> _scrolls;
 

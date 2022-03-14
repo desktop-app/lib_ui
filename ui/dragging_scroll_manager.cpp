@@ -7,13 +7,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/dragging_scroll_manager.h"
 
-#include "ui/widgets/scroll_area.h"
+#include "base/timer.h"
+#include "ui/widgets/scroll_area.h" // kMaxScrollSpeed.
 
 namespace Ui {
 
-DraggingScrollManager::DraggingScrollManager()
-: _timer([=] { scrollByTimer(); }) {
-}
+DraggingScrollManager::DraggingScrollManager() = default;
 
 void DraggingScrollManager::scrollByTimer() {
 	const auto d = (_delta > 0)
@@ -25,9 +24,12 @@ void DraggingScrollManager::scrollByTimer() {
 void DraggingScrollManager::checkDeltaScroll(int delta) {
 	_delta = delta;
 	if (_delta) {
-		_timer.callEach(15);
+		if (!_timer) {
+			_timer = std::make_unique<base::Timer>([=] { scrollByTimer(); });
+		}
+		_timer->callEach(15);
 	} else {
-		_timer.cancel();
+		cancel();
 	}
 }
 
@@ -44,10 +46,13 @@ void DraggingScrollManager::checkDeltaScroll(
 }
 
 void DraggingScrollManager::cancel() {
-	_timer.cancel();
+	if (_timer) {
+		_timer->cancel();
+		_timer = nullptr;
+	}
 }
 
-rpl::producer<int> DraggingScrollManager::scrolls() {
+rpl::producer<int> DraggingScrollManager::scrolls() const {
 	return _scrolls.events();
 }
 
