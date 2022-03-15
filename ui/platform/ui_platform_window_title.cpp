@@ -481,7 +481,8 @@ SeparateTitleControls::SeparateTitleControls(
 std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 		not_null<RpWindow*> window,
 		const style::WindowTitle &st,
-		Fn<void(bool maximized)> maximize) {
+		Fn<void(bool maximized)> maximize,
+		rpl::producer<int> controlsTop) {
 	auto result = std::make_unique<SeparateTitleControls>(
 		window->body(),
 		st,
@@ -491,11 +492,12 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 	auto &lifetime = raw->wrap.lifetime();
 	rpl::combine(
 		window->body()->widthValue(),
-		window->additionalContentPaddingValue()
-	) | rpl::start_with_next([=](int width, int padding) {
+		window->additionalContentPaddingValue(),
+		controlsTop ? std::move(controlsTop) : rpl::single(0)
+	) | rpl::start_with_next([=](int width, int padding, int top) {
 		raw->wrap.setGeometry(
 			padding,
-			0,
+			top,
 			width - 2 * padding,
 			raw->controls.geometry().height());
 	}, lifetime);

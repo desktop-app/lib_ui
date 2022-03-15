@@ -150,7 +150,8 @@ struct SeparateTitleControls {
 [[nodiscard]] auto SetupSeparateTitleControls(
 	not_null<RpWindow*> window,
 	const style::WindowTitle &st,
-	Fn<void(bool maximized)> maximize = nullptr)
+	Fn<void(bool maximized)> maximize = nullptr,
+	rpl::producer<int> controlsTop = nullptr)
 -> std::unique_ptr<SeparateTitleControls>;
 
 } // namespace Platform
