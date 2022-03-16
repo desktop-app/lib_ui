@@ -21,6 +21,11 @@ class ScrollArea;
 
 class PopupMenu : public RpWidget {
 public:
+	enum class VerticalOrigin {
+		Top,
+		Bottom,
+	};
+
 	PopupMenu(QWidget *parent, const style::PopupMenu &st = st::defaultPopupMenu);
 	PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st = st::defaultPopupMenu);
 
@@ -53,6 +58,7 @@ public:
 	void popup(const QPoint &p);
 	void hideMenu(bool fast = false);
 	void setForcedOrigin(PanelAnimation::Origin origin);
+	void setForcedVerticalOrigin(VerticalOrigin origin);
 
 	void setDestroyedCallback(Fn<void()> callback) {
 		_destroyedCallback = std::move(callback);
@@ -143,6 +149,7 @@ private:
 
 	QPointer<PopupMenu> _activeSubmenu;
 
+	std::optional<VerticalOrigin> _forcedVerticalOrigin;
 	PanelAnimation::Origin _origin = PanelAnimation::Origin::TopLeft;
 	std::optional<PanelAnimation::Origin> _forcedOrigin;
 	std::unique_ptr<PanelAnimation> _showAnimation;

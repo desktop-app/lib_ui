@@ -601,6 +601,10 @@ void PopupMenu::setForcedOrigin(PanelAnimation::Origin origin) {
 	_forcedOrigin = origin;
 }
 
+void PopupMenu::setForcedVerticalOrigin(VerticalOrigin origin) {
+	_forcedVerticalOrigin = origin;
+}
+
 void PopupMenu::showAnimated(PanelAnimation::Origin origin) {
 	setOrigin(origin);
 	showStarted();
@@ -760,15 +764,19 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 	const auto forceLeft = _forcedOrigin
 		&& (*_forcedOrigin == Origin::TopLeft
 			|| *_forcedOrigin == Origin::BottomLeft);
-	const auto forceTop = _forcedOrigin
-		&& (*_forcedOrigin == Origin::TopLeft
-			|| *_forcedOrigin == Origin::TopRight);
+	const auto forceTop = (_forcedVerticalOrigin
+			&& (*_forcedVerticalOrigin == VerticalOrigin::Top))
+		|| (_forcedOrigin
+			&& (*_forcedOrigin == Origin::TopLeft
+				|| *_forcedOrigin == Origin::TopRight));
 	const auto forceRight = _forcedOrigin
 		&& (*_forcedOrigin == Origin::TopRight
 			|| *_forcedOrigin == Origin::BottomRight);
-	const auto forceBottom = _forcedOrigin
-		&& (*_forcedOrigin == Origin::BottomLeft
-			|| *_forcedOrigin == Origin::BottomRight);
+	const auto forceBottom = (_forcedVerticalOrigin
+			&& (*_forcedVerticalOrigin == VerticalOrigin::Bottom))
+		|| (_forcedOrigin
+			&& (*_forcedOrigin == Origin::BottomLeft
+				|| *_forcedOrigin == Origin::BottomRight));
 	auto w = p - QPoint(0, _padding.top());
 	auto r = screen->availableGeometry();
 	_useTransparency = Platform::TranslucentWindowsSupported(p);
