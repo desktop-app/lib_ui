@@ -744,8 +744,9 @@ void PopupMenu::popup(const QPoint &p) {
 }
 
 void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source) {
-	const auto screen = QGuiApplication::screenAt(p);
-	if (!screen
+	const auto usingScreenGeometry = !::Platform::IsWayland();
+	const auto screen = usingScreenGeometry ? QGuiApplication::screenAt(p) : nullptr;
+	if ((usingScreenGeometry && !screen)
 		|| (!parent && ::Platform::IsMac() && !Platform::IsApplicationActive())) {
 		_hiding = false;
 		_a_opacity.stop();
@@ -778,14 +779,14 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 			&& (*_forcedOrigin == Origin::BottomLeft
 				|| *_forcedOrigin == Origin::BottomRight));
 	auto w = p - QPoint(0, _padding.top());
-	auto r = screen->availableGeometry();
+	auto r = screen ? screen->availableGeometry() : QRect();
 	_useTransparency = Platform::TranslucentWindowsSupported(p);
 	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
 	handleCompositingUpdate();
 	if (style::RightToLeft()) {
-		const auto badLeft = (w.x() - width() < r.x() - _padding.left());
+		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _padding.left();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && w.x() + _parent->width() - _padding.left() - _padding.right() + width() - _padding.right() <= r.x() + r.width()) {
+			if (_parent && (r.isNull() || w.x() + _parent->width() - _padding.left() - _padding.right() + width() - _padding.right() <= r.x() + r.width())) {
 				w.setX(w.x() + _parent->width() - _padding.left() - _padding.right());
 			} else {
 				w.setX(r.x() - _padding.left());
@@ -794,9 +795,9 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 			w.setX(w.x() - width());
 		}
 	} else {
-		const auto badLeft = (w.x() + width() - _padding.right() > r.x() + r.width());
+		const auto badLeft = !r.isNull() && w.x() + width() - _padding.right() > r.x() + r.width();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && w.x() - _parent->width() + _padding.left() + _padding.right() - width() + _padding.right() >= r.x() - _padding.left()) {
+			if (_parent && (r.isNull() || w.x() - _parent->width() + _padding.left() + _padding.right() - width() + _padding.right() >= r.x() - _padding.left())) {
 				w.setX(w.x() + _padding.left() + _padding.right() - _parent->width() - width() + _padding.left() + _padding.right());
 			} else {
 				w.setX(p.x() - width() + _padding.right());
@@ -804,7 +805,7 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 			origin = PanelAnimation::Origin::TopRight;
 		}
 	}
-	const auto badTop = (w.y() + height() - _padding.bottom() > r.y() + r.height());
+	const auto badTop = !r.isNull() && w.y() + height() - _padding.bottom() > r.y() + r.height();
 	if (forceBottom || (badTop && !forceTop)) {
 		if (_parent) {
 			w.setY(r.y() + r.height() - height() + _padding.bottom());
@@ -813,10 +814,10 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 			origin = (origin == PanelAnimation::Origin::TopRight) ? PanelAnimation::Origin::BottomRight : PanelAnimation::Origin::BottomLeft;
 		}
 	}
-	if (w.x() < r.x()) {
+	if (!r.isNull() && w.x() < r.x()) {
 		w.setX(r.x());
 	}
-	if (w.y() < r.y()) {
+	if (!r.isNull() && w.y() < r.y()) {
 		w.setY(r.y());
 	}
 	move(w);
