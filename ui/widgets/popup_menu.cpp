@@ -760,6 +760,12 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 	}
 	_parent = parent;
 
+	if (_parent) {
+		setScreen(_parent->screen());
+	} else if (screen) {
+		setScreen(screen);
+	}
+
 	using Origin = PanelAnimation::Origin;
 	auto origin = Origin::TopLeft;
 	const auto forceLeft = _forcedOrigin
