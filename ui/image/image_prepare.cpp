@@ -1130,7 +1130,6 @@ QImage Colored(QImage &&image, QColor add) {
 		const auto cb = int(add.blueF() * 0xFF);
 		const auto w = image.width();
 		const auto h = image.height();
-		const auto size = w * h * 4;
 		const auto add = image.bytesPerLine() - (w * 4);
 		auto i = index_type();
 		for (auto y = 0; y != h; ++y) {
