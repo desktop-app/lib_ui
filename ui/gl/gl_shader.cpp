@@ -80,6 +80,16 @@ uniform sampler2D s_texture;
 	};
 }
 
+QString FragmentYUV2RGB() {
+	return R"(
+	result = vec4(
+		1.164 * y + 1.596 * v,
+		1.164 * y - 0.392 * u - 0.813 * v,
+		1.164 * y + 2.17 * u,
+		1.);
+)";
+}
+
 ShaderPart FragmentSampleYUV420Texture() {
 	return {
 		.header = R"(
@@ -92,12 +102,23 @@ uniform sampler2D v_texture;
 	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
 	float u = texture2D(u_texture, v_texcoord).a - 0.5;
 	float v = texture2D(v_texture, v_texcoord).a - 0.5;
-	result = vec4(
-		1.164 * y + 1.596 * v,
-		1.164 * y - 0.392 * u - 0.813 * v,
-		1.164 * y + 2.17 * u,
-		1.);
+)" + FragmentYUV2RGB(),
+	};
+}
+
+ShaderPart FragmentSampleNV12Texture() {
+	return {
+		.header = R"(
+varying vec2 v_texcoord;
+uniform sampler2D y_texture;
+uniform sampler2D uv_texture;
 )",
+		.body = R"(
+	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
+	vec2 uv = texture2D(uv_texture, v_texcoord).rg - vec2(0.5, 0.5);
+	float u = uv.x;
+	float v = uv.y;
+)" + FragmentYUV2RGB(),
 	};
 }
 
