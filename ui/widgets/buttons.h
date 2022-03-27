@@ -261,7 +261,9 @@ public:
 		const style::SettingsButton &st);
 	~SettingsButton();
 
-	SettingsButton *toggleOn(rpl::producer<bool> &&toggled);
+	SettingsButton *toggleOn(
+		rpl::producer<bool> &&toggled,
+		bool ignoreClick = false);
 	bool toggled() const;
 	rpl::producer<bool> toggledChanges() const;
 	rpl::producer<bool> toggledValue() const;

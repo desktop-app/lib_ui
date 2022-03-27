@@ -701,16 +701,20 @@ SettingsButton::SettingsButton(
 
 SettingsButton::~SettingsButton() = default;
 
-SettingsButton *SettingsButton::toggleOn(rpl::producer<bool> &&toggled) {
+SettingsButton *SettingsButton::toggleOn(
+		rpl::producer<bool> &&toggled,
+		bool ignoreClick) {
 	Expects(_toggle == nullptr);
 
 	_toggle = std::make_unique<Ui::ToggleView>(
 		isOver() ? _st.toggleOver : _st.toggle,
 		false,
 		[this] { rtlupdate(toggleRect()); });
-	addClickHandler([this] {
-		_toggle->setChecked(!_toggle->checked(), anim::type::normal);
-	});
+	if (!ignoreClick) {
+		addClickHandler([this] {
+			_toggle->setChecked(!_toggle->checked(), anim::type::normal);
+		});
+	}
 	std::move(
 		toggled
 	) | rpl::start_with_next([this](bool toggled) {
