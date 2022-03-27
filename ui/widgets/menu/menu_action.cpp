@@ -83,6 +83,15 @@ bool Action::hasSubmenu() const {
 	return _action->menu() != nullptr;
 }
 
+void Action::paintText(Painter &p) {
+	_text.drawLeftElided(
+		p,
+		_st.itemPadding.left(),
+		_st.itemPadding.top(),
+		_textWidth,
+		width());
+}
+
 void Action::paint(Painter &p) {
 	const auto enabled = isEnabled();
 	const auto selected = isSelected();
@@ -97,7 +106,7 @@ void Action::paint(Painter &p) {
 		icon->paint(p, _st.itemIconPosition, width());
 	}
 	p.setPen(selected ? _st.itemFgOver : (enabled ? _st.itemFg : _st.itemFgDisabled));
-	_text.drawLeftElided(p, _st.itemPadding.left(), _st.itemPadding.top(), _textWidth, width());
+	paintText(p);
 	if (hasSubmenu()) {
 		const auto left = width() - _st.itemPadding.right() - _st.arrow.width();
 		const auto top = (_height - _st.arrow.height()) / 2;

@@ -38,6 +38,8 @@ protected:
 
 	int contentHeight() const override;
 
+	void paintText(Painter &p);
+
 private:
 	void processAction();
 	void paint(Painter &p);
