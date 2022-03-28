@@ -68,6 +68,7 @@ void TimePart::wheelEvent(QWheelEvent *e) {
 		time -= max;
 	}
 	setText(QString::number(time));
+	Ui::MaskedInputField::changed();
 }
 
 void TimePart::correctValue(
