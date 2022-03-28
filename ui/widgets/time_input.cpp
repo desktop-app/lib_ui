@@ -284,6 +284,7 @@ void TimeInput::putNext(const object_ptr<TimePart> &field, QChar ch) {
 		field->setText(ch + field->getLastText());
 		field->setCursorPosition(1);
 	}
+	field->onTextEdited();
 	field->setFocus();
 }
 
