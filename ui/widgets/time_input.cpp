@@ -55,8 +55,10 @@ public:
 	void setMaxValue(int value);
 	void setWheelStep(int value);
 
-	rpl::producer<> erasePrevious() const;
-	rpl::producer<QChar> putNext() const;
+	[[nodiscard]] rpl::producer<> erasePrevious() const;
+	[[nodiscard]] rpl::producer<QChar> putNext() const;
+
+	[[nodiscard]] std::optional<int> number();
 
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
@@ -77,8 +79,8 @@ private:
 
 };
 
-std::optional<int> Number(not_null<TimePart*> field) {
-	const auto text = field->getLastText();
+std::optional<int> TimePart::number() {
+	const auto text = getLastText();
 	auto view = QStringView(text);
 	while (view.size() > 1 && view.at(0) == '0') {
 		view = base::StringViewMid(view, 1);
@@ -121,7 +123,7 @@ void TimePart::keyPressEvent(QKeyEvent *e) {
 
 void TimePart::wheelEvent(QWheelEvent *e) {
 	const auto direction = WheelDirection(e);
-	const auto now = Number(this);
+	const auto now = number();
 	if (!now.has_value()) {
 		return;
 	}
@@ -307,11 +309,11 @@ bool TimeInput::setFocusFast() {
 }
 
 std::optional<int> TimeInput::hour() const {
-	return Number(_hour);
+	return _hour->number();
 }
 
 std::optional<int> TimeInput::minute() const {
-	return Number(_minute);
+	return _minute->number();
 }
 
 QString TimeInput::valueCurrent() const {
