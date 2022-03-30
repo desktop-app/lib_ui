@@ -105,7 +105,13 @@ void Action::paint(Painter &p) {
 	if (const auto icon = (selected ? _iconOver : _icon)) {
 		icon->paint(p, _st.itemIconPosition, width());
 	}
-	p.setPen(selected ? _st.itemFgOver : (enabled ? _st.itemFg : _st.itemFgDisabled));
+	p.setPen(_fgOverride
+		? QPen(*_fgOverride)
+		: selected
+		? _st.itemFgOver
+		: enabled
+		? _st.itemFg
+		: _st.itemFgDisabled);
 	paintText(p);
 	if (hasSubmenu()) {
 		const auto left = width() - _st.itemPadding.right() - _st.arrow.width();
@@ -168,6 +174,14 @@ void Action::processAction() {
 	_shortcut = actionShortcut;
 	setMinWidth(w);
 	update();
+
+	// TODO better way.
+	if (const auto variant = _action->data(); variant.isValid()) {
+		const auto overrideColor = variant.value<QColor>();
+		if (overrideColor.isValid()) {
+			_fgOverride = overrideColor;
+		}
+	}
 }
 
 bool Action::isEnabled() const {
