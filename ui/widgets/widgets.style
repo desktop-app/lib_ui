@@ -338,6 +338,17 @@ IconButton {
 	ripple: RippleAnimation;
 }
 
+IconButtonWithText {
+	iconButton: IconButton;
+	height: pixels;
+
+	textFg: color;
+	textFgOver: color;
+	textPadding: margins;
+
+	font: font;
+}
+
 MediaSlider {
 	width: pixels;
 	activeFg: color;

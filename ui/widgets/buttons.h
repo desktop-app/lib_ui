@@ -196,6 +196,8 @@ protected:
 	QImage prepareRippleMask() const override;
 	QPoint prepareRippleStartPosition() const override;
 
+	[[nodiscard]] float64 iconOverOpacity() const;
+
 private:
 	const style::IconButton &_st;
 	const style::icon *_iconOverride = nullptr;

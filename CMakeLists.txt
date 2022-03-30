@@ -170,6 +170,8 @@ PRIVATE
     ui/widgets/checkbox.h
     ui/widgets/dropdown_menu.cpp
     ui/widgets/dropdown_menu.h
+    ui/widgets/icon_button_with_text.cpp
+    ui/widgets/icon_button_with_text.h
     ui/widgets/inner_dropdown.cpp
     ui/widgets/inner_dropdown.h
     ui/widgets/input_fields.cpp

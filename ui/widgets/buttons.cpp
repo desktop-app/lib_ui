@@ -476,14 +476,19 @@ void IconButton::setRippleColorOverride(const style::color *colorOverride) {
 	_rippleColorOverride = colorOverride;
 }
 
+float64 IconButton::iconOverOpacity() const {
+	return (isDown() || forceRippled())
+		? 1.
+		: _a_over.value(isOver() ? 1. : 0.);
+}
+
 void IconButton::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
 	paintRipple(p, _st.rippleAreaPosition, _rippleColorOverride ? &(*_rippleColorOverride)->c : nullptr);
 
-	auto down = isDown();
-	auto overIconOpacity = (down || forceRippled()) ? 1. : _a_over.value(isOver() ? 1. : 0.);
-	auto overIcon = [this] {
+	const auto overIconOpacity = iconOverOpacity();
+	const auto overIcon = [&] {
 		if (_iconOverrideOver) {
 			return _iconOverrideOver;
 		} else if (!_st.iconOver.empty()) {
@@ -493,13 +498,13 @@ void IconButton::paintEvent(QPaintEvent *e) {
 		}
 		return &_st.icon;
 	};
-	auto justIcon = [this] {
+	const auto justIcon = [&] {
 		if (_iconOverride) {
 			return _iconOverride;
 		}
 		return &_st.icon;
 	};
-	auto icon = (overIconOpacity == 1.) ? overIcon() : justIcon();
+	const auto icon = (overIconOpacity == 1.) ? overIcon() : justIcon();
 	auto position = _st.iconPosition;
 	if (position.x() < 0) {
 		position.setX((width() - icon->width()) / 2);
@@ -509,7 +514,7 @@ void IconButton::paintEvent(QPaintEvent *e) {
 	}
 	icon->paint(p, position, width());
 	if (overIconOpacity > 0. && overIconOpacity < 1.) {
-		auto iconOver = overIcon();
+		const auto iconOver = overIcon();
 		if (iconOver != icon) {
 			p.setOpacity(overIconOpacity);
 			iconOver->paint(p, position, width());
