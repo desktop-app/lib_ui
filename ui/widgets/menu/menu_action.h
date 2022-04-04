@@ -54,7 +54,6 @@ private:
 	const style::icon *_iconOver;
 //	std::unique_ptr<ToggleView> _toggle;
 	int _textWidth = 0;
-	std::optional<QColor> _fgOverride;
 	const int _height;
 
 };
