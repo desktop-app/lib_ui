@@ -128,6 +128,7 @@ private:
 
 	const style::Box *_st = nullptr;
 	not_null<LayerStackWidget*> _layer;
+	bool _layerType = false;
 	int _fullHeight = 0;
 
 	bool _noContentMargin = false;
@@ -140,7 +141,6 @@ private:
 	rpl::variable<QString> _additionalTitle;
 	int _titleLeft = 0;
 	int _titleTop = 0;
-	bool _layerType = false;
 	bool _closeByOutsideClick = true;
 
 	std::vector<object_ptr<RoundButton>> _buttons;

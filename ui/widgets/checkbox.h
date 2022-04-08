@@ -228,8 +228,8 @@ private:
 	rpl::event_stream<bool> _checkedChanges;
 	QPixmap _checkCache;
 
-	Text::String _text;
 	style::align _checkAlignment = style::al_left;
+	Text::String _text;
 	int _allowTextLines = 1;
 	bool _textBreakEverywhere = false;
 
