@@ -9,20 +9,24 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/platform/base_platform_info.h"
 #include "waylandshells/xdg_shell.h"
+#include "qwayland-xdg-shell.h"
 
+#include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
+#include <qpa/qplatformnativeinterface.h>
+#include <private/qguiapplication_p.h>
+#include <private/qhighdpiscaling_p.h>
 
-// private headers are using keywords :(
+// private QtWaylandClient headers are using keywords :(
 #ifdef QT_NO_KEYWORDS
 #define signals Q_SIGNALS
 #define slots Q_SLOTS
 #endif // QT_NO_KEYWORDS
 
-#include <private/qguiapplication_p.h>
 #include <private/qwaylandintegration_p.h>
 #include <private/qwaylanddisplay_p.h>
 #include <private/qwaylandwindow_p.h>
-#include <private/qwaylandshellsurface_p.h>
+#include <private/qwaylandinputdevice_p.h>
 
 #include <connection_thread.h>
 #include <registry.h>
@@ -113,16 +117,36 @@ void WaylandIntegration::unsetWindowExtents(QWindow *window) {
 }
 
 bool WaylandIntegration::showWindowMenu(QWindow *window) {
-	if (const auto waylandWindow = static_cast<QWaylandWindow*>(
-		window->handle())) {
-		if (const auto seat = waylandWindow->display()->lastInputDevice()) {
-			if (const auto shellSurface = waylandWindow->shellSurface()) {
-				return shellSurface->showWindowMenu(seat);
-			}
-		}
+	const auto native = QGuiApplication::platformNativeInterface();
+	if (!native) {
+		return false;
 	}
 
-	return false;
+	const auto toplevel = reinterpret_cast<xdg_toplevel*>(
+		native->nativeResourceForWindow(QByteArray("xdg_toplevel"), window));
+
+	const auto seat = reinterpret_cast<wl_seat*>(
+		native->nativeResourceForIntegration(QByteArray("wl_seat")));
+	
+	const auto serial = [&]() -> std::optional<uint32_t> {
+		const auto waylandWindow = static_cast<QWaylandWindow*>(
+			window->handle());
+		if (!waylandWindow) {
+			return std::nullopt;
+		}
+		return waylandWindow->display()->defaultInputDevice()->serial();
+	}();
+
+	if (!toplevel || !seat || !serial) {
+		return false;
+	}
+
+	const auto pos = QHighDpi::toNativePixels(
+		window->mapFromGlobal(QCursor::pos()),
+		window);
+
+	xdg_toplevel_show_window_menu(toplevel, seat, *serial, pos.x(), pos.y());
+	return true;
 }
 
 } // namespace Platform
