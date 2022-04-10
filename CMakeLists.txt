@@ -27,7 +27,7 @@ generate_emoji(lib_ui emoji.txt emoji_suggestions/emoji_autocomplete.json)
 set_target_properties(lib_ui PROPERTIES AUTOMOC ON)
 target_prepare_qrc(lib_ui)
 
-target_precompile_headers(lib_ui PRIVATE ${src_loc}/ui/ui_pch.h)
+target_precompile_headers(lib_ui PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${src_loc}/ui/ui_pch.h>)
 nice_target_sources(lib_ui ${src_loc}
 PRIVATE
     ${style_files}
@@ -266,11 +266,26 @@ if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
 elseif(LINUX)
     remove_target_sources(lib_ui ${src_loc} ui/platform/linux/ui_linux_wayland_integration_dummy.cpp)
 
+    if (DESKTOP_APP_QT6)
+        qt6_generate_wayland_protocol_client_sources(lib_ui
+        FILES
+            ${third_party_loc}/wayland-protocols/stable/xdg-shell/xdg-shell.xml
+        )
+    else()
+        message(FATAL_ERROR "This piece of cmake code is not ported to Qt 5")
+    endif()
+
     target_link_libraries(lib_ui
     PUBLIC
         desktop-app::lib_waylandshells
         desktop-app::external_kwayland
     )
+
+    if (DESKTOP_APP_USE_PACKAGED)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
+        target_link_libraries(lib_ui PRIVATE PkgConfig::WAYLAND_CLIENT)
+    endif()
 endif()
 
 target_include_directories(lib_ui
