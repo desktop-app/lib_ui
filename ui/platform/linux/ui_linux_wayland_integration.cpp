@@ -105,13 +105,25 @@ bool WaylandIntegration::windowExtentsSupported() {
 void WaylandIntegration::setWindowExtents(
 		QWindow *window,
 		const QMargins &extents) {
-	window->setProperty(
+	const auto native = QGuiApplication::platformNativeInterface();
+	if (!native) {
+		return;
+	}
+
+	native->setWindowProperty(
+		window->handle(),
 		"_desktopApp_waylandCustomMargins",
 		QVariant::fromValue<QMargins>(extents));
 }
 
 void WaylandIntegration::unsetWindowExtents(QWindow *window) {
-	window->setProperty(
+	const auto native = QGuiApplication::platformNativeInterface();
+	if (!native) {
+		return;
+	}
+
+	native->setWindowProperty(
+		window->handle(),
 		"_desktopApp_waylandCustomMargins",
 		QVariant());
 }
