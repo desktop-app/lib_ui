@@ -23,6 +23,7 @@
 #include <QtCore/QPoint>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <private/qhighdpiscaling_p.h>
 
 namespace Ui {
 namespace Platform {
@@ -504,11 +505,12 @@ bool WindowExtentsSupported() {
 }
 
 void SetWindowExtents(QWindow *window, const QMargins &extents) {
+	const auto nativeExtents = QHighDpi::toNativePixels(extents, window);
 	if (const auto integration = WaylandIntegration::Instance()) {
-		integration->setWindowExtents(window, extents);
+		integration->setWindowExtents(window, nativeExtents);
 	} else if (::Platform::IsX11()) {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		SetXCBFrameExtents(window, extents);
+		SetXCBFrameExtents(window, nativeExtents);
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
 }
