@@ -18,8 +18,11 @@ std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 
 bool NativeWindowFrameSupported() {
 	const auto waylandIntegration = WaylandIntegration::Instance();
-	return !waylandIntegration
-			|| waylandIntegration->xdgDecorationSupported();
+	if (waylandIntegration) {
+		waylandIntegration->waitForInterfaceAnnounce();
+		return waylandIntegration->xdgDecorationSupported();
+	}
+	return true;
 }
 
 } // namespace Platform
