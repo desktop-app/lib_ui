@@ -82,6 +82,8 @@ private:
 	std::vector<Row> _rows;
 	bool _inResize = false;
 
+	rpl::lifetime _rowsLifetime;
+
 };
 
 } // namespace Ui

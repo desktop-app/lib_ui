@@ -133,7 +133,7 @@ RpWidget *VerticalLayout::insertChild(
 			}
 		}, [=] {
 			removeChild(weak);
-		}, lifetime());
+		}, _rowsLifetime);
 		return weak;
 	}
 	return nullptr;
