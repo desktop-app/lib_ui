@@ -33,11 +33,13 @@ public:
 		const style::icon *iconOver = nullptr);
 
 protected:
+	void paintEvent(QPaintEvent *e) override;
 	QPoint prepareRippleStartPosition() const override;
 	QImage prepareRippleMask() const override;
 
 	int contentHeight() const override;
 
+	void paintBackground(Painter &p, bool selected);
 	void paintText(Painter &p);
 
 private:
