@@ -35,7 +35,10 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 }
 
 void IconButtonWithText::setText(const QString &text) {
-	_text = text;
+	if (_text != text) {
+		_text = text;
+		update();
+	}
 }
 
 } // namespace Ui
