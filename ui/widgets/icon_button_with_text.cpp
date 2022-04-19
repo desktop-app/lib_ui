@@ -24,13 +24,13 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	p.setFont(_st.font);
 	p.setPen(_st.textFg);
-	p.drawText(r, _text, style::al_center);
+	p.drawText(r, _text, _st.textAlign);
 
 	const auto overIconOpacity = IconButton::iconOverOpacity();
 	if (overIconOpacity > 0. && overIconOpacity < 1.) {
 		p.setPen(_st.textFgOver);
 		p.setOpacity(overIconOpacity);
-		p.drawText(r, _text, style::al_center);
+		p.drawText(r, _text, _st.textAlign);
 	}
 }
 

@@ -345,6 +345,7 @@ IconButtonWithText {
 	textFg: color;
 	textFgOver: color;
 	textPadding: margins;
+	textAlign: align;
 
 	font: font;
 }
