@@ -19,8 +19,8 @@ not_null<QAction*> CreateAction(
 		Fn<void()> &&callback) {
 	const auto action = new QAction(text, parent);
 	const auto guard = MakeWeak(parent);
-	auto triggered = [guard, callback = std::move(callback)]() mutable {
-		InvokeQueued(guard, std::move(callback));
+	auto triggered = [guard, callback = std::move(callback)] {
+		InvokeQueued(guard, callback);
 	};
 	parent->connect(action, &QAction::triggered, std::move(triggered));
 	return action;
