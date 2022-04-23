@@ -332,11 +332,14 @@ void RoundButton::resizeToText(const QString &text) {
 
 	int innerWidth = contentWidth();
 	if (_fullWidthOverride > 0) {
+		const auto padding = _fullRadius
+			? (_st.padding.left() + _st.padding.right())
+			: 0;
 		if (_fullWidthOverride < innerWidth + (_st.height - _st.font->height)) {
-			_text = _st.font->elided(text, qMax(_fullWidthOverride - (_st.height - _st.font->height), 1));
+			_text = _st.font->elided(text, qMax(_fullWidthOverride - (_st.height - _st.font->height) - padding, 1));
 			_textWidth = _st.font->width(_text);
 		}
-		resize(_fullWidthOverride, _st.height + _st.padding.top() + _st.padding.bottom());
+		resize(_fullWidthOverride + padding, _st.height + _st.padding.top() + _st.padding.bottom());
 	} else if (_fullWidthOverride < 0) {
 		resize(innerWidth - _fullWidthOverride, _st.height + _st.padding.top() + _st.padding.bottom());
 	} else if (_st.width <= 0) {
