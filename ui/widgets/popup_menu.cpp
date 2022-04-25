@@ -15,6 +15,7 @@
 #include "ui/ui_utility.h"
 #include "ui/delayed_activation.h"
 #include "ui/painter.h"
+#include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
 
 #include <QtGui/QtEvents>
@@ -645,20 +646,29 @@ void PopupMenu::prepareCache() {
 }
 
 void PopupMenu::startOpacityAnimation(bool hiding) {
-	_hiding = false;
 	if (!_useTransparency) {
 		_a_opacity.stop();
-		if (hiding) {
-			hideFinished();
+		_hiding = hiding;
+		if (_hiding) {
+			InvokeQueued(this, [=] {
+				if (_hiding) {
+					hideFinished();
+				}
+			});
 		} else {
 			update();
 		}
 		return;
 	}
+	_hiding = false;
 	prepareCache();
 	_hiding = hiding;
 	hideChildren();
-	_a_opacity.start([this] { opacityAnimationCallback(); }, _hiding ? 1. : 0., _hiding ? 0. : 1., _st.duration);
+	_a_opacity.start(
+		[=] { opacityAnimationCallback(); },
+		_hiding ? 1. : 0.,
+		_hiding ? 0. : 1.,
+		_st.duration);
 }
 
 void PopupMenu::showStarted() {
