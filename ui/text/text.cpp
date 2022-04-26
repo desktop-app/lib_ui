@@ -28,7 +28,6 @@ namespace {
 
 constexpr auto kStringLinkIndexShift = uint16(0x8000);
 constexpr auto kMaxDiacAfterSymbol = 2;
-constexpr auto kSelectedSpoilerOpacity = 0.5;
 
 inline bool IsMono(int32 flags) {
 	return (flags & TextBlockFPre) || (flags & TextBlockFCode);
