@@ -17,6 +17,8 @@
 #include <QtWidgets/QTextEdit>
 #include <QtCore/QTimer>
 
+#include <rpl/variable.h>
+
 class QTouchEvent;
 class Painter;
 

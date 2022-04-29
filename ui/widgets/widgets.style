@@ -1445,6 +1445,10 @@ defaultToast: Toast {
 	durationSlide: 160;
 }
 
+defaultMultilineToast: Toast(defaultToast) {
+	minWidth: msgMinWidth;
+}
+
 shakeShift: 4px;
 
 // Windows specific title

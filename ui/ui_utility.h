@@ -10,7 +10,9 @@
 #include "ui/rect_part.h"
 #include "ui/integration.h"
 
+#include <crl/crl.h>
 #include <QtCore/QEvent>
+#include <QtWidgets/QWidget>
 
 class QPixmap;
 class QImage;

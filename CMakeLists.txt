@@ -161,6 +161,8 @@ PRIVATE
     ui/toast/toast_manager.h
     ui/toast/toast_widget.cpp
     ui/toast/toast_widget.h
+    ui/toasts/common_toasts.cpp
+    ui/toasts/common_toasts.h
     ui/widgets/box_content_divider.cpp
     ui/widgets/box_content_divider.h
     ui/widgets/buttons.cpp
@@ -197,6 +199,8 @@ PRIVATE
     ui/widgets/popup_menu.h
     ui/widgets/rp_window.cpp
     ui/widgets/rp_window.h
+    ui/widgets/separate_panel.cpp
+    ui/widgets/separate_panel.h
     ui/widgets/scroll_area.cpp
     ui/widgets/scroll_area.h
     ui/widgets/side_bar_button.cpp

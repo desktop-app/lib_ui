@@ -8,6 +8,8 @@
 
 #include "base/basic_types.h"
 
+#include <rpl/producer.h>
+
 #include <any>
 
 // Methods that must be implemented outside lib_ui.
@@ -71,6 +73,8 @@ public:
 	[[nodiscard]] virtual QString phraseFormattingStrikeOut();
 	[[nodiscard]] virtual QString phraseFormattingMonospace();
 	[[nodiscard]] virtual QString phraseFormattingSpoiler();
+	[[nodiscard]] virtual QString phraseButtonOk();
+	[[nodiscard]] virtual QString phraseButtonCancel();
 
 };
 

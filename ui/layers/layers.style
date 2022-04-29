@@ -157,3 +157,43 @@ boxLoadingSize: 20px;
 boxDividerTop: icon {{ "box_divider_top", boxDividerFg }};
 boxDividerBottom: icon {{ "box_divider_bottom", boxDividerFg }};
 boxDividerHeight: 10px;
+
+separatePanelBorderCacheSize: 60px;
+separatePanelTitleHeight: 62px;
+separatePanelClose: IconButton(boxTitleClose) {
+	width: 60px;
+	height: 60px;
+
+	rippleAreaPosition: point(8px, 8px);
+	rippleAreaSize: 44px;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: windowBgOver;
+	}
+}
+separatePanelTitleFont: font(18px semibold);
+separatePanelTitle: FlatLabel(defaultFlatLabel) {
+	textFg: boxTitleFg;
+	maxHeight: 26px;
+	style: TextStyle(defaultTextStyle) {
+		font: separatePanelTitleFont;
+		linkFont: separatePanelTitleFont;
+		linkFontOver: font(18px semibold underline);
+	}
+}
+separatePanelTitleTop: 18px;
+separatePanelTitleLeft: 22px;
+separatePanelTitleSkip: 0px;
+separatePanelBack: IconButton(separatePanelClose) {
+	icon: icon {{ "box_button_back", boxTitleCloseFg }};
+	iconOver: icon {{ "box_button_back", boxTitleCloseFgOver }};
+}
+separatePanelDuration: 150;
+
+webviewDialogButton: defaultBoxButton;
+webviewDialogSubmit: RoundButton(defaultActiveButton) {
+	width: -48px;
+	height: 34px;
+	textTop: 7px;
+	font: font(14px semibold);
+}
+webviewDialogPadding: margins(8px, 12px, 15px, 12px);
