@@ -1494,10 +1494,9 @@ void InputField::setTagMimeProcessor(
 }
 
 void InputField::setAdditionalMargin(int margin) {
-	_inner->setStyleSheet(
-		QString::fromLatin1("QTextEdit { margin: %1px; }").arg(margin));
 	_additionalMargin = margin;
-	checkContentHeight();
+	QResizeEvent e(size(), size());
+	QCoreApplication::sendEvent(this, &e);
 }
 
 void InputField::setMaxLength(int length) {
@@ -3673,7 +3672,7 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 
 void InputField::resizeEvent(QResizeEvent *e) {
 	refreshPlaceholder(_placeholderFull.current());
-	_inner->setGeometry(rect().marginsRemoved(_st.textMargins));
+	_inner->setGeometry(rect().marginsRemoved(_st.textMargins + _additionalMargin));
 	_borderAnimationStart = width() / 2;
 	RpWidget::resizeEvent(e);
 	checkContentHeight();
