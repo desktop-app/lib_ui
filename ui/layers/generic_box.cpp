@@ -16,13 +16,34 @@ namespace Ui {
 void GenericBox::prepare() {
 	_init(this);
 
+	const auto currentWidth = width();
+	if (_pinnedToTopContent) {
+		_pinnedToTopContent->resizeToWidth(currentWidth);
+	}
+
 	auto wrap = object_ptr<Ui::OverrideMargins>(this, std::move(_owned));
-	setDimensionsToContent(_width ? _width : st::boxWidth, wrap.data());
-	setInnerWidget(std::move(wrap));
+	setDimensionsToContent(currentWidth, wrap.data());
+	setInnerWidget(
+		std::move(wrap),
+		_pinnedToTopContent ? _pinnedToTopContent->height() : 0);
 }
 
 void GenericBox::addSkip(int height) {
 	addRow(object_ptr<Ui::FixedHeightWidget>(this, height));
+}
+
+not_null<Ui::VerticalLayout*> GenericBox::setPinnedToTopContent(
+		object_ptr<Ui::VerticalLayout> layout) {
+	_pinnedToTopContent = std::move(layout);
+	return _pinnedToTopContent.data();
+}
+
+int GenericBox::rowsCount() const {
+	return _content->count();
+}
+
+int GenericBox::width() const {
+	return _width ? _width : st::boxWidth;
 }
 
 not_null<Ui::VerticalLayout*> GenericBox::verticalLayout() {

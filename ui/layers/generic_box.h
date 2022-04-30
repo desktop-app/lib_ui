@@ -42,9 +42,8 @@ public:
 		_showFinished = callback;
 	}
 
-	int rowsCount() const {
-		return _content->count();
-	}
+	[[nodiscard]] int rowsCount() const;
+	[[nodiscard]] int width() const;
 
 	template <
 		typename Widget,
@@ -85,6 +84,9 @@ public:
 		}
 	}
 
+	not_null<Ui::VerticalLayout*> setPinnedToTopContent(
+		object_ptr<Ui::VerticalLayout> layout);
+
 	[[nodiscard]] not_null<Ui::VerticalLayout*> verticalLayout();
 
 	using BoxContent::setNoContentMargin;
@@ -123,6 +125,8 @@ private:
 	object_ptr<Ui::VerticalLayout> _owned;
 	not_null<Ui::VerticalLayout*> _content;
 	int _width = 0;
+
+	object_ptr<Ui::VerticalLayout> _pinnedToTopContent = { nullptr };
 
 };
 
