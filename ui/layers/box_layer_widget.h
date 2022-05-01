@@ -10,19 +10,19 @@
 #include "base/flags.h"
 #include "ui/layers/layer_widget.h"
 #include "ui/layers/box_content.h"
-#include "ui/wrap/padding_wrap.h"
-#include "ui/widgets/labels.h"
-#include "ui/effects/animation_value.h"
-#include "ui/text/text_entity.h"
 #include "ui/round_rect.h"
 #include "ui/rp_widget.h"
 
 class Painter;
+struct TextWithEntities;
+
+namespace anim {
+enum class type;
+} // namespace anim
 
 namespace style {
 struct RoundButton;
 struct IconButton;
-struct ScrollArea;
 struct Box;
 } // namespace style
 
@@ -30,9 +30,7 @@ namespace Ui {
 
 class RoundButton;
 class IconButton;
-class ScrollArea;
 class FlatLabel;
-class FadeShadow;
 
 class BoxLayerWidget : public LayerWidget, public BoxContentDelegate {
 public:

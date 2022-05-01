@@ -8,12 +8,7 @@
 
 #include "ui/effects/radial_animation.h"
 #include "ui/widgets/buttons.h"
-#include "ui/widgets/scroll_area.h"
 #include "ui/widgets/labels.h"
-#include "ui/widgets/shadow.h"
-#include "ui/wrap/fade_wrap.h"
-#include "ui/text/text_utilities.h"
-#include "ui/image/image_prepare.h"
 #include "ui/painter.h"
 #include "base/timer.h"
 #include "styles/style_layers.h"
