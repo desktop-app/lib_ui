@@ -25,9 +25,9 @@ class FadeWrapScaled;
 
 namespace Ui {
 
-class SeparatePanel final : public Ui::RpWidget {
+class SeparatePanel final : public RpWidget {
 public:
-	SeparatePanel();
+	explicit SeparatePanel(QWidget *parent = nullptr);
 
 	void setTitle(rpl::producer<QString> title);
 	void setInnerSize(QSize size);
@@ -37,10 +37,10 @@ public:
 	void showAndActivate();
 	int hideGetDuration();
 
-	void showInner(base::unique_qptr<Ui::RpWidget> inner);
+	void showInner(base::unique_qptr<RpWidget> inner);
 	void showBox(
-		object_ptr<Ui::BoxContent> box,
-		Ui::LayerOptions options,
+		object_ptr<BoxContent> box,
+		LayerOptions options,
 		anim::type animated);
 	void showToast(const TextWithEntities &text);
 	void destroyLayer();
@@ -83,12 +83,12 @@ private:
 	void finishAnimating();
 	void finishClose();
 
-	object_ptr<Ui::IconButton> _close;
-	object_ptr<Ui::FlatLabel> _title = { nullptr };
-	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _back;
-	object_ptr<Ui::RpWidget> _body;
-	base::unique_qptr<Ui::RpWidget> _inner;
-	base::unique_qptr<Ui::LayerStackWidget> _layer = { nullptr };
+	object_ptr<IconButton> _close;
+	object_ptr<FlatLabel> _title = { nullptr };
+	object_ptr<FadeWrapScaled<IconButton>> _back;
+	object_ptr<RpWidget> _body;
+	base::unique_qptr<RpWidget> _inner;
+	base::unique_qptr<LayerStackWidget> _layer = { nullptr };
 	rpl::event_stream<> _synteticBackRequests;
 	rpl::event_stream<> _userCloseRequests;
 	rpl::event_stream<> _closeEvents;
@@ -101,10 +101,10 @@ private:
 	QPoint _dragStartMousePosition;
 	QPoint _dragStartMyPosition;
 
-	Ui::Animations::Simple _titleLeft;
+	Animations::Simple _titleLeft;
 	bool _visible = false;
 
-	Ui::Animations::Simple _opacityAnimation;
+	Animations::Simple _opacityAnimation;
 	QPixmap _animationCache;
 	QPixmap _borderParts;
 
