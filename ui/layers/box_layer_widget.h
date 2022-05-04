@@ -17,7 +17,7 @@ class Painter;
 struct TextWithEntities;
 
 namespace anim {
-enum class type;
+enum class type : uchar;
 } // namespace anim
 
 namespace style {

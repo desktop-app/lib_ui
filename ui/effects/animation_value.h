@@ -14,14 +14,19 @@
 
 namespace anim {
 
-enum class type {
+enum class type : uchar {
 	normal,
 	instant,
 };
 
-enum class activation {
+enum class activation : uchar {
 	normal,
 	background,
+};
+
+enum class repeat : uchar {
+	loop,
+	once,
 };
 
 using transition = Fn<float64(float64 delta, float64 dt)>;
