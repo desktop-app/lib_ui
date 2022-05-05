@@ -21,8 +21,13 @@ public:
 		int height,
 		const style::color &bg);
 
+	[[nodiscard]] const style::color &color() const;
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
+
+	void paintTop(QPainter &p);
+	void paintBottom(QPainter &p);
 
 private:
 	const style::color &_bg;

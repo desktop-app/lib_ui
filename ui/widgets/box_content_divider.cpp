@@ -34,18 +34,30 @@ BoxContentDivider::BoxContentDivider(
 void BoxContentDivider::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
 	p.fillRect(e->rect(), _bg);
+	paintTop(p);
+	paintBottom(p);
+}
+
+void BoxContentDivider::paintTop(QPainter &p) {
 	const auto dividerFillTop = QRect(
 		0,
 		0,
 		width(),
 		st::boxDividerTop.height());
 	st::boxDividerTop.fill(p, dividerFillTop);
+}
+
+void BoxContentDivider::paintBottom(QPainter &p) {
 	const auto dividerFillBottom = myrtlrect(
 		0,
 		height() - st::boxDividerBottom.height(),
 		width(),
 		st::boxDividerBottom.height());
 	st::boxDividerBottom.fill(p, dividerFillBottom);
+}
+
+const style::color &BoxContentDivider::color() const {
+	return _bg;
 }
 
 } // namespace Ui
