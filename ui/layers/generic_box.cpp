@@ -32,9 +32,9 @@ void GenericBox::addSkip(int height) {
 	addRow(object_ptr<Ui::FixedHeightWidget>(this, height));
 }
 
-not_null<Ui::VerticalLayout*> GenericBox::setPinnedToTopContent(
-		object_ptr<Ui::VerticalLayout> layout) {
-	_pinnedToTopContent = std::move(layout);
+not_null<Ui::RpWidget*> GenericBox::doSetPinnedToTopContent(
+		object_ptr<Ui::RpWidget> content) {
+	_pinnedToTopContent = std::move(content);
 	return _pinnedToTopContent.data();
 }
 

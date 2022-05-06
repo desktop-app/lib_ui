@@ -84,15 +84,15 @@ public:
 		}
 	}
 
-	not_null<Ui::VerticalLayout*> setPinnedToTopContent(
-		object_ptr<Ui::VerticalLayout> layout);
+	template <typename Widget>
+	not_null<Widget*> setPinnedToTopContent(object_ptr<Widget> content) {
+		return static_cast<Widget*>(
+			doSetPinnedToTopContent(std::move(content)).get());
+	}
 
 	[[nodiscard]] not_null<Ui::VerticalLayout*> verticalLayout();
 
 	using BoxContent::setNoContentMargin;
-
-protected:
-	void prepare() override;
 
 private:
 	template <typename InitMethod, typename ...InitArgs>
@@ -119,6 +119,10 @@ private:
 	auto MakeIniter(InitMethod &&method, InitArgs &&...args)
 		-> Initer<std::decay_t<InitMethod>, std::decay_t<InitArgs>...>;
 
+	void prepare() override;
+	not_null<Ui::RpWidget*> doSetPinnedToTopContent(
+		object_ptr<Ui::RpWidget> content);
+
 	FnMut<void(not_null<GenericBox*>)> _init;
 	Fn<void()> _focus;
 	Fn<void()> _showFinished;
@@ -126,7 +130,7 @@ private:
 	not_null<Ui::VerticalLayout*> _content;
 	int _width = 0;
 
-	object_ptr<Ui::VerticalLayout> _pinnedToTopContent = { nullptr };
+	object_ptr<Ui::RpWidget> _pinnedToTopContent = { nullptr };
 
 };
 
