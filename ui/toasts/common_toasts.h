@@ -10,6 +10,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_entity.h"
 #include "base/weak_ptr.h"
 
+class ClickHandler;
+using ClickHandlerPtr = std::shared_ptr<ClickHandler>;
+using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
+
 namespace Ui {
 namespace Toast {
 class Instance;
@@ -19,6 +23,7 @@ struct MultilineToastArgs {
 	QWidget *parentOverride = nullptr;
 	TextWithEntities text;
 	crl::time duration = 0;
+	ClickHandlerFilter filter;
 };
 
 base::weak_ptr<Toast::Instance> ShowMultilineToast(

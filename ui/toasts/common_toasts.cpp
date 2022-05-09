@@ -21,6 +21,7 @@ base::weak_ptr<Toast::Instance> ShowMultilineToast(
 			? args.duration
 			: Ui::Toast::kDefaultDuration),
 		.multiline = true,
+		.filter = std::move(args.filter),
 	};
 	return args.parentOverride
 		? Ui::Toast::Show(args.parentOverride, std::move(config))
