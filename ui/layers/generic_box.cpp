@@ -17,15 +17,22 @@ void GenericBox::prepare() {
 	_init(this);
 
 	const auto currentWidth = width();
-	if (_pinnedToTopContent) {
-		_pinnedToTopContent->resizeToWidth(currentWidth);
+	const auto pinned = _pinnedToTopContent.data();
+	if (pinned) {
+		pinned->resizeToWidth(currentWidth);
 	}
 
 	auto wrap = object_ptr<Ui::OverrideMargins>(this, std::move(_owned));
-	setDimensionsToContent(currentWidth, wrap.data());
-	setInnerWidget(
-		std::move(wrap),
-		_pinnedToTopContent ? _pinnedToTopContent->height() : 0);
+	wrap->resizeToWidth(currentWidth);
+	rpl::combine(
+		pinned ? pinned->heightValue() : rpl::single(0),
+		wrap->heightValue()
+	) | rpl::start_with_next([=](int top, int height) {
+		setInnerTopSkip(top);
+		setDimensions(currentWidth, top + height);
+	}, wrap->lifetime());
+
+	setInnerWidget(std::move(wrap), pinned ? pinned->height() : 0);
 }
 
 void GenericBox::addSkip(int height) {
