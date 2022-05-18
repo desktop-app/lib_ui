@@ -653,3 +653,8 @@ songCoverOverlayFg: #00000066; // song cover overlay
 
 photoEditorBg: boxTitleAdditionalFg; // photo editor background
 photoEditorItemBaseHandleFg: #3ccaef; // photo editor handle circle
+
+premiumButtonBg1: #55a5ff; // upgrade to premium button gradient 1
+premiumButtonBg2: #a767ff; // upgrade to premium button gradient 2
+premiumButtonBg3: #db5c9d; // upgrade to premium button gradient 3
+premiumButtonFg: #ffffff; // upgrade to premium button text
