@@ -263,46 +263,35 @@ void BoxLayerWidget::clearButtons() {
 	_topButton = nullptr;
 }
 
-QPointer<RoundButton> BoxLayerWidget::addButton(
-		rpl::producer<QString> text,
-		Fn<void()> clickCallback,
-		const style::RoundButton &st) {
-	_buttons.emplace_back(this, std::move(text), st);
-	auto result = QPointer<RoundButton>(_buttons.back());
-	result->setTextTransform(RoundButton::TextTransform::NoTransform);
-	result->setClickedCallback(std::move(clickCallback));
-	result->show();
-	result->widthValue(
+void BoxLayerWidget::addButton(object_ptr<AbstractButton> button) {
+	_buttons.push_back(std::move(button));
+	const auto raw = _buttons.back().data();
+	raw->setParent(this);
+	raw->show();
+	raw->widthValue(
 	) | rpl::start_with_next([=] {
 		updateButtonsPositions();
-	}, result->lifetime());
-	return result;
+	}, raw->lifetime());
 }
 
-QPointer<RoundButton> BoxLayerWidget::addLeftButton(
-		rpl::producer<QString> text,
-		Fn<void()> clickCallback,
-		const style::RoundButton &st) {
-	_leftButton = object_ptr<RoundButton>(this, std::move(text), st);
-	auto result = QPointer<RoundButton>(_leftButton);
-	result->setTextTransform(RoundButton::TextTransform::NoTransform);
-	result->setClickedCallback(std::move(clickCallback));
-	result->show();
-	result->widthValue(
+void BoxLayerWidget::addLeftButton(object_ptr<AbstractButton> button) {
+	_leftButton = std::move(button);
+	const auto raw = _leftButton.data();
+	raw->setParent(this);
+	raw->show();
+	raw->widthValue(
 	) | rpl::start_with_next([=] {
 		updateButtonsPositions();
-	}, result->lifetime());
-	return result;
+	}, raw->lifetime());
 }
 
-QPointer<IconButton> BoxLayerWidget::addTopButton(const style::IconButton &st, Fn<void()> clickCallback) {
-	_topButton = base::make_unique_q<IconButton>(this, st);
-	auto result = QPointer<IconButton>(_topButton.get());
-	result->setClickedCallback(std::move(clickCallback));
-	result->show();
+void BoxLayerWidget::addTopButton(object_ptr<AbstractButton> button) {
+	_topButton = base::make_unique_q<AbstractButton>(button.release());
+	const auto raw = _topButton.get();
+	raw->setParent(this);
+	raw->show();
 	updateButtonsPositions();
 	updateTitlePosition();
-	return result;
 }
 
 void BoxLayerWidget::showLoading(bool show) {

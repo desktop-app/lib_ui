@@ -21,15 +21,12 @@ enum class type : uchar;
 } // namespace anim
 
 namespace style {
-struct RoundButton;
-struct IconButton;
 struct Box;
 } // namespace style
 
 namespace Ui {
 
-class RoundButton;
-class IconButton;
+class AbstractButton;
 class FlatLabel;
 
 class BoxLayerWidget : public LayerWidget, public BoxContentDelegate {
@@ -56,17 +53,9 @@ public:
 	}
 
 	void clearButtons() override;
-	QPointer<RoundButton> addButton(
-		rpl::producer<QString> text,
-		Fn<void()> clickCallback,
-		const style::RoundButton &st) override;
-	QPointer<RoundButton> addLeftButton(
-		rpl::producer<QString> text,
-		Fn<void()> clickCallback,
-		const style::RoundButton &st) override;
-	QPointer<IconButton> addTopButton(
-		const style::IconButton &st,
-		Fn<void()> clickCallback) override;
+	void addButton(object_ptr<AbstractButton> button) override;
+	void addLeftButton(object_ptr<AbstractButton> button) override;
+	void addTopButton(object_ptr<AbstractButton> button) override;
 	void showLoading(bool show) override;
 	void updateButtonsPositions() override;
 	QPointer<QWidget> outerContainer() override;
@@ -141,9 +130,9 @@ private:
 	int _titleTop = 0;
 	bool _closeByOutsideClick = true;
 
-	std::vector<object_ptr<RoundButton>> _buttons;
-	object_ptr<RoundButton> _leftButton = { nullptr };
-	base::unique_qptr<IconButton> _topButton = { nullptr };
+	std::vector<object_ptr<AbstractButton>> _buttons;
+	object_ptr<AbstractButton> _leftButton = { nullptr };
+	base::unique_qptr<AbstractButton> _topButton = { nullptr };
 	std::unique_ptr<LoadingProgress> _loadingProgress;
 
 };

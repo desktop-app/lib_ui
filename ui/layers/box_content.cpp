@@ -24,6 +24,13 @@ void BoxContent::setTitle(rpl::producer<QString> title) {
 	getDelegate()->setTitle(std::move(title) | Text::ToWithEntities());
 }
 
+QPointer<AbstractButton> BoxContent::addButton(
+		object_ptr<AbstractButton> button) {
+	auto result = QPointer<AbstractButton>(button.data());
+	getDelegate()->addButton(std::move(button));
+	return result;
+}
+
 QPointer<RoundButton> BoxContent::addButton(
 		rpl::producer<QString> text,
 		Fn<void()> clickCallback) {
@@ -33,13 +40,67 @@ QPointer<RoundButton> BoxContent::addButton(
 		getDelegate()->style().button);
 }
 
+QPointer<RoundButton> BoxContent::addButton(
+		rpl::producer<QString> text,
+		const style::RoundButton &st) {
+	return addButton(std::move(text), nullptr, st);
+}
+
+QPointer<RoundButton> BoxContent::addButton(
+		rpl::producer<QString> text,
+		Fn<void()> clickCallback,
+		const style::RoundButton &st) {
+	auto button = object_ptr<RoundButton>(this, std::move(text), st);
+	auto result = QPointer<RoundButton>(button.data());
+	result->setTextTransform(RoundButton::TextTransform::NoTransform);
+	result->setClickedCallback(std::move(clickCallback));
+	getDelegate()->addButton(std::move(button));
+	return result;
+}
+
+QPointer<AbstractButton> BoxContent::addLeftButton(
+		object_ptr<AbstractButton> button) {
+	auto result = QPointer<AbstractButton>(button.data());
+	getDelegate()->addLeftButton(std::move(button));
+	return result;
+}
+
 QPointer<RoundButton> BoxContent::addLeftButton(
 		rpl::producer<QString> text,
 		Fn<void()> clickCallback) {
-	return getDelegate()->addLeftButton(
+	return addLeftButton(
 		std::move(text),
 		std::move(clickCallback),
 		getDelegate()->style().button);
+}
+
+QPointer<RoundButton> BoxContent::addLeftButton(
+		rpl::producer<QString> text,
+		Fn<void()> clickCallback,
+		const style::RoundButton &st) {
+	auto button = object_ptr<RoundButton>(this, std::move(text), st);
+	const auto result = QPointer<RoundButton>(button.data());
+	result->setTextTransform(RoundButton::TextTransform::NoTransform);
+	result->setClickedCallback(std::move(clickCallback));
+	getDelegate()->addLeftButton(std::move(button));
+	return result;
+}
+
+QPointer<AbstractButton> BoxContent::addTopButton(
+		object_ptr<AbstractButton> button) {
+	auto result = QPointer<AbstractButton>(button.data());
+	getDelegate()->addTopButton(std::move(button));
+	return result;
+}
+
+QPointer<IconButton> BoxContent::addTopButton(
+		const style::IconButton &st,
+		Fn<void()> clickCallback) {
+	auto button = object_ptr<IconButton>(this, st);
+	const auto result = QPointer<IconButton>(button.data());
+	result->setClickedCallback(std::move(clickCallback));
+	getDelegate()->addTopButton(std::move(button));
+	return result;
 }
 
 void BoxContent::setInner(object_ptr<TWidget> inner) {

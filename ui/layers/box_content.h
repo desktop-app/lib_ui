@@ -43,6 +43,7 @@ inline object_ptr<BoxType> Box(Args &&...args) {
 
 namespace Ui {
 
+class AbstractButton;
 class RoundButton;
 class IconButton;
 class ScrollArea;
@@ -60,17 +61,9 @@ public:
 	virtual void setCloseByOutsideClick(bool close) = 0;
 
 	virtual void clearButtons() = 0;
-	virtual QPointer<RoundButton> addButton(
-		rpl::producer<QString> text,
-		Fn<void()> clickCallback,
-		const style::RoundButton &st) = 0;
-	virtual QPointer<RoundButton> addLeftButton(
-		rpl::producer<QString> text,
-		Fn<void()> clickCallback,
-		const style::RoundButton &st) = 0;
-	virtual QPointer<IconButton> addTopButton(
-		const style::IconButton &st,
-		Fn<void()> clickCallback) = 0;
+	virtual void addButton(object_ptr<AbstractButton> button) = 0;
+	virtual void addLeftButton(object_ptr<AbstractButton> button) = 0;
+	virtual void addTopButton(object_ptr<AbstractButton> button) = 0;
 	virtual void showLoading(bool show) = 0;
 	virtual void updateButtonsPositions() = 0;
 
@@ -141,40 +134,31 @@ public:
 	void clearButtons() {
 		getDelegate()->clearButtons();
 	}
+	QPointer<AbstractButton> addButton(object_ptr<AbstractButton> button);
 	QPointer<RoundButton> addButton(
+		rpl::producer<QString> text,
+		Fn<void()> clickCallback = nullptr);
+	QPointer<RoundButton> addButton(
+		rpl::producer<QString> text,
+		const style::RoundButton &st);
+	QPointer<RoundButton> addButton(
+		rpl::producer<QString> text,
+		Fn<void()> clickCallback,
+		const style::RoundButton &st);
+	QPointer<AbstractButton> addLeftButton(
+		object_ptr<AbstractButton> button);
+	QPointer<RoundButton> addLeftButton(
 		rpl::producer<QString> text,
 		Fn<void()> clickCallback = nullptr);
 	QPointer<RoundButton> addLeftButton(
 		rpl::producer<QString> text,
-		Fn<void()> clickCallback = nullptr);
+		Fn<void()> clickCallback,
+		const style::RoundButton& st);
+	QPointer<AbstractButton> addTopButton(
+		object_ptr<AbstractButton> button);
 	QPointer<IconButton> addTopButton(
-			const style::IconButton &st,
-			Fn<void()> clickCallback = nullptr) {
-		return getDelegate()->addTopButton(st, std::move(clickCallback));
-	}
-	QPointer<RoundButton> addButton(
-			rpl::producer<QString> text,
-			const style::RoundButton &st) {
-		return getDelegate()->addButton(std::move(text), nullptr, st);
-	}
-	QPointer<RoundButton> addButton(
-			rpl::producer<QString> text,
-			Fn<void()> clickCallback,
-			const style::RoundButton &st) {
-		return getDelegate()->addButton(
-			std::move(text),
-			std::move(clickCallback),
-			st);
-	}
-	QPointer<RoundButton> addLeftButton(
-			rpl::producer<QString> text,
-			Fn<void()> clickCallback,
-			const style::RoundButton& st) {
-		return getDelegate()->addLeftButton(
-			std::move(text),
-			std::move(clickCallback),
-			st);
-	}
+		const style::IconButton &st,
+		Fn<void()> clickCallback = nullptr);
 	void showLoading(bool show) {
 		getDelegate()->showLoading(show);
 	}
