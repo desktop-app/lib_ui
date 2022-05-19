@@ -14,8 +14,6 @@
 #include <QtGui/QtEvents>
 #include <QWheelEvent>
 
-#include <private/qhighdpiscaling_p.h>
-
 #include <array>
 
 namespace Ui {
@@ -193,18 +191,18 @@ bool IsContentVisible(
 			return false;
 		}
 
-		const auto mappedRect = QHighDpi::toNativePixels(
-			rect.isNull()
-				? QRect(
-					widget->mapToGlobal(QPoint()),
-					widget->mapToGlobal(
-						QPoint(widget->width(), widget->height())))
-				: QRect(
-					widget->mapToGlobal(rect.topLeft()),
-					widget->mapToGlobal(rect.bottomRight())),
-			widget->window()->windowHandle());
+		const auto mappedRect = rect.isNull()
+			? QRect(
+				widget->mapTo(widget->window(), QPoint()),
+				widget->size())
+			: QRect(
+				widget->mapTo(widget->window(), rect.topLeft()),
+				rect.size());
 
-		const auto overlapped = Platform::IsOverlapped(widget, mappedRect);
+		const auto overlapped = Platform::IsOverlapped(
+			widget->window(),
+			mappedRect);
+
 		return overlapped.has_value() && !*overlapped;
 	}();
 

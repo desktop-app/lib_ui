@@ -103,18 +103,16 @@ void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio) {
 std::optional<bool> IsOverlapped(
 		not_null<QWidget*> widget,
 		const QRect &rect) {
-	NSWindow *window = [reinterpret_cast<NSView*>(widget->window()->winId()) window];
+	NSWindow *window = [reinterpret_cast<NSView*>(widget->winId()) window];
 	Assert(window != nullptr);
 
 	if (![window isOnActiveSpace]) {
 		return true;
 	}
 
-	const auto nativeRect = CGRectMake(
-		rect.x(),
-		rect.y(),
-		rect.width(),
-		rect.height());
+	const auto nativeRect = QRect(
+		widget->mapToGlobal(rect.topLeft()),
+		rect.size()).toCGRect();
 
 	CGWindowID windowId = (CGWindowID)[window windowNumber];
 	const CGWindowListOption options = kCGWindowListExcludeDesktopElements
