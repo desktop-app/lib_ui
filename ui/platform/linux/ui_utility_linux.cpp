@@ -620,17 +620,6 @@ TitleControls::Layout TitleControlsLayout() {
 	}
 #endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
-#ifdef __HAIKU__
-	return TitleControls::Layout{
-		.left = {
-			TitleControls::Control::Close,
-		},
-		.right = {
-			TitleControls::Control::Minimize,
-			TitleControls::Control::Maximize,
-		}
-	};
-#else // __HAIKU__
 	return TitleControls::Layout{
 		.right = {
 			TitleControls::Control::Minimize,
@@ -638,7 +627,6 @@ TitleControls::Layout TitleControlsLayout() {
 			TitleControls::Control::Close,
 		}
 	};
-#endif // !__HAIKU__
 }
 
 } // namespace Platform
