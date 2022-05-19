@@ -248,6 +248,8 @@ emojiIconFgActive: windowBgActive; // active emoji category icon
 stickerPanDeleteBg: #000000ff; // delete X button background for custom sent stickers in stickers panel (legacy)
 stickerPanDeleteFg: windowFgActive; // delete X button icon for custom sent stickers in stickers panel (legacy)
 stickerPreviewBg: #ffffffb0; // sticker and GIF preview background (when you press and hold on a sticker)
+stickerPanPremium1: #5a99ff; // premium sticker pack icon gradient 1
+stickerPanPremium2: #45b9f3; // premium sticker pack icon gradient 2
 
 historyTextInFg: windowFg; // inbox message text
 historyTextInFgSelected: historyTextInFg; // inbox message selected text or text in a selected message
