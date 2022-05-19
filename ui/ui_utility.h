@@ -194,8 +194,6 @@ QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
     not_null<QWidget*> widget,
     const QRect &rect = QRect());
 
-void DisableCustomScaling();
-
 int WheelDirection(not_null<QWheelEvent*> e);
 
 } // namespace Ui
