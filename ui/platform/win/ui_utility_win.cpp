@@ -53,7 +53,7 @@ void IgnoreAllActivation(not_null<QWidget*> widget) {
 std::optional<bool> IsOverlapped(
 		not_null<QWidget*> widget,
 		const QRect &rect) {
-	const auto handle = reinterpret_cast<HWND>(widget->window()->winId());
+	const auto handle = HWND(widget->winId());
 	Expects(handle != nullptr);
 
 	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
@@ -73,14 +73,36 @@ std::optional<bool> IsOverlapped(
 		}
 	}
 
-	std::vector<HWND> visited;
-	const RECT nativeRect{
-		rect.left(),
-		rect.top(),
-		rect.right(),
-		rect.bottom(),
-	};
+	const auto nativeRect = [&] {
+		const auto topLeft = [&] {
+			const auto qpoints = rect.topLeft()
+				* widget->devicePixelRatioF();
+			POINT result{
+				qpoints.x(),
+				qpoints.y(),
+			};
+			ClientToScreen(handle, &result);
+			return result;
+		}();
+		const auto bottomRight = [&] {
+			const auto qpoints = rect.bottomRight()
+				* widget->devicePixelRatioF();
+			POINT result{
+				qpoints.x(),
+				qpoints.y(),
+			};
+			ClientToScreen(handle, &result);
+			return result;
+		}();
+		return RECT{
+			topLeft.x,
+			topLeft.y,
+			bottomRight.x,
+			bottomRight.y,
+		};
+	}();
 
+	std::vector<HWND> visited;
 	for (auto curHandle = handle;
 		curHandle != nullptr && !ranges::contains(visited, curHandle);
 		curHandle = GetWindow(curHandle, GW_HWNDPREV)) {

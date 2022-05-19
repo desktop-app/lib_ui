@@ -208,7 +208,7 @@ std::optional<uint> XCBWindowWorkspace(xcb_window_t window) {
 std::optional<bool> XCBIsOverlapped(
 		not_null<QWidget*> widget,
 		const QRect &rect) {
-	const auto window = widget->window()->winId();
+	const auto window = widget->winId();
 	Expects(window != XCB_WINDOW_NONE);
 
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
@@ -221,17 +221,25 @@ std::optional<bool> XCBIsOverlapped(
 		return std::nullopt;
 	}
 
-	const auto windowWorkspace = XCBWindowWorkspace(
-		window);
-
+	const auto windowWorkspace = XCBWindowWorkspace(window);
 	const auto currentWorkspace = XCBCurrentWorkspace();
-
 	if (windowWorkspace.has_value()
 		&& currentWorkspace.has_value()
 		&& *windowWorkspace != *currentWorkspace
 		&& *windowWorkspace != 0xFFFFFFFF) {
 		return true;
 	}
+
+	const auto windowGeometry = XCBWindowGeometry(window);
+	if (windowGeometry.isNull()) {
+		return std::nullopt;
+	}
+
+	const auto mappedRect = QRect(
+		rect.topLeft()
+			* widget->devicePixelRatioF()
+			+ windowGeometry.topLeft(),
+		rect.size() * widget->devicePixelRatioF());
 
 	const auto cookie = xcb_query_tree(connection, *root);
 	const auto reply = base::Platform::XCB::MakeReplyPointer(
@@ -255,7 +263,7 @@ std::optional<bool> XCBIsOverlapped(
 		}
 
 		const auto geometry = XCBWindowGeometry(tree[i]);
-		if (!rect.intersects(geometry)) {
+		if (!mappedRect.intersects(geometry)) {
 			continue;
 		}
 
