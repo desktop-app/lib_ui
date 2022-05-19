@@ -14,7 +14,6 @@
 #include <QtGui/QtEvents>
 #include <QWheelEvent>
 
-#include <private/qguiapplication_p.h>
 #include <private/qhighdpiscaling_p.h>
 
 #include <array>
@@ -212,11 +211,6 @@ bool IsContentVisible(
 	return activeOrNotOverlapped
 		&& widget->isVisible()
 		&& !widget->window()->isMinimized();
-}
-
-void DisableCustomScaling() {
-	QHighDpiScaling::setGlobalFactor(1);
-	QGuiApplicationPrivate::resetCachedDevicePixelRatio();
 }
 
 int WheelDirection(not_null<QWheelEvent*> e) {
