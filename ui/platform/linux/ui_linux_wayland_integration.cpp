@@ -15,7 +15,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 #include <qpa/qplatformnativeinterface.h>
 #include <private/qguiapplication_p.h>
-#include <private/qhighdpiscaling_p.h>
 
 // private QtWaylandClient headers are using keywords :(
 #ifdef QT_NO_KEYWORDS
@@ -153,9 +152,8 @@ bool WaylandIntegration::showWindowMenu(QWindow *window) {
 		return false;
 	}
 
-	const auto pos = QHighDpi::toNativePixels(
-		window->mapFromGlobal(QCursor::pos()),
-		window);
+	const auto pos = window->mapFromGlobal(QCursor::pos())
+		* window->devicePixelRatio();
 
 	xdg_toplevel_show_window_menu(toplevel, seat, *serial, pos.x(), pos.y());
 	return true;
