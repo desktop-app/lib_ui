@@ -14,7 +14,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
 #include <qpa/qplatformnativeinterface.h>
-#include <private/qguiapplication_p.h>
 
 // private QtWaylandClient headers are using keywords :(
 #ifdef QT_NO_KEYWORDS
@@ -22,7 +21,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define slots Q_SLOTS
 #endif // QT_NO_KEYWORDS
 
-#include <private/qwaylandintegration_p.h>
 #include <private/qwaylanddisplay_p.h>
 #include <private/qwaylandwindow_p.h>
 #include <private/qwaylandinputdevice_p.h>
@@ -32,7 +30,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 Q_DECLARE_METATYPE(QMargins);
 
-using QtWaylandClient::QWaylandIntegration;
 using QtWaylandClient::QWaylandWindow;
 using namespace KWayland::Client;
 
@@ -93,11 +90,6 @@ bool WaylandIntegration::xdgDecorationSupported() {
 }
 
 bool WaylandIntegration::windowExtentsSupported() {
-	// initialize shell integration before querying
-	if (const auto integration = static_cast<QWaylandIntegration*>(
-		QGuiApplicationPrivate::platformIntegration())) {
-		integration->shellIntegration();
-	}
 	return WaylandShells::XdgShell();
 }
 
