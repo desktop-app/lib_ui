@@ -495,7 +495,9 @@ bool WindowExtentsSupported() {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
 	if (::Platform::IsX11()
-		&& XCB::IsSupportedByWM(kXCBFrameExtentsAtomName.utf16())) {
+		&& XCB::IsSupportedByWM(
+			XCB::GetConnectionFromQt(),
+			kXCBFrameExtentsAtomName.utf16())) {
 		return true;
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
