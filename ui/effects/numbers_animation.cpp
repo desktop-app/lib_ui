@@ -17,10 +17,15 @@ NumbersAnimation::NumbersAnimation(
 	const style::font &font,
 	Fn<void()> animationCallback)
 : _font(font)
+, _duration(st::slideWrapDuration)
 , _animationCallback(std::move(animationCallback)) {
 	for (auto ch = '0'; ch != '9'; ++ch) {
 		accumulate_max(_digitWidth, _font->m.horizontalAdvance(ch));
 	}
+}
+
+void NumbersAnimation::setDuration(int duration) {
+	_duration = duration;
 }
 
 void NumbersAnimation::setText(const QString &text, int value) {
@@ -82,7 +87,7 @@ void NumbersAnimation::realSetText(QString text, int value) {
 			[this] { animationCallback(); },
 			0.,
 			1.,
-			st::slideWrapDuration);
+			_duration);
 	}
 }
 

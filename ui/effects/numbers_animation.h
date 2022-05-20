@@ -25,6 +25,7 @@ public:
 		_widthChangedCallback = std::move(callback);
 	}
 	void setText(const QString &text, int value);
+	void setDuration(int duration);
 	void finishAnimating();
 
 	void paint(QPainter &p, int x, int y, int outerWidth);
@@ -43,6 +44,8 @@ private:
 	void realSetText(QString text, int value);
 
 	const style::font &_font;
+
+	int _duration;
 
 	QList<Digit> _digits;
 	int _digitWidth = 0;
