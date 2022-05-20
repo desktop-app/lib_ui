@@ -660,3 +660,6 @@ premiumButtonBg1: #55a5ff; // upgrade to premium button gradient 1
 premiumButtonBg2: #a767ff; // upgrade to premium button gradient 2
 premiumButtonBg3: #db5c9d; // upgrade to premium button gradient 3
 premiumButtonFg: #ffffff; // upgrade to premium button text
+
+premiumIconBg1: #f38926; // icon in premium settings gradient 1
+premiumIconBg2: #e44456; // icon in premium settings gradient 2
