@@ -49,14 +49,12 @@ private:
 	friend class NativeFilter;
 
 	void init();
-	void updateMargins();
 	void updateWindowFrameColors();
 	void updateWindowFrameColors(bool active);
 	void updateSystemMenu();
 	void updateSystemMenu(Qt::WindowState state);
 	void initialShadowUpdate();
 	void updateCornersRounding();
-	void fixMaximizedWindow();
 	[[nodiscard]] bool handleNativeEvent(
 		UINT msg,
 		WPARAM wParam,
@@ -82,9 +80,7 @@ private:
 	rpl::event_stream<HitTestResult> _systemButtonDown;
 	std::optional<WindowShadow> _shadow;
 	rpl::variable<uint> _dpi;
-	QMargins _marginsDelta;
 	HMENU _menu = nullptr;
-	bool _updatingMargins = false;
 	bool _isFullScreen = false;
 
 };
