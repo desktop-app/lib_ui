@@ -74,7 +74,7 @@ void TitleWidget::initInWindow(not_null<RpWindow*> window) {
 	) | rpl::filter([=](not_null<HitTestRequest*> request) {
 		return !isHidden() && geometry().contains(request->point);
 	}) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
-		request->result = hitTest(request->point);
+		request->result = hitTest(request->point, request->result);
 	}, lifetime());
 
 	SetupSemiNativeSystemButtons(&_controls, window, lifetime(), [=] {
@@ -98,9 +98,9 @@ void TitleWidget::refreshGeometryWithWidth(int width) {
 	setGeometry(0, 0, width, _controls.st()->height + add);
 	if (_paddingHelper) {
 		_paddingHelper->controlsParent.setGeometry(
+			0,
 			add,
-			add,
-			width - 2 * add,
+			width,
 			_controls.st()->height);
 	}
 	update();
@@ -126,7 +126,9 @@ void TitleWidget::resizeEvent(QResizeEvent *e) {
 	_shadow->setGeometry(0, height() - thickness, width(), thickness);
 }
 
-HitTestResult TitleWidget::hitTest(QPoint point) const {
+HitTestResult TitleWidget::hitTest(
+		QPoint point,
+		HitTestResult oldResult) const {
 	const auto origin = _paddingHelper
 		? _paddingHelper->controlsParent.pos()
 		: QPoint();
@@ -136,6 +138,8 @@ HitTestResult TitleWidget::hitTest(QPoint point) const {
 	const auto controlsResult = _controls.hitTest(point - origin, padding);
 	return (controlsResult != HitTestResult::None)
 		? controlsResult
+		: (oldResult != HitTestResult::Client)
+		? oldResult
 		: HitTestResult::Caption;
 }
 
