@@ -126,8 +126,8 @@ bool ShowWindowMenu(QWindow *window) {
 
 	SendMessage(
 		HWND(window->winId()),
-		WM_SYSCOMMAND,
-		SC_MOUSEMENU,
+		0x313 /* WM_POPUPSYSTEMMENU */,
+		0,
 		MAKELPARAM(pos.x(), pos.y()));
 
 	return true;

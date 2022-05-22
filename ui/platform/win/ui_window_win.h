@@ -51,8 +51,6 @@ private:
 	void init();
 	void updateWindowFrameColors();
 	void updateWindowFrameColors(bool active);
-	void updateSystemMenu();
-	void updateSystemMenu(Qt::WindowState state);
 	void initialShadowUpdate();
 	void updateCornersRounding();
 	[[nodiscard]] bool handleNativeEvent(
@@ -80,7 +78,6 @@ private:
 	rpl::event_stream<HitTestResult> _systemButtonDown;
 	std::optional<WindowShadow> _shadow;
 	rpl::variable<uint> _dpi;
-	HMENU _menu = nullptr;
 	bool _isFullScreen = false;
 
 };
