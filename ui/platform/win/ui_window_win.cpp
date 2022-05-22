@@ -399,11 +399,7 @@ void WindowHelper::init() {
 
 	updateWindowFrameColors();
 
-	_menu = GetSystemMenu(_handle, FALSE);
-	updateSystemMenu();
-
 	const auto handleStateChanged = [=](Qt::WindowState state) {
-		updateSystemMenu(state);
 		if (fixedSize() && (state & Qt::WindowMaximized)) {
 			crl::on_main(window().get(), [=] {
 				window()->setWindowState(
@@ -507,7 +503,7 @@ bool WindowHelper::handleNativeEvent(
 		if (_title->isHidden()) {
 			return false;
 		}
-		SendMessage(_handle, WM_SYSCOMMAND, SC_MOUSEMENU, lParam);
+		SendMessage(_handle, 0x313 /* WM_POPUPSYSTEMMENU */, 0, lParam);
 		if (result) *result = 0;
 	} return true;
 
@@ -650,45 +646,6 @@ bool WindowHelper::handleNativeEvent(
 		_systemButtonOver.fire(systemButtonHitTest(*result));
 	} return true;
 
-	case WM_SYSCOMMAND: {
-		if (wParam == SC_MOUSEMENU && !fixedSize()) {
-			POINTS p = MAKEPOINTS(lParam);
-			updateSystemMenu(window()->windowHandle()->windowState());
-			TrackPopupMenu(
-				_menu,
-				TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON,
-				p.x,
-				p.y,
-				0,
-				_handle,
-				0);
-		}
-	} return false;
-
-	case WM_COMMAND: {
-		if (HIWORD(wParam)) {
-			return false;
-		}
-		const auto command = LOWORD(wParam);
-		switch (command) {
-		case SC_CLOSE:
-			window()->close();
-			return true;
-		case SC_MINIMIZE:
-			window()->setWindowState(
-				window()->windowState() | Qt::WindowMinimized);
-			return true;
-		case SC_MAXIMIZE:
-			if (!fixedSize()) {
-				window()->setWindowState(Qt::WindowMaximized);
-			}
-			return true;
-		case SC_RESTORE:
-			window()->setWindowState(Qt::WindowNoState);
-			return true;
-		}
-	} return true;
-
 	// should return true for Qt not to change window size
 	// when moving the window between screens
 	// change to false once runtime scale change would be supported
@@ -815,49 +772,6 @@ void WindowHelper::updateWindowFrameColors(bool active) {
 		kDWMWA_TEXT_COLOR,
 		&fgRef,
 		sizeof(COLORREF));
-}
-
-void WindowHelper::updateSystemMenu() {
-	updateSystemMenu(window()->windowHandle()->windowState());
-}
-
-void WindowHelper::updateSystemMenu(Qt::WindowState state) {
-	if (!_menu) {
-		return;
-	}
-
-	const auto menuToDisable = (state == Qt::WindowMaximized)
-		? SC_MAXIMIZE
-		: (state == Qt::WindowMinimized)
-		? SC_MINIMIZE
-		: SC_RESTORE;
-	const auto itemCount = GetMenuItemCount(_menu);
-	for (int i = 0; i < itemCount; ++i) {
-		MENUITEMINFO itemInfo = { 0 };
-		itemInfo.cbSize = sizeof(itemInfo);
-		itemInfo.fMask = MIIM_TYPE | MIIM_STATE | MIIM_ID;
-		if (!GetMenuItemInfo(_menu, i, TRUE, &itemInfo)) {
-			break;
-		}
-		if (itemInfo.fType & MFT_SEPARATOR) {
-			continue;
-		} else if (!itemInfo.wID || itemInfo.wID == SC_CLOSE) {
-			continue;
-		}
-		UINT fOldState = itemInfo.fState;
-		UINT fState = itemInfo.fState & ~(MFS_DISABLED | MFS_DEFAULT);
-		if (itemInfo.wID == menuToDisable
-			|| (itemInfo.wID != SC_MINIMIZE
-				&& itemInfo.wID != SC_MAXIMIZE
-				&& itemInfo.wID != SC_RESTORE)) {
-			fState |= MFS_DISABLED;
-		}
-		itemInfo.fMask = MIIM_STATE;
-		itemInfo.fState = fState;
-		if (!SetMenuItemInfo(_menu, i, TRUE, &itemInfo)) {
-			break;
-		}
-	}
 }
 
 not_null<WindowHelper::NativeFilter*> WindowHelper::GetNativeFilter() {
