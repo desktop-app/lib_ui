@@ -49,6 +49,7 @@ private:
 	friend class NativeFilter;
 
 	void init();
+	void updateFrameMargins();
 	void updateWindowFrameColors();
 	void updateWindowFrameColors(bool active);
 	void initialShadowUpdate();
@@ -64,6 +65,7 @@ private:
 		LPARAM lParam,
 		LRESULT *result);
 	[[nodiscard]] bool fixedSize() const;
+	[[nodiscard]] bool frameMarginsSet() const;
 	[[nodiscard]] int systemButtonHitTest(HitTestResult result) const;
 	[[nodiscard]] HitTestResult systemButtonHitTest(int result) const;
 
@@ -78,6 +80,7 @@ private:
 	rpl::event_stream<HitTestResult> _systemButtonDown;
 	std::optional<WindowShadow> _shadow;
 	rpl::variable<uint> _dpi;
+	rpl::variable<std::optional<QMargins>> _frameMargins;
 	bool _isFullScreen = false;
 
 };
