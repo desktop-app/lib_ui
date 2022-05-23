@@ -3312,8 +3312,16 @@ void InputField::removeMarkdownTag(
 	auto tags = TagList();
 	for (const auto &existing : current.tags) {
 		const auto id = TextUtilities::TagWithRemoved(existing.id, tag);
-		if (!id.isEmpty()) {
-			tags.push_back({ existing.offset, existing.length, id });
+		const auto additional = (tag == kTagPre)
+			? kTagCode
+			: (tag == kTagCode)
+			? kTagPre
+			: QString();
+		const auto use = additional.isEmpty()
+			? id
+			: TextUtilities::TagWithRemoved(id, additional);
+		if (!use.isEmpty()) {
+			tags.push_back({ existing.offset, existing.length, use });
 		}
 	}
 
