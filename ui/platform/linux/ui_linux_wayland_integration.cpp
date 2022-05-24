@@ -158,7 +158,7 @@ bool WaylandIntegration::windowExtentsSupported() {
 }
 
 void WaylandIntegration::setWindowExtents(
-		QWindow *window,
+		not_null<QWidget*> widget,
 		const QMargins &extents) {
 	const auto native = QGuiApplication::platformNativeInterface();
 	if (!native) {
@@ -166,38 +166,42 @@ void WaylandIntegration::setWindowExtents(
 	}
 
 	native->setWindowProperty(
-		window->handle(),
+		widget->windowHandle()->handle(),
 		"_desktopApp_waylandCustomMargins",
 		QVariant::fromValue<QMargins>(extents));
 }
 
-void WaylandIntegration::unsetWindowExtents(QWindow *window) {
+void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
 	const auto native = QGuiApplication::platformNativeInterface();
 	if (!native) {
 		return;
 	}
 
 	native->setWindowProperty(
-		window->handle(),
+		widget->windowHandle()->handle(),
 		"_desktopApp_waylandCustomMargins",
 		QVariant());
 }
 
-bool WaylandIntegration::showWindowMenu(QWindow *window) {
+void WaylandIntegration::showWindowMenu(
+		not_null<QWidget*> widget,
+		const QPoint &point) {
 	const auto native = QGuiApplication::platformNativeInterface();
 	if (!native) {
-		return false;
+		return;
 	}
 
 	const auto toplevel = reinterpret_cast<xdg_toplevel*>(
-		native->nativeResourceForWindow(QByteArray("xdg_toplevel"), window));
+		native->nativeResourceForWindow(
+			QByteArray("xdg_toplevel"),
+			widget->windowHandle()));
 
 	const auto seat = reinterpret_cast<wl_seat*>(
 		native->nativeResourceForIntegration(QByteArray("wl_seat")));
 	
 	const auto serial = [&]() -> std::optional<uint32_t> {
 		const auto waylandWindow = static_cast<QWaylandWindow*>(
-			window->handle());
+			widget->windowHandle()->handle());
 		if (!waylandWindow) {
 			return std::nullopt;
 		}
@@ -205,14 +209,10 @@ bool WaylandIntegration::showWindowMenu(QWindow *window) {
 	}();
 
 	if (!toplevel || !seat || !serial) {
-		return false;
+		return;
 	}
 
-	const auto pos = window->mapFromGlobal(QCursor::pos())
-		* window->devicePixelRatio();
-
-	xdg_toplevel_show_window_menu(toplevel, seat, *serial, pos.x(), pos.y());
-	return true;
+	xdg_toplevel_show_window_menu(toplevel, seat, *serial, point.x(), point.y());
 }
 
 } // namespace Platform

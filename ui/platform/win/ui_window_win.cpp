@@ -8,6 +8,7 @@
 
 #include "ui/inactive_press.h"
 #include "ui/platform/win/ui_window_title_win.h"
+#include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/painter.h"
 #include "base/platform/win/base_windows_safe_library.h"
@@ -569,7 +570,10 @@ bool WindowHelper::handleNativeEvent(
 		if (_title->isHidden() && !frameMarginsSet()) {
 			return false;
 		}
-		SendMessage(_handle, 0x313 /* WM_POPUPSYSTEMMENU */, 0, lParam);
+		POINT p{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+		ScreenToClient(_handle, &p);
+		const auto mapped = QPoint(p.x, p.y) / window()->devicePixelRatioF();
+		ShowWindowMenu(window(), mapped);
 		if (result) *result = 0;
 	} return true;
 

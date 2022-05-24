@@ -31,14 +31,13 @@ inline bool WindowExtentsSupported() {
 	return false;
 }
 
-inline void SetWindowExtents(QWindow *window, const QMargins &extents) {
+inline void SetWindowExtents(not_null<QWidget*> widget, const QMargins &extents) {
 }
 
-inline void UnsetWindowExtents(QWindow *window) {
+inline void UnsetWindowExtents(not_null<QWidget*> widget) {
 }
 
-inline bool ShowWindowMenu(QWindow *window) {
-	return false;
+inline void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 }
 
 } // namespace Platform

@@ -450,7 +450,7 @@ void DefaultTitleWidget::mousePressEvent(QMouseEvent *e) {
 	if (e->button() == Qt::LeftButton) {
 		_mousePressed = true;
 	} else if (e->button() == Qt::RightButton) {
-		ShowWindowMenu(window()->windowHandle());
+		ShowWindowMenu(window(), e->windowPos().toPoint());
 	}
 }
 

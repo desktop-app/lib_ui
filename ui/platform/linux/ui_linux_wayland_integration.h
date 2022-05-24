@@ -19,9 +19,9 @@ public:
 	void waitForInterfaceAnnounce();
 	[[nodiscard]] bool xdgDecorationSupported();
 	[[nodiscard]] bool windowExtentsSupported();
-	void setWindowExtents(QWindow *window, const QMargins &extents);
-	void unsetWindowExtents(QWindow *window);
-	bool showWindowMenu(QWindow *window);
+	void setWindowExtents(not_null<QWidget*> widget, const QMargins &extents);
+	void unsetWindowExtents(not_null<QWidget*> widget);
+	void showWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 private:
 	WaylandIntegration();

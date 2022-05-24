@@ -9,7 +9,6 @@
 #include "base/platform/win/base_windows_h.h"
 
 #include <QtWidgets/QApplication>
-#include <QtGui/QWindow>
 
 #include <wrl/client.h>
 #include <Shobjidl.h>
@@ -121,16 +120,16 @@ std::optional<bool> IsOverlapped(
 	return false;
 }
 
-bool ShowWindowMenu(QWindow *window) {
-	const auto pos = QCursor::pos();
-
+void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
+	const auto handle = HWND(widget->winId());
+	const auto mapped = point * widget->devicePixelRatioF();
+	POINT p{ mapped.x(), mapped.y() };
+	ClientToScreen(handle, &p);
 	SendMessage(
-		HWND(window->winId()),
+		handle,
 		0x313 /* WM_POPUPSYSTEMMENU */,
 		0,
-		MAKELPARAM(pos.x(), pos.y()));
-
-	return true;
+		MAKELPARAM(p.x, p.y));
 }
 
 TitleControls::Layout TitleControlsLayout() {
