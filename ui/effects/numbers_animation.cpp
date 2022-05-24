@@ -28,6 +28,10 @@ void NumbersAnimation::setDuration(int duration) {
 	_duration = duration;
 }
 
+void NumbersAnimation::setDisabledMonospace(bool value) {
+	_disabledMonospace = value;
+}
+
 void NumbersAnimation::setText(const QString &text, int value) {
 	if (_a_ready.animating()) {
 		_delayedText = text;
@@ -80,8 +84,13 @@ void NumbersAnimation::realSetText(QString text, int value) {
 			--oldSize;
 		}
 	}
-	_fromWidth = oldSize * _digitWidth;
-	_toWidth = newSize * _digitWidth;
+	if (_disabledMonospace) {
+		_fromWidth = _toWidth;
+		_toWidth = _font->m.horizontalAdvance(text);
+	} else {
+		_fromWidth = oldSize * _digitWidth;
+		_toWidth = newSize * _digitWidth;
+	}
 	if (animating) {
 		_a_ready.start(
 			[this] { animationCallback(); },
@@ -122,30 +131,37 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 
 	QString singleChar('0');
 	if (style::RightToLeft()) x = outerWidth - x - width;
-	x += width - _digits.size() * _digitWidth;
+	x += width
+		- (_disabledMonospace ? _toWidth : _digits.size() * _digitWidth);
 	auto fromTop = anim::interpolate(0, _font->height, progress) * (_growing ? 1 : -1);
 	auto toTop = anim::interpolate(_font->height, 0, progress) * (_growing ? -1 : 1);
 	for (auto i = 0; i != digitsCount; ++i) {
 		auto &digit = _digits[i];
 		auto from = digit.from;
 		auto to = digit.to;
+		const auto toCharWidth = (!_disabledMonospace || to.isDigit())
+			? _digitWidth
+			: _font->m.horizontalAdvance(to);
+		const auto fromCharWidth = (!_disabledMonospace || from.isDigit())
+			? _digitWidth
+			: _font->m.horizontalAdvance(from);
 		if (from == to) {
 			p.setOpacity(1.);
 			singleChar[0] = from;
-			p.drawText(x + (_digitWidth - digit.fromWidth) / 2, y + _font->ascent, singleChar);
+			p.drawText(x + (toCharWidth - digit.fromWidth) / 2, y + _font->ascent, singleChar);
 		} else {
 			if (from.unicode()) {
 				p.setOpacity(1. - progress);
 				singleChar[0] = from;
-				p.drawText(x + (_digitWidth - digit.fromWidth) / 2, y + fromTop + _font->ascent, singleChar);
+				p.drawText(x + (fromCharWidth - digit.fromWidth) / 2, y + fromTop + _font->ascent, singleChar);
 			}
 			if (to.unicode()) {
 				p.setOpacity(progress);
 				singleChar[0] = to;
-				p.drawText(x + (_digitWidth - digit.toWidth) / 2, y + toTop + _font->ascent, singleChar);
+				p.drawText(x + (toCharWidth - digit.toWidth) / 2, y + toTop + _font->ascent, singleChar);
 			}
 		}
-		x += _digitWidth;
+		x += std::max(toCharWidth, fromCharWidth);
 	}
 	p.setOpacity(1.);
 }

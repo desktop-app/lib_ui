@@ -26,6 +26,7 @@ public:
 	}
 	void setText(const QString &text, int value);
 	void setDuration(int duration);
+	void setDisabledMonospace(bool value);
 	void finishAnimating();
 
 	void paint(QPainter &p, int x, int y, int outerWidth);
@@ -59,6 +60,8 @@ private:
 
 	int _value = 0;
 	bool _growing = false;
+
+	bool _disabledMonospace = false;
 
 	Fn<void()> _animationCallback;
 	Fn<void()> _widthChangedCallback;
