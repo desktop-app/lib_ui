@@ -484,10 +484,10 @@ void DefaultWindowHelper::paintBorders(QPainter &p) {
 
 void DefaultWindowHelper::updateWindowExtents() {
 	if (hasShadow() && !_title->isHidden()) {
-		SetWindowExtents(window()->windowHandle(), resizeArea());
+		SetWindowExtents(window(), resizeArea());
 		_extentsSet = true;
 	} else if (_extentsSet) {
-		UnsetWindowExtents(window()->windowHandle());
+		UnsetWindowExtents(window());
 		_extentsSet = false;
 	}
 }

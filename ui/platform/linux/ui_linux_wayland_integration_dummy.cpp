@@ -38,15 +38,16 @@ bool WaylandIntegration::windowExtentsSupported() {
 }
 
 void WaylandIntegration::setWindowExtents(
-		QWindow *window,
+		not_null<QWidget*> widget,
 		const QMargins &extents) {
 }
 
-void WaylandIntegration::unsetWindowExtents(QWindow *window) {
+void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
 }
 
-bool WaylandIntegration::showWindowMenu(QWindow *window) {
-	return false;
+void WaylandIntegration::showWindowMenu(
+		not_null<QWidget*> widget,
+		const QPoint &point) {
 }
 
 } // namespace Platform
