@@ -44,10 +44,12 @@ public:
 	[[nodiscard]] auto systemButtonDown() const
 		-> rpl::producer<HitTestResult> override;
 
-private:
-	class NativeFilter;
-	friend class NativeFilter;
+	[[nodiscard]] bool nativeEvent(
+		const QByteArray &eventType,
+		void *message,
+		base::NativeEventResult *result) override;
 
+private:
 	void init();
 	void updateFrameMargins();
 	void updateWindowFrameColors();
@@ -70,7 +72,6 @@ private:
 	[[nodiscard]] HitTestResult systemButtonHitTest(int result) const;
 
 	[[nodiscard]] int titleHeight() const;
-	static not_null<NativeFilter*> GetNativeFilter();
 
 	const HWND _handle = nullptr;
 	const not_null<TitleWidget*> _title;

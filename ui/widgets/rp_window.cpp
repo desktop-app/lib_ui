@@ -17,6 +17,8 @@ RpWindow::RpWindow(QWidget *parent)
 
 	_helper->initInWindow(this);
 	hide();
+
+	_initialized = true;
 }
 
 RpWindow::~RpWindow() = default;
@@ -97,6 +99,19 @@ void RpWindow::close() {
 void RpWindow::setBodyTitleArea(
 		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	_helper->setBodyTitleArea(std::move(testMethod));
+}
+
+bool RpWindow::nativeEvent(
+		const QByteArray &eventType,
+		void *message,
+		base::NativeEventResult *result) {
+	if (_initialized && _helper->nativeEvent(
+		eventType,
+		message,
+		result)) {
+		return true;
+	}
+	return RpWidget::nativeEvent(eventType, message, result);
 }
 
 } // namespace Ui

@@ -8,6 +8,7 @@
 
 #include "base/flags.h"
 #include "base/object_ptr.h"
+#include "base/qt/qt_common_adapters.h"
 #include "ui/round_rect.h"
 
 namespace style {
@@ -48,6 +49,10 @@ public:
 		-> rpl::producer<HitTestResult>;
 	[[nodiscard]] virtual auto systemButtonDown() const
 		-> rpl::producer<HitTestResult>;
+	[[nodiscard]] virtual bool nativeEvent(
+		const QByteArray &eventType,
+		void *message,
+		base::NativeEventResult *result);
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);
