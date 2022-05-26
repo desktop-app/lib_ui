@@ -92,7 +92,7 @@ void IgnoreAllActivation(not_null<QWidget*> widget) {
 }
 
 void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio) {
-	const auto winId = widget->window()->winId();
+	const auto winId = widget->winId();
 	if (const auto view = reinterpret_cast<NSView*>(winId)) {
 		if (const auto window = [view window]) {
 			window.styleMask &= ~NSWindowStyleMaskResizable;
