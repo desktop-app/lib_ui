@@ -9,6 +9,7 @@
 #include "ui/inactive_press.h"
 #include "ui/platform/win/ui_window_title_win.h"
 #include "ui/widgets/rp_window.h"
+#include "base/platform/win/base_windows_safe_library.h"
 #include "base/platform/base_platform_info.h"
 #include "base/integration.h"
 #include "base/debug_log.h"
@@ -35,6 +36,18 @@ constexpr auto kDWMWCP_DONOTROUND = DWORD(1);
 constexpr auto kDWMWA_WINDOW_CORNER_PREFERENCE = DWORD(33);
 constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
 constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
+
+UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
+
+[[nodiscard]] bool GetDpiForWindowSupported() {
+	static const auto Result = [&] {
+#define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
+		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
+		return LOAD_SYMBOL(user32, GetDpiForWindow);
+#undef LOAD_SYMBOL
+	}();
+	return Result;
+}
 
 [[nodiscard]] bool IsCompositionEnabled() {
 	auto result = BOOL(FALSE);
@@ -163,7 +176,8 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 , _handle(ResolveWindowHandle(window))
 , _title(Ui::CreateChild<TitleWidget>(window.get()))
 , _body(Ui::CreateChild<RpWidget>(window.get()))
-, _shadow(std::in_place, window, st::windowShadowFg->c) {
+, _shadow(std::in_place, window, st::windowShadowFg->c)
+, _dpi(GetDpiForWindowSupported() ? GetDpiForWindow(_handle) : 0) {
 	Expects(_handle != nullptr);
 
 	init();
@@ -593,6 +607,13 @@ bool WindowHelper::handleNativeEvent(
 			window()->setWindowState(Qt::WindowNoState);
 			return true;
 		}
+	} return true;
+
+	// should return true for Qt not to change window size
+	// when moving the window between screens
+	// change to false once runtime scale change would be supported
+	case WM_DPICHANGED: {
+		_dpi = LOWORD(wParam);
 	} return true;
 
 	}
