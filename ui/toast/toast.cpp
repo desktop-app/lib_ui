@@ -87,6 +87,10 @@ void Instance::hide() {
 	_widget->deleteLater();
 }
 
+void Instance::setInputUsed(bool used) {
+	_widget->setInputUsed(used);
+}
+
 not_null<RpWidget*> Instance::widget() const {
 	return _widget.get();
 }

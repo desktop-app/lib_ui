@@ -21,6 +21,7 @@ public:
 
 	// shownLevel=1 completely visible, shownLevel=0 completely invisible
 	void setShownLevel(float64 shownLevel);
+	void setInputUsed(bool used);
 
 	void onParentResized();
 

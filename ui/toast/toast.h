@@ -56,6 +56,7 @@ public:
 	void hideAnimated();
 	void hide();
 
+	void setInputUsed(bool used);
 	[[nodiscard]] not_null<RpWidget*> widget() const;
 
 private:

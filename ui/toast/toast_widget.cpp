@@ -49,6 +49,12 @@ Widget::Widget(QWidget *parent, const Config &config)
 	show();
 }
 
+void Widget::setInputUsed(bool used) {
+	setAttribute(
+		Qt::WA_TransparentForMouseEvents,
+		!used && !_text.hasLinks());
+}
+
 void Widget::onParentResized() {
 	updateGeometry();
 }
