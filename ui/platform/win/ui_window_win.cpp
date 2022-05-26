@@ -42,7 +42,7 @@ constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
 	return success && result;
 }
 
-HWND FindTaskbarWindow(LPRECT rcMon = nullptr) {
+[[nodiscard]] HWND FindTaskbarWindow(LPRECT rcMon = nullptr) {
 	HWND hTaskbar = nullptr;
 	RECT rcTaskbar, rcMatch;
 
@@ -63,7 +63,9 @@ HWND FindTaskbarWindow(LPRECT rcMon = nullptr) {
 	return hTaskbar;
 }
 
-bool IsTaskbarAutoHidden(LPRECT rcMon = nullptr, PUINT pEdge = nullptr) {
+[[nodiscard]] bool IsTaskbarAutoHidden(
+		LPRECT rcMon = nullptr,
+		PUINT pEdge = nullptr) {
 	HWND hTaskbar = FindTaskbarWindow(rcMon);
 	if (!hTaskbar) {
 		if (pEdge) {
