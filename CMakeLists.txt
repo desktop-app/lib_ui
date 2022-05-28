@@ -262,10 +262,6 @@ PRIVATE
     emoji_suggestions/emoji_suggestions_helper.h
 )
 
-if (DESKTOP_APP_USE_PACKAGED)
-    nice_target_sources(lib_ui ${src_loc} PRIVATE ui/text/qtextitemint.cpp)
-endif()
-
 if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
     nice_target_sources(lib_ui ${src_loc} PRIVATE fonts/fonts.qrc)
 endif()
