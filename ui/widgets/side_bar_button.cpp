@@ -7,6 +7,7 @@
 #include "ui/widgets/side_bar_button.h"
 
 #include "ui/effects/ripple_animation.h"
+#include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
 
@@ -14,6 +15,7 @@ namespace Ui {
 namespace {
 
 constexpr auto kMaxLabelLines = 3;
+constexpr auto kPremiumLockedOpacity = 0.6;
 
 } // namespace
 
@@ -23,6 +25,14 @@ SideBarButton::SideBarButton(
 	const style::SideBarButton &st)
 : RippleButton(parent, st.ripple)
 , _st(st)
+, _arcPen(
+	_st.textFg,
+	// Use a divider to get 1.5.
+	st::sideBarButtonLockPenWidth
+		/ float64(st::sideBarButtonLockPenWidthDivider),
+	Qt::SolidLine,
+	Qt::SquareCap,
+	Qt::RoundJoin)
 , _text(_st.minTextWidth) {
 	_text.setText(_st.style, title);
 	setAttribute(Qt::WA_OpaquePaintEvent);
@@ -30,6 +40,7 @@ SideBarButton::SideBarButton(
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
 		_iconCache = _iconCacheActive = QImage();
+		_lock.iconCache = _lock.iconCacheActive = QImage();
 		update();
 	}, lifetime());
 }
@@ -66,6 +77,26 @@ void SideBarButton::setIconOverride(
 	update();
 }
 
+void SideBarButton::setLocked(bool locked) {
+	if (_lock.locked == locked) {
+		return;
+	}
+	_lock.locked = locked;
+	const auto charFiller = QChar('l');
+	const auto count = std::ceil(st::sideBarButtonLockSize.width()
+		/ float(_st.style.font->width(charFiller)));
+	const auto filler = QString().fill(charFiller, count);
+	const auto result = _lock.locked
+		? (filler + _text.toString())
+		: _text.toString().mid(count);
+	_text.setText(_st.style, result);
+	update();
+}
+
+bool SideBarButton::locked() const {
+	return _lock.locked;
+}
+
 int SideBarButton::resizeGetHeight(int newWidth) {
 	auto result = _st.minHeight;
 	const auto text = std::min(
@@ -79,9 +110,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 	auto p = Painter(this);
 	const auto clip = e->rect();
 
-	p.fillRect(clip, _active ? _st.textBgActive : _st.textBg);
+	const auto &bg = _active ? _st.textBgActive : _st.textBg;
+	p.fillRect(clip, bg);
 
 	RippleButton::paintRipple(p, 0, 0);
+
+	if (_lock.locked) {
+		p.setOpacity(kPremiumLockedOpacity);
+	}
 
 	const auto &icon = computeIcon();
 	const auto x = (_st.iconPosition.x() < 0)
@@ -126,6 +162,28 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 			x + (_iconCacheBadgeWidth - _badge.maxWidth()) / 2,
 			y + (_st.badgeHeight - _st.badgeStyle.font->height) / 2,
 			width());
+	}
+
+	if (_lock.locked) {
+		auto lineWidths = QVector<int>();
+		lineWidths.reserve(kMaxLabelLines);
+		_text.countLineWidths(width() - 2 * _st.textSkip, &lineWidths);
+		if (lineWidths.isEmpty()) {
+			return;
+		}
+		validateLockIconCache();
+
+		const auto &icon = _active ? _lock.iconCacheActive : _lock.iconCache;
+		const auto size = icon.size() / style::DevicePixelRatio();
+		p.translate(
+			(width() - lineWidths.front()) / 2.,
+			_st.textTop + (_st.style.font->height - size.height()) / 2.);
+		p.setOpacity(1.);
+		p.fillRect(QRect(QPoint(), size), bg);
+		p.setOpacity(kPremiumLockedOpacity);
+		p.translate(-_st.style.font->spacew / 2., 0);
+
+		p.drawImage(0, 0, icon);
 	}
 }
 
@@ -180,6 +238,61 @@ void SideBarButton::validateIconCache() {
 		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
 	}
 	(_active ? _iconCacheActive : _iconCache) = std::move(image);
+}
+
+void SideBarButton::validateLockIconCache() {
+	if (!(_active ? _lock.iconCacheActive : _lock.iconCache).isNull()) {
+		return;
+	}
+	const auto &size = st::sideBarButtonLockSize;
+	auto image = QImage(
+		size * style::DevicePixelRatio(),
+		QImage::Format_ARGB32_Premultiplied);
+	image.setDevicePixelRatio(style::DevicePixelRatio());
+	image.fill(Qt::transparent);
+	{
+		auto p = QPainter(&image);
+		auto hq = PainterHighQualityEnabler(p);
+
+		const auto &arcOffset = st::sideBarButtonLockArcOffset;
+		const auto arcWidth = size.width() - arcOffset * 2;
+		const auto &arcHeight = st::sideBarButtonLockArcHeight;
+
+		const auto blockRectWidth = size.width();
+		const auto blockRectHeight = st::sideBarButtonLockBlockHeight;
+		const auto blockRectTop = size.height() - blockRectHeight;
+
+		const auto blockRect = QRectF(
+			(size.width() - blockRectWidth) / 2,
+			blockRectTop,
+			blockRectWidth,
+			blockRectHeight);
+		const auto lineHeight = -(blockRect.y() - arcHeight)
+			+ _arcPen.width() / 2.;
+
+		p.setPen(Qt::NoPen);
+		p.setBrush(_st.textFg);
+		{
+			p.drawRoundedRect(blockRect, 2, 2);
+		}
+
+		p.translate(size.width() - arcOffset, blockRect.y());
+
+		p.setPen(_arcPen);
+		const auto rLine = QLineF(0, 0, 0, lineHeight);
+		const auto lLine = rLine.translated(-arcWidth, 0);
+		p.drawLine(rLine);
+		p.drawLine(lLine);
+
+		p.drawArc(
+			-arcWidth,
+			-arcHeight - _arcPen.width() / 2.,
+			arcWidth,
+			arcHeight * 2,
+			0,
+			180 * 16);
+	}
+	(_active ? _lock.iconCacheActive : _lock.iconCache) = std::move(image);
 }
 
 } // namespace Ui
