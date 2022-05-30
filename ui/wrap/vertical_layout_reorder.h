@@ -36,6 +36,8 @@ public:
 	void start();
 	void cancel();
 	void finishReordering();
+	void addPinnedInterval(int from, int length);
+	void clearPinnedIntervals();
 	[[nodiscard]] rpl::producer<Single> updates() const;
 
 private:
@@ -45,6 +47,12 @@ private:
 		int shift = 0;
 		int finalShift = 0;
 		int deltaShift = 0;
+	};
+	struct Interval {
+		[[nodiscard]] bool isIn(int index) const;
+
+		int from = 0;
+		int length = 0;
 	};
 
 	void mouseMove(not_null<RpWidget*> widget, QPoint position);
@@ -66,12 +74,16 @@ private:
 
 	void updateScrollCallback();
 	void checkForScrollAnimation();
-	int deltaFromEdge();
+	[[nodiscard]] int deltaFromEdge();
+
+	[[nodiscard]] bool isIndexPinned(int index) const;
 
 	const not_null<Ui::VerticalLayout*> _layout;
 	Ui::ScrollArea *_scroll = nullptr;
 
 	Ui::Animations::Basic _scrollAnimation;
+
+	std::vector<Interval> _pinnedIntervals;
 
 	RpWidget *_currentWidget = nullptr;
 	int _currentStart = 0;
