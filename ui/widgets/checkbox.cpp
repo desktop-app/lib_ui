@@ -486,6 +486,9 @@ Checkbox::Checkbox(
 				std::move(value),
 				_checkboxRichOptions);
 			resizeToText();
+			if (_text.hasLinks()) {
+				setMouseTracking(true);
+			}
 			update();
 		}
 	}, lifetime());
@@ -689,6 +692,59 @@ void Checkbox::paintEvent(QPaintEvent *e) {
 	}
 }
 
+void Checkbox::mousePressEvent(QMouseEvent *e) {
+	RippleButton::mousePressEvent(e);
+	ClickHandler::pressed();
+}
+
+void Checkbox::mouseMoveEvent(QMouseEvent *e) {
+	RippleButton::mouseMoveEvent(e);
+	const auto state = getTextState(e->pos());
+	if (state.link != ClickHandler::getActive()) {
+		ClickHandler::setActive(state.link, this);
+		update();
+	}
+}
+
+void Checkbox::mouseReleaseEvent(QMouseEvent *e) {
+	if (auto activated = _activatingHandler = ClickHandler::unpressed()) {
+		const auto button = e->button();
+		crl::on_main(this, [=] {
+			const auto guard = window();
+			ActivateClickHandler(guard, activated, button);
+		});
+	}
+	RippleButton::mouseReleaseEvent(e);
+	_activatingHandler = nullptr;
+}
+
+void Checkbox::leaveEventHook(QEvent *e) {
+	RippleButton::leaveEventHook(e);
+	ClickHandler::clearActive(this);
+}
+
+Text::StateResult Checkbox::getTextState(const QPoint &m) const {
+	if (!(_checkAlignment & Qt::AlignLeft)) {
+		return {};
+	}
+	const auto check = checkRect();
+	const auto textSkip = _st.checkPosition.x()
+		+ check.width()
+		+ _st.textPosition.x();
+	const auto availableTextWidth = std::max(width() - textSkip, 1);
+	const auto textTop = _st.margin.top() + _st.textPosition.y();
+	return !_allowTextLines
+		? _text.getStateElided(
+			m - QPoint(textSkip, textTop),
+			availableTextWidth,
+			{})
+		: _text.getStateElidedLeft(
+			m - QPoint(textSkip, textTop),
+			availableTextWidth,
+			width(),
+			{});
+}
+
 QPixmap Checkbox::grabCheckCache() const {
 	auto checkSize = _check->getSize();
 	auto image = QImage(
@@ -724,7 +780,9 @@ void Checkbox::onStateChanged(State was, StateChangeSource source) {
 }
 
 void Checkbox::handlePress() {
-	setChecked(!checked());
+	if (!_activatingHandler) {
+		setChecked(!checked());
+	}
 }
 
 int Checkbox::resizeGetHeight(int newWidth) {
