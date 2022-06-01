@@ -14,22 +14,42 @@
 #include <QtGui/QtEvents>
 
 namespace Ui {
+namespace {
 
-PlainShadow::PlainShadow(QWidget *parent)
-: PlainShadow(parent, st::shadowFg) {
-}
+struct CustomShadowCorners {
+	struct Image {
+	public:
+		Image(const QImage &image)
+		: _image(image) {
+		}
+		void paint(QPainter &p, int x, int y, int outerw) const {
+			p.drawImage(x, y, _image);
+		}
+		[[nodiscard]] bool empty() const {
+			return _image.isNull();
+		}
+		[[nodiscard]] int width() const {
+			return _image.width() / style::DevicePixelRatio();
+		}
+		[[nodiscard]] int height() const {
+			return _image.height() / style::DevicePixelRatio();
+		}
+	private:
+		const QImage &_image;
+	};
+	const style::icon &left;
+	Image topLeft;
+	const style::icon &top;
+	Image topRight;
+	const style::icon &right;
+	Image bottomRight;
+	const style::icon &bottom;
+	Image bottomLeft;
+	const style::margins &extend;
+};
 
-PlainShadow::PlainShadow(QWidget *parent, style::color color)
-: RpWidget(parent)
-, _color(color) {
-	resize(st::lineWidth, st::lineWidth);
-}
-
-void PlainShadow::paintEvent(QPaintEvent *e) {
-	QPainter(this).fillRect(e->rect(), _color);
-}
-
-void Shadow::paint(QPainter &p, const QRect &box, int outerWidth, const style::Shadow &st, RectParts sides) {
+template <typename Shadow>
+void ShadowPaint(QPainter &p, const QRect &box, int outerWidth, const Shadow &st, RectParts sides) {
 	auto left = (sides & RectPart::Left);
 	auto top = (sides & RectPart::Top);
 	auto right = (sides & RectPart::Right);
@@ -82,6 +102,47 @@ void Shadow::paint(QPainter &p, const QRect &box, int outerWidth, const style::S
 			st.bottom.fill(p, style::rtlrect(from, box.y() + box.height() + st.extend.bottom() - st.bottom.height(), to - from, st.bottom.height(), outerWidth));
 		}
 	}
+}
+
+} // namespace
+
+PlainShadow::PlainShadow(QWidget *parent)
+: PlainShadow(parent, st::shadowFg) {
+}
+
+PlainShadow::PlainShadow(QWidget *parent, style::color color)
+: RpWidget(parent)
+, _color(color) {
+	resize(st::lineWidth, st::lineWidth);
+}
+
+void PlainShadow::paintEvent(QPaintEvent *e) {
+	QPainter(this).fillRect(e->rect(), _color);
+}
+
+void Shadow::paint(QPainter &p, const QRect &box, int outerWidth, const style::Shadow &st, RectParts sides) {
+	ShadowPaint<style::Shadow>(p, box, outerWidth, st, std::move(sides));
+}
+
+void Shadow::paint(
+		QPainter &p,
+		const QRect &box,
+		int outerWidth,
+		const style::Shadow &st,
+		RectParts sides,
+		const std::array<QImage, 4> &corners) {
+	const auto shadow = CustomShadowCorners{
+		.left = st.left,
+		.topLeft = CustomShadowCorners::Image(corners[0]),
+		.top = st.top,
+		.topRight = CustomShadowCorners::Image(corners[2]),
+		.right = st.right,
+		.bottomRight = CustomShadowCorners::Image(corners[3]),
+		.bottom = st.bottom,
+		.bottomLeft = CustomShadowCorners::Image(corners[1]),
+		.extend = st.extend,
+	};
+	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
 }
 
 QPixmap Shadow::grab(

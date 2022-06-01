@@ -227,6 +227,8 @@ PRIVATE
     ui/abstract_button.h
     ui/basic_click_handlers.cpp
     ui/basic_click_handlers.h
+    ui/cached_special_layer_shadow_corners.cpp
+    ui/cached_special_layer_shadow_corners.h
     ui/click_handler.cpp
     ui/click_handler.h
     ui/delayed_activation.cpp

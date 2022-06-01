@@ -6,6 +6,7 @@
 //
 #include "ui/layers/layer_widget.h"
 
+#include "ui/cached_special_layer_shadow_corners.h"
 #include "ui/layers/box_layer_widget.h"
 #include "ui/widgets/shadow.h"
 #include "ui/image/image_prepare.h"
@@ -21,7 +22,7 @@ namespace Ui {
 
 class LayerStackWidget::BackgroundWidget : public TWidget {
 public:
-	explicit BackgroundWidget(QWidget *parent);
+	using TWidget::TWidget;
 
 	void setDoneCallback(Fn<void()> callback) {
 		_doneCallback = std::move(callback);
@@ -63,7 +64,6 @@ private:
 	int _mainMenuCacheWidth = 0;
 	QPixmap _specialLayerCache;
 	QPixmap _layerCache;
-	RoundRect _roundRect;
 
 	Fn<void()> _doneCallback;
 
@@ -83,11 +83,6 @@ private:
 	bool _layerShown = false;
 
 };
-
-LayerStackWidget::BackgroundWidget::BackgroundWidget(QWidget *parent)
-: TWidget(parent)
-, _roundRect(st::boxRadius, st::boxBg) {
-}
 
 void LayerStackWidget::BackgroundWidget::setCacheImages(
 		QPixmap &&bodyCache,
@@ -262,15 +257,9 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 		if (topCorners || bottomCorners) {
 			p.setClipRegion(QRegion(rect()) - specialLayerBox.marginsRemoved(QMargins(st::boxRadius, 0, st::boxRadius, 0)) - specialLayerBox.marginsRemoved(QMargins(0, st::boxRadius, 0, st::boxRadius)));
 		}
-		Ui::Shadow::paint(p, specialLayerBox, width(), st::boxRoundShadow, sides);
-
+		Ui::Shadow::paint(p, specialLayerBox, width(), st::boxRoundShadow, sides, Ui::SpecialLayerShadowCorners());
 		if (topCorners || bottomCorners) {
-			// In case of painting the shadow above the special layer we get
-			// glitches in the corners, so we need to paint the corners once more.
 			p.setClipping(false);
-			auto parts = (topCorners ? (RectPart::TopLeft | RectPart::TopRight) : RectPart::None)
-				| (bottomCorners ? (RectPart::BottomLeft | RectPart::BottomRight) : RectPart::None);
-			_roundRect.paint(p, specialLayerBox, parts);
 		}
 	}
 
