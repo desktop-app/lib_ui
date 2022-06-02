@@ -7,19 +7,19 @@
 #pragma once
 
 #include "ui/rp_widget.h"
+#include "ui/rect_part.h"
 
 namespace Ui {
 
 class BoxContentDivider : public Ui::RpWidget {
 public:
 	BoxContentDivider(QWidget *parent);
-	BoxContentDivider(
-		QWidget *parent,
-		int height);
+	BoxContentDivider(QWidget *parent, int height);
 	BoxContentDivider(
 		QWidget *parent,
 		int height,
-		const style::color &bg);
+		const style::color &bg,
+		RectParts parts = RectPart::Top | RectPart::Bottom);
 
 	[[nodiscard]] const style::color &color() const;
 
@@ -31,6 +31,7 @@ protected:
 
 private:
 	const style::color &_bg;
+	const RectParts _parts;
 
 };
 

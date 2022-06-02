@@ -14,6 +14,8 @@
 #include "ui/basic_click_handlers.h" // UrlClickHandler
 #include "ui/inactive_press.h"
 #include "base/qt/qt_common_adapters.h"
+#include "styles/style_layers.h"
+#include "styles/palette.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QClipboard>
@@ -901,6 +903,15 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 	} else {
 		_text.draw(p, textLeft, _st.margin.top(), textWidth, _st.align, e->rect().y(), e->rect().bottom(), selection);
 	}
+}
+
+DividerLabel::DividerLabel(
+	QWidget *parent,
+	object_ptr<FlatLabel> &&child,
+	const style::margins &padding,
+	RectParts parts)
+: PaddingWrap(parent, std::move(child), padding)
+, _background(this, st::boxDividerHeight, st::boxDividerBg, parts) {
 }
 
 int DividerLabel::naturalWidth() const {

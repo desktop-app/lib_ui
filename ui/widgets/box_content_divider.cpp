@@ -25,17 +25,24 @@ BoxContentDivider::BoxContentDivider(QWidget *parent, int height)
 BoxContentDivider::BoxContentDivider(
 	QWidget *parent,
 	int height,
-	const style::color &bg)
+	const style::color &bg,
+	RectParts parts)
 : RpWidget(parent)
-, _bg(bg) {
+, _bg(bg)
+, _parts(parts) {
 	resize(width(), height);
 }
 
 void BoxContentDivider::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
+
 	p.fillRect(e->rect(), _bg);
-	paintTop(p);
-	paintBottom(p);
+	if (_parts & RectPart::Top) {
+		paintTop(p);
+	}
+	if (_parts & RectPart::Bottom) {
+		paintBottom(p);
+	}
 }
 
 void BoxContentDivider::paintTop(QPainter &p) {

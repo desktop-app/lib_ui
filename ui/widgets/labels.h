@@ -247,7 +247,11 @@ private:
 
 class DividerLabel : public PaddingWrap<FlatLabel> {
 public:
-	using PaddingWrap::PaddingWrap;
+	DividerLabel(
+		QWidget *parent,
+		object_ptr<FlatLabel> &&child,
+		const style::margins &padding,
+		RectParts parts = RectPart::Top | RectPart::Bottom);
 
 	int naturalWidth() const override;
 
@@ -255,8 +259,7 @@ protected:
 	void resizeEvent(QResizeEvent *e) override;
 
 private:
-	object_ptr<BoxContentDivider> _background
-		= object_ptr<BoxContentDivider>(this);
+	object_ptr<BoxContentDivider> _background;
 
 };
 
