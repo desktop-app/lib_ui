@@ -1567,3 +1567,29 @@ sideBarButtonLockBlockHeight: 5px;
 sideBarButtonLockLineHeight: 1px;
 sideBarButtonLockPenWidth: 3px;
 sideBarButtonLockPenWidthDivider: 2;
+
+menuIconColor: windowBoldFg;
+menuIconAttentionColor: attentionButtonFg;
+
+menuIconSubmenuArrow: icon {{ "menu/submenu_arrow", menuIconColor }};
+
+menuWithIcons: Menu(defaultMenu) {
+	itemIconPosition: point(15px, 5px);
+	itemPadding: margins(54px, 8px, 17px, 8px);
+
+	arrow: menuIconSubmenuArrow;
+}
+menuWithIconsAttention: Menu(menuWithIcons) {
+	itemFg: attentionButtonFg;
+	itemFgOver: attentionButtonFgOver;
+}
+popupMenuWithIcons: PopupMenu(defaultPopupMenu) {
+	scrollPadding: margins(0px, 5px, 0px, 5px);
+	menu: menuWithIcons;
+}
+dropdownMenuWithIcons: DropdownMenu(defaultDropdownMenu) {
+	wrap: InnerDropdown(defaultInnerDropdown) {
+		scrollPadding: margins(0px, 5px, 0px, 5px);
+	}
+	menu: menuWithIcons;
+}

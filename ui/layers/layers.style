@@ -170,6 +170,15 @@ separatePanelClose: IconButton(boxTitleClose) {
 		color: windowBgOver;
 	}
 }
+separatePanelMenu: IconButton(separatePanelClose) {
+	width: 44px;
+
+	icon: icon {{ "title_menu_dots", boxTitleCloseFg }};
+	iconOver: icon {{ "title_menu_dots", boxTitleCloseFgOver }};
+
+	rippleAreaPosition: point(0px, 8px);
+}
+separatePanelMenuPosition: point(0px, 52px);
 separatePanelTitleFont: font(18px semibold);
 separatePanelTitle: FlatLabel(defaultFlatLabel) {
 	textFg: boxTitleFg;

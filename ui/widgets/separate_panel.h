@@ -14,16 +14,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 class Painter;
 
+namespace Ui::Menu {
+struct MenuCallback;
+} // namespace Ui::Menu
+
 namespace Ui {
+
 class BoxContent;
 class IconButton;
+class PopupMenu;
 class LayerStackWidget;
 class FlatLabel;
 template <typename Widget>
 class FadeWrapScaled;
-} // namespace Ui
-
-namespace Ui {
 
 class SeparatePanel final : public RpWidget {
 public:
@@ -49,6 +52,8 @@ public:
 	[[nodiscard]] rpl::producer<> closeRequests() const;
 	[[nodiscard]] rpl::producer<> closeEvents() const;
 	void setBackAllowed(bool allowed);
+
+	void setMenuAllowed(Fn<void(const Menu::MenuCallback&)> fill);
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -83,12 +88,17 @@ private:
 	void finishAnimating();
 	void finishClose();
 
+	void showMenu(Fn<void(const Menu::MenuCallback&)> fill);
+	[[nodiscard]] bool createMenu(not_null<IconButton*> button);
+
 	object_ptr<IconButton> _close;
+	object_ptr<IconButton> _menuToggle = { nullptr };
 	object_ptr<FlatLabel> _title = { nullptr };
 	object_ptr<FadeWrapScaled<IconButton>> _back;
 	object_ptr<RpWidget> _body;
 	base::unique_qptr<RpWidget> _inner;
 	base::unique_qptr<LayerStackWidget> _layer = { nullptr };
+	base::unique_qptr<PopupMenu> _menu;
 	rpl::event_stream<> _synteticBackRequests;
 	rpl::event_stream<> _userCloseRequests;
 	rpl::event_stream<> _closeEvents;

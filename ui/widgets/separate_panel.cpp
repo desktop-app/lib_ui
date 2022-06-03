@@ -10,16 +10,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/tooltip.h"
+#include "ui/widgets/popup_menu.h"
+#include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/toasts/common_toasts.h"
-#include "ui/widgets/tooltip.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/layers/layer_widget.h"
+#include "base/debug_log.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"
-#include "base/debug_log.h"
 
 #include <QtGui/QWindow>
 #include <QtGui/QScreen>
@@ -70,7 +73,8 @@ void SeparatePanel::initControls() {
 void SeparatePanel::updateTitleGeometry(int newWidth) {
 	_title->resizeToWidth(newWidth
 		- _padding.left() - _back->width()
-		- _padding.right() - _close->width());
+		- _padding.right() - _close->width()
+		- (_menuToggle ? _menuToggle->width() : 0));
 	updateTitlePosition();
 }
 
@@ -108,6 +112,58 @@ void SeparatePanel::setBackAllowed(bool allowed) {
 	if (allowed != _back->toggled()) {
 		_back->toggle(allowed, anim::type::normal);
 	}
+}
+
+void SeparatePanel::setMenuAllowed(
+		Fn<void(const Menu::MenuCallback&)> fill) {
+	_menuToggle.create(this, st::separatePanelMenu);
+	_menuToggle->show();
+	_menuToggle->setClickedCallback([=] { showMenu(fill); });
+
+	widthValue(
+	) | rpl::start_with_next([=](int width) {
+		_menuToggle->moveToRight(
+			_padding.right() + _close->width(),
+			_padding.top());
+	}, _menuToggle->lifetime());
+}
+
+void SeparatePanel::showMenu(Fn<void(const Menu::MenuCallback&)> fill) {
+	const auto created = createMenu(_menuToggle);
+	if (!created) {
+		return;
+	}
+	fill(Menu::CreateAddActionCallback(_menu));
+	if (_menu->empty()) {
+		_menu = nullptr;
+	} else {
+		_menu->setForcedOrigin(PanelAnimation::Origin::TopRight);
+		_menu->popup(mapToGlobal(QPoint(
+			(width()
+				- _padding.right()
+				- _close->width()
+				+ st::separatePanelMenuPosition.x()),
+			st::separatePanelMenuPosition.y())));
+	}
+}
+
+bool SeparatePanel::createMenu(not_null<IconButton*> button) {
+	if (_menu) {
+		return false;
+	}
+	_menu = base::make_unique_q<PopupMenu>(this, st::popupMenuWithIcons);
+	_menu->setDestroyedCallback([
+		weak = Ui::MakeWeak(this),
+			weakButton = Ui::MakeWeak(button),
+			menu = _menu.get()]{
+		if (weak && weak->_menu == menu) {
+			if (weakButton) {
+				weakButton->setForceRippled(false);
+			}
+		}
+		});
+	button->setForceRippled(true);
+	return true;
 }
 
 void SeparatePanel::setHideOnDeactivate(bool hideOnDeactivate) {

@@ -188,6 +188,10 @@ PRIVATE
     ui/widgets/menu/menu.h
     ui/widgets/menu/menu_action.cpp
     ui/widgets/menu/menu_action.h
+    ui/widgets/menu/menu_add_action_callback.cpp
+    ui/widgets/menu/menu_add_action_callback.h
+    ui/widgets/menu/menu_add_action_callback_factory.cpp
+    ui/widgets/menu/menu_add_action_callback_factory.h
     ui/widgets/menu/menu_common.cpp
     ui/widgets/menu/menu_common.h
     ui/widgets/menu/menu_item_base.cpp
