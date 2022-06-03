@@ -289,14 +289,8 @@ elseif(LINUX)
     target_link_libraries(lib_ui
     PUBLIC
         desktop-app::lib_waylandshells
-        desktop-app::external_kwayland
+        desktop-app::external_wayland_client
     )
-
-    if (DESKTOP_APP_USE_PACKAGED)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
-        target_link_libraries(lib_ui PRIVATE PkgConfig::WAYLAND_CLIENT)
-    endif()
 endif()
 
 target_include_directories(lib_ui
