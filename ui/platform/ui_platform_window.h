@@ -7,6 +7,8 @@
 #pragma once
 
 #include "base/flags.h"
+#include "base/object_ptr.h"
+#include "ui/round_rect.h"
 
 namespace style {
 struct WindowTitle;
@@ -95,6 +97,7 @@ protected:
 
 private:
 	void init();
+	void updateRoundingOverlay();
 	[[nodiscard]] bool hasShadow() const;
 	[[nodiscard]] QMargins resizeArea() const;
 	[[nodiscard]] Qt::Edges edgesFromPos(const QPoint &pos) const;
@@ -106,6 +109,8 @@ private:
 
 	const not_null<DefaultTitleWidget*> _title;
 	const not_null<RpWidget*> _body;
+	RoundRect _roundRect;
+	object_ptr<RpWidget> _roundingOverlay = { nullptr };
 	bool _extentsSet = false;
 	rpl::variable<Qt::WindowStates> _windowState = Qt::WindowNoState;
 
