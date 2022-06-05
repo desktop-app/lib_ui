@@ -128,7 +128,7 @@ QImage GrabWidgetToImage(not_null<QWidget*> target, QRect rect, QColor bg) {
 	if (!target->testAttribute(Qt::WA_OpaquePaintEvent)) {
 		result.fill(bg);
 	}
-	{
+	if (rect.isValid()) {
 		QPainter p(&result);
 		RenderWidget(p, target, QPoint(), rect);
 	}
