@@ -15,7 +15,7 @@
 #include "styles/palette.h"
 #include "styles/style_basic.h"
 
-#include "zlib.h"
+#include <zlib.h>
 #include <QtCore/QFile>
 #include <QtCore/QBuffer>
 #include <QtCore/QMutex>
