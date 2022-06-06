@@ -707,6 +707,7 @@ void Checkbox::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void Checkbox::mouseReleaseEvent(QMouseEvent *e) {
+	const auto weak = Ui::MakeWeak(this);
 	if (auto activated = _activatingHandler = ClickHandler::unpressed()) {
 		const auto button = e->button();
 		crl::on_main(this, [=] {
@@ -715,7 +716,9 @@ void Checkbox::mouseReleaseEvent(QMouseEvent *e) {
 		});
 	}
 	RippleButton::mouseReleaseEvent(e);
-	_activatingHandler = nullptr;
+	if (weak) {
+		_activatingHandler = nullptr;
+	}
 }
 
 void Checkbox::leaveEventHook(QEvent *e) {
