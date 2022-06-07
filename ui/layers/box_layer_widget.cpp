@@ -286,7 +286,7 @@ void BoxLayerWidget::addLeftButton(object_ptr<AbstractButton> button) {
 }
 
 void BoxLayerWidget::addTopButton(object_ptr<AbstractButton> button) {
-	_topButton = base::make_unique_q<AbstractButton>(button.release());
+	_topButton = base::unique_qptr<AbstractButton>(button.release());
 	const auto raw = _topButton.get();
 	raw->setParent(this);
 	raw->show();
