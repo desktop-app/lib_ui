@@ -8,9 +8,7 @@
 
 namespace anim {
 
-QColor gradient_color_at(const QGradient &gradient, float64 ratio) {
-	const auto &stops = gradient.stops();
-
+QColor gradient_color_at(const QGradientStops & stops, float64 ratio) {
 	for (auto i = 1; i < stops.size(); i++) {
 		const auto currentPoint = stops[i].first;
 		const auto previousPoint = stops[i - 1].first;
@@ -23,6 +21,10 @@ QColor gradient_color_at(const QGradient &gradient, float64 ratio) {
 		}
 	}
 	return QColor();
+}
+
+QColor gradient_color_at(const QGradient &gradient, float64 ratio) {
+	return gradient_color_at(gradient.stops(), ratio);
 }
 
 } // namespace anim

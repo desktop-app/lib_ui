@@ -15,6 +15,10 @@
 namespace anim {
 
 [[nodiscard]] QColor gradient_color_at(
+	const QGradientStops &stops,
+	float64 ratio);
+
+[[nodiscard]] QColor gradient_color_at(
 	const QGradient &gradient,
 	float64 ratio);
 
