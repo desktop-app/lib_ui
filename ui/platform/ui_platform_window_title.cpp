@@ -167,12 +167,9 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 	});
 	_close->setPointerCursor(false);
 
-	parent()->widthValue(
-	) | rpl::start_with_next([=](int width) {
-		updateControlsPosition();
-	}, _close->lifetime());
-
-	TitleControlsLayoutChanged(
+	rpl::combine(
+		parent()->widthValue(),
+		TitleControlsLayoutValue()
 	) | rpl::start_with_next([=] {
 		updateControlsPosition();
 	}, _close->lifetime());
@@ -415,6 +412,10 @@ DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)
 
 not_null<const style::WindowTitle*> DefaultTitleWidget::st() const {
 	return _controls.st();
+}
+
+QRect DefaultTitleWidget::controlsGeometry() const {
+	return _controls.geometry();
 }
 
 void DefaultTitleWidget::setText(const QString &text) {
