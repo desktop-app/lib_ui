@@ -334,7 +334,7 @@ void WindowHelper::init() {
 			titleShown ? titleHeight : 0,
 			0,
 			0
-		)).marginsRemoved(frameMargins ? *frameMargins : QMargins()));
+		)).marginsRemoved(frameMargins.value_or(QMargins())));
 	}, _body->lifetime());
 
 	hitTestRequests(
@@ -354,9 +354,8 @@ void WindowHelper::init() {
 			} else {
 				AdjustWindowRectEx(&r, style, false, styleEx);
 			}
-			const auto frameMargins = _frameMargins.current()
-				? *_frameMargins.current()
-				: QMargins();
+			const auto frameMargins = _frameMargins.current().value_or(
+				QMargins());
 			const auto maximized = window()->isMaximized()
 				|| window()->isFullScreen();
 			return (!maximized && (request->point.y() < -r.top))
@@ -374,9 +373,8 @@ void WindowHelper::init() {
 
 	_frameMargins.value(
 	) | rpl::start_with_next([=](std::optional<QMargins> frameMargins) {
-		const auto deviceDependentMargins = frameMargins
-			? *frameMargins * window()->devicePixelRatioF()
-			: QMargins();
+		const auto deviceDependentMargins = frameMargins.value_or(QMargins())
+			* window()->devicePixelRatioF();
 		const MARGINS m{
 			deviceDependentMargins.left(),
 			deviceDependentMargins.right(),
@@ -833,7 +831,7 @@ void WindowHelper::updateWindowFrameColors(bool active) {
 }
 
 bool WindowHelper::frameMarginsSet() const {
-	return _frameMargins.current() && !_frameMargins.current()->isNull();
+	return !_frameMargins.current().value_or(QMargins()).isNull();
 }
 
 void WindowHelper::updateFrameMargins() {
