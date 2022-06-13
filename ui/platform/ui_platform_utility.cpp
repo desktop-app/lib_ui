@@ -10,16 +10,24 @@ namespace Ui {
 namespace Platform {
 namespace {
 
-rpl::event_stream<> TitleControlsLayoutChanges;
+rpl::event_stream<TitleControls::Layout> TitleControlsLayoutChanges;
 
 } // namespace
 
-rpl::producer<> TitleControlsLayoutChanged() {
+rpl::producer<TitleControls::Layout> TitleControlsLayoutValue() {
+	return rpl::single(
+		TitleControlsLayout()
+	) | rpl::then(
+		TitleControlsLayoutChanged()
+	);
+}
+
+rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged() {
 	return TitleControlsLayoutChanges.events();
 }
 
 void NotifyTitleControlsLayoutChanged() {
-	TitleControlsLayoutChanges.fire({});
+	TitleControlsLayoutChanges.fire_copy(TitleControlsLayout());
 }
 
 } // namespace Platform

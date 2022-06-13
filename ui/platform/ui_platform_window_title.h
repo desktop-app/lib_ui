@@ -118,6 +118,7 @@ public:
 	explicit DefaultTitleWidget(not_null<RpWidget*> parent);
 
 	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
+	[[nodiscard]] QRect controlsGeometry() const;
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
 	void setResizeEnabled(bool enabled);

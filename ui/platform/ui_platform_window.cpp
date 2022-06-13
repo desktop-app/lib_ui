@@ -202,29 +202,35 @@ void DefaultWindowHelper::init() {
 	rpl::combine(
 		window()->widthValue(),
 		_windowState.value(),
-		_title->shownValue()
+		_title->shownValue(),
+		TitleControlsLayoutValue()
 	) | rpl::start_with_next([=](
 			int width,
 			Qt::WindowStates windowState,
-			bool shown) {
+			bool shown,
+			TitleControls::Layout controlsLayout) {
 		const auto area = resizeArea();
 		_title->setGeometry(
 			area.left(),
 			area.top(),
 			width - area.left() - area.right(),
-			_title->st()->height);
+			_title->controlsGeometry().height()
+				? _title->st()->height
+				: 0);
 	}, _title->lifetime());
 
 	rpl::combine(
 		window()->sizeValue(),
 		_windowState.value(),
 		_title->heightValue(),
-		_title->shownValue()
+		_title->shownValue(),
+		TitleControlsLayoutValue()
 	) | rpl::start_with_next([=](
 			QSize size,
 			Qt::WindowStates windowState,
 			int titleHeight,
-			bool titleShown) {
+			bool titleShown,
+			TitleControls::Layout controlsLayout) {
 		const auto area = resizeArea();
 
 		const auto sizeWithoutMargins = size
@@ -342,7 +348,8 @@ bool DefaultWindowHelper::hasShadow() const {
 QMargins DefaultWindowHelper::resizeArea() const {
 	if (window()->isMaximized()
 		|| window()->isFullScreen()
-		|| _title->isHidden()) {
+		|| _title->isHidden()
+		|| (!hasShadow() && !_title->controlsGeometry().height())) {
 		return QMargins();
 	}
 

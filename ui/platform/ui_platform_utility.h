@@ -44,7 +44,8 @@ void UnsetWindowExtents(QWindow *window);
 bool ShowWindowMenu(QWindow *window);
 
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();
-[[nodiscard]] rpl::producer<> TitleControlsLayoutChanged();
+[[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
+[[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
 void NotifyTitleControlsLayoutChanged();
 
 } // namespace Platform
