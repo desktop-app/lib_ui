@@ -102,8 +102,8 @@ boxTitleClose: IconButton(defaultIconButton) {
 	icon: boxTitleCloseIcon;
 	iconOver: boxTitleCloseIconOver;
 
-	rippleAreaPosition: point(6px, 6px);
-	rippleAreaSize: 44px;
+	rippleAreaPosition: point(4px, 4px);
+	rippleAreaSize: 40px;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: windowBgOver;
 	}
