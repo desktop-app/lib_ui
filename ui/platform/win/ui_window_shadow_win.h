@@ -78,6 +78,7 @@ private:
 
 	const not_null<RpWidget*> _window;
 	const HWND _handle;
+	const bool _windows11 = false;
 
 	int _x = 0;
 	int _y = 0;
