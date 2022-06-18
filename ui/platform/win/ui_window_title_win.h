@@ -55,7 +55,9 @@ protected:
 private:
 	struct PaddingHelper;
 
-	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
+	[[nodiscard]] HitTestResult hitTest(
+		QPoint point,
+		HitTestResult oldResult) const;
 	[[nodiscard]] bool additionalPaddingRequired() const;
 	void refreshGeometryWithWidth(int width);
 	void setAdditionalPadding(int padding);
