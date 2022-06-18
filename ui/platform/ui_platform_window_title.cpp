@@ -280,18 +280,21 @@ void TitleControls::raise() {
 }
 
 HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
-	const auto test = [&](
-			const object_ptr<AbstractButton> &button,
-			bool close) {
+	const auto test = [&](const object_ptr<AbstractButton> &button) {
 		return button && button->geometry().marginsAdded(
-			{ close ? padding : 0, padding, close ? padding : 0, 0 }
+			{ 0, padding, 0, 0 }
 		).contains(point);
 	};
-	if (test(_minimize, false)) {
+	if (::Platform::IsWindows11OrGreater()
+		&& !_maximizedState
+		&& (point.y() < style::ConvertScale(
+			window()->windowHandle()->devicePixelRatio()))) {
+		return HitTestResult::Top;
+	} else if (test(_minimize)) {
 		return HitTestResult::Minimize;
-	} else if (test(_maximizeRestore, false)) {
+	} else if (test(_maximizeRestore)) {
 		return HitTestResult::MaximizeRestore;
-	} else if (test(_close, true)) {
+	} else if (test(_close)) {
 		return HitTestResult::Close;
 	}
 	return HitTestResult::None;
@@ -586,9 +589,9 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 		controlsTop ? std::move(controlsTop) : rpl::single(0)
 	) | rpl::start_with_next([=](int width, int padding, int top) {
 		raw->wrap.setGeometry(
-			padding,
+			0,
 			top,
-			width - 2 * padding,
+			width,
 			raw->controls.geometry().height());
 	}, lifetime);
 
