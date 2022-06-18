@@ -24,6 +24,7 @@
 
 #include <dwmapi.h>
 #include <uxtheme.h>
+#include <windowsx.h>
 
 Q_DECLARE_METATYPE(QMargins);
 
@@ -513,12 +514,9 @@ bool WindowHelper::handleNativeEvent(
 			return false;
 		}
 
-		const auto p = MAKEPOINTS(lParam);
-		auto r = RECT();
-		GetWindowRect(_handle, &r);
-		const auto mapped = QPoint(
-			p.x - r.left + _marginsDelta.left(),
-			p.y - r.top + _marginsDelta.top());
+		POINT p{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+		ScreenToClient(_handle, &p);
+		const auto mapped = QPoint(p.x, p.y) / window()->devicePixelRatioF();
 		*result = [&] {
 			if (!window()->rect().contains(mapped)) {
 				return HTTRANSPARENT;
