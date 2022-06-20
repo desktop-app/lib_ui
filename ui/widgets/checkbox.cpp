@@ -7,6 +7,7 @@
 #include "ui/widgets/checkbox.h"
 
 #include "ui/effects/ripple_animation.h"
+#include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
 
 #include <QtGui/QtEvents>
@@ -543,6 +544,27 @@ void Checkbox::setTextBreakEverywhere(bool allow) {
 	_textBreakEverywhere = allow;
 }
 
+void Checkbox::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {
+	_text.setLink(lnkIndex, lnk);
+}
+
+void Checkbox::setLinksTrusted() {
+	static const auto TrustedLinksFilter = [](
+			const ClickHandlerPtr &link,
+			Qt::MouseButton button) {
+		if (const auto url = dynamic_cast<UrlClickHandler*>(link.get())) {
+			url->UrlClickHandler::onClick({ button });
+			return false;
+		}
+		return true;
+	};
+	setClickHandlerFilter(TrustedLinksFilter);
+}
+
+void Checkbox::setClickHandlerFilter(ClickHandlerFilter &&filter) {
+	_clickHandlerFilter = std::move(filter);
+}
+
 bool Checkbox::checked() const {
 	return _check->checked();
 }
@@ -709,10 +731,15 @@ void Checkbox::mouseMoveEvent(QMouseEvent *e) {
 void Checkbox::mouseReleaseEvent(QMouseEvent *e) {
 	const auto weak = Ui::MakeWeak(this);
 	if (auto activated = _activatingHandler = ClickHandler::unpressed()) {
+		// _clickHandlerFilter may delete `this`. In that case we don't want
+		// to try to show a context menu or smth like that.
 		const auto button = e->button();
 		crl::on_main(this, [=] {
 			const auto guard = window();
-			ActivateClickHandler(guard, activated, button);
+			if (!_clickHandlerFilter
+				|| _clickHandlerFilter(activated, button)) {
+				ActivateClickHandler(guard, activated, button);
+			}
 		});
 	}
 	RippleButton::mouseReleaseEvent(e);

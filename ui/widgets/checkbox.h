@@ -180,6 +180,12 @@ public:
 	void setAllowTextLines(int lines = 0);
 	void setTextBreakEverywhere(bool allow = true);
 
+	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
+	void setLinksTrusted();
+
+	using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
+	void setClickHandlerFilter(ClickHandlerFilter &&filter);
+
 	bool checked() const;
 	rpl::producer<bool> checkedChanges() const;
 	rpl::producer<bool> checkedValue() const;
@@ -234,6 +240,8 @@ private:
 	rpl::event_stream<bool> _checkedChanges;
 	ClickHandlerPtr _activatingHandler;
 	QPixmap _checkCache;
+
+	ClickHandlerFilter _clickHandlerFilter;
 
 	style::align _checkAlignment = style::al_left;
 	Text::String _text;
