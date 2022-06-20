@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toasts/common_toasts.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/layers/layer_widget.h"
+#include "ui/layers/show.h"
 #include "base/debug_log.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
@@ -29,6 +30,64 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QApplication>
 
 namespace Ui {
+namespace {
+
+class PanelShow final : public Show {
+public:
+	explicit PanelShow(not_null<SeparatePanel*> panel);
+	~PanelShow();
+	void showBox(
+		object_ptr<Ui::BoxContent> content,
+		Ui::LayerOptions options = Ui::LayerOption::KeepOther) const override;
+	void hideLayer() const override;
+	[[nodiscard]] not_null<QWidget*> toastParent() const override;
+	[[nodiscard]] bool valid() const override;
+	operator bool() const override;
+
+private:
+	const QPointer<SeparatePanel> _panel;
+
+};
+
+PanelShow::PanelShow(not_null<SeparatePanel*> panel)
+: _panel(panel.get()) {
+}
+
+PanelShow::~PanelShow() = default;
+
+void PanelShow::showBox(
+		object_ptr<Ui::BoxContent> content,
+		Ui::LayerOptions options) const {
+	if (const auto panel = _panel.data()) {
+		panel->showBox(std::move(content), options, anim::type::normal);
+	}
+}
+
+void PanelShow::hideLayer() const {
+	if (const auto panel = _panel.data()) {
+		panel->showBox(
+			object_ptr<Ui::BoxContent>{ nullptr },
+			Ui::LayerOption::CloseOther,
+			anim::type::normal);
+	}
+}
+
+not_null<QWidget*> PanelShow::toastParent() const {
+	const auto panel = _panel.data();
+
+	Ensures(panel != nullptr);
+	return panel;
+}
+
+bool PanelShow::valid() const {
+	return (_panel.data() != nullptr);
+}
+
+PanelShow::operator bool() const {
+	return valid();
+}
+
+} // namespace
 
 SeparatePanel::SeparatePanel(QWidget *parent)
 : RpWidget(parent)
@@ -331,8 +390,16 @@ void SeparatePanel::showBox(
 		object_ptr<Ui::BoxContent> box,
 		Ui::LayerOptions options,
 		anim::type animated) {
-	ensureLayerCreated();
-	_layer->showBox(std::move(box), options, animated);
+	if (box) {
+		ensureLayerCreated();
+		_layer->showBox(std::move(box), options, animated);
+	} else if (_layer) {
+		_layer->hideAll(animated);
+	}
+}
+
+std::shared_ptr<Show> SeparatePanel::uiShow() {
+	return std::make_shared<PanelShow>(this);
 }
 
 void SeparatePanel::showToast(const TextWithEntities &text) {

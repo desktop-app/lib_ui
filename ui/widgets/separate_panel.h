@@ -20,6 +20,7 @@ struct MenuCallback;
 
 namespace Ui {
 
+class Show;
 class BoxContent;
 class IconButton;
 class PopupMenu;
@@ -54,6 +55,7 @@ public:
 	void setBackAllowed(bool allowed);
 
 	void setMenuAllowed(Fn<void(const Menu::MenuCallback&)> fill);
+	[[nodiscard]] std::shared_ptr<Show> uiShow();
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
