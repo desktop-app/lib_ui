@@ -342,11 +342,15 @@ bool WindowHelper::nativeEvent(
 	const auto guard = gsl::finally([&] {
 		*result = base::NativeEventResult(lresult);
 	});
-	return handleNativeEvent(
-		msg->message,
-		msg->wParam,
-		msg->lParam,
-		&lresult);
+	auto filtered = false;
+	base::Integration::Instance().enterFromEventLoop([&] {
+		filtered = handleNativeEvent(
+			msg->message,
+			msg->wParam,
+			msg->lParam,
+			&lresult);
+	});
+	return filtered;
 }
 
 bool WindowHelper::handleNativeEvent(
