@@ -21,6 +21,7 @@
 #include <QtGui/QtEvents>
 #include <QtGui/QPainter>
 #include <QtGui/QScreen>
+#include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
 
 namespace Ui {

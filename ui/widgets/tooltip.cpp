@@ -13,6 +13,7 @@
 #include "base/platform/base_platform_info.h"
 
 #include <QtGui/QScreen>
+#include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
 
 namespace Ui {
