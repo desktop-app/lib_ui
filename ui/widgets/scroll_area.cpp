@@ -254,6 +254,7 @@ void ScrollBar::mousePressEvent(QMouseEvent *e) {
 	if (!width() || !height()) return;
 
 	_dragStart = e->globalPos();
+	area()->setMovingByScrollBar(true);
 	setMoving(true);
 	if (_overbar) {
 		_startFrom = _connected->value();
@@ -265,15 +266,12 @@ void ScrollBar::mousePressEvent(QMouseEvent *e) {
 		_connected->setValue(_startFrom);
 		setOverBar(true);
 	}
-
-	area()->setMovingByScrollBar(true);
 }
 
 void ScrollBar::mouseReleaseEvent(QMouseEvent *e) {
 	if (_moving) {
-		setMoving(false);
-
 		area()->setMovingByScrollBar(false);
+		setMoving(false);
 	}
 	if (!_over) {
 		setMouseTracking(false);
