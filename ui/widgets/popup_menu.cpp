@@ -770,10 +770,11 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 	}
 	_parent = parent;
 
+	createWinId();
 	if (_parent) {
-		setScreen(_parent->screen());
+		windowHandle()->setScreen(_parent->screen());
 	} else if (screen) {
-		setScreen(screen);
+		windowHandle()->setScreen(screen);
 	}
 
 	using Origin = PanelAnimation::Origin;
