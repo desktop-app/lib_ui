@@ -280,10 +280,14 @@ elseif(LINUX)
     if (DESKTOP_APP_QT6)
         qt6_generate_wayland_protocol_client_sources(lib_ui
         FILES
-            ${third_party_loc}/wayland-protocols/stable/xdg-shell/xdg-shell.xml
+            ${WaylandProtocols_DATADIR}/stable/xdg-shell/xdg-shell.xml
         )
     else()
-        message(FATAL_ERROR "This piece of cmake code is not ported to Qt 5")
+        ecm_add_qtwayland_client_protocol(lib_ui
+            PROTOCOL ${WaylandProtocols_DATADIR}/stable/xdg-shell/xdg-shell.xml
+            BASENAME xdg-shell
+        )
+        target_include_directories(lib_ui PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     endif()
 
     target_link_libraries(lib_ui
