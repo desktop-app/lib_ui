@@ -200,7 +200,6 @@ DefaultWindowHelper::DefaultWindowHelper(not_null<RpWidget*> window)
 
 void DefaultWindowHelper::init() {
 	_title->show();
-	window()->setWindowFlag(Qt::FramelessWindowHint);
 
 	if (WindowExtentsSupported()) {
 		window()->setAttribute(Qt::WA_TranslucentBackground);
@@ -268,10 +267,8 @@ void DefaultWindowHelper::init() {
 			bool shown,
 			bool titleShown,
 			Qt::WindowStates windowState) {
-		if (shown) {
-			window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
-			updateWindowExtents();
-		}
+		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
+		updateWindowExtents();
 	}, window()->lifetime());
 
 	window()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
