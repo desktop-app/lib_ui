@@ -108,11 +108,29 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
 	return bAutoHidden;
 }
 
+void FixAeroSnap(HWND handle) {
+	SetWindowLongPtr(
+		handle,
+		GWL_STYLE,
+		GetWindowLongPtr(handle, GWL_STYLE) | WS_CAPTION | WS_THICKFRAME);
+}
+
+[[nodiscard]] HWND ResolveWindowHandle(not_null<QWidget*> widget) {
+	if (!::Platform::IsWindows8OrGreater()) {
+		widget->setWindowFlag(Qt::FramelessWindowHint);
+	}
+	const auto result = GetWindowHandle(widget);
+	if (!::Platform::IsWindows8OrGreater()) {
+		FixAeroSnap(result);
+	}
+	return result;
+}
+
 } // namespace
 
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
 : BasicWindowHelper(window)
-, _handle(GetWindowHandle(window))
+, _handle(ResolveWindowHandle(window))
 , _title(Ui::CreateChild<TitleWidget>(window.get()))
 , _body(Ui::CreateChild<RpWidget>(window.get()))
 , _shadow(std::in_place, window, st::windowShadowFg->c)
@@ -164,11 +182,10 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 
 void WindowHelper::setNativeFrame(bool enabled) {
 	if (!::Platform::IsWindows8OrGreater()) {
-		const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
-		SetWindowLongPtr(
-			_handle,
-			GWL_STYLE,
-			enabled ? (style | WS_CAPTION) : (style & ~WS_CAPTION));
+		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
+		if (!enabled) {
+			FixAeroSnap(_handle);
+		}
 	}
 	_title->setVisible(!enabled);
 	if (enabled) {
@@ -479,27 +496,6 @@ bool WindowHelper::handleNativeEvent(
 	} return false;
 
 	case WM_SHOWWINDOW: {
-		const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
-		if (!::Platform::IsWindows8OrGreater()
-			&& !_title->isHidden()
-			&& (style & WS_CAPTION)) {
-			SetWindowLongPtr(
-				_handle,
-				GWL_STYLE,
-				style & ~WS_CAPTION);
-			SetWindowPos(
-				_handle,
-				0,
-				0,
-				0,
-				0,
-				0,
-				SWP_FRAMECHANGED
-					| SWP_NOMOVE
-					| SWP_NOSIZE
-					| SWP_NOZORDER
-					| SWP_NOACTIVATE);
-		}
 		if (_shadow) {
 			const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 			const auto changes = WindowShadow::Change::Resized
