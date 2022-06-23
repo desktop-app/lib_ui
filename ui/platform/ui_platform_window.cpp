@@ -267,7 +267,11 @@ void DefaultWindowHelper::init() {
 			bool shown,
 			bool titleShown,
 			Qt::WindowStates windowState) {
-		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
+		if (const auto handle = window()->windowHandle()) {
+			handle->setFlag(Qt::FramelessWindowHint, titleShown);
+		} else {
+			window()->setWindowFlag(Qt::FramelessWindowHint, titleShown);
+		}
 		updateWindowExtents();
 	}, window()->lifetime());
 
