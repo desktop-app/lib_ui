@@ -23,6 +23,7 @@ enum class EntityType : uchar {
 	Cashtag,
 	Mention,
 	MentionName,
+	CustomEmoji,
 	BotCommand,
 	MediaTimestamp,
 	PlainLink, // Senders in chat list, attachements in chat list, etc.

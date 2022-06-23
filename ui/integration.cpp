@@ -8,6 +8,7 @@
 
 #include "ui/gl/gl_detection.h"
 #include "ui/text/text_entity.h"
+#include "ui/text/text_block.h"
 #include "ui/basic_click_handlers.h"
 #include "base/platform/base_platform_info.h"
 
@@ -66,6 +67,12 @@ std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 				data.shown == EntityLinkShown::Full)
 			: nullptr;
 	}
+	return nullptr;
+}
+
+std::unique_ptr<Text::CustomEmoji> Integration::createCustomEmoji(
+		const QString &data,
+		const std::any &context) {
 	return nullptr;
 }
 

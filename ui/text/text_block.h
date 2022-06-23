@@ -18,7 +18,8 @@ enum TextBlockType {
 	TextBlockTNewline = 0x01,
 	TextBlockTText = 0x02,
 	TextBlockTEmoji = 0x03,
-	TextBlockTSkip = 0x04,
+	TextBlockTCustomEmoji = 0x04,
+	TextBlockTSkip = 0x05,
 };
 
 enum TextBlockFlags {
@@ -63,10 +64,8 @@ protected:
 		uint16 lnkIndex,
 		uint16 spoilerIndex);
 
-	uint16 _from = 0;
-
 	uint32 _flags = 0; // 2 bits empty, 16 bits lnkIndex, 4 bits type, 10 bits flags
-
+	uint16 _from = 0;
 	uint16 _spoilerIndex = 0;
 
 	QFixed _width = 0;
@@ -165,6 +164,35 @@ private:
 
 };
 
+class CustomEmoji {
+public:
+	virtual ~CustomEmoji() = default;
+	[[nodiscard]] virtual QString entityData() = 0;
+	virtual void paint(QPainter &p, int x, int y) = 0;
+
+};
+
+class CustomEmojiBlock final : public AbstractBlock {
+public:
+	CustomEmojiBlock(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		uint16 length,
+		uint16 flags,
+		uint16 lnkIndex,
+		uint16 spoilerIndex,
+		std::unique_ptr<CustomEmoji> custom);
+
+private:
+	std::unique_ptr<CustomEmoji> _custom;
+
+	friend class String;
+	friend class Parser;
+	friend class Renderer;
+
+};
+
 class SkipBlock final : public AbstractBlock {
 public:
 	SkipBlock(
@@ -190,9 +218,7 @@ private:
 class Block final {
 public:
 	Block();
-	Block(const Block &other);
 	Block(Block &&other);
-	Block &operator=(const Block &other);
 	Block &operator=(Block &&other);
 	~Block();
 
@@ -224,6 +250,16 @@ public:
 			uint16 lnkIndex,
 			uint16 spoilerIndex,
 			EmojiPtr emoji);
+
+	[[nodiscard]] static Block CustomEmoji(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		uint16 length,
+		uint16 flags,
+		uint16 lnkIndex,
+		uint16 spoilerIndex,
+		std::unique_ptr<CustomEmoji> custom);
 
 	[[nodiscard]] static Block Skip(
 			const style::font &font,
@@ -278,6 +314,8 @@ private:
 	static_assert(alignof(NewlineBlock) <= alignof(void*));
 	static_assert(sizeof(EmojiBlock) <= sizeof(TextBlock));
 	static_assert(alignof(EmojiBlock) <= alignof(void*));
+	static_assert(sizeof(CustomEmojiBlock) <= sizeof(TextBlock));
+	static_assert(alignof(CustomEmojiBlock) <= alignof(void*));
 	static_assert(sizeof(SkipBlock) <= sizeof(TextBlock));
 	static_assert(alignof(SkipBlock) <= alignof(void*));
 

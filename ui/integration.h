@@ -27,6 +27,10 @@ namespace Emoji {
 class One;
 } // namespace Emoji
 
+namespace Text {
+class CustomEmoji;
+} // namespace Text
+
 class Integration {
 public:
 	static void Set(not_null<Integration*> instance);
@@ -56,6 +60,9 @@ public:
 	[[nodiscard]] virtual QString convertTagToMimeTag(const QString &tagId);
 	[[nodiscard]] virtual const Emoji::One *defaultEmojiVariant(
 		const Emoji::One *emoji);
+	[[nodiscard]] virtual auto createCustomEmoji(
+		const QString &data,
+		const std::any &context) -> std::unique_ptr<Text::CustomEmoji>;
 
 	[[nodiscard]] virtual rpl::producer<> forcePopupMenuHideRequests();
 

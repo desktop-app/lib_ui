@@ -106,9 +106,7 @@ public:
 		const QString &text,
 		const TextParseOptions &options = kDefaultTextOptions,
 		int32 minResizeWidth = QFIXED_MAX);
-	String(const String &other) = default;
 	String(String &&other) = default;
-	String &operator=(const String &other) = default;
 	String &operator=(String &&other) = default;
 	~String() = default;
 
@@ -177,7 +175,7 @@ public:
 	void clear();
 
 private:
-	using TextBlocks = QVector<Block>;
+	using TextBlocks = std::vector<Block>;
 	using TextLinks = QVector<ClickHandlerPtr>;
 
 	uint16 countBlockEnd(const TextBlocks::const_iterator &i, const TextBlocks::const_iterator &e) const;

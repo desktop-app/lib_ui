@@ -348,8 +348,8 @@ AbstractBlock::AbstractBlock(
 	uint16 flags,
 	uint16 lnkIndex,
 	uint16 spoilerIndex)
-: _from(from)
-, _flags((flags & 0b1111111111) | ((lnkIndex & 0xFFFF) << 14))
+: _flags((flags & 0b1111111111) | ((lnkIndex & 0xFFFF) << 14))
+, _from(from)
 , _spoilerIndex(spoilerIndex) {
 }
 
@@ -474,6 +474,30 @@ EmojiBlock::EmojiBlock(
 	}
 }
 
+CustomEmojiBlock::CustomEmojiBlock(
+	const style::font &font,
+	const QString &str,
+	uint16 from,
+	uint16 length,
+	uint16 flags,
+	uint16 lnkIndex,
+	uint16 spoilerIndex,
+	std::unique_ptr<CustomEmoji> custom)
+: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex)
+, _custom(std::move(custom)) {
+	_flags |= ((TextBlockTCustomEmoji & 0x0F) << 10);
+	_width = int(st::emojiSize + 2 * st::emojiPadding);
+	_rpadding = 0;
+	for (auto i = length; i != 0;) {
+		auto ch = str[_from + (--i)];
+		if (ch.unicode() == QChar::Space) {
+			_rpadding += font->spacew;
+		} else {
+			break;
+		}
+	}
+}
+
 NewlineBlock::NewlineBlock(
 	const style::font &font,
 	const QString &str,
@@ -546,25 +570,6 @@ Block::Block() {
 	Unexpected("Should not be called.");
 }
 
-Block::Block(const Block &other) {
-	switch (other->type()) {
-	case TextBlockTNewline:
-		emplace<NewlineBlock>(other.unsafe<NewlineBlock>());
-		break;
-	case TextBlockTText:
-		emplace<TextBlock>(other.unsafe<TextBlock>());
-		break;
-	case TextBlockTEmoji:
-		emplace<EmojiBlock>(other.unsafe<EmojiBlock>());
-		break;
-	case TextBlockTSkip:
-		emplace<SkipBlock>(other.unsafe<SkipBlock>());
-		break;
-	default:
-		Unexpected("Bad text block type in Block(const Block&).");
-	}
-}
-
 Block::Block(Block &&other) {
 	switch (other->type()) {
 	case TextBlockTNewline:
@@ -576,36 +581,15 @@ Block::Block(Block &&other) {
 	case TextBlockTEmoji:
 		emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
 		break;
+	case TextBlockTCustomEmoji:
+		emplace<CustomEmojiBlock>(std::move(other.unsafe<CustomEmojiBlock>()));
+		break;
 	case TextBlockTSkip:
 		emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
 		break;
 	default:
 		Unexpected("Bad text block type in Block(Block&&).");
 	}
-}
-
-Block &Block::operator=(const Block &other) {
-	if (&other == this) {
-		return *this;
-	}
-	destroy();
-	switch (other->type()) {
-	case TextBlockTNewline:
-		emplace<NewlineBlock>(other.unsafe<NewlineBlock>());
-		break;
-	case TextBlockTText:
-		emplace<TextBlock>(other.unsafe<TextBlock>());
-		break;
-	case TextBlockTEmoji:
-		emplace<EmojiBlock>(other.unsafe<EmojiBlock>());
-		break;
-	case TextBlockTSkip:
-		emplace<SkipBlock>(other.unsafe<SkipBlock>());
-		break;
-	default:
-		Unexpected("Bad text block type in operator=(const Block&).");
-	}
-	return *this;
 }
 
 Block &Block::operator=(Block &&other) {
@@ -622,6 +606,9 @@ Block &Block::operator=(Block &&other) {
 		break;
 	case TextBlockTEmoji:
 		emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
+		break;
+	case TextBlockTCustomEmoji:
+		emplace<CustomEmojiBlock>(std::move(other.unsafe<CustomEmojiBlock>()));
 		break;
 	case TextBlockTSkip:
 		emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
@@ -694,6 +681,26 @@ Block Block::Emoji(
 		emoji);
 }
 
+Block Block::CustomEmoji(
+		const style::font &font,
+		const QString &str,
+		uint16 from,
+		uint16 length,
+		uint16 flags,
+		uint16 lnkIndex,
+		uint16 spoilerIndex,
+		std::unique_ptr<Text::CustomEmoji> custom) {
+	return New<CustomEmojiBlock>(
+		font,
+		str,
+		from,
+		length,
+		flags,
+		lnkIndex,
+		spoilerIndex,
+		std::move(custom));
+}
+
 Block Block::Skip(
 		const style::font &font,
 		const QString &str,
@@ -739,6 +746,9 @@ void Block::destroy() {
 		break;
 	case TextBlockTEmoji:
 		unsafe<EmojiBlock>().~EmojiBlock();
+		break;
+	case TextBlockTCustomEmoji:
+		unsafe<CustomEmojiBlock>().~CustomEmojiBlock();
 		break;
 	case TextBlockTSkip:
 		unsafe<SkipBlock>().~SkipBlock();

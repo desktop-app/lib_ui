@@ -272,6 +272,7 @@ private:
 	const QChar *_ptr = nullptr;
 	const EntitiesInText::const_iterator _entitiesEnd;
 	EntitiesInText::const_iterator _waitingEntity;
+	QString _customEmojiData;
 	const bool _multiline = false;
 
 	const QFixed _stopAfterWidth; // summary width of all added words
@@ -406,9 +407,16 @@ void Parser::createBlock(int32 skipBack) {
 		}
 		_lastSkipped = false;
 		const auto lnkIndex = _monoIndex ? _monoIndex : _lnkIndex;
-		if (_emoji) {
+		auto custom = _customEmojiData.isEmpty()
+			? nullptr
+			: Integration::Instance().createCustomEmoji(
+				_customEmojiData,
+				_context);
+		if (custom) {
+			_t->_blocks.push_back(Block::CustomEmoji(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex, std::move(custom)));
+			_lastSkipped = true;
+		} else if (_emoji) {
 			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex, _emoji));
-			_emoji = nullptr;
 			_lastSkipped = true;
 		} else if (newline) {
 			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex));
@@ -416,6 +424,8 @@ void Parser::createBlock(int32 skipBack) {
 			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, lnkIndex, _spoilerIndex));
 		}
 		_blockStart += len;
+		_customEmojiData = QByteArray();
+		_emoji = nullptr;
 		blockCreated();
 	}
 }
@@ -499,7 +509,10 @@ bool Parser::checkEntities() {
 		link.data = _waitingEntity->data();
 		link.text = QString(entityBegin, entityLength);
 	};
-	if (entityType == EntityType::Bold) {
+	if (entityType == EntityType::CustomEmoji) {
+		createBlock();
+		_customEmojiData = _waitingEntity->data();
+	} else if (entityType == EntityType::Bold) {
 		flags = TextBlockFBold;
 	} else if (entityType == EntityType::Semibold) {
 		flags = TextBlockFSemibold;
@@ -519,7 +532,8 @@ bool Parser::checkEntities() {
 			flags = TextBlockFPre;
 			createBlock();
 			if (!_t->_blocks.empty()
-				&& _t->_blocks.back()->type() != TextBlockTNewline) {
+				&& _t->_blocks.back()->type() != TextBlockTNewline
+				&& _customEmojiData.isEmpty()) {
 				createNewlineBlock();
 			}
 		}
@@ -632,10 +646,11 @@ void Parser::skipBadEntities() {
 void Parser::parseCurrentChar() {
 	_ch = ((_ptr < _end) ? *_ptr : 0);
 	_emojiLookback = 0;
-	const auto isNewLine = _multiline && IsNewline(_ch);
+	const auto inCustomEmoji = !_customEmojiData.isEmpty();
+	const auto isNewLine = !inCustomEmoji && _multiline && IsNewline(_ch);
 	const auto isSpace = IsSpace(_ch);
 	const auto isDiac = IsDiac(_ch);
-	const auto isTilde = _checkTilde && (_ch == '~');
+	const auto isTilde = !inCustomEmoji && _checkTilde && (_ch == '~');
 	const auto skip = [&] {
 		if (IsBad(_ch) || _ch.isLowSurrogate()) {
 			return true;
@@ -711,6 +726,9 @@ void Parser::parseCurrentChar() {
 }
 
 void Parser::parseEmojiFromCurrent() {
+	if (!_customEmojiData.isEmpty()) {
+		return;
+	}
 	int len = 0;
 	auto e = Emoji::Find(_ptr - _emojiLookback, _end, &len);
 	if (!e) return;
@@ -878,7 +896,7 @@ void Parser::finalize(const TextParseOptions &options) {
 	}
 	_t->_links.squeeze();
 	_t->_spoilers.squeeze();
-	_t->_blocks.squeeze();
+	_t->_blocks.shrink_to_fit();
 	_t->_text.squeeze();
 }
 
@@ -1301,7 +1319,10 @@ private:
 					i = n;
 					++n;
 				}
-				if ((*i)->type() != TextBlockTEmoji && *curr >= 0x590) {
+				const auto type = (*i)->type();
+				if (type != TextBlockTEmoji
+					&& type != TextBlockTCustomEmoji
+					&& *curr >= 0x590) {
 					ignore = false;
 					break;
 				}
@@ -1490,8 +1511,13 @@ private:
 				levels[i] = si.analysis.bidiLevel;
 			}
 			if (si.analysis.flags == QScriptAnalysis::Object) {
-				if (_type == TextBlockTEmoji || _type == TextBlockTSkip) {
-					si.width = currentBlock->f_width() + (nextBlock == _endBlock && (!nextBlock || nextBlock->from() >= trimmedLineEnd) ? 0 : currentBlock->f_rpadding());
+				if (_type == TextBlockTEmoji
+					|| _type == TextBlockTCustomEmoji
+					|| _type == TextBlockTSkip) {
+					si.width = currentBlock->f_width()
+						+ (nextBlock == _endBlock && (!nextBlock || nextBlock->from() >= trimmedLineEnd)
+							? 0
+							: currentBlock->f_rpadding());
 				}
 			}
 		}
@@ -1586,7 +1612,7 @@ private:
 						}
 					}
 					return false;
-				} else if (_p && _type == TextBlockTEmoji) {
+				} else if (_p && (_type == TextBlockTEmoji || _type == TextBlockTCustomEmoji)) {
 					auto glyphX = x;
 					auto spacesWidth = (si.width - currentBlock->f_width());
 					if (rtl) {
@@ -1636,12 +1662,18 @@ private:
 						if (hasSpoiler) {
 							_p->setOpacity(opacity * (1. - spoilerOpacity));
 						}
-						Emoji::Draw(
-							*_p,
-							static_cast<const EmojiBlock*>(currentBlock)->_emoji,
-							Emoji::GetSizeNormal(),
-							(glyphX + st::emojiPadding).toInt(),
-							_y + _yDelta + emojiY);
+						const auto x = (glyphX + st::emojiPadding).toInt();
+						const auto y = _y + _yDelta + emojiY;
+						if (_type == TextBlockTEmoji) {
+							Emoji::Draw(
+								*_p,
+								static_cast<const EmojiBlock*>(currentBlock)->_emoji,
+								Emoji::GetSizeNormal(),
+								x,
+								y);
+						} else if (const auto custom = static_cast<const CustomEmojiBlock*>(currentBlock)->_custom.get()) {
+							custom->paint(*_p, x, y);
+						}
 					}
 					if (hasSpoiler) {
 						_p->setOpacity(opacity * spoilerOpacity);
@@ -2014,11 +2046,16 @@ private:
 			}
 			TextBlockType _type = currentBlock->type();
 			if (si.analysis.flags == QScriptAnalysis::Object) {
-				if (_type == TextBlockTEmoji || _type == TextBlockTSkip) {
+				if (_type == TextBlockTEmoji
+					|| _type == TextBlockTCustomEmoji
+					|| _type == TextBlockTSkip) {
 					si.width = currentBlock->f_width() + currentBlock->f_rpadding();
 				}
 			}
-			if (_type == TextBlockTEmoji || _type == TextBlockTSkip || _type == TextBlockTNewline) {
+			if (_type == TextBlockTEmoji
+				|| _type == TextBlockTCustomEmoji
+				|| _type == TextBlockTSkip
+				|| _type == TextBlockTNewline) {
 				if (_wLeft < si.width) {
 					lineText = lineText.mid(0, currentBlock->from() - _localFrom) + kQEllipsis;
 					lineLength = currentBlock->from() + kQEllipsis.size() - _lineStart;
@@ -2214,7 +2251,9 @@ private:
 				nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
 			}
 			auto _type = currentBlock->type();
-			if (_type == TextBlockTEmoji || _type == TextBlockTSkip) {
+			if (_type == TextBlockTEmoji
+				|| _type == TextBlockTCustomEmoji
+				|| _type == TextBlockTSkip) {
 				analysis->script = QChar::Script_Common;
 				analysis->flags = QScriptAnalysis::Object;
 			} else {
@@ -2294,7 +2333,8 @@ private:
 			TextBlockType _itype = (*i)->type();
 			if (eor == _parLength)
 				dir = control.basicDirection();
-			else if (_itype == TextBlockTEmoji)
+			else if (_itype == TextBlockTEmoji
+				|| _itype == TextBlockTCustomEmoji)
 				dir = QChar::DirCS;
 			else if (_itype == TextBlockTSkip)
 				dir = QChar::DirCS;
@@ -2329,7 +2369,7 @@ private:
 
 		QChar::Direction sdir;
 		TextBlockType _stype = (*_parStartBlock)->type();
-		if (_stype == TextBlockTEmoji)
+		if (_stype == TextBlockTEmoji || _stype == TextBlockTCustomEmoji)
 			sdir = QChar::DirCS;
 		else if (_stype == TextBlockTSkip)
 			sdir = QChar::DirCS;
@@ -2355,7 +2395,8 @@ private:
 			TextBlockType _itype = (*i)->type();
 			if (current == (int)_parLength)
 				dirCurrent = control.basicDirection();
-			else if (_itype == TextBlockTEmoji)
+			else if (_itype == TextBlockTEmoji
+				|| _itype == TextBlockTCustomEmoji)
 				dirCurrent = QChar::DirCS;
 			else if (_itype == TextBlockTSkip)
 				dirCurrent = QChar::DirCS;
@@ -3356,8 +3397,17 @@ uint16 String::countBlockLength(const String::TextBlocks::const_iterator &i, con
 	return countBlockEnd(i, e) - (*i)->from();
 }
 
-template <typename AppendPartCallback, typename ClickHandlerStartCallback, typename ClickHandlerFinishCallback, typename FlagsChangeCallback>
-void String::enumerateText(TextSelection selection, AppendPartCallback appendPartCallback, ClickHandlerStartCallback clickHandlerStartCallback, ClickHandlerFinishCallback clickHandlerFinishCallback, FlagsChangeCallback flagsChangeCallback) const {
+template <
+	typename AppendPartCallback,
+	typename ClickHandlerStartCallback,
+	typename ClickHandlerFinishCallback,
+	typename FlagsChangeCallback>
+void String::enumerateText(
+		TextSelection selection,
+		AppendPartCallback appendPartCallback,
+		ClickHandlerStartCallback clickHandlerStartCallback,
+		ClickHandlerFinishCallback clickHandlerFinishCallback,
+		FlagsChangeCallback flagsChangeCallback) const {
 	if (isEmpty() || selection.empty()) {
 		return;
 	}
@@ -3437,12 +3487,20 @@ void String::enumerateText(TextSelection selection, AppendPartCallback appendPar
 			break;
 		}
 
-		if ((*i)->type() == TextBlockTSkip) continue;
+		const auto blockType = (*i)->type();
+		if (blockType == TextBlockTSkip) continue;
 
 		auto rangeFrom = qMax(selection.from, blockFrom);
-		auto rangeTo = qMin(selection.to, uint16(blockFrom + countBlockLength(i, e)));
+		auto rangeTo = qMin(
+			selection.to,
+			uint16(blockFrom + countBlockLength(i, e)));
 		if (rangeTo > rangeFrom) {
-			appendPartCallback(base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom));
+			const auto customEmojiData = (blockType == TextBlockTCustomEmoji)
+				? static_cast<const CustomEmojiBlock*>(i->get())->_custom->entityData()
+				: QString();
+			appendPartCallback(
+				base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom),
+				customEmojiData);
 		}
 	}
 }
@@ -3562,10 +3620,20 @@ TextForMimeData String::toText(
 				plainUrl ? QString() : entity.data });
 		}
 	};
-	const auto appendPartCallback = [&](QStringView part) {
+	const auto appendPartCallback = [&](
+			QStringView part,
+			const QString &customEmojiData) {
 		result.rich.text += part;
 		if (composeExpanded) {
 			result.expanded += part;
+		}
+		if (composeEntities && !customEmojiData.isEmpty()) {
+			insertEntity({
+				EntityType::CustomEmoji,
+				result.rich.text.size() - part.size(),
+				part.size(),
+				customEmojiData,
+			});
 		}
 	};
 
