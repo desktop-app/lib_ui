@@ -8,7 +8,6 @@
 
 #include "ui/rp_widget.h"
 #include "base/flags.h"
-#include "base/qt/qt_common_adapters.h"
 
 namespace style {
 struct WindowTitle;
@@ -68,14 +67,7 @@ public:
 	void close();
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
-protected:
-	bool nativeEvent(
-		const QByteArray &eventType,
-		void *message,
-		base::NativeEventResult *result) override;
-
 private:
-	bool _initialized = false;
 	const std::unique_ptr<Platform::BasicWindowHelper> _helper;
 
 };
