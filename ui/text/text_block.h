@@ -168,7 +168,8 @@ class CustomEmoji {
 public:
 	virtual ~CustomEmoji() = default;
 	[[nodiscard]] virtual QString entityData() = 0;
-	virtual void paint(QPainter &p, int x, int y) = 0;
+	virtual void paint(QPainter &p, int x, int y, const QColor &preview) = 0;
+	virtual void unload() = 0;
 
 };
 

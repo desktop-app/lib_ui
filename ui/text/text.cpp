@@ -838,7 +838,11 @@ void Parser::finalize(const TextParseOptions &options) {
 			currentIndex++;
 		}
 	};
+	_t->_hasCustomEmoji = false;
 	for (auto &block : _t->_blocks) {
+		if (block->type() == TextBlockTCustomEmoji) {
+			_t->_hasCustomEmoji = true;
+		}
 		const auto spoilerIndex = block->spoilerIndex();
 		if (spoilerIndex && (_t->_spoilers.size() < spoilerIndex)) {
 			_t->_spoilers.resize(spoilerIndex);
@@ -1682,7 +1686,7 @@ private:
 								x,
 								y);
 						} else if (const auto custom = static_cast<const CustomEmojiBlock*>(currentBlock)->_custom.get()) {
-							custom->paint(*_p, x, y);
+							custom->paint(*_p, x, y, _textPalette->spoilerActiveBg->c);
 						}
 					}
 					if (hasSpoiler) {
@@ -3511,6 +3515,22 @@ void String::enumerateText(
 			appendPartCallback(
 				base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom),
 				customEmojiData);
+		}
+	}
+}
+
+bool String::hasCustomEmoji() const {
+	return _hasCustomEmoji;
+}
+
+void String::unloadCustomEmoji() {
+	if (!_hasCustomEmoji) {
+		return;
+	}
+	for (const auto &block : _blocks) {
+		const auto raw = block.get();
+		if (raw->type() == TextBlockTCustomEmoji) {
+			static_cast<const CustomEmojiBlock*>(raw)->_custom->unload();
 		}
 	}
 }

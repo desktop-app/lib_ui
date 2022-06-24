@@ -161,6 +161,9 @@ public:
 		return _text.size();
 	}
 
+	[[nodiscard]] bool hasCustomEmoji() const;
+	void unloadCustomEmoji();
+
 	QString toString(TextSelection selection = AllTextSelection) const;
 	TextWithEntities toTextWithEntities(
 		TextSelection selection = AllTextSelection) const;
@@ -207,6 +210,7 @@ private:
 	QFixed _minResizeWidth;
 	QFixed _maxWidth = 0;
 	int32 _minHeight = 0;
+	bool _hasCustomEmoji = false;
 
 	QString _text;
 	const style::TextStyle *_st = nullptr;
