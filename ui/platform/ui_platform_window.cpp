@@ -315,7 +315,7 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 				rect.topRight() - QPoint(radiusWithFix, 0),
 				radiusSize
 			)) || clip.intersects(QRect(
-				rect.bottomRight() - QPoint(0, radiusWithFix),
+				rect.bottomLeft() - QPoint(0, radiusWithFix),
 				radiusSize
 			)) || clip.intersects(QRect(
 				rect.bottomRight() - QPoint(radiusWithFix, radiusWithFix),
