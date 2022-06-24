@@ -215,14 +215,16 @@ private:
 			Link,
 			IndexedLink,
 			Spoiler,
+			CustomEmoji,
 		};
 
 		explicit StartedEntity(TextBlockFlags flags);
 		explicit StartedEntity(uint16 index, Type type);
 
-		std::optional<TextBlockFlags> flags() const;
-		std::optional<uint16> lnkIndex() const;
-		std::optional<uint16> spoilerIndex() const;
+		[[nodiscard]] Type type() const;
+		[[nodiscard]] std::optional<TextBlockFlags> flags() const;
+		[[nodiscard]] std::optional<uint16> lnkIndex() const;
+		[[nodiscard]] std::optional<uint16> spoilerIndex() const;
 
 	private:
 		const int _value = 0;
@@ -321,6 +323,10 @@ Parser::StartedEntity::StartedEntity(uint16 index, Type type)
 	Expects((_type == Type::Link)
 		? (_value >= kStringLinkIndexShift)
 		: (_value < kStringLinkIndexShift));
+}
+
+Parser::StartedEntity::Type Parser::StartedEntity::type() const {
+	return _type;
 }
 
 std::optional<TextBlockFlags> Parser::StartedEntity::flags() const {
@@ -450,7 +456,9 @@ void Parser::finishEntities() {
 		_startedEntities.erase(_startedEntities.begin());
 
 		while (!list.empty()) {
-			if (const auto flags = list.back().flags()) {
+			if (list.back().type() == StartedEntity::Type::CustomEmoji) {
+				createBlock();
+			} else if (const auto flags = list.back().flags()) {
 				if (_flags & (*flags)) {
 					createBlock();
 					_flags &= ~(*flags);
@@ -509,9 +517,13 @@ bool Parser::checkEntities() {
 		link.data = _waitingEntity->data();
 		link.text = QString(entityBegin, entityLength);
 	};
+
+	using Type = StartedEntity::Type;
+
 	if (entityType == EntityType::CustomEmoji) {
 		createBlock();
 		_customEmojiData = _waitingEntity->data();
+		_startedEntities[entityEnd].emplace_back(0, Type::CustomEmoji);
 	} else if (entityType == EntityType::Bold) {
 		flags = TextBlockFBold;
 	} else if (entityType == EntityType::Semibold) {
@@ -567,8 +579,6 @@ bool Parser::checkEntities() {
 	} else if (entityType == EntityType::MentionName) {
 		pushComplexUrl();
 	}
-
-	using Type = StartedEntity::Type;
 
 	if (link.type != EntityType::Invalid) {
 		createBlock();
