@@ -70,13 +70,6 @@ rpl::producer<HitTestResult> BasicWindowHelper::systemButtonDown() const {
 	return rpl::never<HitTestResult>();
 }
 
-bool BasicWindowHelper::nativeEvent(
-		const QByteArray &eventType,
-		void *message,
-		base::NativeEventResult *result) {
-	return false;
-}
-
 void BasicWindowHelper::setTitle(const QString &title) {
 	_window->setWindowTitle(title);
 }
