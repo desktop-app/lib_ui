@@ -11,6 +11,8 @@
 
 #include <private/qfixed_p.h>
 
+#include <crl/crl_time.h>
+
 namespace Ui {
 namespace Text {
 
@@ -168,7 +170,13 @@ class CustomEmoji {
 public:
 	virtual ~CustomEmoji() = default;
 	[[nodiscard]] virtual QString entityData() = 0;
-	virtual void paint(QPainter &p, int x, int y, const QColor &preview) = 0;
+	virtual void paint(
+		QPainter &p,
+		int x,
+		int y,
+		crl::time now,
+		const QColor &preview,
+		bool paused) = 0;
 	virtual void unload() = 0;
 
 };

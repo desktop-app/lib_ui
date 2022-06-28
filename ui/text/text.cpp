@@ -1686,7 +1686,10 @@ private:
 								x,
 								y);
 						} else if (const auto custom = static_cast<const CustomEmojiBlock*>(currentBlock)->_custom.get()) {
-							custom->paint(*_p, x, y, _textPalette->spoilerActiveBg->c);
+							if (!_now) {
+								_now = crl::now();
+							}
+							custom->paint(*_p, x, y, _now, _textPalette->spoilerActiveBg->c, _p->inactive());
 						}
 					}
 					if (hasSpoiler) {
@@ -1920,7 +1923,10 @@ private:
 		if (!_background.startMs) {
 			return 1.;
 		}
-		const auto progress = float64(crl::now() - _background.startMs)
+		if (!_now) {
+			_now = crl::now();
+		}
+		const auto progress = float64(_now - _background.startMs)
 			/ st::fadeWrapDuration;
 		if ((progress > 1.) && _background.spoilerIndex) {
 			const auto link = _t->_spoilers.at(_background.spoilerIndex - 1);
@@ -2863,6 +2869,7 @@ private:
 	TextSelection _selection = { 0, 0 };
 	bool _fullWidthSelection = true;
 	const QChar *_str = nullptr;
+	crl::time _now = 0;
 
 	int _indexOfElidedBlock = -1; // For spoilers.
 

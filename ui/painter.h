@@ -69,12 +69,19 @@ public:
 	void restoreTextPalette() {
 		_textPalette = nullptr;
 	}
-	const style::TextPalette &textPalette() const {
+	[[nodiscard]] const style::TextPalette &textPalette() const {
 		return _textPalette ? *_textPalette : st::defaultTextPalette;
+	}
+	void setInactive(bool inactive) {
+		_inactive = inactive;
+	}
+	[[nodiscard]] bool inactive() const {
+		return _inactive;
 	}
 
 private:
 	const style::TextPalette *_textPalette = nullptr;
+	bool _inactive = false;
 
 };
 
