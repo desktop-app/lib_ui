@@ -26,4 +26,19 @@ public:
 		Qt::AspectRatioMode mode = Qt::IgnoreAspectRatio) = 0;
 };
 
+class ImageFrameGenerator final : public Ui::FrameGenerator {
+public:
+	explicit ImageFrameGenerator(const QByteArray &bytes);
+
+	int count() override;
+	Frame renderNext(
+		QImage storage,
+		QSize size,
+		Qt::AspectRatioMode mode = Qt::IgnoreAspectRatio) override;
+
+private:
+	QByteArray _bytes;
+
+};
+
 } // namespace Ui
