@@ -41,15 +41,15 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
 
 	const auto skipx = (size.width() - scaled.width()) / 2;
 	const auto skipy = (size.height() - scaled.height()) / 2;
-	const auto fromPerLine = scaled.bytesPerLine();
-	const auto toPerLine = result.bytesPerLine();
+	const auto srcPerLine = scaled.bytesPerLine();
+	const auto dstPerLine = result.bytesPerLine();
 	const auto lineBytes = scaled.width() * 4;
-	auto from = scaled.constBits();
-	auto to = result.bits() + (skipx * 4) + (skipy * fromPerLine);
+	auto src = scaled.constBits();
+	auto dst = result.bits() + (skipx * 4) + (skipy * srcPerLine);
 	for (auto y = 0, height = scaled.height(); y != height; ++y) {
-		memcpy(to, from, lineBytes);
-		from += fromPerLine;
-		to += toPerLine;
+		memcpy(dst, src, lineBytes);
+		src += srcPerLine;
+		dst += dstPerLine;
 	}
 
 	return { .image = std::move(result) };
