@@ -2052,7 +2052,9 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 	const auto processState = [&](State nextState) {
 		const auto linkChanged = (nextState.link != state.link);
 		if (linkChanged) {
-			if (IsMentionLink(state.link)) {
+			if (Ui::InputField::IsCustomEmojiLink(state.link)) {
+				closeType(EntityType::CustomEmoji);
+			} else if (IsMentionLink(state.link)) {
 				closeType(EntityType::MentionName);
 			} else {
 				closeType(EntityType::CustomUrl);
@@ -2064,7 +2066,13 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 			}
 		}
 		if (linkChanged && !nextState.link.isEmpty()) {
-			if (IsMentionLink(nextState.link)) {
+			if (Ui::InputField::IsCustomEmojiLink(nextState.link)) {
+				const auto data = Ui::InputField::CustomEmojiEntityData(
+					nextState.link);
+				if (!data.isEmpty()) {
+					openType(EntityType::CustomEmoji, data);
+				}
+			} else if (IsMentionLink(nextState.link)) {
 				const auto match = qthelp::regex_match(
 					"^(\\d+\\.\\d+)(/|$)",
 					base::StringViewMid(nextState.link, kMentionTagStart.size()));
@@ -2174,6 +2182,9 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 				&& !IsMentionLink(url)) {
 				push(url);
 			}
+		} break;
+		case EntityType::CustomEmoji: {
+			push(Ui::InputField::CustomEmojiLink(entity.data()));
 		} break;
 		case EntityType::Bold: push(Ui::InputField::kTagBold); break;
 		//case EntityType::Semibold: // Semibold is for UI parts only.

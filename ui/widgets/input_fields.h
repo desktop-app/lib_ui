@@ -15,6 +15,7 @@
 #include <QContextMenuEvent>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QTextEdit>
+#include <QtGui/QTextObjectInterface>
 #include <QtCore/QTimer>
 
 #include <rpl/variable.h>
@@ -143,6 +144,26 @@ private:
 
 };
 
+class CustomEmojiObject : public QObject, public QTextObjectInterface {
+	Q_OBJECT
+	Q_INTERFACES(QTextObjectInterface)
+
+public:
+	explicit CustomEmojiObject(QObject *parent);
+
+	QSizeF intrinsicSize(
+		QTextDocument *doc,
+		int posInDocument,
+		const QTextFormat &format) override;
+	void drawObject(
+		QPainter *painter,
+		const QRectF &rect,
+		QTextDocument *doc,
+		int posInDocument,
+		const QTextFormat &format) override;
+
+};
+
 class InputField : public RpWidget {
 	Q_OBJECT
 
@@ -173,6 +194,7 @@ public:
 	static const QString kTagCode;
 	static const QString kTagPre;
 	static const QString kTagSpoiler;
+	static const QString kCustomEmojiTagStart;
 
 	InputField(
 		QWidget *parent,
@@ -261,7 +283,10 @@ public:
 		EditLinkSelection selection,
 		const QString &text,
 		const QString &link);
-	static bool IsValidMarkdownLink(QStringView link);
+	[[nodiscard]] static bool IsValidMarkdownLink(QStringView link);
+	[[nodiscard]] static bool IsCustomEmojiLink(QStringView link);
+	[[nodiscard]] static QString CustomEmojiLink(QStringView entityData);
+	[[nodiscard]] static QString CustomEmojiEntityData(QStringView link);
 
 	const QString &getLastText() const {
 		return _lastTextWithTags.text;

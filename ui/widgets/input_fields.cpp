@@ -14,8 +14,9 @@
 #include "base/random.h"
 #include "base/platform/base_platform_info.h"
 #include "emoji_suggestions_helper.h"
-#include "styles/palette.h"
+#include "base/qthelp_regex.h"
 #include "base/qt/qt_common_adapters.h"
+#include "styles/palette.h"
 
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
@@ -34,6 +35,9 @@ constexpr auto kInstantReplaceWhatId = QTextFormat::UserProperty + 1;
 constexpr auto kInstantReplaceWithId = QTextFormat::UserProperty + 2;
 constexpr auto kReplaceTagId = QTextFormat::UserProperty + 3;
 constexpr auto kTagProperty = QTextFormat::UserProperty + 4;
+constexpr auto kCustomEmojiFormat = QTextFormat::UserObject + 1;
+constexpr auto kCustomEmojiText = QTextFormat::UserProperty + 5;
+constexpr auto kCustomEmojiLink = QTextFormat::UserProperty + 6;
 const auto kObjectReplacementCh = QChar(QChar::ObjectReplacementCharacter);
 const auto kObjectReplacement = QString::fromRawData(
 	&kObjectReplacementCh,
@@ -45,12 +49,16 @@ const auto &kTagStrikeOut = InputField::kTagStrikeOut;
 const auto &kTagCode = InputField::kTagCode;
 const auto &kTagPre = InputField::kTagPre;
 const auto &kTagSpoiler = InputField::kTagSpoiler;
-const auto kTagCheckLinkMeta = QString("^:/:/:^");
+const auto kTagCheckLinkMeta = u"^:/:/:^"_q;
 const auto kNewlineChars = QString("\r\n")
 	+ QChar(0xfdd0) // QTextBeginningOfFrame
 	+ QChar(0xfdd1) // QTextEndOfFrame
 	+ QChar(QChar::ParagraphSeparator)
 	+ QChar(QChar::LineSeparator);
+
+// We need unique tags otherwise same custom emoji would join in a single
+// QTextCharFormat with the same properties, including kCustomEmojiText.
+auto GlobalCustomEmojiCounter = 0;
 
 class InputDocument : public QTextDocument {
 public:
@@ -103,6 +111,20 @@ bool IsNewline(QChar ch) {
 
 [[nodiscard]] bool IsValidMarkdownLink(QStringView link) {
 	return (link.indexOf('.') >= 0) || (link.indexOf(':') >= 0);
+}
+
+[[nodiscard]] bool IsCustomEmojiLink(QStringView link) {
+	return link.startsWith(Ui::InputField::kCustomEmojiTagStart);
+}
+
+[[nodiscard]] QString MakeUniqueCustomEmojiLink(QStringView link) {
+	if (!IsCustomEmojiLink(link)) {
+		return link.toString();
+	}
+	const auto index = link.indexOf('?');
+	return u"%1?%2"_q
+		.arg((index < 0) ? link : base::StringViewMid(link, 0, index))
+		.arg(++GlobalCustomEmojiCounter);
 }
 
 [[nodiscard]] QString CheckFullTextTag(
@@ -703,8 +725,15 @@ QTextCharFormat PrepareTagFormat(
 	auto font = st.font;
 	auto color = std::optional<style::color>();
 	auto bg = std::optional<style::color>();
+	auto replaceWhat = QString();
+	auto replaceWith = QString();
 	const auto applyOne = [&](QStringView tag) {
-		if (IsValidMarkdownLink(tag)) {
+		if (IsCustomEmojiLink(tag)) {
+			replaceWhat = tag.toString();
+			replaceWith = MakeUniqueCustomEmojiLink(tag);
+			result.setObjectType(kCustomEmojiFormat);
+			result.setProperty(kCustomEmojiLink, replaceWith);
+		} else if (IsValidMarkdownLink(tag)) {
 			color = st::defaultTextPalette.linkFg;
 		} else if (tag == kTagBold) {
 			font = font->bold();
@@ -726,7 +755,11 @@ QTextCharFormat PrepareTagFormat(
 	}
 	result.setFont(font);
 	result.setForeground(color.value_or(st.textFg));
-	result.setProperty(kTagProperty, tag);
+	result.setProperty(
+		kTagProperty,
+		(replaceWhat.isEmpty()
+			? tag
+			: std::move(tag).replace(replaceWhat, replaceWith)));
 	if (bg) {
 		result.setBackground(*bg);
 	}
@@ -772,7 +805,6 @@ int ProcessInsertedTags(
 			QTextCursor c(document);
 			c.setPosition(tagFrom);
 			c.setPosition(tagTo, QTextCursor::KeepAnchor);
-
 			c.mergeCharFormat(PrepareTagFormat(st, tagId));
 
 			applyNoTagFrom = tagTo;
@@ -824,6 +856,7 @@ struct FormattingAction {
 	enum class Type {
 		Invalid,
 		InsertEmoji,
+		InsertCustomEmoji,
 		TildeFont,
 		RemoveTag,
 		RemoveNewline,
@@ -834,6 +867,8 @@ struct FormattingAction {
 	EmojiPtr emoji = nullptr;
 	bool isTilde = false;
 	QString tildeTag;
+	QString customEmojiText;
+	QString customEmojiLink;
 	int intervalStart = 0;
 	int intervalEnd = 0;
 
@@ -850,6 +885,7 @@ const QString InputField::kTagStrikeOut = QStringLiteral("~~");
 const QString InputField::kTagCode = QStringLiteral("`");
 const QString InputField::kTagPre = QStringLiteral("```");
 const QString InputField::kTagSpoiler = QStringLiteral("||");
+const QString InputField::kCustomEmojiTagStart = u"custom-emoji://"_q;
 
 class InputField::Inner final : public QTextEdit {
 public:
@@ -900,6 +936,20 @@ private:
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 	const auto currentFormat = cursor.charFormat();
 	auto format = PrepareEmojiFormat(emoji, currentFormat.font());
+	ApplyTagFormat(format, currentFormat);
+	cursor.insertText(kObjectReplacement, format);
+}
+
+void InsertCustomEmojiAtCursor(
+		QTextCursor cursor,
+		const QString &text,
+		const QString &link) {
+	const auto currentFormat = cursor.charFormat();
+	auto format = QTextCharFormat();
+	format.setObjectType(kCustomEmojiFormat);
+	format.setProperty(kCustomEmojiText, text);
+	format.setProperty(kCustomEmojiLink, MakeUniqueCustomEmojiLink(link));
+	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
 	ApplyTagFormat(format, currentFormat);
 	cursor.insertText(kObjectReplacement, format);
 }
@@ -1265,6 +1315,30 @@ void FlatInput::onTextChange(const QString &text) {
 	Integration::Instance().textActionsUpdated();
 }
 
+CustomEmojiObject::CustomEmojiObject(QObject *parent) : QObject(parent) {
+}
+
+QSizeF CustomEmojiObject::intrinsicSize(
+		QTextDocument *doc,
+		int posInDocument,
+		const QTextFormat &format) {
+	const auto factor = style::DevicePixelRatio() * 1.;
+	const auto size = Emoji::GetSizeNormal() / factor;
+	const auto width = size + st::emojiPadding * 2.;
+	const auto font = format.toCharFormat().font();
+	const auto height = std::max(QFontMetrics(font).height() * 1., size);
+	return { width, height };
+}
+
+void CustomEmojiObject::drawObject(
+		QPainter *painter,
+		const QRectF &rect,
+		QTextDocument *doc,
+		int posInDocument,
+		const QTextFormat &format) {
+	painter->fillRect(rect, QColor(0, 128, 0, 128));
+}
+
 InputField::InputField(
 	QWidget *parent,
 	const style::InputField &st,
@@ -1313,6 +1387,10 @@ InputField::InputField(
 	if (_st.textBg->c.alphaF() >= 1.) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
+
+	_inner->document()->documentLayout()->registerHandler(
+		kCustomEmojiFormat,
+		new CustomEmojiObject(this));
 
 	_inner->setFont(_st.font->f);
 	_inner->setAlignment(_st.textAlign);
@@ -1940,7 +2018,7 @@ QString InputField::getTextPart(
 						return emoji->text();
 					}
 				}
-				return QString();
+				return format.property(kCustomEmojiText).toString();
 			}();
 			auto text = [&] {
 				const auto result = fragment.text();
@@ -2086,6 +2164,20 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				auto *textStart = fragmentText.constData();
 				auto *textEnd = textStart + fragmentText.size();
 
+				if (format.objectType() == kCustomEmojiFormat) {
+					if (fragmentText == kObjectReplacement) {
+						checkedTill = fragmentEnd;
+						continue;
+					}
+					action.type = ActionType::InsertCustomEmoji;
+					action.intervalStart = fragmentPosition;
+					action.intervalEnd = fragmentPosition
+						+ fragmentText.size();
+					action.customEmojiText = fragmentText;
+					action.customEmojiLink = format.property(
+						kCustomEmojiLink).toString();
+				}
+
 				const auto with = format.property(kInstantReplaceWithId);
 				if (with.isValid()) {
 					const auto string = with.toString();
@@ -2205,8 +2297,16 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 			auto cursor = QTextCursor(document);
 			cursor.setPosition(action.intervalStart);
 			cursor.setPosition(action.intervalEnd, QTextCursor::KeepAnchor);
-			if (action.type == ActionType::InsertEmoji) {
-				InsertEmojiAtCursor(cursor, action.emoji);
+			if (action.type == ActionType::InsertEmoji
+				|| action.type == ActionType::InsertCustomEmoji) {
+				if (action.type == ActionType::InsertEmoji) {
+					InsertEmojiAtCursor(cursor, action.emoji);
+				} else {
+					InsertCustomEmojiAtCursor(
+						cursor,
+						action.customEmojiText,
+						action.customEmojiLink);
+				}
 				insertPosition = action.intervalStart + 1;
 				if (insertEnd >= action.intervalEnd) {
 					insertEnd -= action.intervalEnd
@@ -2858,7 +2958,7 @@ auto InputField::selectionEditLinkData(EditLinkSelection selection) const
 				kTagCheckLinkMeta)
 			: QString();
 	}();
-	const auto simple = EditLinkData {
+	const auto simple = EditLinkData{
 		selection.from,
 		selection.till,
 		QString()
@@ -3346,6 +3446,23 @@ void InputField::finishMarkdownTagChange(
 
 bool InputField::IsValidMarkdownLink(QStringView link) {
 	return ::Ui::IsValidMarkdownLink(link);
+}
+
+bool InputField::IsCustomEmojiLink(QStringView link) {
+	return ::Ui::IsCustomEmojiLink(link);
+}
+
+QString InputField::CustomEmojiLink(QStringView entityData) {
+	return MakeUniqueCustomEmojiLink(u"%1%2"_q
+		.arg(kCustomEmojiTagStart)
+		.arg(entityData));
+}
+
+QString InputField::CustomEmojiEntityData(QStringView link) {
+	const auto match = qthelp::regex_match(
+		"^(\\d+\\.\\d+/\\d+)(\\?|$)",
+		base::StringViewMid(link, kCustomEmojiTagStart.size()));
+	return match ? match->captured(1) : QString();
 }
 
 void InputField::commitMarkdownLinkEdit(
