@@ -268,7 +268,7 @@ public:
 	void setTagMimeProcessor(Fn<QString(QStringView)> processor);
 	void setCustomEmojiFactory(
 		CustomEmojiFactory factory,
-		Fn<bool()> paused);
+		Fn<bool()> paused = nullptr);
 
 	struct EditLinkSelection {
 		int from = 0;

@@ -1414,7 +1414,7 @@ void CustomEmojiObject::drawObject(
 		int(base::SafeRound(rect.y())),
 		_now,
 		st::defaultTextPalette.spoilerActiveBg->c,
-		_paused());
+		_paused && _paused());
 }
 
 void CustomEmojiObject::clear() {
