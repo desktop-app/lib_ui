@@ -38,6 +38,7 @@ constexpr auto kTagProperty = QTextFormat::UserProperty + 4;
 constexpr auto kCustomEmojiFormat = QTextFormat::UserObject + 1;
 constexpr auto kCustomEmojiText = QTextFormat::UserProperty + 5;
 constexpr auto kCustomEmojiLink = QTextFormat::UserProperty + 6;
+constexpr auto kCustomEmojiId = QTextFormat::UserProperty + 7;
 const auto kObjectReplacementCh = QChar(QChar::ObjectReplacementCharacter);
 const auto kObjectReplacement = QString::fromRawData(
 	&kObjectReplacementCh,
@@ -125,6 +126,19 @@ bool IsNewline(QChar ch) {
 	return u"%1?%2"_q
 		.arg((index < 0) ? link : base::StringViewMid(link, 0, index))
 		.arg(++GlobalCustomEmojiCounter);
+}
+
+[[nodiscard]] uint64 CustomEmojiIdFromLink(QStringView link) {
+	const auto skip = Ui::InputField::kCustomEmojiTagStart.size();
+	if (const auto i = link.indexOf('/', skip + 1); i > 0) {
+		const auto j = link.indexOf('?', i + 1);
+		return base::StringViewMid(
+			link,
+			i + 1,
+			(j > i) ? (j - i - 1) : -1
+		).toULongLong();
+	}
+	return 0;
 }
 
 [[nodiscard]] QString CheckFullTextTag(
@@ -733,6 +747,9 @@ QTextCharFormat PrepareTagFormat(
 			replaceWith = MakeUniqueCustomEmojiLink(tag);
 			result.setObjectType(kCustomEmojiFormat);
 			result.setProperty(kCustomEmojiLink, replaceWith);
+			result.setProperty(
+				kCustomEmojiId,
+				CustomEmojiIdFromLink(replaceWith));
 		} else if (IsValidMarkdownLink(tag)) {
 			color = st::defaultTextPalette.linkFg;
 		} else if (tag == kTagBold) {
@@ -762,8 +779,38 @@ QTextCharFormat PrepareTagFormat(
 			: std::move(tag).replace(replaceWhat, replaceWith)));
 	if (bg) {
 		result.setBackground(*bg);
+	} else {
+		result.setBackground(QBrush());
 	}
 	return result;
+}
+
+[[nodiscard]] QString TagWithoutCustomEmoji(QStringView tag) {
+	auto tags = TextUtilities::SplitTags(tag);
+	for (auto i = tags.begin(); i != tags.end();) {
+		if (IsCustomEmojiLink(*i)) {
+			i = tags.erase(i);
+		} else {
+			++i;
+		}
+	}
+	return TextUtilities::JoinTag(tags);
+}
+
+void RemoveCustomEmojiTag(
+		const style::InputField &st,
+		not_null<QTextDocument*> document,
+		const QString &existingTags,
+		int from,
+		int end) {
+	auto cursor = QTextCursor(document);
+	cursor.setPosition(from);
+	cursor.setPosition(end, QTextCursor::KeepAnchor);
+
+	auto format = PrepareTagFormat(st, TagWithoutCustomEmoji(existingTags));
+	format.setProperty(kCustomEmojiLink, QString());
+	format.setProperty(kCustomEmojiId, QString());
+	cursor.mergeCharFormat(format);
 }
 
 void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
@@ -781,7 +828,7 @@ int ProcessInsertedTags(
 		int changedPosition,
 		int changedEnd,
 		const TextWithTags::Tags &tags,
-		InputField::TagMimeProcessor *processor) {
+		Fn<QString(QStringView)> processor) {
 	int firstTagStart = changedEnd;
 	int applyNoTagFrom = changedEnd;
 	for (const auto &tag : tags) {
@@ -789,7 +836,7 @@ int ProcessInsertedTags(
 		int tagTo = tagFrom + tag.length;
 		accumulate_max(tagFrom, changedPosition);
 		accumulate_min(tagTo, changedEnd);
-		auto tagId = processor ? processor->tagFromMimeTag(tag.id) : tag.id;
+		auto tagId = processor ? processor(tag.id) : tag.id;
 		if (tagTo > tagFrom && !tagId.isEmpty()) {
 			accumulate_min(firstTagStart, tagFrom);
 
@@ -833,7 +880,9 @@ bool WasInsertTillTheEndOfTag(
 			const auto outsideInsertion = (position >= insertionEnd);
 			if (outsideInsertion) {
 				const auto format = fragment.charFormat();
-				return (format.property(kTagProperty) != insertTagName);
+				const auto tag = format.property(kTagProperty).toString();
+				return TagWithoutCustomEmoji(tag)
+					!= TagWithoutCustomEmoji(insertTagName.toString());
 			}
 			const auto end = position + fragment.length();
 			const auto notFullFragmentInserted = (end > insertionEnd);
@@ -857,6 +906,7 @@ struct FormattingAction {
 		Invalid,
 		InsertEmoji,
 		InsertCustomEmoji,
+		RemoveCustomEmoji,
 		TildeFont,
 		RemoveTag,
 		RemoveNewline,
@@ -867,6 +917,7 @@ struct FormattingAction {
 	EmojiPtr emoji = nullptr;
 	bool isTilde = false;
 	QString tildeTag;
+	QString existingTags;
 	QString customEmojiText;
 	QString customEmojiLink;
 	int intervalStart = 0;
@@ -949,6 +1000,7 @@ void InsertCustomEmojiAtCursor(
 	format.setObjectType(kCustomEmojiFormat);
 	format.setProperty(kCustomEmojiText, text);
 	format.setProperty(kCustomEmojiLink, MakeUniqueCustomEmojiLink(link));
+	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
 	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
 	ApplyTagFormat(format, currentFormat);
 	cursor.insertText(kObjectReplacement, format);
@@ -1315,8 +1367,13 @@ void FlatInput::onTextChange(const QString &text) {
 	Integration::Instance().textActionsUpdated();
 }
 
-CustomEmojiObject::CustomEmojiObject(QObject *parent) : QObject(parent) {
+CustomEmojiObject::CustomEmojiObject(Factory factory, Fn<bool()> paused)
+: _factory(std::move(factory))
+, _paused(std::move(paused))
+, _now(crl::now()) {
 }
+
+CustomEmojiObject::~CustomEmojiObject() = default;
 
 QSizeF CustomEmojiObject::intrinsicSize(
 		QTextDocument *doc,
@@ -1326,7 +1383,7 @@ QSizeF CustomEmojiObject::intrinsicSize(
 	const auto size = Emoji::GetSizeNormal() / factor;
 	const auto width = size + st::emojiPadding * 2.;
 	const auto font = format.toCharFormat().font();
-	const auto height = std::max(QFontMetrics(font).height() * 1., size);
+	const auto height = std::min(QFontMetrics(font).height() * 1., size);
 	return { width, height };
 }
 
@@ -1336,7 +1393,36 @@ void CustomEmojiObject::drawObject(
 		QTextDocument *doc,
 		int posInDocument,
 		const QTextFormat &format) {
-	painter->fillRect(rect, QColor(0, 128, 0, 128));
+	const auto id = format.property(kCustomEmojiId).toULongLong();
+	if (!id) {
+		return;
+	}
+	auto i = _emoji.find(id);
+	if (i == end(_emoji)) {
+		const auto link = format.property(kCustomEmojiLink).toString();
+		const auto data = InputField::CustomEmojiEntityData(link);
+		if (auto emoji = _factory(data)) {
+			i = _emoji.emplace(id, std::move(emoji)).first;
+		}
+	}
+	if (i == end(_emoji)) {
+		return;
+	}
+	i->second->paint(
+		*painter,
+		int(base::SafeRound(rect.x())) + st::emojiPadding,
+		int(base::SafeRound(rect.y())),
+		_now,
+		st::defaultTextPalette.spoilerActiveBg->c,
+		_paused());
+}
+
+void CustomEmojiObject::clear() {
+	_emoji.clear();
+}
+
+void CustomEmojiObject::setNow(crl::time now) {
+	_now = now;
 }
 
 InputField::InputField(
@@ -1387,10 +1473,6 @@ InputField::InputField(
 	if (_st.textBg->c.alphaF() >= 1.) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
-
-	_inner->document()->documentLayout()->registerHandler(
-		kCustomEmojiFormat,
-		new CustomEmojiObject(this));
 
 	_inner->setFont(_st.font->f);
 	_inner->setAlignment(_st.textAlign);
@@ -1473,6 +1555,8 @@ bool InputField::viewportEventInner(QEvent *e) {
 		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
 			handleTouchEvent(ev);
 		}
+	} else if (e->type() == QEvent::Paint && _customEmojiObject) {
+		_customEmojiObject->setNow(crl::now());
 	}
 	return _inner->QTextEdit::viewportEvent(e);
 }
@@ -1566,9 +1650,20 @@ void InputField::setMarkdownReplacesEnabled(rpl::producer<bool> enabled) {
 	}, lifetime());
 }
 
-void InputField::setTagMimeProcessor(
-		std::unique_ptr<TagMimeProcessor> &&processor) {
+void InputField::setTagMimeProcessor(Fn<QString(QStringView)> processor) {
 	_tagMimeProcessor = std::move(processor);
+}
+
+void InputField::setCustomEmojiFactory(
+		CustomEmojiFactory factory,
+		Fn<bool()> paused) {
+	_customEmojiObject = std::make_unique<CustomEmojiObject>([=](
+			QStringView data) {
+		return factory(data, [=] { _inner->update(); });
+	}, std::move(paused));
+	_inner->document()->documentLayout()->registerHandler(
+		kCustomEmojiFormat,
+		_customEmojiObject.get());
 }
 
 void InputField::setAdditionalMargin(int margin) {
@@ -2105,8 +2200,8 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 	auto document = _inner->document();
 
 	// Apply inserted tags.
-	auto insertedTagsProcessor = _insertedTagsAreFromMime
-		? _tagMimeProcessor.get()
+	const auto insertedTagsProcessor = _insertedTagsAreFromMime
+		? _tagMimeProcessor
 		: nullptr;
 	const auto breakTagOnNotLetterTill = ProcessInsertedTags(
 		_st,
@@ -2176,6 +2271,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					action.customEmojiText = fragmentText;
 					action.customEmojiLink = format.property(
 						kCustomEmojiLink).toString();
+					break;
 				}
 
 				const auto with = format.property(kInstantReplaceWithId);
@@ -2193,6 +2289,15 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					}
 				}
 
+				if (format.hasProperty(kCustomEmojiLink)
+					&& !format.property(kCustomEmojiLink).toString().isEmpty()) {
+					action.type = ActionType::RemoveCustomEmoji;
+					action.existingTags = format.property(kTagProperty).toString();
+					action.intervalStart = fragmentPosition;
+					action.intervalEnd = fragmentPosition
+						+ fragmentText.size();
+					break;
+				}
 				if (!startTagFound) {
 					startTagFound = true;
 					auto tagName = format.property(kTagProperty).toString();
@@ -2317,6 +2422,13 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				RemoveDocumentTags(
 					_st,
 					document,
+					action.intervalStart,
+					action.intervalEnd);
+			} else if (action.type == ActionType::RemoveCustomEmoji) {
+				RemoveCustomEmojiTag(
+					_st,
+					document,
+					action.existingTags,
 					action.intervalStart,
 					action.intervalEnd);
 			} else if (action.type == ActionType::TildeFont) {
@@ -2476,6 +2588,11 @@ void InputField::handleContentsChanged() {
 		checkContentHeight();
 	}
 	startPlaceholderAnimation();
+	if (_lastTextWithTags.text.isEmpty()) {
+		if (const auto object = _customEmojiObject.get()) {
+			object->clear();
+		}
+	}
 	Integration::Instance().textActionsUpdated();
 }
 
@@ -2751,6 +2868,9 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 void InputField::clear() {
 	_inner->clear();
 	startPlaceholderAnimation();
+	if (const auto object = _customEmojiObject.get()) {
+		object->clear();
+	}
 }
 
 bool InputField::hasFocus() const {
@@ -3460,7 +3580,7 @@ QString InputField::CustomEmojiLink(QStringView entityData) {
 
 QString InputField::CustomEmojiEntityData(QStringView link) {
 	const auto match = qthelp::regex_match(
-		"^(\\d+\\.\\d+/\\d+)(\\?|$)",
+		"^(\\d+\\.\\d+:\\d+/\\d+)(\\?|$)",
 		base::StringViewMid(link, kCustomEmojiTagStart.size()));
 	return match ? match->captured(1) : QString();
 }

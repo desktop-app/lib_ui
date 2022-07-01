@@ -23,6 +23,10 @@
 class QTouchEvent;
 class Painter;
 
+namespace Ui::Text {
+class CustomEmoji;
+} // namespace Ui::Text
+
 namespace Ui {
 
 const auto kClearFormatSequence = QKeySequence("ctrl+shift+n");
@@ -30,6 +34,10 @@ const auto kStrikeOutSequence = QKeySequence("ctrl+shift+x");
 const auto kMonospaceSequence = QKeySequence("ctrl+shift+m");
 const auto kEditLinkSequence = QKeySequence("ctrl+k");
 const auto kSpoilerSequence = QKeySequence("ctrl+shift+p");
+
+using CustomEmojiFactory = Fn<std::unique_ptr<Text::CustomEmoji>(
+	QStringView,
+	Fn<void()>)>;
 
 class PopupMenu;
 
@@ -149,7 +157,10 @@ class CustomEmojiObject : public QObject, public QTextObjectInterface {
 	Q_INTERFACES(QTextObjectInterface)
 
 public:
-	explicit CustomEmojiObject(QObject *parent);
+	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
+
+	CustomEmojiObject(Factory factory, Fn<bool()> paused);
+	~CustomEmojiObject();
 
 	QSizeF intrinsicSize(
 		QTextDocument *doc,
@@ -161,6 +172,15 @@ public:
 		QTextDocument *doc,
 		int posInDocument,
 		const QTextFormat &format) override;
+
+	void setNow(crl::time now);
+	void clear();
+
+private:
+	Factory _factory;
+	Fn<bool()> _paused;
+	base::flat_map<uint64, std::unique_ptr<Text::CustomEmoji>> _emoji;
+	crl::time _now = 0;
 
 };
 
@@ -245,12 +265,10 @@ public:
 
 	// If you need to make some preparations of tags before putting them to QMimeData
 	// (and then to clipboard or to drag-n-drop object), here is a strategy for that.
-	class TagMimeProcessor {
-	public:
-		virtual QString tagFromMimeTag(const QString &mimeTag) = 0;
-		virtual ~TagMimeProcessor() = default;
-	};
-	void setTagMimeProcessor(std::unique_ptr<TagMimeProcessor> &&processor);
+	void setTagMimeProcessor(Fn<QString(QStringView)> processor);
+	void setCustomEmojiFactory(
+		CustomEmojiFactory factory,
+		Fn<bool()> paused);
 
 	struct EditLinkSelection {
 		int from = 0;
@@ -528,7 +546,8 @@ private:
 	// before _documentContentsChanges fire.
 	int _emojiSurrogateAmount = 0;
 
-	std::unique_ptr<TagMimeProcessor> _tagMimeProcessor;
+	Fn<QString(QStringView)> _tagMimeProcessor;
+	std::unique_ptr<CustomEmojiObject> _customEmojiObject;
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	bool _markdownEnabled = false;

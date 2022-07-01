@@ -1527,6 +1527,29 @@ bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
 	return true;
 }
 
+MentionNameFields MentionNameDataToFields(QStringView data) {
+	const auto components = data.split('.');
+	if (components.size() != 2) {
+		return {};
+	}
+	const auto parts = components[1].split(':');
+	if (parts.size() != 2) {
+		return {};
+	}
+	return {
+		.selfId = parts[1].toULongLong(),
+		.userId = components[0].toULongLong(),
+		.accessHash = parts[0].toULongLong(),
+	};
+}
+
+QString MentionNameDataFromFields(const MentionNameFields &fields) {
+	return u"%1.%2:%3"_q
+		.arg(fields.userId)
+		.arg(fields.accessHash)
+		.arg(fields.selfId);
+}
+
 TextWithEntities ParseEntities(const QString &text, int32 flags) {
 	auto result = TextWithEntities{ text, EntitiesInText() };
 	ParseEntities(result, flags);
@@ -1929,7 +1952,14 @@ bool IsMentionLink(QStringView link) {
 	return link.startsWith(kMentionTagStart);
 }
 
-[[nodiscard]] bool IsSeparateTag(QStringView tag) {
+QString MentionEntityData(QStringView link) {
+	const auto match = qthelp::regex_match(
+		"^(\\d+\\.\\d+:\\d+)(/|$)",
+		base::StringViewMid(link, kMentionTagStart.size()));
+	return match ? match->captured(1) : QString();
+}
+
+bool IsSeparateTag(QStringView tag) {
 	return (tag == Ui::InputField::kTagCode)
 		|| (tag == Ui::InputField::kTagPre);
 }
@@ -1953,8 +1983,8 @@ QString JoinTag(const QList<QStringView> &list) {
 	return result;
 }
 
-QList<QStringView> SplitTags(const QString &tag) {
-	return QStringView(tag).split(kTagSeparator);
+QList<QStringView> SplitTags(QStringView tag) {
+	return tag.split(kTagSeparator);
 }
 
 QString TagWithRemoved(const QString &tag, const QString &removed) {
@@ -2073,11 +2103,9 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 					openType(EntityType::CustomEmoji, data);
 				}
 			} else if (IsMentionLink(nextState.link)) {
-				const auto match = qthelp::regex_match(
-					"^(\\d+\\.\\d+)(/|$)",
-					base::StringViewMid(nextState.link, kMentionTagStart.size()));
-				if (match) {
-					openType(EntityType::MentionName, match->captured(1));
+				const auto data = MentionEntityData(nextState.link);
+				if (!data.isEmpty()) {
+					openType(EntityType::MentionName, data);
 				}
 			} else {
 				openType(EntityType::CustomUrl, nextState.link);
@@ -2169,8 +2197,8 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 		};
 		switch (entity.type()) {
 		case EntityType::MentionName: {
-			auto match = QRegularExpression(
-				R"(^(\d+\.\d+)$)"
+			const auto match = QRegularExpression(
+				"^(\\d+\\.\\d+:\\d+)$"
 			).match(entity.data());
 			if (match.hasMatch()) {
 				push(kMentionTagStart + entity.data());
@@ -2184,7 +2212,12 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 			}
 		} break;
 		case EntityType::CustomEmoji: {
-			push(Ui::InputField::CustomEmojiLink(entity.data()));
+			const auto match = QRegularExpression(
+				"^(\\d+\\.\\d+:\\d+/\\d+)$"
+			).match(entity.data());
+			if (match.hasMatch()) {
+				push(Ui::InputField::CustomEmojiLink(entity.data()));
+			}
 		} break;
 		case EntityType::Bold: push(Ui::InputField::kTagBold); break;
 		//case EntityType::Semibold: // Semibold is for UI parts only.

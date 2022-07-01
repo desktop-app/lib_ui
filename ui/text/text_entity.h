@@ -306,31 +306,13 @@ QStringList PrepareSearchWords(const QString &query, const QRegularExpression *S
 bool CutPart(TextWithEntities &sending, TextWithEntities &left, int limit);
 
 struct MentionNameFields {
-	MentionNameFields(uint64 userId = 0, uint64 accessHash = 0)
-	: userId(userId), accessHash(accessHash) {
-	}
+	uint64 selfId = 0;
 	uint64 userId = 0;
 	uint64 accessHash = 0;
 };
-
-inline MentionNameFields MentionNameDataToFields(const QString &data) {
-	auto components = data.split('.');
-	if (!components.isEmpty()) {
-		return {
-			components.at(0).toULongLong(),
-			(components.size() > 1) ? components.at(1).toULongLong() : 0
-		};
-	}
-	return MentionNameFields{};
-}
-
-inline QString MentionNameDataFromFields(const MentionNameFields &fields) {
-	auto result = QString::number(fields.userId);
-	if (fields.accessHash) {
-		result += '.' + QString::number(fields.accessHash);
-	}
-	return result;
-}
+[[nodiscard]] MentionNameFields MentionNameDataToFields(QStringView data);
+[[nodiscard]] QString MentionNameDataFromFields(
+	const MentionNameFields &fields);
 
 // New entities are added to the ones that are already in result.
 // Changes text if (flags & TextParseMarkdown).
@@ -362,12 +344,13 @@ void ApplyServerCleaning(TextWithEntities &result);
 [[nodiscard]] QString TagsMimeType();
 [[nodiscard]] QString TagsTextMimeType();
 
-inline const auto kMentionTagStart = qstr("mention://user.");
+inline const auto kMentionTagStart = qstr("mention://");
 
 [[nodiscard]] bool IsMentionLink(QStringView link);
+[[nodiscard]] QString MentionEntityData(QStringView link);
 [[nodiscard]] bool IsSeparateTag(QStringView tag);
 [[nodiscard]] QString JoinTag(const QList<QStringView> &list);
-[[nodiscard]] QList<QStringView> SplitTags(const QString &tag);
+[[nodiscard]] QList<QStringView> SplitTags(QStringView tag);
 [[nodiscard]] QString TagWithRemoved(
 	const QString &tag,
 	const QString &removed);
