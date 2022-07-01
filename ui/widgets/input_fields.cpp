@@ -2259,7 +2259,8 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				auto *textStart = fragmentText.constData();
 				auto *textEnd = textStart + fragmentText.size();
 
-				if (format.objectType() == kCustomEmojiFormat) {
+				if (_customEmojiObject
+					&& format.objectType() == kCustomEmojiFormat) {
 					if (fragmentText == kObjectReplacement) {
 						checkedTill = fragmentEnd;
 						continue;
