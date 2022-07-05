@@ -130,13 +130,11 @@ bool IsNewline(QChar ch) {
 
 [[nodiscard]] uint64 CustomEmojiIdFromLink(QStringView link) {
 	const auto skip = Ui::InputField::kCustomEmojiTagStart.size();
-	if (const auto i = link.indexOf('/', skip + 1); i > 0) {
-		const auto j = link.indexOf('?', i + 1);
+	if (const auto i = link.indexOf(':', skip + 1); i > 0) {
 		return base::StringViewMid(
 			link,
-			i + 1,
-			(j > i) ? (j - i - 1) : -1
-		).toULongLong();
+			skip + 1,
+			i - skip - 1).toULongLong();
 	}
 	return 0;
 }
@@ -1003,6 +1001,13 @@ void InsertCustomEmojiAtCursor(
 	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
 	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
 	ApplyTagFormat(format, currentFormat);
+	auto existingTag = TagWithoutCustomEmoji(
+		format.property(kTagProperty).toString());
+	auto existingTags = existingTag.isEmpty()
+		? QList<QStringView>()
+		: TextUtilities::SplitTags(existingTag);
+	existingTags.push_back(link);
+	format.setProperty(kTagProperty, TextUtilities::JoinTag(existingTags));
 	cursor.insertText(kObjectReplacement, format);
 }
 
@@ -3581,7 +3586,7 @@ QString InputField::CustomEmojiLink(QStringView entityData) {
 
 QString InputField::CustomEmojiEntityData(QStringView link) {
 	const auto match = qthelp::regex_match(
-		"^(\\d+\\.\\d+:\\d+/\\d+)(\\?|$)",
+		"^(\\d+:\\d+)(\\?|$)",
 		base::StringViewMid(link, kCustomEmojiTagStart.size()));
 	return match ? match->captured(1) : QString();
 }

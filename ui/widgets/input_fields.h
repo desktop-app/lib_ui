@@ -42,6 +42,10 @@ using CustomEmojiFactory = Fn<std::unique_ptr<Text::CustomEmoji>(
 class PopupMenu;
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji);
+void InsertCustomEmojiAtCursor(
+	QTextCursor cursor,
+	const QString &text,
+	const QString &link);
 
 struct InstantReplaces {
 	struct Node {
