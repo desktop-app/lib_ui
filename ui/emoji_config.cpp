@@ -490,8 +490,8 @@ void Init() {
 	const auto persprite = kImagesPerRow * kImageRowsPerSprite;
 	SpritesCount = (count / persprite) + ((count % persprite) ? 1 : 0);
 
-	SizeNormal = style::ConvertScale(18, style::Scale() * style::DevicePixelRatio());
-	SizeLarge = int(style::ConvertScale(18 * 4 / 3., style::Scale() * style::DevicePixelRatio()));
+	SizeNormal = st::emojiSize * style::DevicePixelRatio();
+	SizeLarge = int(style::ConvertScale(18 * 4 / 3., style::Scale())) * style::DevicePixelRatio();
 	Universal = std::make_shared<UniversalImages>(ReadCurrentSetId());
 	CanClearUniversal = false;
 

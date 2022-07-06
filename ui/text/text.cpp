@@ -1689,7 +1689,17 @@ private:
 							if (!_now) {
 								_now = crl::now();
 							}
-							custom->paint(*_p, x, y, _now, _textPalette->spoilerActiveBg->c, _p->inactive());
+							if (!_customEmojiSize) {
+								_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
+								_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+							}
+							custom->paint(
+								*_p,
+								x + _customEmojiSkip,
+								y + _customEmojiSkip,
+								_now,
+								_textPalette->spoilerActiveBg->c,
+								_p->inactive());
 						}
 					}
 					if (hasSpoiler) {
@@ -2871,6 +2881,8 @@ private:
 	const QChar *_str = nullptr;
 	crl::time _now = 0;
 
+	int _customEmojiSize = 0;
+	int _customEmojiSkip = 0;
 	int _indexOfElidedBlock = -1; // For spoilers.
 
 	// current paragraph data

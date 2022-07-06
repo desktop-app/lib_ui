@@ -202,6 +202,8 @@ private:
 
 };
 
+[[nodiscard]] int AdjustCustomEmojiSize(int emojiSize);
+
 class SkipBlock final : public AbstractBlock {
 public:
 	SkipBlock(

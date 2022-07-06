@@ -815,7 +815,11 @@ void RemoveCustomEmojiTag(
 }
 
 void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
-	to.setProperty(kTagProperty, from.property(kTagProperty));
+	if (from.hasProperty(kTagProperty)) {
+		to.setProperty(
+			kTagProperty,
+			TagWithoutCustomEmoji(from.property(kTagProperty).toString()));
+	}
 	to.setProperty(kReplaceTagId, from.property(kReplaceTagId));
 	to.setFont(from.font());
 	to.setForeground(from.foreground());
@@ -1000,19 +1004,19 @@ void InsertCustomEmojiAtCursor(
 		const QString &text,
 		const QString &link) {
 	const auto currentFormat = cursor.charFormat();
+	const auto unique = MakeUniqueCustomEmojiLink(link);
 	auto format = QTextCharFormat();
 	format.setObjectType(kCustomEmojiFormat);
 	format.setProperty(kCustomEmojiText, text);
-	format.setProperty(kCustomEmojiLink, MakeUniqueCustomEmojiLink(link));
+	format.setProperty(kCustomEmojiLink, unique);
 	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
 	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
 	ApplyTagFormat(format, currentFormat);
-	auto existingTag = TagWithoutCustomEmoji(
-		format.property(kTagProperty).toString());
+	auto existingTag = format.property(kTagProperty).toString();
 	auto existingTags = existingTag.isEmpty()
 		? QList<QStringView>()
 		: TextUtilities::SplitTags(existingTag);
-	existingTags.push_back(link);
+	existingTags.push_back(unique);
 	format.setProperty(kTagProperty, TextUtilities::JoinTag(existingTags));
 	cursor.insertText(kObjectReplacement, format);
 }
@@ -1391,10 +1395,14 @@ QSizeF CustomEmojiObject::intrinsicSize(
 		int posInDocument,
 		const QTextFormat &format) {
 	const auto factor = style::DevicePixelRatio() * 1.;
-	const auto size = Emoji::GetSizeNormal() / factor;
+	const auto size = st::emojiSize * 1.;
 	const auto width = size + st::emojiPadding * 2.;
 	const auto font = format.toCharFormat().font();
 	const auto height = std::min(QFontMetrics(font).height() * 1., size);
+	if (!_skip) {
+		const auto emoji = Ui::Text::AdjustCustomEmojiSize(st::emojiSize);
+		_skip = (st::emojiSize - emoji) / 2;
+	}
 	return { width, height };
 }
 
@@ -1421,8 +1429,8 @@ void CustomEmojiObject::drawObject(
 	}
 	i->second->paint(
 		*painter,
-		int(base::SafeRound(rect.x())) + st::emojiPadding,
-		int(base::SafeRound(rect.y())),
+		int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
+		int(base::SafeRound(rect.y())) + _skip,
 		_now,
 		st::defaultTextPalette.spoilerActiveBg->c,
 		_paused && _paused());
@@ -1614,7 +1622,8 @@ void InputField::updatePalette() {
 		auto format = cursor.charFormat();
 		format.merge(PrepareTagFormat(
 			_st,
-			format.property(kTagProperty).toString()));
+			TagWithoutCustomEmoji(
+				format.property(kTagProperty).toString())));
 		cursor.setCharFormat(format);
 		setTextCursor(cursor);
 	}

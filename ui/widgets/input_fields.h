@@ -185,6 +185,7 @@ private:
 	Fn<bool()> _paused;
 	base::flat_map<uint64, std::unique_ptr<Text::CustomEmoji>> _emoji;
 	crl::time _now = 0;
+	int _skip = 0;
 
 };
 
