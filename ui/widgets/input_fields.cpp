@@ -963,6 +963,9 @@ protected:
 	void inputMethodEvent(QInputMethodEvent *e) override {
 		return outer()->inputMethodEventInner(e);
 	}
+	void paintEvent(QPaintEvent *e) override {
+		return outer()->paintEventInner(e);
+	}
 
 	bool canInsertFromMimeData(const QMimeData *source) const override {
 		return outer()->canInsertFromMimeDataInner(source);
@@ -1664,11 +1667,24 @@ void InputField::setCustomEmojiFactory(
 		Fn<bool()> paused) {
 	_customEmojiObject = std::make_unique<CustomEmojiObject>([=](
 			QStringView data) {
-		return factory(data, [=] { _inner->update(); });
+		return factory(data, [=] { customEmojiRepaint(); });
 	}, std::move(paused));
 	_inner->document()->documentLayout()->registerHandler(
 		kCustomEmojiFormat,
 		_customEmojiObject.get());
+}
+
+void InputField::customEmojiRepaint() {
+	if (_customEmojiRepaintScheduled) {
+		return;
+	}
+	_customEmojiRepaintScheduled = true;
+	_inner->update();
+}
+
+void InputField::paintEventInner(QPaintEvent *e) {
+	_customEmojiRepaintScheduled = false;
+	_inner->QTextEdit::paintEvent(e);
 }
 
 void InputField::setAdditionalMargin(int margin) {

@@ -442,6 +442,7 @@ private:
 	void contextMenuEventInner(QContextMenuEvent *e, QMenu *m = nullptr);
 	void dropEventInner(QDropEvent *e);
 	void inputMethodEventInner(QInputMethodEvent *e);
+	void paintEventInner(QPaintEvent *e);
 
 	QMimeData *createMimeDataFromSelectionInner() const;
 	bool canInsertFromMimeDataInner(const QMimeData *source) const;
@@ -513,6 +514,7 @@ private:
 
 	bool revertFormatReplace();
 
+	void customEmojiRepaint();
 	void highlightMarkdown();
 
 	const style::InputField &_st;
@@ -536,6 +538,7 @@ private:
 
 	bool _forcePlaceholderHidden = false;
 	bool _reverseMarkdownReplacement = false;
+	bool _customEmojiRepaintScheduled = false;
 
 	// Tags list which we should apply while setText() call or insert from mime data.
 	TagList _insertedTags;
