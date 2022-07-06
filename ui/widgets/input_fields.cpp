@@ -204,8 +204,11 @@ public:
 	TagAccumulator(TextWithTags::Tags &tags) : _tags(tags) {
 	}
 
-	bool changed() const {
+	[[nodiscard]] bool changed() const {
 		return _changed;
+	}
+	[[nodiscrd]] QString currentTag() const {
+		return _currentTagId;
 	}
 
 	void feed(const QString &randomTagId, int currentPosition) {
@@ -214,7 +217,7 @@ public:
 		}
 
 		if (!_currentTagId.isEmpty()) {
-			const auto tag = TextWithTags::Tag {
+			const auto tag = TextWithTags::Tag{
 				_currentStart,
 				currentPosition - _currentStart,
 				_currentTagId
@@ -2186,6 +2189,9 @@ QString InputField::getTextPart(
 
 		block = block.next();
 		if (block != till) {
+			tagAccumulator.feed(
+				TagWithoutCustomEmoji(tagAccumulator.currentTag()),
+				result.size());
 			result.append('\n');
 			markdownTagAccumulator.feed(newline, 1, lastTag);
 		}
