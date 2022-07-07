@@ -199,6 +199,7 @@ separatePanelBack: IconButton(separatePanelClose) {
 separatePanelDuration: 150;
 
 webviewDialogButton: defaultBoxButton;
+webviewDialogDestructiveButton: attentionBoxButton;
 webviewDialogSubmit: RoundButton(defaultActiveButton) {
 	width: -48px;
 	height: 34px;

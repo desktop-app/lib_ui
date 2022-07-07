@@ -154,8 +154,24 @@ QString Integration::phraseButtonOk() {
 	return "OK";
 }
 
+QString Integration::phraseButtonClose() {
+	return "Close";
+}
+
 QString Integration::phraseButtonCancel() {
 	return "Cancel";
+}
+
+QString Integration::phrasePanelCloseWarning() {
+	return "Warning";
+}
+
+QString Integration::phrasePanelCloseUnsaved() {
+	return "Changes that you made may not be saved.";
+}
+
+QString Integration::phrasePanelCloseAnyway() {
+	return "Close anyway";
 }
 
 } // namespace Ui

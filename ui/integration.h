@@ -81,7 +81,11 @@ public:
 	[[nodiscard]] virtual QString phraseFormattingMonospace();
 	[[nodiscard]] virtual QString phraseFormattingSpoiler();
 	[[nodiscard]] virtual QString phraseButtonOk();
+	[[nodiscard]] virtual QString phraseButtonClose();
 	[[nodiscard]] virtual QString phraseButtonCancel();
+	[[nodiscard]] virtual QString phrasePanelCloseWarning();
+	[[nodiscard]] virtual QString phrasePanelCloseUnsaved();
+	[[nodiscard]] virtual QString phrasePanelCloseAnyway();
 
 };
 
