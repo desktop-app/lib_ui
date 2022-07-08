@@ -3679,8 +3679,8 @@ TextForMimeData String::toText(
 		if (composeEntities && !customEmojiData.isEmpty()) {
 			insertEntity({
 				EntityType::CustomEmoji,
-				result.rich.text.size() - part.size(),
-				part.size(),
+				int(result.rich.text.size() - part.size()),
+				int(part.size()),
 				customEmojiData,
 			});
 		}

@@ -14,6 +14,7 @@ namespace Ui {
 
 class FrameGenerator {
 public:
+	virtual ~FrameGenerator() = default;
 	[[nodiscard]] virtual int count() = 0;
 
 	struct Frame {
