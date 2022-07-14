@@ -205,7 +205,8 @@ void TitleWidget::refreshAdditionalPaddings(
 			return -1;
 		}
 		const auto pixels = (factor + 50) / 100;
-		return int(base::SafeRound(pixels / window()->devicePixelRatioF()));
+		return int(base::SafeRound(
+			pixels / window()->windowHandle()->devicePixelRatio()));
 	}();
 	if (padding < 0) {
 		return;
