@@ -10,6 +10,7 @@
 
 #include <crl/crl_time.h>
 #include <rpl/lifetime.h>
+#include <QtCore/QObject>
 
 namespace Ui {
 namespace Animations {
