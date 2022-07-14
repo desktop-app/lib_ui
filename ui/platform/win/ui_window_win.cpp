@@ -455,7 +455,8 @@ bool WindowHelper::handleNativeEvent(
 		}
 		POINT p{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		ScreenToClient(_handle, &p);
-		const auto mapped = QPoint(p.x, p.y) / window()->devicePixelRatioF();
+		const auto mapped = QPoint(p.x, p.y)
+			/ window()->windowHandle()->devicePixelRatio();
 		ShowWindowMenu(window(), mapped);
 		if (result) *result = 0;
 	} return true;
@@ -547,7 +548,8 @@ bool WindowHelper::handleNativeEvent(
 
 		POINT p{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		ScreenToClient(_handle, &p);
-		const auto mapped = QPoint(p.x, p.y) / window()->devicePixelRatioF();
+		const auto mapped = QPoint(p.x, p.y)
+			/ window()->windowHandle()->devicePixelRatio();
 		*result = [&] {
 			if (!window()->rect().contains(mapped)) {
 				return HTTRANSPARENT;
