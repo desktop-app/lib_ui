@@ -174,4 +174,16 @@ QString Integration::phrasePanelCloseAnyway() {
 	return "Close anyway";
 }
 
+QString Integration::phraseBotSharePhone() {
+	return "Do you want to share your phone number with this bot?";
+}
+
+QString Integration::phraseBotSharePhoneTitle() {
+	return "Phone number";
+}
+
+QString Integration::phraseBotSharePhoneConfirm() {
+	return "Share";
+}
+
 } // namespace Ui

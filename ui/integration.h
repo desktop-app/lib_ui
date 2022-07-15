@@ -86,6 +86,9 @@ public:
 	[[nodiscard]] virtual QString phrasePanelCloseWarning();
 	[[nodiscard]] virtual QString phrasePanelCloseUnsaved();
 	[[nodiscard]] virtual QString phrasePanelCloseAnyway();
+	[[nodiscard]] virtual QString phraseBotSharePhone();
+	[[nodiscard]] virtual QString phraseBotSharePhoneTitle();
+	[[nodiscard]] virtual QString phraseBotSharePhoneConfirm();
 
 };
 
