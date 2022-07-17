@@ -24,24 +24,33 @@ namespace {
 
 constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
 
-[[nodiscard]] Backend DefaultChooseBackend(Capabilities capabilities) {
-	const auto use = ::Platform::IsMac()
-		? true
-		: ::Platform::IsWindows()
-		? capabilities.supported
-		: capabilities.transparency;
-	LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
-	return use ? Backend::OpenGL : Backend::Raster;
+class RpWindowNoRhi : public RpWindow {
+protected:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+	std::optional<QPlatformBackingStoreRhiConfig> rhiConfig() const override {
+		return QPlatformBackingStoreRhiConfig();
+	}
+#endif // Qt >= 6.4.0
+};
+
+[[nodiscard]] Fn<Backend(Capabilities)> ChooseBackendWrap(
+		Fn<Backend(Capabilities)> chooseBackend) {
+	return [=](Capabilities capabilities) {
+		const auto backend = chooseBackend(capabilities);
+		const auto use = backend == Backend::OpenGL;
+		LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
+		return backend;
+	};
 }
 
 } // namespace
 
-Window::Window() : Window(DefaultChooseBackend) {
+Window::Window() : Window(ChooseBackendDefault) {
 }
 
 Window::Window(Fn<Backend(Capabilities)> chooseBackend)
-: _window(createWindow(chooseBackend))
-, _bodyNativeWrap(createNativeBodyWrap(chooseBackend))
+: _window(createWindow(ChooseBackendWrap(chooseBackend)))
+, _bodyNativeWrap(createNativeBodyWrap(ChooseBackendWrap(chooseBackend)))
 , _body(_bodyNativeWrap ? _bodyNativeWrap.get() : _window->body().get()) {
 }
 
@@ -61,7 +70,7 @@ not_null<RpWidget*> Window::widget() const {
 
 std::unique_ptr<RpWindow> Window::createWindow(
 		const Fn<Backend(Capabilities)> &chooseBackend) {
-	auto result = std::make_unique<RpWindow>();
+	std::unique_ptr<RpWindow> result = std::make_unique<RpWindowNoRhi>();
 	if constexpr (!kUseNativeChild) {
 		_backend = chooseBackend(CheckCapabilities(result.get()));
 		if (_backend != Backend::OpenGL) {
