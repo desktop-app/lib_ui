@@ -6,10 +6,45 @@
 //
 #include "ui/rp_widget.h"
 
+#include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
+#include "ui/gl/gl_detection.h"
 
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
+#include <private/qwidget_p.h>
+
+class TWidgetPrivate : public QWidgetPrivate {
+public:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+	QPlatformBackingStoreRhiConfig rhiConfig() const override {
+		const auto q = static_cast<TWidget*>(q_ptr);
+		if (!q->testAttribute(Qt::WA_WState_Created)) {
+			return QWidgetPrivate::rhiConfig();
+		}
+		if (const auto config = q->rhiConfig()) {
+			return *config;
+		}
+		if (::Platform::IsMac10_14OrGreater()) {
+			return { QPlatformBackingStoreRhiConfig::Metal };
+		}
+		// We can't specify the widget here as q_evaluateRhiConfig is called
+		// in QWidgetWindow constructor, while windowHandle is set right after
+		// the constructor is completed
+		if (::Platform::IsWayland() // old versions of mutter produce flicker without OpenGL
+			&& Ui::GL::ChooseBackendDefault(
+					Ui::GL::CheckCapabilities(nullptr))
+				== Ui::GL::Backend::OpenGL) {
+			return { QPlatformBackingStoreRhiConfig::OpenGL };
+		}
+		return QWidgetPrivate::rhiConfig();
+	}
+#endif // Qt >= 6.4.0
+};
+
+TWidget::TWidget(QWidget *parent)
+: TWidgetHelper<QWidget>(*(new TWidgetPrivate), parent, {}) {
+}
 
 namespace Ui {
 namespace {

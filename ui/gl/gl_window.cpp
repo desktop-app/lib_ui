@@ -23,6 +23,16 @@ namespace Ui::GL {
 namespace {
 
 constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
+
+class RpWindowNoRhi : public RpWindow {
+protected:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+	std::optional<QPlatformBackingStoreRhiConfig> rhiConfig() const override {
+		return QPlatformBackingStoreRhiConfig();
+	}
+#endif // Qt >= 6.4.0
+};
+
 [[nodiscard]] Fn<Backend(Capabilities)> ChooseBackendWrap(
 		Fn<Backend(Capabilities)> chooseBackend) {
 	return [=](Capabilities capabilities) {
@@ -60,7 +70,7 @@ not_null<RpWidget*> Window::widget() const {
 
 std::unique_ptr<RpWindow> Window::createWindow(
 		const Fn<Backend(Capabilities)> &chooseBackend) {
-	auto result = std::make_unique<RpWindow>();
+	std::unique_ptr<RpWindow> result = std::make_unique<RpWindowNoRhi>();
 	if constexpr (!kUseNativeChild) {
 		_backend = chooseBackend(CheckCapabilities(result.get()));
 		if (_backend != Backend::OpenGL) {
