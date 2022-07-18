@@ -220,6 +220,7 @@ public:
 	static const QString kTagPre;
 	static const QString kTagSpoiler;
 	static const QString kCustomEmojiTagStart;
+	static const int kCustomEmojiFormat;
 
 	InputField(
 		QWidget *parent,
@@ -301,7 +302,11 @@ public:
 	void setInstantReplacesEnabled(rpl::producer<bool> enabled);
 	void setMarkdownReplacesEnabled(rpl::producer<bool> enabled);
 	void setExtendedContextMenu(rpl::producer<ExtendedContextMenu> value);
-	void commitInstantReplacement(int from, int till, const QString &with);
+	void commitInstantReplacement(
+		int from,
+		int till,
+		const QString &with,
+		const QString &customEmojiData);
 	void commitMarkdownLinkEdit(
 		EditLinkSelection selection,
 		const QString &text,
@@ -497,6 +502,7 @@ private:
 		int from,
 		int till,
 		const QString &with,
+		const QString &customEmojiData,
 		std::optional<QString> checkOriginal,
 		bool checkIfInMonospace);
 	bool commitMarkdownReplacement(

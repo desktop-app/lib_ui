@@ -35,7 +35,6 @@ constexpr auto kInstantReplaceWhatId = QTextFormat::UserProperty + 1;
 constexpr auto kInstantReplaceWithId = QTextFormat::UserProperty + 2;
 constexpr auto kReplaceTagId = QTextFormat::UserProperty + 3;
 constexpr auto kTagProperty = QTextFormat::UserProperty + 4;
-constexpr auto kCustomEmojiFormat = QTextFormat::UserObject + 1;
 constexpr auto kCustomEmojiText = QTextFormat::UserProperty + 5;
 constexpr auto kCustomEmojiLink = QTextFormat::UserProperty + 6;
 constexpr auto kCustomEmojiId = QTextFormat::UserProperty + 7;
@@ -50,6 +49,7 @@ const auto &kTagStrikeOut = InputField::kTagStrikeOut;
 const auto &kTagCode = InputField::kTagCode;
 const auto &kTagPre = InputField::kTagPre;
 const auto &kTagSpoiler = InputField::kTagSpoiler;
+const auto &kCustomEmojiFormat = InputField::kCustomEmojiFormat;
 const auto kTagCheckLinkMeta = u"^:/:/:^"_q;
 const auto kNewlineChars = QString("\r\n")
 	+ QChar(0xfdd0) // QTextBeginningOfFrame
@@ -942,6 +942,8 @@ const QString InputField::kTagCode = QStringLiteral("`");
 const QString InputField::kTagPre = QStringLiteral("```");
 const QString InputField::kTagSpoiler = QStringLiteral("||");
 const QString InputField::kCustomEmojiTagStart = u"custom-emoji://"_q;
+const int InputField::kCustomEmojiFormat
+	= QTextFormat::UserObject + 1;
 
 class InputField::Inner final : public QTextEdit {
 public:
@@ -1012,12 +1014,9 @@ void InsertCustomEmojiAtCursor(
 	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
 	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
 	ApplyTagFormat(format, currentFormat);
-	auto existingTag = format.property(kTagProperty).toString();
-	auto existingTags = existingTag.isEmpty()
-		? QList<QStringView>()
-		: TextUtilities::SplitTags(existingTag);
-	existingTags.push_back(unique);
-	format.setProperty(kTagProperty, TextUtilities::JoinTag(existingTags));
+	format.setProperty(kTagProperty, TextUtilities::TagWithAdded(
+		format.property(kTagProperty).toString(),
+		unique));
 	cursor.insertText(kObjectReplacement, format);
 }
 
@@ -3352,20 +3351,34 @@ void InputField::applyInstantReplace(
 	} else if (position < length) {
 		return;
 	}
-	commitInstantReplacement(position - length, position, with, what, true);
-}
-
-void InputField::commitInstantReplacement(
-		int from,
-		int till,
-		const QString &with) {
-	commitInstantReplacement(from, till, with, std::nullopt, false);
+	commitInstantReplacement(
+		position - length,
+		position,
+		with,
+		QString(),
+		what,
+		true);
 }
 
 void InputField::commitInstantReplacement(
 		int from,
 		int till,
 		const QString &with,
+		const QString &customEmojiData) {
+	commitInstantReplacement(
+		from,
+		till,
+		with,
+		customEmojiData,
+		std::nullopt,
+		false);
+}
+
+void InputField::commitInstantReplacement(
+		int from,
+		int till,
+		const QString &with,
+		const QString &customEmojiData,
 		std::optional<QString> checkOriginal,
 		bool checkIfInMonospace) {
 	const auto original = getTextWithTagsPart(from, till).text;
@@ -3388,17 +3401,32 @@ void InputField::commitInstantReplacement(
 	cursor.setPosition(from);
 	cursor.setPosition(till, QTextCursor::KeepAnchor);
 
+	const auto link = customEmojiData.isEmpty()
+		? QString()
+		: CustomEmojiLink(customEmojiData);
+	const auto unique = link.isEmpty()
+		? QString()
+		: MakeUniqueCustomEmojiLink(link);
 	auto format = [&]() -> QTextCharFormat {
 		auto emojiLength = 0;
 		const auto emoji = Emoji::Find(with, &emojiLength);
 		if (!emoji || with.size() != emojiLength) {
 			return _defaultCharFormat;
+		} else if (!customEmojiData.isEmpty()) {
+			auto result = QTextCharFormat();
+			result.setObjectType(kCustomEmojiFormat);
+			result.setProperty(kCustomEmojiText, with);
+			result.setProperty(kCustomEmojiLink, unique);
+			result.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
+			result.setVerticalAlignment(QTextCharFormat::AlignBottom);
+			return result;
 		}
 		const auto use = Integration::Instance().defaultEmojiVariant(
 			emoji);
 		return PrepareEmojiFormat(use, _st.font);
 	}();
-	const auto replacement = format.isImageFormat()
+	const auto replacement = (format.isImageFormat()
+		|| format.objectType() == kCustomEmojiFormat)
 		? kObjectReplacement
 		: with;
 	format.setProperty(kInstantReplaceWhatId, original);
@@ -3407,6 +3435,11 @@ void InputField::commitInstantReplacement(
 		kInstantReplaceRandomId,
 		base::RandomValue<uint32>());
 	ApplyTagFormat(format, cursor.charFormat());
+	if (!unique.isEmpty()) {
+		format.setProperty(kTagProperty, TextUtilities::TagWithAdded(
+			format.property(kTagProperty).toString(),
+			unique));
+	}
 	cursor.insertText(replacement, format);
 }
 
