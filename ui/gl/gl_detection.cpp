@@ -79,10 +79,6 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			LOG(("OpenGL: Could not create window for widget."));
 			return {};
 		}
-		if (!widget->window()->windowHandle()->supportsOpenGL()) {
-			LOG_ONCE(("OpenGL: Not supported for window."));
-			return {};
-		}
 		format = widget->window()->windowHandle()->format();
 		format.setAlphaBufferSize(8);
 		widget->window()->windowHandle()->setFormat(format);
