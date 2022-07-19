@@ -207,7 +207,7 @@ public:
 	[[nodiscard]] bool changed() const {
 		return _changed;
 	}
-	[[nodiscrd]] QString currentTag() const {
+	[[nodiscard]] QString currentTag() const {
 		return _currentTagId;
 	}
 
@@ -1393,7 +1393,6 @@ QSizeF CustomEmojiObject::intrinsicSize(
 		QTextDocument *doc,
 		int posInDocument,
 		const QTextFormat &format) {
-	const auto factor = style::DevicePixelRatio() * 1.;
 	const auto size = st::emojiSize * 1.;
 	const auto width = size + st::emojiPadding * 2.;
 	const auto font = format.toCharFormat().font();
