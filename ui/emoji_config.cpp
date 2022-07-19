@@ -124,12 +124,9 @@ uint32 ComputeVersion(int id) {
 	static_assert(kCacheVersion > 0 && kCacheVersion < (1 << 16));
 	static_assert(kSetVersion > 0 && kSetVersion < (1 << 8));
 
-	auto result = uint32(kCacheVersion);
-	if (!id) {
-		return result;
-	}
-	result |= (uint32(id) << 24) | (uint32(kSetVersion) << 16);
-	return result;
+	return uint32(kCacheVersion)
+		| (uint32(kSetVersion) << 16)
+		| (uint32(id) << 24);
 }
 
 int ReadCurrentSetId() {
