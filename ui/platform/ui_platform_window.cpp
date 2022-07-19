@@ -262,10 +262,10 @@ void DefaultWindowHelper::init() {
 			Qt::WindowStates windowState) {
 		if (const auto handle = window()->windowHandle()) {
 			handle->setFlag(Qt::FramelessWindowHint, titleShown);
+			updateWindowExtents();
 		} else {
 			window()->setWindowFlag(Qt::FramelessWindowHint, titleShown);
 		}
-		updateWindowExtents();
 	}, window()->lifetime());
 
 	window()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
@@ -315,7 +315,7 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 				rect.topRight() - QPoint(radiusWithFix, 0),
 				radiusSize
 			)) || clip.intersects(QRect(
-				rect.bottomRight() - QPoint(0, radiusWithFix),
+				rect.bottomLeft() - QPoint(0, radiusWithFix),
 				radiusSize
 			)) || clip.intersects(QRect(
 				rect.bottomRight() - QPoint(radiusWithFix, radiusWithFix),

@@ -9,6 +9,7 @@
 #include "base/platform/win/base_windows_h.h"
 
 #include <QtWidgets/QApplication>
+#include <QtGui/QWindow>
 
 #include <wrl/client.h>
 #include <Shobjidl.h>
@@ -75,7 +76,7 @@ std::optional<bool> IsOverlapped(
 	const auto nativeRect = [&] {
 		const auto topLeft = [&] {
 			const auto qpoints = rect.topLeft()
-				* widget->devicePixelRatioF();
+				* widget->windowHandle()->devicePixelRatio();
 			POINT result{
 				qpoints.x(),
 				qpoints.y(),
@@ -85,7 +86,7 @@ std::optional<bool> IsOverlapped(
 		}();
 		const auto bottomRight = [&] {
 			const auto qpoints = rect.bottomRight()
-				* widget->devicePixelRatioF();
+				* widget->windowHandle()->devicePixelRatio();
 			POINT result{
 				qpoints.x(),
 				qpoints.y(),
@@ -122,7 +123,7 @@ std::optional<bool> IsOverlapped(
 
 void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	const auto handle = HWND(widget->winId());
-	const auto mapped = point * widget->devicePixelRatioF();
+	const auto mapped = point * widget->windowHandle()->devicePixelRatio();
 	POINT p{ mapped.x(), mapped.y() };
 	ClientToScreen(handle, &p);
 	SendMessage(

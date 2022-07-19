@@ -21,6 +21,7 @@
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #include <QtCore/QPoint>
+#include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
 
 namespace Ui {
@@ -236,9 +237,9 @@ std::optional<bool> XCBIsOverlapped(
 
 	const auto mappedRect = QRect(
 		rect.topLeft()
-			* widget->devicePixelRatioF()
+			* widget->windowHandle()->devicePixelRatio()
 			+ windowGeometry.topLeft(),
-		rect.size() * widget->devicePixelRatioF());
+		rect.size() * widget->windowHandle()->devicePixelRatio());
 
 	const auto cookie = xcb_query_tree(connection, *root);
 	const auto reply = base::Platform::XCB::MakeReplyPointer(
@@ -304,7 +305,9 @@ void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
 		return;
 	}
 
-	const auto nativeExtents = extents * widget->devicePixelRatioF();
+	const auto nativeExtents = extents
+		* widget->windowHandle()->devicePixelRatio();
+
 	const auto extentsVector = std::vector<uint>{
 		uint(nativeExtents.left()),
 		uint(nativeExtents.right()),
@@ -368,7 +371,7 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	}
 
 	const auto globalPos = point
-		* widget->devicePixelRatioF()
+		* widget->windowHandle()->devicePixelRatio()
 		+ windowGeometry.topLeft();
 
 	xcb_client_message_event_t xev;

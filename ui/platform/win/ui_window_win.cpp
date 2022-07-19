@@ -244,6 +244,18 @@ void WindowHelper::setNativeFrame(bool enabled) {
 	updateMargins();
 	updateWindowFrameColors();
 	fixMaximizedWindow();
+	SetWindowPos(
+		_handle,
+		0,
+		0,
+		0,
+		0,
+		0,
+		SWP_FRAMECHANGED
+			| SWP_NOMOVE
+			| SWP_NOSIZE
+			| SWP_NOZORDER
+			| SWP_NOACTIVATE);
 }
 
 void WindowHelper::initialShadowUpdate() {
@@ -403,17 +415,14 @@ bool WindowHelper::handleNativeEvent(
 	} return true;
 
 	case WM_NCCALCSIZE: {
-		if (_title->isHidden()) {
+		if (_title->isHidden() || !wParam) {
 			return false;
 		}
 		WINDOWPLACEMENT wp;
 		wp.length = sizeof(WINDOWPLACEMENT);
 		if (GetWindowPlacement(_handle, &wp)
 			&& (wp.showCmd == SW_SHOWMAXIMIZED)) {
-			const auto params = (LPNCCALCSIZE_PARAMS)lParam;
-			const auto r = (wParam == TRUE)
-				? &params->rgrc[0]
-				: (LPRECT)lParam;
+			const auto r = &((LPNCCALCSIZE_PARAMS)lParam)->rgrc[0];
 			const auto hMonitor = MonitorFromPoint(
 				{ (r->left + r->right) / 2, (r->top + r->bottom) / 2 },
 				MONITOR_DEFAULTTONEAREST);
@@ -433,8 +442,10 @@ bool WindowHelper::handleNativeEvent(
 					}
 				}
 			}
+			if (result) *result = 0;
+		} else {
+			if (result) *result = WVR_REDRAW;
 		}
-		if (result) *result = 0;
 		return true;
 	}
 
@@ -444,7 +455,8 @@ bool WindowHelper::handleNativeEvent(
 		}
 		POINT p{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		ScreenToClient(_handle, &p);
-		const auto mapped = QPoint(p.x, p.y) / window()->devicePixelRatioF();
+		const auto mapped = QPoint(p.x, p.y)
+			/ window()->windowHandle()->devicePixelRatio();
 		ShowWindowMenu(window(), mapped);
 		if (result) *result = 0;
 	} return true;
@@ -536,7 +548,8 @@ bool WindowHelper::handleNativeEvent(
 
 		POINT p{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		ScreenToClient(_handle, &p);
-		const auto mapped = QPoint(p.x, p.y) / window()->devicePixelRatioF();
+		const auto mapped = QPoint(p.x, p.y)
+			/ window()->windowHandle()->devicePixelRatio();
 		*result = [&] {
 			if (!window()->rect().contains(mapped)) {
 				return HTTRANSPARENT;
