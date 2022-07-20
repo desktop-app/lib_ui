@@ -633,7 +633,7 @@ void Parser::parseCurrentChar() {
 	_ch = ((_ptr < _end) ? *_ptr : 0);
 	_emojiLookback = 0;
 	const auto isNewLine = _multiline && IsNewline(_ch);
-	const auto isSpace = IsSpace(_ch);
+	const auto isSpace = IsSpace(_ch) && _ch != QChar(160);
 	const auto isDiac = IsDiac(_ch);
 	const auto isTilde = _checkTilde && (_ch == '~');
 	const auto skip = [&] {
