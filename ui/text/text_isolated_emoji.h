@@ -6,17 +6,19 @@
 //
 #pragma once
 
-namespace Ui {
-namespace Text {
+#include "base/variant.h"
+
+namespace Ui::Text {
 
 inline constexpr auto kIsolatedEmojiLimit = 3;
 
 struct IsolatedEmoji {
-	using Items = std::array<EmojiPtr, kIsolatedEmojiLimit>;
-	Items items = { { nullptr } };
+	using Item = std::variant<v::null_t, EmojiPtr, QString>;
+	using Items = std::array<Item, kIsolatedEmojiLimit>;
+	Items items = {};
 
 	[[nodiscard]] bool empty() const {
-		return items[0] == nullptr;
+		return v::is_null(items[0]);
 	}
 	[[nodiscard]] explicit operator bool() const {
 		return !empty();
@@ -41,5 +43,6 @@ struct IsolatedEmoji {
 	}
 };
 
-} // namespace Text
-} // namespace Ui
+constexpr auto t = sizeof(IsolatedEmoji);
+
+} // namespace Ui::Text

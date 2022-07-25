@@ -22,8 +22,7 @@
 #include <private/qharfbuzz_p.h>
 #endif // Qt < 6.0.0
 
-namespace Ui {
-namespace Text {
+namespace Ui::Text {
 namespace {
 
 constexpr auto kStringLinkIndexShift = uint16(0x8000);
@@ -169,8 +168,7 @@ void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
 }
 
 } // namespace
-} // namespace Text
-} // namespace Ui
+} // namespace Ui::Text
 
 const TextParseOptions kDefaultTextOptions = {
 	TextParseLinks | TextParseMultiline, // flags
@@ -3723,17 +3721,20 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 		|| _blocks.back()->type() != TextBlockTSkip) ? 0 : 1;
 	if ((_blocks.size() > kIsolatedEmojiLimit + skip)
 		|| !_spoilers.empty()) {
-		return IsolatedEmoji();
+		return {};
 	}
 	auto index = 0;
 	for (const auto &block : _blocks) {
 		const auto type = block->type();
 		if (block->lnkIndex()) {
-			return IsolatedEmoji();
+			return {};
 		} else if (type == TextBlockTEmoji) {
 			result.items[index++] = block.unsafe<EmojiBlock>()._emoji;
+		} else if (type == TextBlockTCustomEmoji) {
+			result.items[index++]
+				= block.unsafe<CustomEmojiBlock>()._custom->entityData();
 		} else if (type != TextBlockTSkip) {
-			return IsolatedEmoji();
+			return {};
 		}
 	}
 	return result;
