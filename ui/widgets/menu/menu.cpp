@@ -148,28 +148,43 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 	const auto raw = widget.get();
 	_actionWidgets.push_back(std::move(widget));
 
-	rpl::combine(
-		raw->minWidthValue(),
-		raw->heightValue()
-	) | rpl::start_with_next([=] {
-		const auto newWidth = _forceWidth
+	const auto recountWidth = [=] {
+		return _forceWidth
 			? _forceWidth
 			: std::clamp(
-				_actionWidgets.empty()
-				? 0
-				: (*ranges::max_element(
-					_actionWidgets,
-					std::less<>(),
-					&ItemBase::minWidth))->minWidth(),
+				(_actionWidgets.empty()
+					? 0
+					: (*ranges::max_element(
+						_actionWidgets,
+						std::less<>(),
+						&ItemBase::minWidth))->minWidth()),
 				_st.widthMin,
 				_st.widthMax);
-		const auto newHeight = ranges::accumulate(
-			_actionWidgets,
-			0,
-			ranges::plus(),
-			&ItemBase::height);
-		resizeFromInner(newWidth, newHeight);
+	};
+	const auto recountHeight = [=] {
+		auto result = 0;
+		for (const auto &widget : _actionWidgets) {
+			if (widget->y() != result) {
+				widget->move(0, result);
+			}
+			result += widget->height();
+		}
+		return result;
+	};
+
+	raw->minWidthValue(
+	) | rpl::skip(1) | rpl::filter([=] {
+		return !_forceWidth;
+	}) | rpl::start_with_next([=] {
+		resizeFromInner(recountWidth(), height());
 	}, raw->lifetime());
+
+	raw->heightValue(
+	) | rpl::skip(1) | rpl::start_with_next([=] {
+		resizeFromInner(width(), recountHeight());
+	}, raw->lifetime());
+
+	resizeFromInner(recountWidth(), recountHeight());
 
 	updateSelected(QCursor::pos());
 
@@ -204,11 +219,10 @@ bool Menu::empty() const {
 }
 
 void Menu::resizeFromInner(int w, int h) {
-	if ((w == width()) && (h == height())) {
-		return;
+	if (const auto s = QSize(w, h); s != size()) {
+		resize(s);
+		_resizesFromInner.fire({});
 	}
-	resize(w, h);
-	_resizesFromInner.fire({});
 }
 
 rpl::producer<> Menu::resizesFromInner() const {
