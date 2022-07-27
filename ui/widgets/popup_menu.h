@@ -49,7 +49,8 @@ public:
 
 	[[nodiscard]] const std::vector<not_null<QAction*>> &actions() const;
 	[[nodiscard]] not_null<PopupMenu*> ensureSubmenu(
-		not_null<QAction*> action);
+		not_null<QAction*> action,
+		const style::PopupMenu &st);
 	void removeSubmenu(not_null<QAction*> action);
 	void checkSubmenuShow();
 	bool empty() const;
