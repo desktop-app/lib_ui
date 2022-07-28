@@ -39,6 +39,10 @@ class UrlClickHandler : public TextClickHandler {
 public:
 	UrlClickHandler(const QString &url, bool fullDisplayed = true);
 
+	[[nodiscard]] QString originalUrl() const {
+		return _originalUrl;
+	}
+
 	QString copyToClipboardContextItemText() const override;
 
 	QString dragText() const override {
@@ -64,9 +68,6 @@ public:
 	[[nodiscard]] static QString ShowEncoded(const QString &url);
 
 protected:
-	[[nodiscard]] QString originalUrl() const {
-		return _originalUrl;
-	}
 	QString url() const override {
 		return EncodeForOpening(_originalUrl);
 	}
