@@ -12,10 +12,18 @@
 #include "base/qthelp_url.h"
 #include "base/qt/qt_string_view.h"
 
+#if defined Q_OS_UNIX && !defined Q_OS_MAC && !defined DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include "base/platform/linux/base_linux_app_launch_context.h"
+#endif // Q_OS_UNIX && !Q_OS_MAC && !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+
 #include <QtCore/QUrl>
 #include <QtCore/QRegularExpression>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
+
+#if defined Q_OS_UNIX && !defined Q_OS_MAC && !defined DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include <giomm.h>
+#endif // Q_OS_UNIX && !Q_OS_MAC && !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
 QString TextClickHandler::readable() const {
 	const auto result = url();
@@ -80,6 +88,25 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 		if (IsEmail(url)) {
 			url = "mailto: " + url;
 		}
+#if defined Q_OS_UNIX && !defined Q_OS_MAC && !defined DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+		// Desktop entry spec implementation,
+		// prefer it over QDesktopServices::openUrl since it just calls
+		// the xdg-open shell script that is known to be bugged:
+		// various shell-specific bugs with spaces in paths,
+		// logic bugs violating the spec and etc, etc.
+		// Not to mention xdg-open can and will use DE-specific executables
+		// that allows various ill people to develop extensions
+		// to the standard and differ the behavior across apps.
+		// https://specifications.freedesktop.org/desktop-entry-spec/latest/
+		try {
+			if (Gio::AppInfo::launch_default_for_uri(
+				url.toStdString(),
+				base::Platform::AppLaunchContext())) {
+				return;
+			}
+		} catch (...) {
+		}
+#endif // Q_OS_UNIX && !Q_OS_MAC && !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 		QDesktopServices::openUrl(url);
 	}
 }
