@@ -836,10 +836,28 @@ void Parser::finalize(const TextParseOptions &options) {
 			currentIndex++;
 		}
 	};
+	auto isolatedEmojiCount = 0;
 	_t->_hasCustomEmoji = false;
+	_t->_isIsolatedEmoji = true;
+	_t->_isOnlyCustomEmoji = true;
 	for (auto &block : _t->_blocks) {
 		if (block->type() == TextBlockTCustomEmoji) {
 			_t->_hasCustomEmoji = true;
+		} else if (block->type() != TextBlockTNewline
+			&& block->type() != TextBlockTSkip) {
+			_t->_isOnlyCustomEmoji = false;
+		} else if (block->lnkIndex()) {
+			_t->_isOnlyCustomEmoji = _t->_isIsolatedEmoji = false;
+		}
+		if (_t->_isIsolatedEmoji) {
+			if (block->type() == TextBlockTCustomEmoji
+				|| block->type() == TextBlockTEmoji) {
+				if (++isolatedEmojiCount > kIsolatedEmojiLimit) {
+					_t->_isIsolatedEmoji = false;
+				}
+			} else if (block->type() != TextBlockTSkip) {
+				_t->_isIsolatedEmoji = false;
+			}
 		}
 		const auto spoilerIndex = block->spoilerIndex();
 		if (spoilerIndex && (_t->_spoilers.size() < spoilerIndex)) {
@@ -905,6 +923,12 @@ void Parser::finalize(const TextParseOptions &options) {
 			_t->setLink(usedIndex(), handler);
 		}
 		lastHandlerIndex.lnk = realIndex;
+	}
+	if (!_t->_hasCustomEmoji || !_t->_spoilers.empty()) {
+		_t->_isOnlyCustomEmoji = false;
+	}
+	if (_t->_blocks.empty() || !_t->_spoilers.empty()) {
+		_t->_isIsolatedEmoji = false;
 	}
 	_t->_links.squeeze();
 	_t->_spoilers.squeeze();
@@ -2916,11 +2940,20 @@ private:
 
 };
 
-String::String(int32 minResizeWidth) : _minResizeWidth(minResizeWidth) {
+String::String(int32 minResizeWidth)
+: _minResizeWidth(minResizeWidth)
+, _hasCustomEmoji(false)
+, _isOnlyCustomEmoji(false) {
 }
 
-String::String(const style::TextStyle &st, const QString &text, const TextParseOptions &options, int32 minResizeWidth)
-: _minResizeWidth(minResizeWidth) {
+String::String(
+	const style::TextStyle &st,
+	const QString &text,
+	const TextParseOptions &options,
+	int32 minResizeWidth)
+: _minResizeWidth(minResizeWidth)
+, _hasCustomEmoji(false)
+, _isOnlyCustomEmoji(false) {
 	setText(st, text, options);
 }
 
@@ -3552,6 +3585,31 @@ void String::unloadCustomEmoji() {
 	}
 }
 
+bool String::isOnlyCustomEmoji() const {
+	return _isOnlyCustomEmoji;
+}
+
+OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+	if (!_isOnlyCustomEmoji) {
+		return {};
+	}
+	auto result = OnlyCustomEmoji();
+	auto spaces = 0;
+	result.lines.emplace_back();
+	for (const auto &block : _blocks) {
+		const auto raw = block.get();
+		if (raw->type() == TextBlockTCustomEmoji) {
+			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
+			result.lines.back().push_back({
+				.entityData = custom->_custom->entityData(),
+			});
+		} else if (raw->type() == TextBlockTNewline) {
+			result.lines.emplace_back();
+		}
+	}
+	return result;
+}
+
 QString String::toString(TextSelection selection) const {
 	return toText(selection, false, false).rich.text;
 }
@@ -3715,7 +3773,14 @@ TextForMimeData String::toText(
 	return result;
 }
 
+bool String::isIsolatedEmoji() const {
+	return _isIsolatedEmoji;
+}
+
 IsolatedEmoji String::toIsolatedEmoji() const {
+	if (!_isIsolatedEmoji) {
+		return {};
+	}
 	auto result = IsolatedEmoji();
 	const auto skip = (_blocks.empty()
 		|| _blocks.back()->type() != TextBlockTSkip) ? 0 : 1;

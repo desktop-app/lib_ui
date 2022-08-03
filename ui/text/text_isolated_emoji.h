@@ -43,6 +43,19 @@ struct IsolatedEmoji {
 	}
 };
 
-constexpr auto t = sizeof(IsolatedEmoji);
+struct OnlyCustomEmoji {
+	struct Item {
+		QString entityData;
+		int spacesBefore = 0;
+	};
+	std::vector<std::vector<Item>> lines;
+
+	[[nodiscard]] bool empty() const {
+		return lines.empty();
+	}
+	[[nodiscard]] explicit operator bool() const {
+		return !empty();
+	}
+};
 
 } // namespace Ui::Text

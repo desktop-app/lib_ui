@@ -63,6 +63,7 @@ static constexpr TextSelection AllTextSelection = { 0, 0xFFFF };
 namespace Ui::Text {
 
 struct IsolatedEmoji;
+struct OnlyCustomEmoji;
 
 struct StateRequest {
 	enum class Flag {
@@ -160,16 +161,21 @@ public:
 		return _text.size();
 	}
 
-	[[nodiscard]] bool hasCustomEmoji() const;
-	void unloadCustomEmoji();
-
 	[[nodiscard]] QString toString(
 		TextSelection selection = AllTextSelection) const;
 	[[nodiscard]] TextWithEntities toTextWithEntities(
 		TextSelection selection = AllTextSelection) const;
 	[[nodiscard]] TextForMimeData toTextForMimeData(
 		TextSelection selection = AllTextSelection) const;
+
+	[[nodiscard]] bool hasCustomEmoji() const;
+	void unloadCustomEmoji();
+
+	[[nodiscard]] bool isIsolatedEmoji() const;
 	[[nodiscard]] IsolatedEmoji toIsolatedEmoji() const;
+
+	[[nodiscard]] bool isOnlyCustomEmoji() const;
+	[[nodiscard]] OnlyCustomEmoji toOnlyCustomEmoji() const;
 
 	[[nodiscard]] const style::TextStyle *style() const {
 		return _st;
@@ -210,7 +216,9 @@ private:
 	QFixed _minResizeWidth;
 	QFixed _maxWidth = 0;
 	int32 _minHeight = 0;
-	bool _hasCustomEmoji = false;
+	bool _hasCustomEmoji : 1;
+	bool _isIsolatedEmoji : 1;
+	bool _isOnlyCustomEmoji : 1;
 
 	QString _text;
 	const style::TextStyle *_st = nullptr;
