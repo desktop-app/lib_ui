@@ -12,9 +12,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "waylandshells/xdg_shell.h"
 #include "qwayland-xdg-shell.h"
 
+#include <QtCore/QtPlugin>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
 #include <qpa/qplatformnativeinterface.h>
+#include <wayland-client.h>
 
 // private QtWaylandClient headers are using keywords :(
 #ifdef QT_NO_KEYWORDS
@@ -22,15 +24,24 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define slots Q_SLOTS
 #endif // QT_NO_KEYWORDS
 
+#ifndef QT_STATICPLUGIN
+#define QT_STATICPLUGIN
+#endif // !QT_STATICPLUGIN
+
 #include <private/qwaylanddisplay_p.h>
 #include <private/qwaylandwindow_p.h>
 #include <private/qwaylandinputdevice_p.h>
-
-#include <wayland-client.h>
+#include <private/qwaylandclientbufferintegrationplugin_p.h>
+#include <private/qwaylandeglclientbufferintegration_p.h>
+#include <private/qwaylandeglwindow_p.h>
+#include <private/qwidgetwindow_p.h>
+#include <private/qwidget_p.h>
 
 Q_DECLARE_METATYPE(QMargins);
 
-using QtWaylandClient::QWaylandWindow;
+Q_IMPORT_PLUGIN(DesktopAppWaylandEglClientBufferPlugin)
+
+using namespace QtWaylandClient;
 
 namespace Ui {
 namespace Platform {
@@ -45,6 +56,64 @@ struct WlRegistryDeleter {
 struct WlCallbackDeleter {
 	void operator()(wl_callback *value) {
 		wl_callback_destroy(value);
+	}
+};
+
+class DesktopAppWaylandEglWindow : public QWaylandEglWindow {
+public:
+	using QWaylandEglWindow::QWaylandEglWindow;
+
+	void ensureSize() override {
+		_settingGeometry = false;
+		QWaylandEglWindow::ensureSize();
+	}
+
+	QRect geometry() const override {
+		if (!_settingGeometry) {
+			if (const auto widgetWindow = qobject_cast<const QWidgetWindow*>(
+				window())) {
+				return widgetWindow->widget()->geometry();
+			}
+		}
+		return QWaylandEglWindow::geometry();
+	}
+
+	void setGeometry(const QRect &rect) override {
+		_settingGeometry = true;
+		QWaylandEglWindow::setGeometry(rect);
+	}
+
+private:
+	bool _settingGeometry = false;
+};
+
+class DesktopAppWaylandEglClientBufferIntegration
+	: public QWaylandEglClientBufferIntegration {
+public:
+	void initialize(QWaylandDisplay *display) override {
+		m_display = display;
+		QWaylandEglClientBufferIntegration::initialize(display);
+	}
+
+	QWaylandWindow *createEglWindow(QWindow *window) override {
+		return new DesktopAppWaylandEglWindow(window, m_display);
+	}
+
+private:
+	QWaylandDisplay *m_display = nullptr;
+};
+
+class DesktopAppWaylandEglClientBufferPlugin
+	: public QWaylandClientBufferIntegrationPlugin {
+	Q_OBJECT
+	Q_PLUGIN_METADATA(
+		IID QWaylandClientBufferIntegrationFactoryInterface_iid
+		FILE "wayland-egl.json")
+public:
+	QWaylandClientBufferIntegration *create(
+			const QString&,
+			const QStringList&) override {
+		return new DesktopAppWaylandEglClientBufferIntegration();
 	}
 };
 
@@ -212,8 +281,15 @@ void WaylandIntegration::showWindowMenu(
 		return;
 	}
 
-	xdg_toplevel_show_window_menu(toplevel, seat, *serial, point.x(), point.y());
+	xdg_toplevel_show_window_menu(
+		toplevel,
+		seat,
+		*serial,
+		point.x(),
+		point.y());
 }
 
 } // namespace Platform
 } // namespace Ui
+
+#include "ui/platform/linux/ui_linux_wayland_integration.moc"
