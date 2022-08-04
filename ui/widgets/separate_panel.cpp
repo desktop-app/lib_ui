@@ -93,7 +93,8 @@ SeparatePanel::SeparatePanel(QWidget *parent)
 : RpWidget(parent)
 , _close(this, st::separatePanelClose)
 , _back(this, object_ptr<Ui::IconButton>(this, st::separatePanelBack))
-, _body(this) {
+, _body(this)
+, _titleHeight(st::separatePanelTitleHeight) {
 	setMouseTracking(true);
 	setWindowIcon(QGuiApplication::windowIcon());
 	initControls();
@@ -105,6 +106,11 @@ void SeparatePanel::setTitle(rpl::producer<QString> title) {
 	_title->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_title->show();
 	updateTitleGeometry(width());
+}
+
+void SeparatePanel::setTitleHeight(int height) {
+	_titleHeight = height;
+	updateControlsGeometry();
 }
 
 void SeparatePanel::initControls() {
@@ -127,6 +133,9 @@ void SeparatePanel::initControls() {
 	}, _back->lifetime());
 	_back->hide(anim::type::instant);
 	_titleLeft.stop();
+
+	_back->raise();
+	_close->raise();
 }
 
 void SeparatePanel::updateTitleGeometry(int newWidth) {
@@ -552,7 +561,7 @@ void SeparatePanel::resizeEvent(QResizeEvent *e) {
 }
 
 void SeparatePanel::updateControlsGeometry() {
-	const auto top = _padding.top() + st::separatePanelTitleHeight;
+	const auto top = _padding.top() + _titleHeight;
 	_body->setGeometry(
 		_padding.left(),
 		top,
@@ -716,7 +725,7 @@ void SeparatePanel::mousePressEvent(QMouseEvent *e) {
 		_padding.left(),
 		_padding.top(),
 		width() - _padding.left() - _padding.right(),
-		st::separatePanelTitleHeight);
+		_titleHeight);
 	if (e->button() == Qt::LeftButton) {
 		if (dragArea.contains(e->pos())) {
 			const auto dragViaSystem = [&] {

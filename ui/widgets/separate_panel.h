@@ -34,6 +34,7 @@ public:
 	explicit SeparatePanel(QWidget *parent = nullptr);
 
 	void setTitle(rpl::producer<QString> title);
+	void setTitleHeight(int height);
 	void setInnerSize(QSize size);
 	[[nodiscard]] QRect innerGeometry() const;
 
@@ -105,6 +106,7 @@ private:
 	rpl::event_stream<> _userCloseRequests;
 	rpl::event_stream<> _closeEvents;
 
+	int _titleHeight = 0;
 	bool _hideOnDeactivate = false;
 	bool _useTransparency = true;
 	style::margins _padding;

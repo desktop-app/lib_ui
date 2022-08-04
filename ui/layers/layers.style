@@ -160,6 +160,7 @@ boxDividerHeight: 10px;
 
 separatePanelBorderCacheSize: 60px;
 separatePanelTitleHeight: 62px;
+separatePanelNoTitleHeight: 32px;
 separatePanelClose: IconButton(boxTitleClose) {
 	width: 60px;
 	height: 60px;
