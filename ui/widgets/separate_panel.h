@@ -29,9 +29,14 @@ class FlatLabel;
 template <typename Widget>
 class FadeWrapScaled;
 
+struct SeparatePanelArgs {
+	QWidget *parent = nullptr;
+	bool onAllSpaces = false;
+};
+
 class SeparatePanel final : public RpWidget {
 public:
-	explicit SeparatePanel(QWidget *parent = nullptr);
+	explicit SeparatePanel(SeparatePanelArgs &&args = {});
 
 	void setTitle(rpl::producer<QString> title);
 	void setTitleHeight(int height);
@@ -73,7 +78,7 @@ protected:
 
 private:
 	void initControls();
-	void initLayout();
+	void initLayout(const SeparatePanelArgs &args);
 	void initGeometry(QSize size);
 	void updateGeometry(QSize size);
 	void showControls();

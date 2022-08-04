@@ -89,8 +89,8 @@ PanelShow::operator bool() const {
 
 } // namespace
 
-SeparatePanel::SeparatePanel(QWidget *parent)
-: RpWidget(parent)
+SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
+: RpWidget(args.parent)
 , _close(this, st::separatePanelClose)
 , _back(this, object_ptr<Ui::IconButton>(this, st::separatePanelBack))
 , _body(this)
@@ -98,7 +98,7 @@ SeparatePanel::SeparatePanel(QWidget *parent)
 	setMouseTracking(true);
 	setWindowIcon(QGuiApplication::windowIcon());
 	initControls();
-	initLayout();
+	initLayout(args);
 }
 
 void SeparatePanel::setTitle(rpl::producer<QString> title) {
@@ -280,7 +280,7 @@ bool SeparatePanel::eventHook(QEvent *e) {
 	return RpWidget::eventHook(e);
 }
 
-void SeparatePanel::initLayout() {
+void SeparatePanel::initLayout(const SeparatePanelArgs &args) {
 	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint)
 		| Qt::WindowStaysOnTopHint
 		| Qt::NoDropShadowWindowHint
@@ -296,7 +296,9 @@ void SeparatePanel::initLayout() {
 		Ui::ForceFullRepaint(this);
 	}, lifetime());
 
-	Ui::Platform::InitOnTopPanel(this);
+	if (args.onAllSpaces) {
+		Ui::Platform::InitOnTopPanel(this);
+	}
 }
 
 void SeparatePanel::createBorderImage() {
