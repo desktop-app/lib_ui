@@ -137,7 +137,8 @@ defaultBox: Box {
 layerBox: Box(defaultBox) {
 }
 boxLabel: FlatLabel(defaultFlatLabel) {
-	minWidth: 274px;
+	// Keep minWidth <= boxWidth - boxPadding.left - boxPadding.right.
+	minWidth: 256px;
 	align: align(topleft);
 	style: boxLabelStyle;
 }
