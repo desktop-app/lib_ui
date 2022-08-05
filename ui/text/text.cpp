@@ -3594,7 +3594,6 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
 		return {};
 	}
 	auto result = OnlyCustomEmoji();
-	auto spaces = 0;
 	result.lines.emplace_back();
 	for (const auto &block : _blocks) {
 		const auto raw = block.get();
