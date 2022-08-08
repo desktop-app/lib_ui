@@ -279,14 +279,10 @@ if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
 elseif(LINUX)
     remove_target_sources(lib_ui ${src_loc} ui/platform/linux/ui_linux_wayland_integration_dummy.cpp)
 
-    if (DESKTOP_APP_QT6)
-        qt6_generate_wayland_protocol_client_sources(lib_ui
-        FILES
-            ${third_party_loc}/wayland-protocols/stable/xdg-shell/xdg-shell.xml
-        )
-    else()
-        message(FATAL_ERROR "This piece of cmake code is not ported to Qt 5")
-    endif()
+    qt_generate_wayland_protocol_client_sources(lib_ui
+    FILES
+        ${third_party_loc}/wayland-protocols/stable/xdg-shell/xdg-shell.xml
+    )
 
     target_link_libraries(lib_ui
     PUBLIC
