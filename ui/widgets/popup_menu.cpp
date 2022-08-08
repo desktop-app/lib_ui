@@ -302,6 +302,13 @@ void PopupMenu::handleCompositingUpdate() {
 	_padding = _useTransparency
 		? _st.shadow.extend
 		: style::margins(line, line, line, line);
+	if (windowHandle()) {
+		if (_useTransparency) {
+			Platform::SetWindowExtents(this, _padding);
+		} else {
+			Platform::UnsetWindowExtents(this);
+		}
+	}
 	_scroll->moveToLeft(_padding.left(), _padding.top());
 	handleMenuResize();
 	updateRoundingOverlay();
