@@ -12,11 +12,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "waylandshells/xdg_shell.h"
 #include "qwayland-xdg-shell.h"
 
-// must be before QtPlugin include
-#ifndef QT_STATICPLUGIN
-#define QT_STATICPLUGIN
-#endif // !QT_STATICPLUGIN
-
 #include <QtCore/QtPlugin>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
@@ -28,6 +23,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define signals Q_SIGNALS
 #define slots Q_SLOTS
 #endif // QT_NO_KEYWORDS
+
+#ifndef QT_STATICPLUGIN
+#define QT_STATICPLUGIN
+#endif // !QT_STATICPLUGIN
 
 #include <private/qwaylanddisplay_p.h>
 #include <private/qwaylandwindow_p.h>
@@ -71,9 +70,8 @@ public:
 
 	QRect geometry() const override {
 		if (!_settingGeometry) {
-			if (window()->inherits("QWidgetWindow")) {
-				const auto widgetWindow = static_cast<QWidgetWindow*>(
-					window());
+			if (const auto widgetWindow = qobject_cast<const QWidgetWindow*>(
+				window())) {
 				return widgetWindow->widget()->geometry();
 			}
 		}
