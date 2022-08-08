@@ -631,12 +631,12 @@ void PopupMenu::hideAnimated() {
 void PopupMenu::hideFast() {
 	if (isHidden()) return;
 
-	_hiding = false;
 	_a_opacity.stop();
 	hideFinished();
 }
 
 void PopupMenu::hideFinished() {
+	_hiding = false;
 	_a_show.stop();
 	_cache = QPixmap();
 	if (!isHidden()) {
@@ -723,7 +723,6 @@ void PopupMenu::opacityAnimationCallback() {
 	update();
 	if (!_a_opacity.animating()) {
 		if (_hiding) {
-			_hiding = false;
 			hideFinished();
 		} else {
 			showChildren();
