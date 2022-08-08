@@ -258,8 +258,6 @@ class RpWidgetWrap {
 public:
 	virtual QWidget *rpWidget() = 0;
 	virtual const QWidget *rpWidget() const = 0;
-	virtual QObjectData *rpPrivate() = 0;
-	virtual const QObjectData *rpPrivate() const = 0;
 
 	rpl::producer<not_null<QEvent*>> events() const;
 	rpl::producer<QRect> geometryValue() const;
@@ -337,12 +335,6 @@ public:
 	}
 	const QWidget *rpWidget() const final override {
 		return this;
-	}
-	QObjectData *rpPrivate() final override {
-		return qGetPtrHelper(this->d_ptr);
-	}
-	const QObjectData *rpPrivate() const final override {
-		return qGetPtrHelper(this->d_ptr);
 	}
 	void setVisible(bool visible) final override {
 		auto wasVisible = !this->isHidden();
