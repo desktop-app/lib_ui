@@ -130,13 +130,12 @@ bool IsNewline(QChar ch) {
 
 [[nodiscard]] uint64 CustomEmojiIdFromLink(QStringView link) {
 	const auto skip = Ui::InputField::kCustomEmojiTagStart.size();
-	if (const auto i = link.indexOf(':', skip + 1); i > 0) {
-		return base::StringViewMid(
-			link,
-			skip + 1,
-			i - skip - 1).toULongLong();
-	}
-	return 0;
+	const auto index = link.indexOf('?', skip + 1);
+	return base::StringViewMid(
+		link,
+		skip,
+		(index <= skip) ? -1 : (index - skip - 1)
+	).toULongLong();
 }
 
 [[nodiscard]] QString CheckFullTextTag(
@@ -3649,7 +3648,7 @@ QString InputField::CustomEmojiLink(QStringView entityData) {
 
 QString InputField::CustomEmojiEntityData(QStringView link) {
 	const auto match = qthelp::regex_match(
-		"^(\\d+:\\d+)(\\?|$)",
+		"^(\\d+)(\\?|$)",
 		base::StringViewMid(link, kCustomEmojiTagStart.size()));
 	return match ? match->captured(1) : QString();
 }
