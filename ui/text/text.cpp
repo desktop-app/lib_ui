@@ -240,7 +240,7 @@ private:
 	void trimSourceRange();
 	void blockCreated();
 	void createBlock(int32 skipBack = 0);
-	void createSkipBlock(int32 w, int32 h);
+	// void createSkipBlock(int32 w, int32 h);
 	void createNewlineBlock();
 
 	// Returns true if at least one entity was parsed in the current position.
@@ -434,12 +434,13 @@ void Parser::createBlock(int32 skipBack) {
 	}
 }
 
-void Parser::createSkipBlock(int32 w, int32 h) {
-	createBlock();
-	_t->_text.push_back('_');
-	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _monoIndex ? _monoIndex : _lnkIndex, _spoilerIndex));
-	blockCreated();
-}
+// Unused.
+// void Parser::createSkipBlock(int32 w, int32 h) {
+// 	createBlock();
+// 	_t->_text.push_back('_');
+// 	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _monoIndex ? _monoIndex : _lnkIndex, _spoilerIndex));
+// 	blockCreated();
+// }
 
 void Parser::createNewlineBlock() {
 	createBlock();
