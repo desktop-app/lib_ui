@@ -2213,7 +2213,7 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 		} break;
 		case EntityType::CustomEmoji: {
 			const auto match = QRegularExpression(
-				"^(\\d+:\\d+)$"
+				"^(\\d+)$"
 			).match(entity.data());
 			if (match.hasMatch()) {
 				push(Ui::InputField::CustomEmojiLink(entity.data()));
