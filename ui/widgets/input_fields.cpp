@@ -3633,7 +3633,7 @@ void InputField::finishMarkdownTagChange(
 }
 
 bool InputField::IsValidMarkdownLink(QStringView link) {
-	return ::Ui::IsValidMarkdownLink(link);
+	return ::Ui::IsValidMarkdownLink(link) && !::Ui::IsCustomEmojiLink(link);
 }
 
 bool InputField::IsCustomEmojiLink(QStringView link) {
