@@ -9,6 +9,7 @@
 #include "ui/basic_click_handlers.h"
 #include "ui/text/text_block.h"
 #include "ui/text/text_isolated_emoji.h"
+#include "ui/text/text_spoiler_data.h"
 #include "ui/emoji_config.h"
 #include "ui/integration.h"
 #include "ui/round_rect.h"
@@ -861,12 +862,17 @@ void Parser::finalize(const TextParseOptions &options) {
 			}
 		}
 		const auto spoilerIndex = block->spoilerIndex();
-		if (spoilerIndex && (_t->_spoilers.size() < spoilerIndex)) {
-			_t->_spoilers.resize(spoilerIndex);
-			const auto handler = (options.flags & TextParseLinks)
-				? std::make_shared<SpoilerClickHandler>()
-				: nullptr;
-			_t->setSpoiler(spoilerIndex, std::move(handler));
+		if (spoilerIndex) {
+			if (!_t->_spoiler) {
+				_t->_spoiler = std::make_shared<SpoilerData>();
+			}
+			if (_t->_spoiler->links.size() < spoilerIndex) {
+				_t->_spoiler->links.resize(spoilerIndex);
+				const auto handler = (options.flags & TextParseLinks)
+					? std::make_shared<SpoilerClickHandler>()
+					: nullptr;
+				_t->setSpoiler(spoilerIndex, std::move(handler));
+			}
 		}
 		const auto shiftedIndex = block->lnkIndex();
 		auto useCustomIndex = false;
@@ -925,14 +931,16 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 		lastHandlerIndex.lnk = realIndex;
 	}
-	if (!_t->_hasCustomEmoji || !_t->_spoilers.empty()) {
+	if (!_t->_hasCustomEmoji || _t->_spoiler) {
 		_t->_isOnlyCustomEmoji = false;
 	}
-	if (_t->_blocks.empty() || !_t->_spoilers.empty()) {
+	if (_t->_blocks.empty() || _t->_spoiler) {
 		_t->_isIsolatedEmoji = false;
 	}
 	_t->_links.squeeze();
-	_t->_spoilers.squeeze();
+	if (_t->_spoiler) {
+		_t->_spoiler->links.squeeze();
+	}
 	_t->_blocks.shrink_to_fit();
 	_t->_text.squeeze();
 }
@@ -1961,8 +1969,9 @@ private:
 		}
 		const auto progress = float64(_now - _background.startMs)
 			/ st::fadeWrapDuration;
-		if ((progress > 1.) && _background.spoilerIndex) {
-			const auto link = _t->_spoilers.at(_background.spoilerIndex - 1);
+		if ((progress > 1.) && _background.spoilerIndex && _t->_spoiler) {
+			const auto link = _t->_spoiler->links.at(
+				_background.spoilerIndex - 1);
 			if (link) {
 				link->setStartMs(0);
 			}
@@ -1977,6 +1986,9 @@ private:
 			int positionFrom,
 			int positionTill) {
 		if (!_background.color) {
+			return;
+		}
+		if (!_t->_spoiler) {
 			return;
 		}
 		const auto elideOffset = (_indexOfElidedBlock == currentBlockIndex)
@@ -2011,8 +2023,8 @@ private:
 		const auto hasRight = (parts & RectPart::Right) != 0;
 
 		const auto &cache = _background.inFront
-			? _t->_spoilerCache
-			: _t->_spoilerShownCache;
+			? _t->_spoiler->spoilerCache
+			: _t->_spoiler->spoilerShownCache;
 		const auto cornerWidth = cache.corners[0].width()
 			/ style::DevicePixelRatio();
 		const auto useWidth = ((x + width).toInt() - x.toInt()) - elideOffset;
@@ -2833,9 +2845,9 @@ private:
 		if (_p) {
 			const auto isMono = IsMono(block->flags());
 			_background = {};
-			if (block->spoilerIndex()) {
+			if (block->spoilerIndex() && _t->_spoiler) {
 				const auto handler
-					= _t->_spoilers.at(block->spoilerIndex() - 1);
+					= _t->_spoiler->links.at(block->spoilerIndex() - 1);
 				const auto inBack = (handler && handler->shown());
 				_background.inFront = !inBack;
 				_background.color = inBack
@@ -2844,14 +2856,15 @@ private:
 				_background.startMs = handler ? handler->startMs() : 0;
 				_background.spoilerIndex = block->spoilerIndex();
 
+				Assert(_t->_spoiler != nullptr);
 				const auto &cache = _background.inFront
-					? _t->_spoilerCache
-					: _t->_spoilerShownCache;
+					? _t->_spoiler->spoilerCache
+					: _t->_spoiler->spoilerShownCache;
 				if (cache.color != (*_background.color)->c) {
 					auto mutableText = const_cast<String*>(_t);
 					auto &mutableCache = _background.inFront
-						? mutableText->_spoilerCache
-						: mutableText->_spoilerShownCache;
+						? mutableText->_spoiler->spoilerCache
+						: mutableText->_spoiler->spoilerShownCache;
 					mutableCache.corners = Images::PrepareCorners(
 						ImageRoundRadius::Small,
 						*_background.color);
@@ -3134,19 +3147,20 @@ void String::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {
 void String::setSpoiler(
 		uint16 lnkIndex,
 		const std::shared_ptr<SpoilerClickHandler> &lnk) {
-	if (!lnkIndex || lnkIndex > _spoilers.size()) {
+	if (!lnkIndex || !_spoiler || lnkIndex > _spoiler->links.size()) {
 		return;
 	}
-	_spoilers[lnkIndex - 1] = lnk;
+	_spoiler->links[lnkIndex - 1] = lnk;
 }
 
 void String::setSpoilerShown(uint16 lnkIndex, bool shown) {
 	if (!lnkIndex
-		|| (lnkIndex > _spoilers.size())
-		|| !_spoilers[lnkIndex - 1]) {
+		|| !_spoiler
+		|| (lnkIndex > _spoiler->links.size())
+		|| !_spoiler->links[lnkIndex - 1]) {
 		return;
 	}
-	_spoilers[lnkIndex - 1]->setShown(shown);
+	_spoiler->links[lnkIndex - 1]->setShown(shown);
 }
 
 bool String::hasLinks() const {
@@ -3154,7 +3168,7 @@ bool String::hasLinks() const {
 }
 
 int String::spoilersCount() const {
-	return _spoilers.size();
+	return !_spoiler ? 0 : int(_spoiler->links.size());
 }
 
 bool String::hasSkipBlock() const {
@@ -3528,9 +3542,9 @@ void String::enumerateText(
 				if (rangeTo > rangeFrom) { // handle click handler
 					const auto r = base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom);
 					// Ignore links that are partially copied.
-					const auto handler = (spoilerFrom != rangeFrom || blockFrom != rangeTo)
+					const auto handler = (spoilerFrom != rangeFrom || blockFrom != rangeTo || !_spoiler)
 						? nullptr
-						: _spoilers.at(spoilerIndex - 1);
+						: _spoiler->links.at(spoilerIndex - 1);
 					const auto type = EntityType::Spoiler;
 					clickHandlerFinishCallback(r, handler, type);
 				}
@@ -3784,8 +3798,7 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 	auto result = IsolatedEmoji();
 	const auto skip = (_blocks.empty()
 		|| _blocks.back()->type() != TextBlockTSkip) ? 0 : 1;
-	if ((_blocks.size() > kIsolatedEmojiLimit + skip)
-		|| !_spoilers.empty()) {
+	if ((_blocks.size() > kIsolatedEmojiLimit + skip) || _spoiler) {
 		return {};
 	}
 	auto index = 0;
@@ -3813,14 +3826,14 @@ void String::clear() {
 void String::clearFields() {
 	_blocks.clear();
 	_links.clear();
-	_spoilers.clear();
+	_spoiler = nullptr;
 	_maxWidth = _minHeight = 0;
 	_startDir = Qt::LayoutDirectionAuto;
 }
 
 ClickHandlerPtr String::spoilerLink(uint16 spoilerIndex) const {
-	if (spoilerIndex) {
-		const auto &handler = _spoilers.at(spoilerIndex - 1);
+	if (spoilerIndex && _spoiler) {
+		const auto &handler = _spoiler->links.at(spoilerIndex - 1);
 		return (handler && !handler->shown()) ? handler : nullptr;
 	}
 	return nullptr;

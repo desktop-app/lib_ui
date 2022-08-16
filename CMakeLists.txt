@@ -154,6 +154,7 @@ PRIVATE
     ui/text/text_entity.cpp
     ui/text/text_entity.h
     ui/text/text_isolated_emoji.h
+    ui/text/text_spoiler_data.h
     ui/text/text_utilities.cpp
     ui/text/text_utilities.h
     ui/text/text_variant.cpp

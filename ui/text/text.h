@@ -64,6 +64,7 @@ namespace Ui::Text {
 
 struct IsolatedEmoji;
 struct OnlyCustomEmoji;
+struct SpoilerData;
 
 struct StateRequest {
 	enum class Flag {
@@ -226,14 +227,9 @@ private:
 	TextBlocks _blocks;
 	TextLinks _links;
 
-	QVector<std::shared_ptr<SpoilerClickHandler>> _spoilers;
-
 	Qt::LayoutDirection _startDir = Qt::LayoutDirectionAuto;
 
-	struct {
-		std::array<QImage, 4> corners;
-		QColor color;
-	} _spoilerCache, _spoilerShownCache;
+	std::shared_ptr<SpoilerData> _spoiler;
 
 	friend class Parser;
 	friend class Renderer;
