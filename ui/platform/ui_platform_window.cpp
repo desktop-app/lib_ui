@@ -339,8 +339,7 @@ QMargins DefaultWindowHelper::frameMargins() {
 }
 
 bool DefaultWindowHelper::hasShadow() const {
-	const auto center = window()->geometry().center();
-	return WindowExtentsSupported() && TranslucentWindowsSupported(center);
+	return WindowExtentsSupported() && TranslucentWindowsSupported();
 }
 
 QMargins DefaultWindowHelper::resizeArea() const {

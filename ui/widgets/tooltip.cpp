@@ -90,7 +90,7 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	_st = st;
 	_text = Text::String(_st->textStyle, text, kPlainTextOptions, _st->widthMax);
 
-	_useTransparency = Platform::TranslucentWindowsSupported(_point);
+	_useTransparency = Platform::TranslucentWindowsSupported();
 	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
 
 	int32 addw = 2 * st::lineWidth + _st->textPadding.left() + _st->textPadding.right();

@@ -62,8 +62,9 @@ not_null<QAction*> DropdownMenu::addAction(const QString &text, Fn<void()> callb
 	return _menu->addAction(text, std::move(callback), icon, iconOver);
 }
 
-not_null<QAction*> DropdownMenu::addSeparator() {
-	return _menu->addSeparator();
+not_null<QAction*> DropdownMenu::addSeparator(
+		const style::MenuSeparator *st) {
+	return _menu->addSeparator(st);
 }
 
 void DropdownMenu::clearActions() {

@@ -248,8 +248,6 @@ void PopupMenu::init() {
 	_menu->setMousePressDelegate([this](QPoint globalPosition) { handleMousePress(globalPosition); });
 	_menu->setMouseReleaseDelegate([this](QPoint globalPosition) { handleMouseRelease(globalPosition); });
 
-	handleCompositingUpdate();
-
 	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint) | Qt::BypassWindowManagerHint | Qt::Popup | Qt::NoDropShadowWindowHint);
 	setMouseTracking(true);
 
@@ -297,16 +295,26 @@ void PopupMenu::checkSubmenuShow() {
 	}
 }
 
-void PopupMenu::handleCompositingUpdate() {
+void PopupMenu::validateCompositingSupport() {
 	const auto line = st::lineWidth;
-	_padding = _useTransparency
-		? _st.shadow.extend
-		: style::margins(line, line, line, line);
+	_useTransparency = Platform::TranslucentWindowsSupported();
+	if (!_useTransparency) {
+		_padding = QMargins(line, line, line, line);
+		_extents = QMargins();
+	} else {
+		const auto &additional = _additionalMenuPadding;
+		_padding = QMargins(
+			std::max(_st.shadow.extend.left(), additional.left()),
+			std::max(_st.shadow.extend.top(), additional.top()),
+			std::max(_st.shadow.extend.right(), additional.right()),
+			std::max(_st.shadow.extend.bottom(), additional.bottom()));
+		_extents = _padding - (additional - _additionalMenuExtents);
+	}
 	if (windowHandle()) {
-		if (_useTransparency) {
-			Platform::SetWindowExtents(this, _padding);
-		} else {
+		if (_extents.isNull()) {
 			Platform::UnsetWindowExtents(this);
+		} else {
+			Platform::SetWindowExtents(this, _extents);
 		}
 	}
 	_scroll->moveToLeft(_padding.left(), _padding.top());
@@ -395,13 +403,17 @@ not_null<QAction*> PopupMenu::addAction(
 	return action;
 }
 
-not_null<QAction*> PopupMenu::addSeparator() {
-	return _menu->addSeparator();
+not_null<QAction*> PopupMenu::addSeparator(const style::MenuSeparator *st) {
+	return _menu->addSeparator(st);
 }
 
 void PopupMenu::clearActions() {
 	_submenus.clear();
 	return _menu->clearActions();
+}
+
+void PopupMenu::setForceWidth(int forceWidth) {
+	_menu->setForceWidth(forceWidth);
 }
 
 const std::vector<not_null<QAction*>> &PopupMenu::actions() const {
@@ -488,10 +500,14 @@ void PopupMenu::popupSubmenu(
 		currentSubmenu->hideMenu(true);
 	}
 	if (submenu) {
-		QPoint p(_inner.x() + (style::RightToLeft() ? _padding.right() : _inner.width() - _padding.left()), _inner.y() + actionTop);
+		QPoint p(_inner.x() + (style::RightToLeft() ? _padding.right() : (_inner.width() - _padding.left())), _inner.y() + actionTop);
 		_activeSubmenu = submenu;
-		_activeSubmenu->showMenu(geometry().topLeft() + p, this, source);
-		_menu->setChildShownAction(action);
+		if (_activeSubmenu->prepareGeometryFor(geometry().topLeft() + p, this)) {
+			_activeSubmenu->showPrepared(source);
+			_menu->setChildShownAction(action);
+		} else {
+			_activeSubmenu = nullptr;
+		}
 	}
 }
 
@@ -614,6 +630,22 @@ void PopupMenu::setForcedOrigin(PanelAnimation::Origin origin) {
 
 void PopupMenu::setForcedVerticalOrigin(VerticalOrigin origin) {
 	_forcedVerticalOrigin = origin;
+}
+
+void PopupMenu::setAdditionalMenuPadding(
+		QMargins padding,
+		QMargins extents) {
+	Expects(padding.left() >= extents.left()
+		&& padding.right() >= extents.right()
+		&& padding.top() >= extents.top()
+		&& padding.bottom() >= extents.bottom());
+
+	if (_additionalMenuPadding != padding
+		|| _additionalMenuExtents != extents) {
+		_additionalMenuPadding = padding;
+		_additionalMenuExtents = extents;
+		_roundingOverlay = nullptr;
+	}
 }
 
 void PopupMenu::showAnimated(PanelAnimation::Origin origin) {
@@ -759,23 +791,54 @@ void PopupMenu::deleteOnHide(bool del) {
 }
 
 void PopupMenu::popup(const QPoint &p) {
-	showMenu(p, nullptr, TriggeredSource::Mouse);
+	if (prepareGeometryFor(p)) {
+		popupPrepared();
+		return;
+	}
+	_hiding = false;
+	_a_opacity.stop();
+	_a_show.stop();
+	_cache = QPixmap();
+	hide();
+	if (_deleteOnHide) {
+		deleteLater();
+	}
 }
 
-void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource source) {
+void PopupMenu::popupPrepared() {
+	showPrepared(TriggeredSource::Mouse);
+}
+
+PanelAnimation::Origin PopupMenu::preparedOrigin() const {
+	return _origin;
+}
+
+QMargins PopupMenu::preparedPadding() const {
+	return _padding;
+}
+
+QMargins PopupMenu::preparedExtents() const {
+	return _extents;
+}
+
+bool PopupMenu::useTransparency() const {
+	return _useTransparency;
+}
+
+bool PopupMenu::prepareGeometryFor(const QPoint &p) {
+	return prepareGeometryFor(p, nullptr);
+}
+
+bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 	const auto usingScreenGeometry = !::Platform::IsWayland();
-	const auto screen = usingScreenGeometry ? QGuiApplication::screenAt(p) : nullptr;
+	const auto screen = usingScreenGeometry
+		? QGuiApplication::screenAt(p)
+		: nullptr;
 	if ((usingScreenGeometry && !screen)
-		|| (!parent && ::Platform::IsMac() && !Platform::IsApplicationActive())) {
-		_hiding = false;
-		_a_opacity.stop();
-		_a_show.stop();
-		_cache = QPixmap();
-		hide();
-		if (_deleteOnHide) {
-			deleteLater();
-		}
-		return;
+		|| (!parent
+			&& ::Platform::IsMac()
+			&& !Platform::IsApplicationActive())) {
+		return false;
 	}
 	_parent = parent;
 
@@ -785,6 +848,7 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 	} else if (screen) {
 		windowHandle()->setScreen(screen);
 	}
+	validateCompositingSupport();
 
 	using Origin = PanelAnimation::Origin;
 	auto origin = Origin::TopLeft;
@@ -792,7 +856,7 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 		&& (*_forcedOrigin == Origin::TopLeft
 			|| *_forcedOrigin == Origin::BottomLeft);
 	const auto forceTop = (_forcedVerticalOrigin
-			&& (*_forcedVerticalOrigin == VerticalOrigin::Top))
+		&& (*_forcedVerticalOrigin == VerticalOrigin::Top))
 		|| (_forcedOrigin
 			&& (*_forcedOrigin == Origin::TopLeft
 				|| *_forcedOrigin == Origin::TopRight));
@@ -800,55 +864,74 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
 		&& (*_forcedOrigin == Origin::TopRight
 			|| *_forcedOrigin == Origin::BottomRight);
 	const auto forceBottom = (_forcedVerticalOrigin
-			&& (*_forcedVerticalOrigin == VerticalOrigin::Bottom))
+		&& (*_forcedVerticalOrigin == VerticalOrigin::Bottom))
 		|| (_forcedOrigin
 			&& (*_forcedOrigin == Origin::BottomLeft
 				|| *_forcedOrigin == Origin::BottomRight));
-	auto w = p - QPoint(0, _padding.top());
+	auto w = p - QPoint(
+		std::max(
+			_additionalMenuPadding.left() - _st.shadow.extend.left(),
+			0),
+		_padding.top());
 	auto r = screen ? screen->availableGeometry() : QRect();
-	_useTransparency = Platform::TranslucentWindowsSupported(p);
-	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
-	handleCompositingUpdate();
 	if (style::RightToLeft()) {
-		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _padding.left();
+		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _extents.left();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && (r.isNull() || w.x() + _parent->width() - _padding.left() - _padding.right() + width() - _padding.right() <= r.x() + r.width())) {
-				w.setX(w.x() + _parent->width() - _padding.left() - _padding.right());
+			if (_parent && (r.isNull() || w.x() + _parent->width() - _extents.left() - _extents.right() + width() - _extents.right() <= r.x() + r.width())) {
+				w.setX(w.x() + _parent->width() - _extents.left() - _extents.right());
 			} else {
-				w.setX(r.x() - _padding.left());
+				w.setX(r.x() - _extents.left());
 			}
 		} else {
 			w.setX(w.x() - width());
 		}
 	} else {
-		const auto badLeft = !r.isNull() && w.x() + width() - _padding.right() > r.x() + r.width();
+		const auto badLeft = !r.isNull() && w.x() + width() - _extents.right() > r.x() + r.width();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && (r.isNull() || w.x() - _parent->width() + _padding.left() + _padding.right() - width() + _padding.right() >= r.x() - _padding.left())) {
-				w.setX(w.x() + _padding.left() + _padding.right() - _parent->width() - width() + _padding.left() + _padding.right());
+			if (_parent && (r.isNull() || w.x() - _parent->width() + _extents.left() + _extents.right() - width() + _extents.right() >= r.x() - _extents.left())) {
+				w.setX(w.x() + _extents.left() + _extents.right() - _parent->width() - width() + _extents.left() + _extents.right());
 			} else {
-				w.setX(p.x() - width() + _padding.right());
+				w.setX(p.x() - width() + std::max(
+					_additionalMenuPadding.right() - _st.shadow.extend.right(),
+					0));
 			}
 			origin = PanelAnimation::Origin::TopRight;
 		}
 	}
-	const auto badTop = !r.isNull() && w.y() + height() - _padding.bottom() > r.y() + r.height();
+	const auto badTop = !r.isNull() && w.y() + height() - _extents.bottom() > r.y() + r.height();
 	if (forceBottom || (badTop && !forceTop)) {
 		if (_parent) {
-			w.setY(r.y() + r.height() - height() + _padding.bottom());
+			w.setY(r.y() + r.height() - height() + _extents.bottom());
 		} else {
-			w.setY(p.y() - height() + _padding.bottom());
-			origin = (origin == PanelAnimation::Origin::TopRight) ? PanelAnimation::Origin::BottomRight : PanelAnimation::Origin::BottomLeft;
+			w.setY(p.y() - height() + _extents.bottom());
+			origin = (origin == PanelAnimation::Origin::TopRight)
+				? PanelAnimation::Origin::BottomRight
+				: PanelAnimation::Origin::BottomLeft;
 		}
 	}
-	if (!r.isNull() && w.x() < r.x()) {
-		w.setX(r.x());
-	}
-	if (!r.isNull() && w.y() < r.y()) {
-		w.setY(r.y());
+	if (!r.isNull()) {
+		if (w.x() + width() - _extents.right() > r.x() + r.width()) {
+			w.setX(r.x() + r.width() + _extents.right() - width());
+		}
+		if (w.x() + _extents.left() < r.x()) {
+			w.setX(r.x() - _extents.left());
+		}
+		if (w.y() + height() - _extents.bottom() > r.y() + r.height()) {
+			w.setY(r.y() + r.height() + _extents.bottom() - height());
+		}
+		if (w.y() + _extents.top() < r.y()) {
+			w.setY(r.y() - _extents.top());
+		}
 	}
 	move(w);
 
 	setOrigin(origin);
+	return true;
+}
+
+void PopupMenu::showPrepared(TriggeredSource source) {
+	Expects(windowHandle() != nullptr);
+
 	_menu->setShowSource(source);
 
 	startShowAnimation();

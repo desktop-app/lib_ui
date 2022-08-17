@@ -7,17 +7,19 @@
 #include "ui/widgets/menu/menu_separator.h"
 
 #include "ui/painter.h"
+#include "styles/style_widgets.h"
 
 namespace Ui::Menu {
 
 Separator::Separator(
 	not_null<RpWidget*> parent,
 	const style::Menu &st,
+	const style::MenuSeparator &separator,
 	not_null<QAction*> action)
 : ItemBase(parent, st)
-, _lineWidth(st.separatorWidth)
-, _padding(st.separatorPadding)
-, _fg(st.separatorFg)
+, _lineWidth(separator.width)
+, _padding(separator.padding)
+, _fg(separator.fg)
 , _bg(st.itemBg)
 , _height(_padding.top() + _lineWidth + _padding.bottom())
 , _action(action) {

@@ -16,7 +16,7 @@ class QPaintEvent;
 namespace Ui {
 namespace Platform {
 
-inline bool TranslucentWindowsSupported(QPoint globalPosition) {
+inline bool TranslucentWindowsSupported() {
 	return true;
 }
 

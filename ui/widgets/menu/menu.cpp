@@ -10,6 +10,7 @@
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
 #include "ui/widgets/scroll_area.h"
+#include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
 
@@ -191,10 +192,14 @@ not_null<QAction*> Menu::addAction(base::unique_qptr<ItemBase> widget) {
 	return action;
 }
 
-not_null<QAction*> Menu::addSeparator() {
+not_null<QAction*> Menu::addSeparator(const style::MenuSeparator *st) {
 	const auto separator = new QAction(this);
 	separator->setSeparator(true);
-	auto item = base::make_unique_q<Separator>(this, _st, separator);
+	auto item = base::make_unique_q<Separator>(
+		this,
+		_st,
+		st ? *st : _st.separator,
+		separator);
 	return addAction(std::move(item));
 }
 

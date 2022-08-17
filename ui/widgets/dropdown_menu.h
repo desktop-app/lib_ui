@@ -18,7 +18,8 @@ public:
 
 	not_null<QAction*> addAction(base::unique_qptr<Menu::ItemBase> widget);
 	not_null<QAction*> addAction(const QString &text, Fn<void()> callback, const style::icon *icon = nullptr, const style::icon *iconOver = nullptr);
-	not_null<QAction*> addSeparator();
+	not_null<QAction*> addSeparator(
+		const style::MenuSeparator *st = nullptr);
 	void clearActions();
 
 	void setHiddenCallback(Fn<void()> callback) {

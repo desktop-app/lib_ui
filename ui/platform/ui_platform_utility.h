@@ -17,7 +17,7 @@ namespace Platform {
 
 [[nodiscard]] bool IsApplicationActive();
 
-[[nodiscard]] bool TranslucentWindowsSupported(QPoint globalPosition);
+[[nodiscard]] bool TranslucentWindowsSupported();
 
 void InitOnTopPanel(not_null<QWidget*> panel);
 void DeInitOnTopPanel(not_null<QWidget*> panel);

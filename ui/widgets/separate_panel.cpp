@@ -526,7 +526,7 @@ void SeparatePanel::initGeometry(QSize size) {
 	if (center.y() - size.height() / 2 < available.y()) {
 		center.setY(available.y() + size.height() / 2);
 	}
-	_useTransparency = Ui::Platform::TranslucentWindowsSupported(center);
+	_useTransparency = Ui::Platform::TranslucentWindowsSupported();
 	_padding = _useTransparency
 		? st::callShadow.extend
 		: style::margins(

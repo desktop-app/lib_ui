@@ -438,7 +438,7 @@ bool IsApplicationActive() {
 	return QApplication::activeWindow() != nullptr;
 }
 
-bool TranslucentWindowsSupported(QPoint globalPosition) {
+bool TranslucentWindowsSupported() {
 	if (::Platform::IsWayland()) {
 		return true;
 	}

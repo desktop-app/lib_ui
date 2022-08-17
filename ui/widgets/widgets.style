@@ -212,6 +212,12 @@ PanelAnimation {
 	shadow: Shadow;
 }
 
+MenuSeparator {
+	padding: margins;
+	width: pixels;
+	fg: color;
+}
+
 Menu {
 	skip: pixels;
 
@@ -230,9 +236,7 @@ Menu {
 	itemToggleOver: Toggle;
 	itemToggleShift: pixels;
 
-	separatorPadding: margins;
-	separatorWidth: pixels;
-	separatorFg: color;
+	separator: MenuSeparator;
 
 	arrow: icon;
 
@@ -846,6 +850,11 @@ defaultMenuToggle: Toggle(defaultToggle) {
 defaultMenuToggleOver: Toggle(defaultToggle) {
 	untoggledFg: menuIconFgOver;
 }
+defaultMenuSeparator: MenuSeparator {
+	padding: margins(0px, 5px, 0px, 5px);
+	width: 1px;
+	fg: menuSeparatorFg;
+}
 defaultMenu: Menu {
 	skip: 0px;
 
@@ -864,9 +873,7 @@ defaultMenu: Menu {
 	itemToggleOver: defaultMenuToggleOver;
 	itemToggleShift: 0px;
 
-	separatorPadding: margins(0px, 5px, 0px, 5px);
-	separatorWidth: 1px;
-	separatorFg: menuSeparatorFg;
+	separator: defaultMenuSeparator;
 
 	arrow: defaultMenuArrow;
 

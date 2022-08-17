@@ -7,9 +7,13 @@
 #pragma once
 
 #include "ui/widgets/menu/menu_item_base.h"
-#include "styles/style_widgets.h"
 
 class Painter;
+
+namespace style {
+struct Menu;
+struct MenuSeparator;
+} // namespace style
 
 namespace Ui::Menu {
 
@@ -18,6 +22,7 @@ public:
 	Separator(
 		not_null<RpWidget*> parent,
 		const style::Menu &st,
+		const style::MenuSeparator &separator,
 		not_null<QAction*> action);
 
 	not_null<QAction*> action() const override;
