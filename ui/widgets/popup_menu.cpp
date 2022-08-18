@@ -428,10 +428,23 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
 
 	if (_a_show.animating()) {
-		if (auto opacity = _a_opacity.value(_hiding ? 0. : 1.)) {
-			_showAnimation->paintFrame(p, 0, 0, width(), _a_show.value(1.), opacity);
+		const auto opacity = _a_opacity.value(_hiding ? 0. : 1.);
+		const auto progress = _a_show.value(1.);
+		if (opacity) {
+			_showAnimation->paintFrame(p, 0, 0, width(), progress, opacity);
 		}
+		_showStateChanges.fire({
+			.opacity = opacity,
+			.progress = progress,
+			.appearing = true,
+		});
 	} else if (_a_opacity.animating()) {
+		if (_showAnimation) {
+			_showAnimation.reset();
+			_showStateChanges.fire({
+				.toggling = true,
+			});
+		}
 		p.setOpacity(_a_opacity.value(0.));
 		p.drawPixmap(0, 0, _cache);
 	} else if (_hiding || isHidden()) {
@@ -439,6 +452,7 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 	} else if (_showAnimation) {
 		_showAnimation->paintFrame(p, 0, 0, width(), 1., 1.);
 		_showAnimation.reset();
+		_showStateChanges.fire({});
 		PostponeCall(this, [=] { showChildren(); });
 	} else {
 		paintBg(p);
@@ -681,10 +695,20 @@ void PopupMenu::prepareCache() {
 
 	auto showAnimation = base::take(_a_show);
 	auto showAnimationData = base::take(_showAnimation);
+	if (showAnimation.animating()) {
+		_showStateChanges.fire({});
+	}
 	showChildren();
 	_cache = GrabWidget(this);
 	_showAnimation = base::take(showAnimationData);
 	_a_show = base::take(showAnimation);
+	if (_a_show.animating()) {
+		_showStateChanges.fire({
+			.opacity = _a_opacity.value(1.),
+			.progress = _a_show.value(1.),
+			.appearing = true,
+		});
+	}
 }
 
 void PopupMenu::startOpacityAnimation(bool hiding) {
@@ -749,6 +773,11 @@ void PopupMenu::startShowAnimation() {
 	}
 	hideChildren();
 	_a_show.start([this] { showAnimationCallback(); }, 0., 1., _st.showDuration);
+	_showStateChanges.fire({
+		.opacity = _a_opacity.value(1.),
+		.progress = _a_show.value(1.),
+		.appearing = true,
+	});
 }
 
 void PopupMenu::opacityAnimationCallback() {
@@ -823,6 +852,10 @@ QMargins PopupMenu::preparedExtents() const {
 
 bool PopupMenu::useTransparency() const {
 	return _useTransparency;
+}
+
+rpl::producer<PopupMenu::ShowState> PopupMenu::showStateValue() const {
+	return _showStateChanges.events();
 }
 
 bool PopupMenu::prepareGeometryFor(const QPoint &p) {

@@ -32,6 +32,7 @@ public:
 
 	PopupMenu(QWidget *parent, const style::PopupMenu &st = st::defaultPopupMenu);
 	PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st = st::defaultPopupMenu);
+	~PopupMenu();
 
 	[[nodiscard]] const style::PopupMenu &st() const {
 		return _st;
@@ -86,7 +87,13 @@ public:
 		return _menu;
 	}
 
-	~PopupMenu();
+	struct ShowState {
+		float64 opacity = 1.;
+		float64 progress = 1.;
+		bool appearing = false;
+		bool toggling = false;
+	};
+	[[nodiscard]] rpl::producer<ShowState> showStateValue() const;
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -173,6 +180,7 @@ private:
 	std::optional<PanelAnimation::Origin> _forcedOrigin;
 	std::unique_ptr<PanelAnimation> _showAnimation;
 	Animations::Simple _a_show;
+	rpl::event_stream<ShowState> _showStateChanges;
 
 	bool _useTransparency = true;
 	bool _hiding = false;
