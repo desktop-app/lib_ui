@@ -79,11 +79,27 @@ public:
 	PanelAnimation(const style::PanelAnimation &st, Origin origin) : _st(st), _origin(origin) {
 	}
 
+	struct PaintState {
+		float64 opacity = 0.;
+		float64 widthProgress = 0.;
+		float64 heightProgress = 0.;
+		float64 fade = 0.;
+		int width = 0;
+		int height = 0;
+	};
+
 	void setFinalImage(QImage &&finalImage, QRect inner);
 	void setSkipShadow(bool skipShadow);
 
 	void start();
-	void paintFrame(QPainter &p, int x, int y, int outerWidth, float64 dt, float64 opacity);
+	[[nodiscard]] PaintState computeState(float64 dt, float64 opacity) const;
+	PaintState paintFrame(
+		QPainter &p,
+		int x,
+		int y,
+		int outerWidth,
+		float64 dt,
+		float64 opacity);
 
 private:
 	void setStartWidth();

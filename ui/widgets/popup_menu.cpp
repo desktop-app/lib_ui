@@ -430,12 +430,15 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 	if (_a_show.animating()) {
 		const auto opacity = _a_opacity.value(_hiding ? 0. : 1.);
 		const auto progress = _a_show.value(1.);
-		if (opacity) {
-			_showAnimation->paintFrame(p, 0, 0, width(), progress, opacity);
-		}
+		const auto state = (opacity > 0.)
+			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
+			: PanelAnimation::PaintState();
 		_showStateChanges.fire({
-			.opacity = opacity,
-			.progress = progress,
+			.opacity = state.opacity,
+			.widthProgress = state.widthProgress,
+			.heightProgress = state.heightProgress,
+			.appearingWidth = state.width,
+			.appearingHeight = state.height,
 			.appearing = true,
 		});
 	} else if (_a_opacity.animating()) {
@@ -703,11 +706,7 @@ void PopupMenu::prepareCache() {
 	_showAnimation = base::take(showAnimationData);
 	_a_show = base::take(showAnimation);
 	if (_a_show.animating()) {
-		_showStateChanges.fire({
-			.opacity = _a_opacity.value(1.),
-			.progress = _a_show.value(1.),
-			.appearing = true,
-		});
+		fireCurrentShowState();
 	}
 }
 
@@ -773,9 +772,19 @@ void PopupMenu::startShowAnimation() {
 	}
 	hideChildren();
 	_a_show.start([this] { showAnimationCallback(); }, 0., 1., _st.showDuration);
+	fireCurrentShowState();
+}
+
+void PopupMenu::fireCurrentShowState() {
+	const auto state = _showAnimation->computeState(
+		_a_show.value(1.),
+		_a_opacity.value(1.));
 	_showStateChanges.fire({
-		.opacity = _a_opacity.value(1.),
-		.progress = _a_show.value(1.),
+		.opacity = state.opacity,
+		.widthProgress = state.widthProgress,
+		.heightProgress = state.heightProgress,
+		.appearingWidth = state.width,
+		.appearingHeight = state.height,
 		.appearing = true,
 	});
 }

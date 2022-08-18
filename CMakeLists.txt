@@ -61,6 +61,8 @@ PRIVATE
     ui/effects/radial_animation.h
     ui/effects/ripple_animation.cpp
     ui/effects/ripple_animation.h
+    ui/effects/round_area_with_shadow.cpp
+    ui/effects/round_area_with_shadow.h
     ui/effects/show_animation.cpp
     ui/effects/show_animation.h
     ui/effects/slide_animation.cpp

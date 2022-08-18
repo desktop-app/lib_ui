@@ -89,7 +89,10 @@ public:
 
 	struct ShowState {
 		float64 opacity = 1.;
-		float64 progress = 1.;
+		float64 widthProgress = 1.;
+		float64 heightProgress = 1.;
+		int appearingWidth = 0;
+		int appearingHeight = 0;
 		bool appearing = false;
 		bool toggling = false;
 	};
@@ -123,6 +126,7 @@ private:
 
 	void hideFinished();
 	void showStarted();
+	void fireCurrentShowState();
 
 	using TriggeredSource = Menu::TriggeredSource;
 	void validateCompositingSupport();

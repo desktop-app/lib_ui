@@ -361,30 +361,64 @@ void PanelAnimation::start() {
 	checkCorner(_bottomRight);
 }
 
-void PanelAnimation::paintFrame(QPainter &p, int x, int y, int outerWidth, float64 dt, float64 opacity) {
+auto PanelAnimation::computeState(float64 dt, float64 opacity) const
+-> PaintState {
+	auto &transition = anim::easeOutCirc;
+	if (dt < _alphaDuration) {
+		opacity *= transition(1., dt / _alphaDuration);
+	}
+	const auto widthProgress = (_startWidth < 0 || dt >= _widthDuration)
+		? 1.
+		: transition(1., dt / _widthDuration);
+	const auto heightProgress = (_startHeight < 0 || dt >= _heightDuration)
+		? 1.
+		: transition(1., dt / _heightDuration);
+	auto frameWidth = (widthProgress < 1.)
+		? anim::interpolate(_startWidth, _finalInnerWidth, widthProgress)
+		: _finalInnerWidth;
+	auto frameHeight = (heightProgress < 1.)
+		? anim::interpolate(_startHeight, _finalInnerHeight, heightProgress)
+		: _finalInnerHeight;
+	if (auto decrease = (frameWidth % style::DevicePixelRatio())) {
+		frameWidth -= decrease;
+	}
+	if (auto decrease = (frameHeight % style::DevicePixelRatio())) {
+		frameHeight -= decrease;
+	}
+	return {
+		.opacity = opacity,
+		.widthProgress = widthProgress,
+		.heightProgress = heightProgress,
+		.fade = transition(1., dt),
+		.width = frameWidth,
+		.height = frameHeight,
+	};
+}
+
+auto PanelAnimation::paintFrame(
+	QPainter &p,
+	int x,
+	int y,
+	int outerWidth,
+	float64 dt,
+	float64 opacity)
+-> PaintState {
 	Assert(started());
 	Assert(dt >= 0.);
 
 	const auto pixelRatio = style::DevicePixelRatio();
 
-	auto &transition = anim::easeOutCirc;
-	if (dt < _alphaDuration) opacity *= transition(1., dt / _alphaDuration);
+	const auto state = computeState(dt, opacity);
+	opacity = state.opacity;
 	_frameAlpha = anim::interpolate(1, 256, opacity);
-
-	auto frameWidth = (_startWidth < 0 || dt >= _widthDuration) ? _finalInnerWidth : anim::interpolate(_startWidth, _finalInnerWidth, transition(1., dt / _widthDuration));
-	auto frameHeight = (_startHeight < 0 || dt >= _heightDuration) ? _finalInnerHeight : anim::interpolate(_startHeight, _finalInnerHeight, transition(1., dt / _heightDuration));
-	if (auto decrease = (frameWidth % pixelRatio)) {
-		frameWidth -= decrease;
-	}
-	if (auto decrease = (frameHeight % pixelRatio)) {
-		frameHeight -= decrease;
-	}
+	const auto frameWidth = state.width;
+	const auto frameHeight = state.height;
 	auto frameLeft = (_origin == Origin::TopLeft || _origin == Origin::BottomLeft) ? _finalInnerLeft : (_finalInnerRight - frameWidth);
 	auto frameTop = (_origin == Origin::TopLeft || _origin == Origin::TopRight) ? _finalInnerTop : (_finalInnerBottom - frameHeight);
 	auto frameRight = frameLeft + frameWidth;
 	auto frameBottom = frameTop + frameHeight;
 
-	auto fadeTop = (_fadeHeight > 0) ? std::clamp(anim::interpolate(_startFadeTop, _finalInnerHeight, transition(1., dt)), 0, frameHeight) : frameHeight;
+	auto fadeTop = (_fadeHeight > 0) ? std::clamp(anim::interpolate(_startFadeTop, _finalInnerHeight, state.fade), 0, frameHeight) : frameHeight;
 	if (auto decrease = (fadeTop % pixelRatio)) {
 		fadeTop -= decrease;
 	}
@@ -503,6 +537,8 @@ void PanelAnimation::paintFrame(QPainter &p, int x, int y, int outerWidth, float
 	//}
 
 	p.drawImage(style::rtlpoint(x + (outerLeft / pixelRatio), y + (outerTop / pixelRatio), outerWidth), _frame, QRect(outerLeft, outerTop, outerRight - outerLeft, outerBottom - outerTop));
+
+	return state;
 }
 
 } // namespace Ui
