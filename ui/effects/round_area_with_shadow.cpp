@@ -227,7 +227,7 @@ void RoundAreaWithShadow::overlayExpandedBorder(
 	FillWithImage(p, QRect(QPoint(), size), overlayShadow);
 }
 
-void RoundAreaWithShadow::FillWithImage(
+QRect RoundAreaWithShadow::FillWithImage(
 		QPainter &p,
 		QRect geometry,
 		const ImageSubrect &pattern) {
@@ -261,6 +261,7 @@ void RoundAreaWithShadow::FillWithImage(
 			geometry.topLeft() + QPoint(0, part + fill),
 			image,
 			QRect(source.x(), source.y() + top, source.width(), half));
+		return QRect();
 	} else if (geometry.height() == sourceHeight) {
 		const auto part = (sourceWidth / 2) - 1;
 		const auto fill = geometry.width() - 2 * part;
@@ -286,6 +287,85 @@ void RoundAreaWithShadow::FillWithImage(
 			geometry.topLeft() + QPoint(part + fill, 0),
 			image,
 			QRect(source.x() + left, source.y(), half, source.height()));
+		return QRect();
+	} else if (geometry.width() > sourceWidth
+		&& geometry.height() > sourceHeight) {
+		const auto xpart = (sourceWidth / 2) - 1;
+		const auto xfill = geometry.width() - 2 * xpart;
+		const auto xhalf = xpart * factor;
+		const auto left = source.width() - xhalf;
+		const auto ypart = (sourceHeight / 2) - 1;
+		const auto yfill = geometry.height() - 2 * ypart;
+		const auto yhalf = ypart * factor;
+		const auto top = source.height() - yhalf;
+		p.drawImage(
+			geometry.topLeft(),
+			image,
+			QRect(source.x(), source.y(), xhalf, yhalf));
+		if (xfill > 0) {
+			p.drawImage(
+				QRect(
+					geometry.topLeft() + QPoint(xpart, 0),
+					QSize(xfill, ypart)),
+				image,
+				QRect(
+					source.x() + xhalf,
+					source.y(),
+					left - xhalf,
+					yhalf));
+		}
+		p.drawImage(
+			geometry.topLeft() + QPoint(xpart + xfill, 0),
+			image,
+			QRect(source.x() + left, source.y(), xhalf, yhalf));
+
+		if (yfill > 0) {
+			p.drawImage(
+				QRect(
+					geometry.topLeft() + QPoint(0, ypart),
+					QSize(xpart, yfill)),
+				image,
+				QRect(
+					source.x(),
+					source.y() + yhalf,
+					xhalf,
+					top - yhalf));
+			p.drawImage(
+				QRect(
+					geometry.topLeft() + QPoint(xpart + xfill, ypart),
+					QSize(xpart, yfill)),
+				image,
+				QRect(
+					source.x() + left,
+					source.y() + yhalf,
+					xhalf,
+					top - yhalf));
+		}
+
+		p.drawImage(
+			geometry.topLeft() + QPoint(0, ypart + yfill),
+			image,
+			QRect(source.x(), source.y() + top, xhalf, yhalf));
+		if (xfill > 0) {
+			p.drawImage(
+				QRect(
+					geometry.topLeft() + QPoint(xpart, ypart + yfill),
+					QSize(xfill, ypart)),
+				image,
+				QRect(
+					source.x() + xhalf,
+					source.y() + top,
+					left - xhalf,
+					yhalf));
+		}
+		p.drawImage(
+			geometry.topLeft() + QPoint(xpart + xfill, ypart + yfill),
+			image,
+			QRect(source.x() + left, source.y() + top, xhalf, yhalf));
+
+		return QRect(
+			geometry.topLeft() + QPoint(xpart, ypart),
+			QSize(xfill, yfill));
 	} else {
 		Unexpected("Values in RoundAreaWithShadow::fillWithImage.");
 	}
@@ -346,7 +426,8 @@ void RoundAreaWithShadow::setBackgroundColor(const QColor &background) {
 
 ImageSubrect RoundAreaWithShadow::validateFrame(
 		int frameIndex,
-		float64 scale) {
+		float64 scale,
+		float64 radius) {
 	const auto result = ImageSubrect{
 		&_cacheBg,
 		FrameCacheRect(frameIndex, kBgCacheIndex, _outer)
@@ -357,8 +438,6 @@ ImageSubrect RoundAreaWithShadow::validateFrame(
 
 	const auto position = result.rect.topLeft() / style::DevicePixelRatio();
 	const auto inner = _inner.translated(position);
-	const auto radius = inner.height() / 2.;
-
 	const auto shadowSource = validateShadow(frameIndex, scale, radius);
 
 	auto p = QPainter(&_cacheBg);

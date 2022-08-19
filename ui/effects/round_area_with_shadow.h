@@ -26,7 +26,8 @@ public:
 		int column,
 		QSize frame);
 
-	static void FillWithImage(
+	// Returns center area which could be just filled with a solid color.
+	static QRect FillWithImage(
 		QPainter &p,
 		QRect geometry,
 		const ImageSubrect &pattern);
@@ -36,7 +37,10 @@ public:
 	void setBackgroundColor(const QColor &background);
 	void setShadowColor(const QColor &shadow);
 
-	[[nodiscard]] ImageSubrect validateFrame(int frameIndex, float64 scale);
+	[[nodiscard]] ImageSubrect validateFrame(
+		int frameIndex,
+		float64 scale,
+		float64 radius);
 	[[nodiscard]] ImageSubrect validateOverlayMask(
 		int frameIndex,
 		QSize innerSize,
