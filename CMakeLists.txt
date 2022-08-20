@@ -281,7 +281,7 @@ elseif(LINUX)
 
     qt_generate_wayland_protocol_client_sources(lib_ui
     FILES
-        ${third_party_loc}/wayland-protocols/stable/xdg-shell/xdg-shell.xml
+        ${WaylandProtocols_DATADIR}/stable/xdg-shell/xdg-shell.xml
     )
 
     target_link_libraries(lib_ui
