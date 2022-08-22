@@ -285,14 +285,6 @@ historyReplyCancelIconOver: icon {{ "box_button_close", historyReplyCancelFgOver
 boxTitleCloseIcon: icon {{ "box_button_close", boxTitleCloseFg }};
 boxTitleCloseIconOver: icon {{ "box_button_close", boxTitleCloseFgOver }};
 
-notifyFadeRight: icon {{ "fade_horizontal", notificationBg }};
-
-stickerIconLeft: icon {{ "fade_horizontal-flip_horizontal", emojiPanCategories }};
-stickerIconRight: icon {{ "fade_horizontal", emojiPanCategories }};
-
-emojiSuggestionsFadeLeft: icon {{ "fade_horizontal-flip_horizontal", boxBg }};
-emojiSuggestionsFadeRight: icon {{ "fade_horizontal", boxBg }};
-
 transparentPlaceholderSize: 4px;
 
 // floating badge colors
