@@ -1424,13 +1424,14 @@ void CustomEmojiObject::drawObject(
 	if (i == end(_emoji)) {
 		return;
 	}
-	i->second->paint(
-		*painter,
-		int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
-		int(base::SafeRound(rect.y())) + _skip,
-		_now,
-		st::defaultTextPalette.spoilerActiveBg->c,
-		_paused && _paused());
+	i->second->paint(*painter, {
+		.preview = st::defaultTextPalette.spoilerActiveBg->c,
+		.now = _now,
+		.position = QPoint(
+			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
+			int(base::SafeRound(rect.y())) + _skip),
+		.paused = _paused && _paused(),
+	});
 }
 
 void CustomEmojiObject::clear() {

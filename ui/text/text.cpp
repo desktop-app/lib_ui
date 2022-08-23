@@ -1724,13 +1724,12 @@ private:
 								_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
 								_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
 							}
-							custom->paint(
-								*_p,
-								x + _customEmojiSkip,
-								y + _customEmojiSkip,
-								_now,
-								_textPalette->spoilerActiveBg->c,
-								_p->inactive());
+							custom->paint(*_p, {
+								.preview = _textPalette->spoilerActiveBg->c,
+								.now = _now,
+								.position = { x + _customEmojiSkip, y + _customEmojiSkip },
+								.paused = _p->inactive(),
+							});
 						}
 					}
 					if (hasSpoiler) {
