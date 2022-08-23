@@ -185,6 +185,7 @@ public:
 	using Context = CustomEmojiPaintContext;
 	virtual void paint(QPainter &p, const Context &context) = 0;
 	virtual void unload() = 0;
+	[[nodiscard]] virtual bool ready() = 0;
 
 };
 
