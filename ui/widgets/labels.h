@@ -122,7 +122,9 @@ public:
 	void setTextColorOverride(std::optional<QColor> color);
 
 	void setText(const QString &text);
-	void setMarkedText(const TextWithEntities &textWithEntities);
+	void setMarkedText(
+		const TextWithEntities &textWithEntities,
+		const std::any &context = {});
 	void setSelectable(bool selectable);
 	void setDoubleClickSelectsParagraph(bool doubleClickSelectsParagraph);
 	void setContextCopyText(const QString &copyText);

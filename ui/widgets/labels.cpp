@@ -269,8 +269,14 @@ void FlatLabel::setText(const QString &text) {
 	textUpdated();
 }
 
-void FlatLabel::setMarkedText(const TextWithEntities &textWithEntities) {
-	_text.setMarkedText(_st.style, textWithEntities, _labelMarkedOptions);
+void FlatLabel::setMarkedText(
+		const TextWithEntities &textWithEntities,
+		const std::any &context) {
+	_text.setMarkedText(
+		_st.style,
+		textWithEntities,
+		_labelMarkedOptions,
+		context);
 	textUpdated();
 }
 
