@@ -153,6 +153,8 @@ PRIVATE
     ui/text/text.h
     ui/text/text_block.cpp
     ui/text/text_block.h
+    ui/text/text_custom_emoji.cpp
+    ui/text/text_custom_emoji.h
     ui/text/text_entity.cpp
     ui/text/text_entity.h
     ui/text/text_isolated_emoji.h

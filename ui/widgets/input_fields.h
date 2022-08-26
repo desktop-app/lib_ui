@@ -10,6 +10,7 @@
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
+#include "ui/text/text_custom_emoji.h"
 #include "styles/style_widgets.h"
 
 #include <QContextMenuEvent>
@@ -34,10 +35,6 @@ const auto kStrikeOutSequence = QKeySequence("ctrl+shift+x");
 const auto kMonospaceSequence = QKeySequence("ctrl+shift+m");
 const auto kEditLinkSequence = QKeySequence("ctrl+k");
 const auto kSpoilerSequence = QKeySequence("ctrl+shift+p");
-
-using CustomEmojiFactory = Fn<std::unique_ptr<Text::CustomEmoji>(
-	QStringView,
-	Fn<void()>)>;
 
 class PopupMenu;
 
@@ -199,6 +196,7 @@ public:
 		MultiLine,
 	};
 	using TagList = TextWithTags::Tags;
+	using CustomEmojiFactory = Text::CustomEmojiFactory;
 
 	struct MarkdownTag {
 		// With each emoji being QChar::ObjectReplacementCharacter.

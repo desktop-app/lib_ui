@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "ui/text/text_custom_emoji.h"
 #include "ui/style/style_core.h"
 #include "ui/emoji_config.h"
 
@@ -166,29 +167,6 @@ private:
 
 };
 
-struct CustomEmojiPaintContext {
-	QColor preview;
-	QSize size; // Required only when scaled = true, for path scaling.
-	crl::time now = 0;
-	float64 scale = 0.;
-	QPoint position;
-	bool paused = false;
-	bool scaled = false;
-};
-
-class CustomEmoji {
-public:
-	virtual ~CustomEmoji() = default;
-
-	[[nodiscard]] virtual QString entityData() = 0;
-
-	using Context = CustomEmojiPaintContext;
-	virtual void paint(QPainter &p, const Context &context) = 0;
-	virtual void unload() = 0;
-	[[nodiscard]] virtual bool ready() = 0;
-
-};
-
 class CustomEmojiBlock final : public AbstractBlock {
 public:
 	CustomEmojiBlock(
@@ -209,8 +187,6 @@ private:
 	friend class Renderer;
 
 };
-
-[[nodiscard]] int AdjustCustomEmojiSize(int emojiSize);
 
 class SkipBlock final : public AbstractBlock {
 public:

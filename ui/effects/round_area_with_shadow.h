@@ -59,7 +59,8 @@ public:
 		QPainter &p,
 		QSize size,
 		float64 expandRatio,
-		float64 radius,
+		float64 radiusFrom,
+		float64 radiusTill,
 		float64 scale);
 
 private:

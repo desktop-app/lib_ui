@@ -103,6 +103,7 @@ ImageSubrect RoundAreaWithShadow::validateOverlayMask(
 	p.setCompositionMode(QPainter::CompositionMode_Source);
 	p.fillRect(QRect(position, maskSize), Qt::transparent);
 
+	p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 	auto hq = PainterHighQualityEnabler(p);
 	const auto inner = QRect(position + _inner.topLeft(), innerSize);
 	p.setPen(Qt::NoPen);
@@ -198,10 +199,13 @@ void RoundAreaWithShadow::overlayExpandedBorder(
 		QPainter &p,
 		QSize size,
 		float64 expandRatio,
-		float64 radius,
+		float64 radiusFrom,
+		float64 radiusTill,
 		float64 scale) {
 	const auto progress = expandRatio;
 	const auto frame = int(base::SafeRound(progress * (kFramesCount - 1)));
+	const auto cacheRatio = frame / float64(kFramesCount - 1);
+	const auto radius = radiusFrom + (radiusTill - radiusFrom) * cacheRatio;
 	const auto twiceRadius = int(base::SafeRound(radius * 2));
 	const auto innerSize = QSize(
 		std::max(_inner.width(), twiceRadius),

@@ -498,10 +498,6 @@ CustomEmojiBlock::CustomEmojiBlock(
 	}
 }
 
-int AdjustCustomEmojiSize(int emojiSize) {
-	return base::SafeRound(emojiSize * 1.12);
-}
-
 NewlineBlock::NewlineBlock(
 	const style::font &font,
 	const QString &str,
