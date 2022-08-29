@@ -149,6 +149,8 @@ PRIVATE
     ui/style/style_core_types.h
     ui/style/style_palette_colorizer.cpp
     ui/style/style_palette_colorizer.h
+    ui/text/custom_emoji_instance.cpp
+    ui/text/custom_emoji_instance.h
     ui/text/text.cpp
     ui/text/text.h
     ui/text/text_block.cpp
@@ -236,6 +238,8 @@ PRIVATE
     ui/wrap/wrap.h
     ui/abstract_button.cpp
     ui/abstract_button.h
+    ui/animated_icon.cpp
+    ui/animated_icon.h
     ui/basic_click_handlers.cpp
     ui/basic_click_handlers.h
     ui/cached_special_layer_shadow_corners.cpp
@@ -308,4 +312,5 @@ PUBLIC
 PRIVATE
     desktop-app::external_zlib
     desktop-app::external_jpeg
+    desktop-app::external_lz4
 )

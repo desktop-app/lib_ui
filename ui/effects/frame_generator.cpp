@@ -14,21 +14,39 @@ ImageFrameGenerator::ImageFrameGenerator(const QByteArray &bytes)
 : _bytes(bytes) {
 }
 
+ImageFrameGenerator::ImageFrameGenerator(const QImage &image)
+: _image(image) {
+}
+
 int ImageFrameGenerator::count() {
 	return 1;
+}
+
+double ImageFrameGenerator::rate() {
+	return 1.;
 }
 
 FrameGenerator::Frame ImageFrameGenerator::renderNext(
 		QImage storage,
 		QSize size,
 		Qt::AspectRatioMode mode) {
-	storage = Images::Read({
-		.content = _bytes,
-	}).image;
-	if (storage.isNull()) {
+	return renderCurrent(std::move(storage), size, mode);
+}
+
+FrameGenerator::Frame ImageFrameGenerator::renderCurrent(
+		QImage storage,
+		QSize size,
+		Qt::AspectRatioMode mode) {
+	if (_image.isNull() && !_bytes.isEmpty()) {
+		_image = Images::Read({
+			.content = _bytes,
+		}).image;
+		_bytes = QByteArray();
+	}
+	if (_image.isNull()) {
 		return {};
 	}
-	auto scaled = storage.scaled(
+	auto scaled = _image.scaled(
 		size,
 		mode,
 		Qt::SmoothTransformation
@@ -52,7 +70,10 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
 		dst += dstPerLine;
 	}
 
-	return { .image = std::move(result) };
+	return { .image = std::move(result), .last = true };
+}
+
+void ImageFrameGenerator::jumpToStart() {
 }
 
 } // namespace Ui
