@@ -81,6 +81,7 @@ public:
 
 	[[nodiscard]] int size() const;
 	[[nodiscard]] int frames() const;
+	[[nodiscard]] bool readyInDefaultState() const;
 	[[nodiscard]] Frame frame(int index) const;
 	void reserve(int frames);
 	void add(crl::time duration, const QImage &frame);
@@ -122,6 +123,7 @@ public:
 	[[nodiscard]] QString entityData() const;
 	[[nodiscard]] Preview makePreview() const;
 	PaintFrameResult paint(QPainter &p, const Context &context);
+	[[nodiscard]] bool inDefaultState() const;
 	[[nodiscard]] Loading unload();
 
 private:
@@ -149,6 +151,7 @@ public:
 
 	[[nodiscard]] bool canMakePreview() const;
 	[[nodiscard]] Preview makePreview() const;
+	[[nodiscard]] bool readyInDefaultState() const;
 
 	void setRepaintCallback(Fn<void()> repaint);
 	[[nodiscard]] Cache takeCache();
@@ -227,6 +230,7 @@ public:
 	[[nodiscard]] QString entityData() const;
 	void paint(QPainter &p, const Context &context);
 	[[nodiscard]] bool ready();
+	[[nodiscard]] bool readyInDefaultState();
 	[[nodiscard]] bool hasImagePreview() const;
 	[[nodiscard]] Preview imagePreview() const;
 	void updatePreview(Preview preview);
@@ -260,6 +264,7 @@ public:
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
 	bool ready() override;
+	bool readyInDefaultState() override;
 
 	void repaint();
 

@@ -39,6 +39,7 @@ public:
 	virtual void paint(QPainter &p, const Context &context) = 0;
 	virtual void unload() = 0;
 	[[nodiscard]] virtual bool ready() = 0;
+	[[nodiscard]] virtual bool readyInDefaultState() = 0;
 
 };
 
@@ -54,6 +55,7 @@ public:
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
 	bool ready() override;
+	bool readyInDefaultState() override;
 
 private:
 	const std::unique_ptr<Ui::Text::CustomEmoji> _wrapped;
@@ -69,6 +71,7 @@ public:
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
 	bool ready() override;
+	bool readyInDefaultState() override;
 
 private:
 	const std::unique_ptr<Ui::Text::CustomEmoji> _wrapped;

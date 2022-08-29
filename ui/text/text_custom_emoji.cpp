@@ -37,6 +37,10 @@ bool ShiftedEmoji::ready() {
 	return _wrapped->ready();
 }
 
+bool ShiftedEmoji::readyInDefaultState() {
+	return _wrapped->readyInDefaultState();
+}
+
 FirstFrameEmoji::FirstFrameEmoji(std::unique_ptr<CustomEmoji> wrapped)
 : _wrapped(std::move(wrapped)) {
 }
@@ -57,6 +61,10 @@ void FirstFrameEmoji::unload() {
 
 bool FirstFrameEmoji::ready() {
 	return _wrapped->ready();
+}
+
+bool FirstFrameEmoji::readyInDefaultState() {
+	return _wrapped->readyInDefaultState();
 }
 
 } // namespace Ui::Text

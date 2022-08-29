@@ -220,6 +220,10 @@ int Cache::frames() const {
 	return _frames;
 }
 
+bool Cache::readyInDefaultState() const {
+	return (_frames > 0) && !_frame;
+}
+
 Cache::Frame Cache::frame(int index) const {
 	Expects(index < _frames);
 
@@ -401,6 +405,10 @@ PaintFrameResult Cached::paint(QPainter &p, const Context &context) {
 	return _cache.paintCurrentFrame(p, context);
 }
 
+bool Cached::inDefaultState() const {
+	return _cache.readyInDefaultState();
+}
+
 Preview Cached::makePreview() const {
 	return _cache.makePreview();
 }
@@ -534,6 +542,10 @@ Preview Renderer::makePreview() const {
 	return _cache.makePreview();
 }
 
+bool Renderer::readyInDefaultState() const {
+	return _cache.readyInDefaultState();
+}
+
 void Renderer::setRepaintCallback(Fn<void()> repaint) {
 	_repaint = std::move(repaint);
 }
@@ -659,6 +671,20 @@ bool Instance::ready() {
 	});
 }
 
+bool Instance::readyInDefaultState() {
+	return v::match(_state, [&](Loading &state) {
+		if (state.hasImagePreview()) {
+			return true;
+		}
+		load(state);
+		return false;
+	}, [](Caching &state) {
+		return state.renderer->readyInDefaultState();
+	}, [](Cached &state) {
+		return state.inDefaultState();
+	});
+}
+
 void Instance::load(Loading &state) {
 	state.load([=](Loader::LoadResult result) {
 		if (auto caching = std::get_if<Caching>(&result)) {
@@ -766,6 +792,14 @@ bool Object::ready() {
 		_instance->incrementUsage(this);
 	}
 	return _instance->ready();
+}
+
+bool Object::readyInDefaultState() {
+	if (!_using) {
+		_using = true;
+		_instance->incrementUsage(this);
+	}
+	return _instance->readyInDefaultState();
 }
 
 void Object::repaint() {
