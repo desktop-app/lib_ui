@@ -37,6 +37,25 @@ void PaintScaledImage(
 		const QRect &target,
 		const Cache::Frame &frame,
 		const Context &context) {
+	const auto colored = context.colored;
+	const auto cache = colored ? &colored->cache : nullptr;
+	auto q = std::optional<QPainter>();
+	if (colored) {
+		const auto ratio = style::DevicePixelRatio();
+		if (cache->width() < target.width() * ratio
+			|| cache->height() < target.height() * ratio) {
+			colored->cache = QImage(
+				std::max(cache->width(), target.width() * ratio),
+				std::max(cache->height(), target.height() * ratio),
+				QImage::Format_ARGB32_Premultiplied);
+			cache->setDevicePixelRatio(ratio);
+		}
+		q.emplace(cache);
+		q->setCompositionMode(QPainter::CompositionMode_Source);
+		q->fillRect(QRect(QPoint(), target.size()), Qt::transparent);
+		q->translate(-target.topLeft());
+	}
+	const auto to = q ? &*q : &p;
 	if (context.scaled) {
 		const auto sx = anim::interpolate(
 			target.width() / 2,
@@ -47,14 +66,21 @@ void PaintScaledImage(
 			: anim::interpolate(target.height() / 2, 0, context.scale);
 		const auto scaled = target.marginsRemoved({ sx, sy, sx, sy });
 		if (frame.source.isNull()) {
-			p.drawImage(scaled, *frame.image);
+			to->drawImage(scaled, *frame.image);
 		} else {
-			p.drawImage(scaled, *frame.image, frame.source);
+			to->drawImage(scaled, *frame.image, frame.source);
 		}
 	} else if (frame.source.isNull()) {
-		p.drawImage(target, *frame.image);
+		to->drawImage(target, *frame.image);
 	} else {
-		p.drawImage(target, *frame.image, frame.source);
+		to->drawImage(target, *frame.image, frame.source);
+	}
+	if (q) {
+		q.reset();
+		const auto ratio = style::DevicePixelRatio();
+		const auto source = QRect(QPoint(), target.size() * ratio);
+		style::colorizeImage(*cache, colored->color, cache, source);
+		p.drawImage(target, *cache, source);
 	}
 }
 
@@ -631,6 +657,9 @@ QString Instance::entityData() const {
 }
 
 void Instance::paint(QPainter &p, const Context &context) {
+	const auto colored = (context.colored && !_colored)
+		? base::take(context.colored)
+		: nullptr;
 	v::match(_state, [&](Loading &state) {
 		state.paint(p, context);
 		load(state);
@@ -655,6 +684,9 @@ void Instance::paint(QPainter &p, const Context &context) {
 			_repaintLater(this, { result.next, result.duration });
 		}
 	});
+	if (colored) {
+		context.colored = colored;
+	}
 }
 
 bool Instance::ready() {
@@ -728,6 +760,15 @@ void Instance::updatePreview(Preview preview) {
 			state.preview = std::move(preview);
 		}
 	}, [](const Cached &) {});
+}
+
+void Instance::setColored() {
+	if (!_colored) {
+		_colored = true;
+		if (ready()) {
+			_repaintLater(this, { .when = crl::now() + 1 });
+		}
+	}
 }
 
 void Instance::repaint() {

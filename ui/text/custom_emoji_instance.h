@@ -234,6 +234,7 @@ public:
 	[[nodiscard]] bool hasImagePreview() const;
 	[[nodiscard]] Preview imagePreview() const;
 	void updatePreview(Preview preview);
+	void setColored();
 
 	void incrementUsage(not_null<Object*> object);
 	void decrementUsage(not_null<Object*> object);
@@ -246,13 +247,8 @@ private:
 	std::variant<Loading, Caching, Cached> _state;
 	base::flat_set<not_null<Object*>> _usage;
 	Fn<void(not_null<Instance*> that, RepaintRequest)> _repaintLater;
+	bool _colored = false;
 
-};
-
-class Delegate {
-public:
-	[[nodiscard]] virtual bool paused() = 0;
-	virtual ~Delegate() = default;
 };
 
 class Object final : public Ui::Text::CustomEmoji {

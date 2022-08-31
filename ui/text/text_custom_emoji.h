@@ -7,6 +7,7 @@
 #pragma once
 
 #include <QtGui/QColor>
+#include <QtGui/QImage>
 #include <QtCore/QSize>
 #include <QtCore/QPoint>
 
@@ -18,8 +19,14 @@ namespace Ui::Text {
 
 [[nodiscard]] int AdjustCustomEmojiSize(int emojiSize);
 
+struct CustomEmojiColored {
+	QColor color;
+	QImage cache;
+};
+
 struct CustomEmojiPaintContext {
 	QColor preview;
+	mutable CustomEmojiColored *colored = nullptr;
 	QSize size; // Required only when scaled = true, for path scaling.
 	crl::time now = 0;
 	float64 scale = 0.;
