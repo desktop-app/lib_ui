@@ -53,6 +53,9 @@ public:
 		const style::icon *iconOver = nullptr);
 	not_null<QAction*> addSeparator(
 		const style::MenuSeparator *st = nullptr);
+	not_null<QAction*> insertAction(
+		int position,
+		base::unique_qptr<ItemBase> widget);
 	void clearActions();
 	void finishAnimating();
 

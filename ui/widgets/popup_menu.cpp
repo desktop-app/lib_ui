@@ -407,6 +407,12 @@ not_null<QAction*> PopupMenu::addSeparator(const style::MenuSeparator *st) {
 	return _menu->addSeparator(st);
 }
 
+not_null<QAction*> PopupMenu::insertAction(
+		int position,
+		base::unique_qptr<Menu::ItemBase> widget) {
+	return _menu->insertAction(position, std::move(widget));
+}
+
 void PopupMenu::clearActions() {
 	_submenus.clear();
 	return _menu->clearActions();

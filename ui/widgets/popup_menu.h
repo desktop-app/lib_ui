@@ -51,6 +51,9 @@ public:
 		const style::icon *iconOver = nullptr);
 	not_null<QAction*> addSeparator(
 		const style::MenuSeparator *st = nullptr);
+	not_null<QAction*> insertAction(
+		int position,
+		base::unique_qptr<Menu::ItemBase> widget);
 	void clearActions();
 
 	[[nodiscard]] const std::vector<not_null<QAction*>> &actions() const;
