@@ -67,4 +67,50 @@ bool FirstFrameEmoji::readyInDefaultState() {
 	return _wrapped->readyInDefaultState();
 }
 
+LimitedLoopsEmoji::LimitedLoopsEmoji(
+	std::unique_ptr<CustomEmoji> wrapped,
+	int limit)
+: _wrapped(std::move(wrapped))
+, _limit(limit) {
+}
+
+QString LimitedLoopsEmoji::entityData() {
+	return _wrapped->entityData();
+}
+
+void LimitedLoopsEmoji::paint(QPainter &p, const Context &context) {
+	if (_played < _limit) {
+		if (_wrapped->readyInDefaultState()) {
+			if (_inLoop) {
+				_inLoop = false;
+				++_played;
+			}
+		} else if (_wrapped->ready()) {
+			_inLoop = true;
+		}
+	}
+	if (_played == _limit) {
+		const auto was = context.firstFrameOnly;
+		context.firstFrameOnly = true;
+		_wrapped->paint(p, context);
+		context.firstFrameOnly = was;
+	} else {
+		_wrapped->paint(p, context);
+	}
+}
+
+void LimitedLoopsEmoji::unload() {
+	_wrapped->unload();
+	_inLoop = false;
+	_played = 0;
+}
+
+bool LimitedLoopsEmoji::ready() {
+	return _wrapped->ready();
+}
+
+bool LimitedLoopsEmoji::readyInDefaultState() {
+	return _wrapped->readyInDefaultState();
+}
+
 } // namespace Ui::Text

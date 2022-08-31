@@ -31,7 +31,7 @@ struct CustomEmojiPaintContext {
 	crl::time now = 0;
 	float64 scale = 0.;
 	QPoint position;
-	bool firstFrameOnly = false;
+	mutable bool firstFrameOnly = false;
 	bool paused = false;
 	bool scaled = false;
 };
@@ -82,6 +82,24 @@ public:
 
 private:
 	const std::unique_ptr<Ui::Text::CustomEmoji> _wrapped;
+
+};
+
+class LimitedLoopsEmoji final : public CustomEmoji {
+public:
+	LimitedLoopsEmoji(std::unique_ptr<CustomEmoji> wrapped, int limit);
+
+	QString entityData() override;
+	void paint(QPainter &p, const Context &context) override;
+	void unload() override;
+	bool ready() override;
+	bool readyInDefaultState() override;
+
+private:
+	const std::unique_ptr<Ui::Text::CustomEmoji> _wrapped;
+	const int _limit = 0;
+	int _played = 0;
+	bool _inLoop = false;
 
 };
 
