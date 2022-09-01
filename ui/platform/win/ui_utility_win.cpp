@@ -62,7 +62,7 @@ std::optional<bool> IsOverlapped(
 		nullptr,
 		CLSCTX_ALL,
 		IID_PPV_ARGS(&virtualDesktopManager));
-	
+
 	if (SUCCEEDED(hr)) {
 		BOOL isCurrent;
 		hr = virtualDesktopManager->IsWindowOnCurrentVirtualDesktop(
