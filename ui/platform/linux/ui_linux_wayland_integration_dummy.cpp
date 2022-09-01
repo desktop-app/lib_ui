@@ -17,7 +17,7 @@ struct WaylandIntegration::Private {
 
 WaylandIntegration::WaylandIntegration() {
 }
-	
+
 WaylandIntegration::~WaylandIntegration() = default;
 
 WaylandIntegration *WaylandIntegration::Instance() {
