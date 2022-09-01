@@ -15,22 +15,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
 #include <qpa/qplatformnativeinterface.h>
-
-// private QtWaylandClient headers are using keywords :(
-#ifdef QT_NO_KEYWORDS
-#define signals Q_SIGNALS
-#define slots Q_SLOTS
-#endif // QT_NO_KEYWORDS
-
-#include <private/qwaylanddisplay_p.h>
-#include <private/qwaylandwindow_p.h>
-#include <private/qwaylandinputdevice_p.h>
-
 #include <wayland-client.h>
 
 Q_DECLARE_METATYPE(QMargins);
-
-using QtWaylandClient::QWaylandWindow;
 
 namespace Ui {
 namespace Platform {
@@ -198,21 +185,20 @@ void WaylandIntegration::showWindowMenu(
 
 	const auto seat = reinterpret_cast<wl_seat*>(
 		native->nativeResourceForIntegration(QByteArray("wl_seat")));
-	
-	const auto serial = [&]() -> std::optional<uint32_t> {
-		const auto waylandWindow = static_cast<QWaylandWindow*>(
-			widget->windowHandle()->handle());
-		if (!waylandWindow) {
-			return std::nullopt;
-		}
-		return waylandWindow->display()->defaultInputDevice()->serial();
-	}();
 
-	if (!toplevel || !seat || !serial) {
+	const auto serial = uint32_t(reinterpret_cast<quintptr>(
+		native->nativeResourceForIntegration(QByteArray("serial"))));
+
+	if (!toplevel || !seat) {
 		return;
 	}
 
-	xdg_toplevel_show_window_menu(toplevel, seat, *serial, point.x(), point.y());
+	xdg_toplevel_show_window_menu(
+		toplevel,
+		seat,
+		serial,
+		point.x(),
+		point.y());
 }
 
 } // namespace Platform
