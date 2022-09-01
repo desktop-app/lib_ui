@@ -16,7 +16,7 @@
 namespace style {
 
 inline constexpr auto kScaleAuto = 0;
-inline constexpr auto kScaleMin = 75;
+inline constexpr auto kScaleMin = 50;
 inline constexpr auto kScaleDefault = 100;
 inline constexpr auto kScaleMax = 300;
 
@@ -34,9 +34,12 @@ void SetScale(int scale);
 
 template <typename T>
 [[nodiscard]] inline T ConvertScale(T value, int scale) {
-	return (value < 0.)
-		? (-ConvertScale(-value, scale))
-		: T(base::SafeRound((double(value) * scale / 100.) - 0.01));
+	if (value < 0.) {
+		return -ConvertScale(-value, scale);
+	}
+	const auto result = T(base::SafeRound(
+		(double(value) * scale / 100.) - 0.01));
+	return (!std::is_integral_v<T> || !value || result) ? result : 1;
 }
 
 template <typename T>

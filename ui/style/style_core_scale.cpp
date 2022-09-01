@@ -21,7 +21,7 @@ int DevicePixelRatio() {
 }
 
 void SetDevicePixelRatio(int ratio) {
-	DevicePixelRatioValue = ratio;
+	DevicePixelRatioValue = std::clamp(ratio, 1, kScaleMax / kScaleMin);
 }
 
 int Scale() {
