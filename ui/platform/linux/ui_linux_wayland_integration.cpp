@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
-#include "waylandshells/xdg_shell.h"
 #include "qwayland-xdg-shell.h"
 
 #include <QtGui/QGuiApplication>
@@ -17,7 +16,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <qpa/qplatformnativeinterface.h>
 #include <wayland-client.h>
 
-Q_DECLARE_METATYPE(QMargins);
+typedef void (*SetWindowMarginsFunc)(
+	QWindow *window,
+	const QMargins &margins);
 
 namespace Ui {
 namespace Platform {
@@ -141,7 +142,20 @@ bool WaylandIntegration::xdgDecorationSupported() {
 }
 
 bool WaylandIntegration::windowExtentsSupported() {
-	return WaylandShells::XdgShell();
+	const auto native = QGuiApplication::platformNativeInterface();
+	if (!native) {
+		return false;
+	}
+
+	const auto setWindowMargins = reinterpret_cast<SetWindowMarginsFunc>(
+		reinterpret_cast<void*>(
+			native->nativeResourceFunctionForWindow("setmargins")));
+
+	if (!setWindowMargins) {
+		return false;
+	}
+
+	return true;
 }
 
 void WaylandIntegration::setWindowExtents(
@@ -152,10 +166,15 @@ void WaylandIntegration::setWindowExtents(
 		return;
 	}
 
-	native->setWindowProperty(
-		widget->windowHandle()->handle(),
-		"_desktopApp_waylandCustomMargins",
-		QVariant::fromValue<QMargins>(extents));
+	const auto setWindowMargins = reinterpret_cast<SetWindowMarginsFunc>(
+		reinterpret_cast<void*>(
+			native->nativeResourceFunctionForWindow("setmargins")));
+
+	if (!setWindowMargins) {
+		return;
+	}
+
+	setWindowMargins(widget->windowHandle(), extents);
 }
 
 void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
@@ -164,10 +183,15 @@ void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
 		return;
 	}
 
-	native->setWindowProperty(
-		widget->windowHandle()->handle(),
-		"_desktopApp_waylandCustomMargins",
-		QVariant());
+	const auto setWindowMargins = reinterpret_cast<SetWindowMarginsFunc>(
+		reinterpret_cast<void*>(
+			native->nativeResourceFunctionForWindow("setmargins")));
+
+	if (!setWindowMargins) {
+		return;
+	}
+
+	setWindowMargins(widget->windowHandle(), QMargins());
 }
 
 void WaylandIntegration::showWindowMenu(
