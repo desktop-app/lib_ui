@@ -254,7 +254,14 @@ void PopupMenu::init() {
 	hide();
 
 	setAttribute(Qt::WA_NoSystemBackground, true);
-	setAttribute(Qt::WA_TranslucentBackground, true);
+
+	_useTransparency = Platform::TranslucentWindowsSupported();
+	if (_useTransparency) {
+		setAttribute(Qt::WA_TranslucentBackground, true);
+	} else {
+		setAttribute(Qt::WA_TranslucentBackground, false);
+		setAttribute(Qt::WA_OpaquePaintEvent, true);
+	}
 }
 
 not_null<PopupMenu*> PopupMenu::ensureSubmenu(
@@ -297,12 +304,15 @@ void PopupMenu::checkSubmenuShow() {
 
 void PopupMenu::validateCompositingSupport() {
 	const auto line = st::lineWidth;
-	_useTransparency = Platform::TranslucentWindowsSupported();
+	const auto &additional = _additionalMenuPadding;
 	if (!_useTransparency) {
-		_padding = QMargins(line, line, line, line);
+		_padding = QMargins(
+			std::max(line, additional.left()),
+			std::max(line, additional.top()),
+			std::max(line, additional.right()),
+			std::max(line, additional.bottom()));
 		_extents = QMargins();
 	} else {
-		const auto &additional = _additionalMenuPadding;
 		_padding = QMargins(
 			std::max(_st.shadow.extend.left(), additional.left()),
 			std::max(_st.shadow.extend.top(), additional.top()),
