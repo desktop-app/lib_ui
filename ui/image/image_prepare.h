@@ -100,7 +100,7 @@ inline constexpr auto is_flag_type(Option) { return true; };
 	ImageRoundRadius radius,
 	RectParts corners = RectPart::AllCorners);
 
-[[nodiscard]] QImage Blur(QImage &&image);
+[[nodiscard]] QImage Blur(QImage &&image, bool ignoreAlpha = false);
 [[nodiscard]] QImage Round(
 	QImage &&image,
 	ImageRoundRadius radius,

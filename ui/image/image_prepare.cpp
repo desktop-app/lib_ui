@@ -506,7 +506,7 @@ ReadResult Read(ReadArgs &&args) {
 		: Option::None);
 }
 
-QImage Blur(QImage &&image) {
+QImage Blur(QImage &&image, bool ignoreAlpha) {
 	if (image.isNull()) {
 		return std::move(image);
 	}
@@ -532,7 +532,7 @@ QImage Blur(QImage &&image) {
 	if (radius >= 16 || div >= w || div >= h || stride > w * 4) {
 		return std::move(image);
 	}
-	const auto withalpha = image.hasAlphaChannel();
+	const auto withalpha = !ignoreAlpha && image.hasAlphaChannel();
 	if (withalpha) {
 		auto smaller = QImage(image.size(), image.format());
 		{
