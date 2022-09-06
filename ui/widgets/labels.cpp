@@ -378,6 +378,30 @@ void FlatLabel::setClickHandlerFilter(ClickHandlerFilter &&filter) {
 	_clickHandlerFilter = std::move(filter);
 }
 
+void FlatLabel::overrideLinkClickHandler(Fn<void()> handler) {
+	setClickHandlerFilter([=](
+			const ClickHandlerPtr &link,
+			Qt::MouseButton button) {
+		if (button != Qt::LeftButton) {
+			return true;
+		}
+		handler();
+		return false;
+	});
+}
+
+void FlatLabel::overrideLinkClickHandler(Fn<void(QString url)> handler) {
+	setClickHandlerFilter([=](
+			const ClickHandlerPtr &link,
+			Qt::MouseButton button) {
+		if (button != Qt::LeftButton) {
+			return true;
+		}
+		handler(link->dragText());
+		return false;
+	});
+}
+
 void FlatLabel::mouseMoveEvent(QMouseEvent *e) {
 	_lastMousePos = e->globalPos();
 	dragActionUpdate();

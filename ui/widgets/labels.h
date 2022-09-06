@@ -139,6 +139,8 @@ public:
 
 	using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 	void setClickHandlerFilter(ClickHandlerFilter &&filter);
+	void overrideLinkClickHandler(Fn<void()> handler);
+	void overrideLinkClickHandler(Fn<void(QString url)> handler);
 
 	// ClickHandlerHost interface
 	void clickHandlerActiveChanged(const ClickHandlerPtr &action, bool active) override;
