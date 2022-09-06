@@ -9,9 +9,11 @@
 #include "ui/ui_utility.h"
 #include "base/call_delayed.h"
 #include "base/invoke_queued.h"
+#include "base/platform/base_platform_info.h"
 
 #include <QtCore/QPointer>
-#include <QtCore/QCoreApplication>
+#include <QtGui/QGuiApplication>
+#include <QtGui/QWindow>
 
 namespace Ui {
 namespace {
@@ -40,15 +42,41 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	} else if (std::exchange(Window, widget.get())) {
 		return;
 	}
-	crl::on_main(Window, [=] {
-		if (const auto widget = base::take(Window)) {
-			if (const auto window = widget->window()) {
-				if (!window->isHidden()) {
-					window->raise();
-					window->activateWindow();
-				}
-			}
+	const auto focusAncestor = [&] {
+		const auto focusWindow = QGuiApplication::focusWindow();
+		if (!focusWindow || !widget->window()) {
+			return false;
 		}
+		const auto handle = widget->window()->windowHandle();
+		if (!handle) {
+			return false;
+		}
+		return handle->isAncestorOf(focusWindow);
+	}();
+	crl::on_main(Window, [=] {
+		const auto widget = base::take(Window);
+		if (!widget) {
+			return;
+		}
+		const auto window = widget->window();
+		if (!window || window->isHidden()) {
+			return;
+		}
+		const auto guard = [&] {
+			if (!::Platform::IsX11() || !focusAncestor) {
+				return gsl::finally(Fn<void()>([] {}));
+			}
+			const auto handle = window->windowHandle();
+			if (!(handle->flags() & Qt::X11BypassWindowManagerHint)) {
+				handle->setFlag(Qt::X11BypassWindowManagerHint);
+				return gsl::finally(Fn<void()>([&] {
+					handle->setFlag(Qt::X11BypassWindowManagerHint, false);
+				}));
+			}
+			return gsl::finally(Fn<void()>([] {}));
+		}();
+		window->raise();
+		window->activateWindow();
 	});
 }
 
