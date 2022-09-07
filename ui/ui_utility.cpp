@@ -222,4 +222,20 @@ int WheelDirection(not_null<QWheelEvent*> e) {
 	return (delta / absDelta);
 }
 
+QPoint MapFrom(
+		not_null<QWidget*> to,
+		not_null<QWidget*> from,
+		QPoint point) {
+	return (to->window() != from->window())
+		? to->mapFromGlobal(from->mapToGlobal(point))
+		: to->mapFrom(to->window(), from->mapTo(from->window(), point));
+}
+
+[[nodiscard]] QRect MapFrom(
+		not_null<QWidget*> to,
+		not_null<QWidget*> from,
+		QRect rect) {
+	return { MapFrom(to, from, rect.topLeft()), rect.size() };
+}
+
 } // namespace Ui

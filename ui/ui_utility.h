@@ -196,4 +196,14 @@ QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
 
 int WheelDirection(not_null<QWheelEvent*> e);
 
+[[nodiscard]] QPoint MapFrom(
+	not_null<QWidget*> to,
+	not_null<QWidget*> from,
+	QPoint point);
+
+[[nodiscard]] QRect MapFrom(
+	not_null<QWidget*> to,
+	not_null<QWidget*> from,
+	QRect rect);
+
 } // namespace Ui
