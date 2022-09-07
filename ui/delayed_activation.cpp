@@ -67,13 +67,13 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 				return gsl::finally(Fn<void()>([] {}));
 			}
 			const auto handle = window->windowHandle();
-			if (!(handle->flags() & Qt::X11BypassWindowManagerHint)) {
-				handle->setFlag(Qt::X11BypassWindowManagerHint);
-				return gsl::finally(Fn<void()>([&] {
-					handle->setFlag(Qt::X11BypassWindowManagerHint, false);
-				}));
+			if (handle->flags() & Qt::X11BypassWindowManagerHint) {
+				return gsl::finally(Fn<void()>([] {}));
 			}
-			return gsl::finally(Fn<void()>([] {}));
+			handle->setFlag(Qt::X11BypassWindowManagerHint);
+			return gsl::finally(Fn<void()>([handle] {
+				handle->setFlag(Qt::X11BypassWindowManagerHint, false);
+			}));
 		}();
 		window->raise();
 		window->activateWindow();
