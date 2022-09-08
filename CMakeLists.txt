@@ -67,6 +67,8 @@ PRIVATE
     ui/effects/show_animation.h
     ui/effects/slide_animation.cpp
     ui/effects/slide_animation.h
+    ui/effects/spoiler_mess.cpp
+    ui/effects/spoiler_mess.h
     ui/gl/gl_detection.cpp
     ui/gl/gl_detection.h
     ui/gl/gl_image.cpp
