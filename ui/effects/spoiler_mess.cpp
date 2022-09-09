@@ -618,6 +618,9 @@ SpoilerAnimation::~SpoilerAnimation() {
 
 int SpoilerAnimation::index(crl::time now, bool paused) {
 	const auto add = std::min(now - _last, kDefaultFrameDuration);
+	if (anim::Disabled()) {
+		paused = true;
+	}
 	if (!paused || _last) {
 		_accumulated += add;
 		_last = paused ? 0 : now;
