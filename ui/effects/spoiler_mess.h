@@ -34,14 +34,25 @@ public:
 		QImage image,
 		int framesCount,
 		crl::time frameDuration,
-		int size);
+		int canvasSize);
+	SpoilerMessCached(const SpoilerMessCached &mask, const QColor &color);
 
 	[[nodiscard]] SpoilerMessFrame frame(int index) const;
 	[[nodiscard]] SpoilerMessFrame frame() const; // Current by time.
 
+	[[nodiscard]] crl::time frameDuration() const;
+	[[nodiscard]] int framesCount() const;
+	[[nodiscard]] int canvasSize() const;
+
+	struct Validator {
+		crl::time frameDuration = 0;
+		int framesCount = 0;
+		int canvasSize = 0;
+	};
 	[[nodiscard]] QByteArray serialize() const;
 	[[nodiscard]] static std::optional<SpoilerMessCached> FromSerialized(
-		const QByteArray &data);
+		QByteArray data,
+		std::optional<Validator> validator = {});
 
 private:
 	QImage _image;
@@ -53,5 +64,9 @@ private:
 
 [[nodiscard]] SpoilerMessCached GenerateSpoilerMess(
 	const SpoilerMessDescriptor &descriptor);
+
+void PrepareDefaultSpoilerMess();
+[[nodiscard]] const SpoilerMessCached &DefaultSpoilerMask();
+[[nodiscard]] const SpoilerMessCached &DefaultImageSpoiler();
 
 } // namespace Ui
