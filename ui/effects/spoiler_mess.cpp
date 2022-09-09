@@ -7,9 +7,11 @@
 #include "ui/effects/spoiler_mess.h"
 
 #include "ui/effects/animations.h"
+#include "ui/image/image_prepare.h"
 #include "ui/painter.h"
 #include "ui/integration.h"
 #include "base/random.h"
+#include "base/flags.h"
 
 #include <QtCore/QBuffer>
 #include <QtCore/QFile>
@@ -277,6 +279,173 @@ SpoilerMessCached GenerateSpoilerMess(
 		frames,
 		descriptor.frameDuration,
 		size);
+}
+
+void FillSpoilerRect(
+		QPainter &p,
+		QRect rect,
+		const SpoilerMessFrame &frame,
+		QPoint originShift) {
+	if (rect.isEmpty()) {
+		return;
+	}
+	const auto &image = *frame.image;
+	const auto source = frame.source;
+	const auto ratio = style::DevicePixelRatio();
+	const auto origin = rect.topLeft() + originShift;
+	const auto size = source.width() / ratio;
+	const auto xSkipFrames = (origin.x() <= rect.x())
+		? ((rect.x() - origin.x()) / size)
+		: -((origin.x() - rect.x() + size - 1) / size);
+	const auto ySkipFrames = (origin.y() <= rect.y())
+		? ((rect.y() - origin.y()) / size)
+		: -((origin.y() - rect.y() + size - 1) / size);
+	const auto xFrom = origin.x() + size * xSkipFrames;
+	const auto yFrom = origin.y() + size * ySkipFrames;
+	Assert((xFrom <= rect.x())
+		&& (yFrom <= rect.y())
+		&& (xFrom + size > rect.x())
+		&& (yFrom + size > rect.y()));
+	const auto xTill = rect.x() + rect.width();
+	const auto yTill = rect.y() + rect.height();
+	const auto xCount = (xTill - xFrom + size - 1) / size;
+	const auto yCount = (yTill - yFrom + size - 1) / size;
+	Assert(xCount > 0 && yCount > 0);
+	const auto xFullFrom = (xFrom < rect.x()) ? 1 : 0;
+	const auto yFullFrom = (yFrom < rect.y()) ? 1 : 0;
+	const auto xFullTill = xCount - (xFrom + xCount * size > xTill ? 1 : 0);
+	const auto yFullTill = yCount - (yFrom + yCount * size > yTill ? 1 : 0);
+	const auto targetRect = [&](int x, int y) {
+		return QRect(xFrom + x * size, yFrom + y * size, size, size);
+	};
+	const auto drawFull = [&](int x, int y) {
+		p.drawImage(targetRect(x, y), image, source);
+	};
+	const auto drawPart = [&](int x, int y) {
+		const auto target = targetRect(x, y);
+		const auto fill = target.intersected(rect);
+		Assert(!fill.isEmpty());
+		p.drawImage(fill, image, QRect(
+			source.topLeft() + ((fill.topLeft() - target.topLeft()) * ratio),
+			fill.size() * ratio));
+	};
+	if (yFullFrom) {
+		for (auto x = 0; x != xCount; ++x) {
+			drawPart(x, 0);
+		}
+	}
+	if (yFullFrom < yFullTill) {
+		if (xFullFrom) {
+			for (auto y = yFullFrom; y != yFullTill; ++y) {
+				drawPart(0, y);
+			}
+		}
+		if (xFullFrom < xFullTill) {
+			for (auto y = yFullFrom; y != yFullTill; ++y) {
+				for (auto x = xFullFrom; x != xFullTill; ++x) {
+					drawFull(x, y);
+				}
+			}
+		}
+		if (xFullFrom <= xFullTill && xFullTill < xCount) {
+			for (auto y = yFullFrom; y != yFullTill; ++y) {
+				drawPart(xFullTill, y);
+			}
+		}
+	}
+	if (yFullFrom <= yFullTill && yFullTill < yCount) {
+		for (auto x = 0; x != xCount; ++x) {
+			drawPart(x, yFullTill);
+		}
+	}
+}
+
+void FillSpoilerRect(
+		QPainter &p,
+		QRect rect,
+		ImageRoundRadius radius,
+		RectParts corners,
+		const SpoilerMessFrame &frame,
+		QImage &cornerCache,
+		QPoint originShift) {
+	if (radius == ImageRoundRadius::None || !corners) {
+		FillSpoilerRect(p, rect, frame, originShift);
+		return;
+	}
+	const auto &mask = Images::CornersMask(radius);
+	const auto side = mask[0].width() / style::DevicePixelRatio();
+	const auto xFillFrom = (corners & RectPart::FullLeft) ? side : 0;
+	const auto xFillTo = rect.width()
+		- ((corners & RectPart::FullRight) ? side : 0);
+	const auto yFillFrom = (corners & RectPart::FullTop) ? side : 0;
+	const auto yFillTo = rect.height()
+		- ((corners & RectPart::FullBottom) ? side : 0);
+	const auto xFill = xFillTo - xFillFrom;
+	const auto yFill = yFillTo - yFillFrom;
+	if (xFill < 0 || yFill < 0) {
+		// Unexpected.. but maybe not fatal, just glitchy.
+		FillSpoilerRect(p, rect, frame, originShift);
+		return;
+	}
+	const auto ratio = style::DevicePixelRatio();
+	const auto paintPart = [&](int x, int y, int w, int h) {
+		FillSpoilerRect(
+			p,
+			{ rect.x() + x, rect.y() + y, w, h },
+			frame,
+			originShift - QPoint(x, y));
+	};
+	const auto paintCorner = [&](QPoint position, const QImage &mask) {
+		if (cornerCache.width() < mask.width()
+			|| cornerCache.height() < mask.height()) {
+			cornerCache = QImage(
+				std::max(cornerCache.width(), mask.width()),
+				std::max(cornerCache.height(), mask.height()),
+				QImage::Format_ARGB32_Premultiplied);
+			cornerCache.setDevicePixelRatio(ratio);
+		}
+		const auto size = mask.size() / ratio;
+		const auto target = QRect(QPoint(), size);
+		auto q = QPainter(&cornerCache);
+		q.setCompositionMode(QPainter::CompositionMode_Source);
+		FillSpoilerRect(
+			q,
+			target,
+			frame,
+			originShift - rect.topLeft() - position);
+		q.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+		q.drawImage(target, mask);
+		q.end();
+		p.drawImage(
+			QRect(rect.topLeft() + position, size),
+			cornerCache,
+			QRect(QPoint(), mask.size()));
+	};
+	if (yFillFrom > 0) {
+		if (xFillFrom > 0) {
+			paintCorner({}, mask[0]);
+		}
+		if (xFill) {
+			paintPart(xFillFrom, 0, xFill, yFillFrom);
+		}
+		if (xFillTo < rect.width()) {
+			paintCorner({ xFillTo, 0 }, mask[1]);
+		}
+	}
+	if (yFill) {
+		paintPart(0, yFillFrom, rect.width(), yFill);
+	}
+	if (yFillTo < rect.height()) {
+		if (xFillFrom > 0) {
+			paintCorner({ 0, yFillTo }, mask[2]);
+		}
+		if (xFill) {
+			paintPart(xFillFrom, yFillTo, xFill, rect.height() - yFillTo);
+		}
+		if (xFillTo < rect.width()) {
+			paintCorner({ xFillTo, yFillTo }, mask[3]);
+		}
+	}
 }
 
 SpoilerMessCached::SpoilerMessCached(
