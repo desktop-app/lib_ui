@@ -16,6 +16,8 @@ struct SpoilerMessDescriptor {
 	crl::time particleFadeOutDuration = 0;
 	float64 particleSizeMin = 0.;
 	float64 particleSizeMax = 0.;
+	float64 particleSpeedMin = 0.;
+	float64 particleSpeedMax = 0.;
 	int particleSpritesCount = 0;
 	int particlesCount = 0;
 	int canvasSize = 0;

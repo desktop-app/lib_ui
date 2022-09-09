@@ -27,7 +27,11 @@ constexpr auto kImageSpoilerDarkenAlpha = 32;
 constexpr auto kMaxCacheSize = 5 * 1024 * 1024;
 constexpr auto kDefaultFrameDuration = crl::time(33);
 constexpr auto kDefaultFramesCount = 60;
-constexpr auto kDefaultCanvasSize = 100;
+constexpr auto kDefaultCanvasSize = 128;
+constexpr auto kDefaultParticlesCount = 3000;
+constexpr auto kDefaultFadeInDuration = crl::time(300);
+constexpr auto kDefaultParticleShownDuration = crl::time(0);
+constexpr auto kDefaultFadeOutDuration = crl::time(300);
 
 std::atomic<const SpoilerMessCached*> DefaultMask/* = nullptr*/;
 std::condition_variable *DefaultMaskSignal/* = nullptr*/;
@@ -54,18 +58,43 @@ struct Particle {
 	int spriteIndex = 0;
 	int x = 0;
 	int y = 0;
+	float64 dx = 0.;
+	float64 dy = 0.;
 };
+
+[[nodiscard]] std::pair<float64, float64> RandomSpeed(
+		const SpoilerMessDescriptor &descriptor,
+		base::BufferedRandom<uint32> &random) {
+	const auto count = descriptor.particlesCount;
+	const auto speedMax = descriptor.particleSpeedMax;
+	const auto speedMin = descriptor.particleSpeedMin;
+	const auto value = RandomIndex(2 * count + 2, random);
+	const auto negative = (value < count + 1);
+	const auto module = (negative ? value : (value - count - 1));
+	const auto speed = speedMin + (((speedMax - speedMin) * module) / count);
+	const auto lifetime = descriptor.particleFadeInDuration
+		+ descriptor.particleShownDuration
+		+ descriptor.particleFadeOutDuration;
+	const auto max = int(std::ceil(speedMax * lifetime));
+	const auto k = speed / lifetime;
+	const auto x = (RandomIndex(2 * max + 1, random) - max) / float64(max);
+	const auto y = sqrt(1 - x * x) * (negative ? -1 : 1);
+	return { k * x, k * y };
+}
 
 [[nodiscard]] Particle GenerateParticle(
 		const SpoilerMessDescriptor &descriptor,
 		int index,
 		base::BufferedRandom<uint32> &random) {
+	const auto speed = RandomSpeed(descriptor, random);
 	return {
 		.start = (index * descriptor.framesCount * descriptor.frameDuration
 			/ descriptor.particlesCount),
 		.spriteIndex = RandomIndex(descriptor.particleSpritesCount, random),
 		.x = RandomIndex(descriptor.canvasSize, random),
 		.y = RandomIndex(descriptor.canvasSize, random),
+		.dx = speed.first,
+		.dy = speed.second,
 	};
 }
 
@@ -179,7 +208,7 @@ SpoilerMessCached GenerateSpoilerMess(
 	const auto fullDuration = frames * descriptor.frameDuration;
 	Assert(fullDuration > singleDuration);
 
-	auto random = base::BufferedRandom<uint32>(count * 3);
+	auto random = base::BufferedRandom<uint32>(count * 5);
 
 	auto particles = std::vector<Particle>();
 	particles.reserve(descriptor.particlesCount);
@@ -197,27 +226,31 @@ SpoilerMessCached GenerateSpoilerMess(
 	auto image = QImage(width, height, QImage::Format_ARGB32_Premultiplied);
 	image.fill(Qt::transparent);
 	auto p = QPainter(&image);
-	const auto paintOneAt = [&](const Particle &particle, crl::time time) {
-		if (time <= 0 || time >= singleDuration) {
+	const auto paintOneAt = [&](const Particle &particle, crl::time now) {
+		if (now <= 0 || now >= singleDuration) {
 			return;
 		}
-		const auto opacity = (time < descriptor.particleFadeInDuration)
-			? (time / float64(descriptor.particleFadeInDuration))
-			: (time > singleDuration - descriptor.particleFadeOutDuration)
-			? ((singleDuration - time)
+		const auto x = (particle.x + int(base::SafeRound(now * particle.dx)))
+			% size;
+		const auto y = (particle.y + int(base::SafeRound(now * particle.dy)))
+			% size;
+		const auto opacity = (now < descriptor.particleFadeInDuration)
+			? (now / float64(descriptor.particleFadeInDuration))
+			: (now > singleDuration - descriptor.particleFadeOutDuration)
+			? ((singleDuration - now)
 				/ float64(descriptor.particleFadeOutDuration))
 			: 1.;
 		p.setOpacity(opacity);
 		const auto &sprite = sprites[particle.spriteIndex];
-		p.drawImage(particle.x, particle.y, sprite);
-		if (particle.x + spriteSize > size) {
-			p.drawImage(particle.x - size, particle.y, sprite);
-			if (particle.y + spriteSize > size) {
-				p.drawImage(particle.x, particle.y - size, sprite);
-				p.drawImage(particle.x - size, particle.y - size, sprite);
+		p.drawImage(x, y, sprite);
+		if (x + spriteSize > size) {
+			p.drawImage(x - size, y, sprite);
+			if (y + spriteSize > size) {
+				p.drawImage(x, y - size, sprite);
+				p.drawImage(x - size, y - size, sprite);
 			}
-		} else if (particle.y + spriteSize > size) {
-			p.drawImage(particle.x, particle.y - size, sprite);
+		} else if (y + spriteSize > size) {
+			p.drawImage(x, y - size, sprite);
 		}
 	};
 	const auto paintOne = [&](const Particle &particle, crl::time now) {
@@ -450,12 +483,15 @@ void PrepareDefaultSpoilerMess() {
 			DefaultMask = new SpoilerMessCached(std::move(*cached));
 		} else {
 			DefaultMask = new SpoilerMessCached(GenerateSpoilerMess({
-				.particleFadeInDuration = 200,
-				.particleFadeOutDuration = 200,
+				.particleFadeInDuration = kDefaultFadeInDuration,
+				.particleShownDuration = kDefaultParticleShownDuration,
+				.particleFadeOutDuration = kDefaultFadeOutDuration,
 				.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
 				.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
+				.particleSpeedMin = style::ConvertScaleExact(10.),
+				.particleSpeedMax = style::ConvertScaleExact(20.),
 				.particleSpritesCount = 5,
-				.particlesCount = 2000,
+				.particlesCount = kDefaultParticlesCount,
 				.canvasSize = size,
 				.framesCount = kDefaultFramesCount,
 				.frameDuration = kDefaultFrameDuration,
