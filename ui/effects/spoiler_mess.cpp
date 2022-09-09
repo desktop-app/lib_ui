@@ -6,6 +6,7 @@
 //
 #include "ui/effects/spoiler_mess.h"
 
+#include "ui/effects/animations.h"
 #include "ui/painter.h"
 #include "ui/integration.h"
 #include "base/random.h"
@@ -31,6 +32,13 @@ constexpr auto kDefaultCanvasSize = 100;
 std::atomic<const SpoilerMessCached*> DefaultMask/* = nullptr*/;
 std::condition_variable *DefaultMaskSignal/* = nullptr*/;
 std::mutex *DefaultMaskMutex/* = nullptr*/;
+
+struct AnimationManager {
+	Ui::Animations::Basic animation;
+	base::flat_set<not_null<SpoilerAnimation*>> list;
+};
+
+AnimationManager *DefaultAnimationManager/* = nullptr*/;
 
 struct Header {
 	uint32 version = 0;
@@ -121,6 +129,28 @@ void WriteDefaultMask(const SpoilerMessCached &mask) {
 	auto file = QFile(DefaultMaskCachePath(folder));
 	if (file.open(QIODevice::WriteOnly) && bytes.size() <= kMaxCacheSize) {
 		file.write(bytes);
+	}
+}
+
+void Register(not_null<SpoilerAnimation*> animation) {
+	if (!DefaultAnimationManager) {
+		DefaultAnimationManager = new AnimationManager();
+		DefaultAnimationManager->animation.init([] {
+			for (const auto &animation : DefaultAnimationManager->list) {
+				animation->repaint();
+			}
+		});
+		DefaultAnimationManager->animation.start();
+	}
+	DefaultAnimationManager->list.emplace(animation);
+}
+
+void Unregister(not_null<SpoilerAnimation*> animation) {
+	Expects(DefaultAnimationManager != nullptr);
+
+	DefaultAnimationManager->list.remove(animation);
+	if (DefaultAnimationManager->list.empty()) {
+		delete base::take(DefaultAnimationManager);
 	}
 }
 
@@ -370,6 +400,39 @@ std::optional<SpoilerMessCached> SpoilerMessCached::FromSerialized(
 		count,
 		header.frameDuration,
 		header.canvasSize);
+}
+
+SpoilerAnimation::SpoilerAnimation(Fn<void()> repaint)
+: _repaint(std::move(repaint)) {
+	Expects(_repaint != nullptr);
+}
+
+SpoilerAnimation::~SpoilerAnimation() {
+	if (_animating) {
+		_animating = false;
+		Unregister(this);
+	}
+}
+
+int SpoilerAnimation::index(crl::time now, bool paused) {
+	const auto add = std::min(now - _last, kDefaultFrameDuration);
+	if (!paused || _last) {
+		_accumulated += add;
+		_last = paused ? 0 : now;
+	}
+	const auto absolute = (_accumulated / kDefaultFrameDuration);
+	if (!paused && !_animating) {
+		_animating = true;
+		Register(this);
+	} else if (paused && _animating) {
+		_animating = false;
+		Unregister(this);
+	}
+	return absolute % kDefaultFramesCount;
+}
+
+void SpoilerAnimation::repaint() {
+	_repaint();
 }
 
 void PrepareDefaultSpoilerMess() {

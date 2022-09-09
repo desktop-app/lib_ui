@@ -62,6 +62,24 @@ private:
 
 };
 
+// Works with default frame duration and default frame count.
+class SpoilerAnimation final {
+public:
+	explicit SpoilerAnimation(Fn<void()> repaint);
+	~SpoilerAnimation();
+
+	int index(crl::time now, bool paused);
+
+	void repaint();
+
+private:
+	const Fn<void()> _repaint;
+	crl::time _accumulated = 0;
+	crl::time _last = 0;
+	bool _animating = false;
+
+};
+
 [[nodiscard]] SpoilerMessCached GenerateSpoilerMess(
 	const SpoilerMessDescriptor &descriptor);
 
