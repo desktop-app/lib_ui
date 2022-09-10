@@ -19,6 +19,8 @@
 
 #include <crl/crl_async.h>
 #include <xxhash.h>
+#include <mutex>
+#include <condition_variable>
 
 namespace Ui {
 namespace {
