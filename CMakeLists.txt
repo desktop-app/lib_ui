@@ -314,4 +314,5 @@ PRIVATE
     desktop-app::external_zlib
     desktop-app::external_jpeg
     desktop-app::external_lz4
+    desktop-app::external_xxhash
 )
