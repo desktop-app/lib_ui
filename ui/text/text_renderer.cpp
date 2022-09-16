@@ -950,10 +950,29 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 				? fillSpoilerOpacity()
 				: 0.;
 			const auto opacity = _p->opacity();
-			const auto isElidedBlock = (!rtl)
+			const auto isElidedBlock = !rtl
 				&& (_indexOfElidedBlock == blockIndex);
+			const auto complexClipping = hasSpoiler
+				&& isElidedBlock
+				&& spoilerOpacity == 1.;
 			if ((spoilerOpacity < 1.) || isElidedBlock) {
-				if (hasSpoiler && !isElidedBlock) {
+				const auto complexClippingEnabled = complexClipping
+					&& _p->hasClipping();
+				const auto complexClippingRegion = complexClipping
+					? _p->clipRegion()
+					: QRegion();
+				if (complexClipping) {
+					const auto elided = (_indexOfElidedBlock == blockIndex)
+						? (_elideRemoveFromEnd + _f->elidew)
+						: 0;
+					_p->setClipRect(
+						QRect(
+							(x + itemWidth).toInt() - elided,
+							_y - _lineHeight,
+							elided,
+							_y + 2 * _lineHeight),
+						Qt::IntersectClip);
+				} else if (hasSpoiler && !isElidedBlock) {
 					_p->setOpacity(opacity * (1. - spoilerOpacity));
 				}
 				if (Q_UNLIKELY(hasSelected)) {
@@ -998,6 +1017,13 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 				} else {
 					_p->setPen(*_currentPen);
 					_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+				}
+				if (complexClipping) {
+					if (complexClippingEnabled) {
+						_p->setClipRegion(complexClippingRegion);
+					} else {
+						_p->setClipping(false);
+					}
 				}
 			}
 
