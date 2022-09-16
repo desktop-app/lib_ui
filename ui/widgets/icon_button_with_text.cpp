@@ -21,7 +21,7 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 
 	const auto r = rect() - _st.textPadding;
 
-	Painter p(this);
+	auto p = QPainter(this);
 	p.setFont(_st.font);
 	p.setPen(_st.textFg);
 	p.drawText(r, _text, _st.textAlign);

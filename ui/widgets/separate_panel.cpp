@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/layers/layer_widget.h"
 #include "ui/layers/show.h"
+#include "ui/painter.h"
 #include "base/debug_log.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
@@ -311,7 +312,7 @@ void SeparatePanel::createBorderImage() {
 	cache.setDevicePixelRatio(style::DevicePixelRatio());
 	cache.fill(Qt::transparent);
 	{
-		Painter p(&cache);
+		auto p = QPainter(&cache);
 		auto inner = QRect(0, 0, cacheSize, cacheSize).marginsRemoved(
 			shadowPadding);
 		Ui::Shadow::paint(p, inner, cacheSize, st::callShadow);
@@ -572,7 +573,7 @@ void SeparatePanel::updateControlsGeometry() {
 }
 
 void SeparatePanel::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+	auto p = QPainter(this);
 	if (!_animationCache.isNull()) {
 		auto opacity = _opacityAnimation.value(_visible ? 1. : 0.);
 		if (!_opacityAnimation.animating()) {
@@ -605,7 +606,7 @@ void SeparatePanel::paintEvent(QPaintEvent *e) {
 	}
 }
 
-void SeparatePanel::paintShadowBorder(Painter &p) const {
+void SeparatePanel::paintShadowBorder(QPainter &p) const {
 	const auto factor = style::DevicePixelRatio();
 	const auto size = st::separatePanelBorderCacheSize;
 	const auto part1 = size / 3;
@@ -685,7 +686,7 @@ void SeparatePanel::paintShadowBorder(Painter &p) const {
 		st::windowBg);
 }
 
-void SeparatePanel::paintOpaqueBorder(Painter &p) const {
+void SeparatePanel::paintOpaqueBorder(QPainter &p) const {
 	const auto border = st::windowShadowFgFallback;
 	p.fillRect(0, 0, width(), _padding.top(), border);
 	p.fillRect(

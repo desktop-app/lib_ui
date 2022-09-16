@@ -63,6 +63,8 @@ public:
 	[[nodiscard]] virtual auto createCustomEmoji(
 		const QString &data,
 		const std::any &context) -> std::unique_ptr<Text::CustomEmoji>;
+	[[nodiscard]] virtual Fn<void()> createSpoilerRepaint(
+		const std::any &context);
 
 	[[nodiscard]] virtual rpl::producer<> forcePopupMenuHideRequests();
 

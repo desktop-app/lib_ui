@@ -39,7 +39,7 @@ protected:
 
 	int contentHeight() const override;
 
-	void paintBackground(Painter &p, bool selected);
+	void paintBackground(QPainter &p, bool selected);
 	void paintText(Painter &p);
 
 private:

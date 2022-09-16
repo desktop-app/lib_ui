@@ -7,6 +7,7 @@
 #include "ui/toast/toast_widget.h"
 
 #include "ui/image/image_prepare.h"
+#include "ui/painter.h"
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
 

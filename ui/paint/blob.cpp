@@ -82,7 +82,7 @@ RadialBlob::RadialBlob(int n, float minScale, float minSpeed, float maxSpeed)
 , _segments(n) {
 }
 
-void RadialBlob::paint(Painter &p, const QBrush &brush, float outerScale) {
+void RadialBlob::paint(QPainter &p, const QBrush &brush, float outerScale) {
 	auto path = QPainterPath();
 	auto m = QTransform();
 
@@ -172,7 +172,7 @@ LinearBlob::LinearBlob(
 , _segments(_segmentsCount) {
 }
 
-void LinearBlob::paint(Painter &p, const QBrush &brush, int width) {
+void LinearBlob::paint(QPainter &p, const QBrush &brush, int width) {
 	if (!width) {
 		return;
 	}

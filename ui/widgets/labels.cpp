@@ -13,6 +13,7 @@
 #include "ui/widgets/box_content_divider.h"
 #include "ui/basic_click_handlers.h" // UrlClickHandler
 #include "ui/inactive_press.h"
+#include "ui/painter.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"

@@ -10,6 +10,7 @@
 #include "ui/layers/box_layer_widget.h"
 #include "ui/widgets/shadow.h"
 #include "ui/image/image_prepare.h"
+#include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/round_rect.h"
 #include "styles/style_layers.h"

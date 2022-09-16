@@ -48,8 +48,7 @@ void Menu::init() {
 
 	paintRequest(
 	) | rpl::start_with_next([=](const QRect &clip) {
-		Painter p(this);
-		p.fillRect(clip, _st.itemBg);
+		QPainter(this).fillRect(clip, _st.itemBg);
 	}, lifetime());
 
 	positionValue(

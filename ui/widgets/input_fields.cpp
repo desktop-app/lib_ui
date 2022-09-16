@@ -10,6 +10,7 @@
 #include "ui/text/text.h"
 #include "ui/emoji_config.h"
 #include "ui/ui_utility.h"
+#include "ui/painter.h"
 #include "base/invoke_queued.h"
 #include "base/random.h"
 #include "base/platform/base_platform_info.h"
@@ -1199,7 +1200,7 @@ void FlatInput::finishAnimations() {
 }
 
 void FlatInput::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+	auto p = QPainter(this);
 
 	auto placeholderFocused = _placeholderFocusedAnimation.value(_focused ? 1. : 0.);
 	auto pen = anim::pen(_st.borderColor, _st.borderActive, placeholderFocused);
@@ -1886,7 +1887,7 @@ void InputField::handleTouchEvent(QTouchEvent *e) {
 }
 
 void InputField::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+	auto p = QPainter(this);
 
 	auto r = rect().intersected(e->rect());
 	if (_st.textBg->c.alphaF() > 0.) {
@@ -4205,7 +4206,7 @@ void MaskedInputField::touchEvent(QTouchEvent *e) {
 }
 
 void MaskedInputField::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+	auto p = QPainter(this);
 
 	auto r = rect().intersected(e->rect());
 	p.fillRect(r, _st.textBg);
@@ -4421,7 +4422,7 @@ QRect MaskedInputField::placeholderRect() const {
 	return rect().marginsRemoved(_textMargins + _st.placeholderMargins);
 }
 
-void MaskedInputField::placeholderAdditionalPrepare(Painter &p) {
+void MaskedInputField::placeholderAdditionalPrepare(QPainter &p) {
 	p.setFont(_st.font);
 	p.setPen(_st.placeholderFg);
 }

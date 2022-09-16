@@ -9,6 +9,7 @@
 #include "ui/effects/ripple_animation.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
+#include "ui/painter.h"
 
 #include <QtGui/QtEvents>
 
@@ -96,7 +97,7 @@ void ToggleView::setStyle(const style::Toggle &st) {
 	_st = &st;
 }
 
-void ToggleView::paint(Painter &p, int left, int top, int outerWidth) {
+void ToggleView::paint(QPainter &p, int left, int top, int outerWidth) {
 	left += _st->border;
 	top += _st->border;
 
@@ -132,7 +133,7 @@ void ToggleView::paint(Painter &p, int left, int top, int outerWidth) {
 	}
 }
 
-void ToggleView::paintXV(Painter &p, int left, int top, int outerWidth, float64 toggled, const QBrush &brush) {
+void ToggleView::paintXV(QPainter &p, int left, int top, int outerWidth, float64 toggled, const QBrush &brush) {
 	Expects(_st->vsize > 0);
 	Expects(_st->stroke > 0);
 
@@ -247,7 +248,7 @@ void CheckView::setStyle(const style::Check &st) {
 	_st = &st;
 }
 
-void CheckView::paint(Painter &p, int left, int top, int outerWidth) {
+void CheckView::paint(QPainter &p, int left, int top, int outerWidth) {
 	auto toggled = currentAnimationValue();
 	auto pen = _untoggledOverride
 		? anim::pen(*_untoggledOverride, _st->toggledFg, toggled)
@@ -305,7 +306,7 @@ void RadioView::setStyle(const style::Radio &st) {
 	_st = &st;
 }
 
-void RadioView::paint(Painter &p, int left, int top, int outerWidth) {
+void RadioView::paint(QPainter &p, int left, int top, int outerWidth) {
 	PainterHighQualityEnabler hq(p);
 
 	auto toggled = currentAnimationValue();

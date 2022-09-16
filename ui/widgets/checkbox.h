@@ -11,6 +11,7 @@
 #include "ui/text/text.h"
 #include "styles/style_widgets.h"
 
+class QPainter;
 class Painter;
 
 namespace Ui {
@@ -38,7 +39,7 @@ public:
 
 	virtual QSize getSize() const = 0;
 
-	virtual void paint(Painter &p, int left, int top, int outerWidth) = 0;
+	virtual void paint(QPainter &p, int left, int top, int outerWidth) = 0;
 	virtual QImage prepareRippleMask() const = 0;
 	virtual bool checkRippleStartPosition(QPoint position) const = 0;
 
@@ -67,7 +68,7 @@ public:
 	void setStyle(const style::Check &st);
 
 	QSize getSize() const override;
-	void paint(Painter &p, int left, int top, int outerWidth) override;
+	void paint(QPainter &p, int left, int top, int outerWidth) override;
 	QImage prepareRippleMask() const override;
 	bool checkRippleStartPosition(QPoint position) const override;
 
@@ -95,7 +96,7 @@ public:
 	void setUntoggledOverride(std::optional<QColor> untoggledOverride);
 
 	QSize getSize() const override;
-	void paint(Painter &p, int left, int top, int outerWidth) override;
+	void paint(QPainter &p, int left, int top, int outerWidth) override;
 	QImage prepareRippleMask() const override;
 	bool checkRippleStartPosition(QPoint position) const override;
 
@@ -118,13 +119,13 @@ public:
 	void setStyle(const style::Toggle &st);
 
 	QSize getSize() const override;
-	void paint(Painter &p, int left, int top, int outerWidth) override;
+	void paint(QPainter &p, int left, int top, int outerWidth) override;
 	QImage prepareRippleMask() const override;
 	bool checkRippleStartPosition(QPoint position) const override;
 	void setLocked(bool locked);
 
 private:
-	void paintXV(Painter &p, int left, int top, int outerWidth, float64 toggled, const QBrush &brush);
+	void paintXV(QPainter &p, int left, int top, int outerWidth, float64 toggled, const QBrush &brush);
 	QSize rippleSize() const;
 
 	not_null<const style::Toggle*> _st;

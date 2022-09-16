@@ -58,7 +58,7 @@ Toggle::~Toggle() = default;
 void Toggle::paintEvent(QPaintEvent *e) {
 	Action::paintEvent(e);
 	if (_toggle) {
-		Painter p(this);
+		auto p = QPainter(this);
 		const auto toggleSize = _toggle->getSize();
 		_toggle->paint(
 			p,

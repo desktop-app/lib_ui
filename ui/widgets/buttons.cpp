@@ -597,7 +597,7 @@ void CrossButton::animationCallback() {
 }
 
 void CrossButton::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+	auto p = QPainter(this);
 
 	auto over = isOver();
 	auto shown = _showAnimation.value(_shown ? 1. : 0.);

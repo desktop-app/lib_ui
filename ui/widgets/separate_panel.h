@@ -89,8 +89,8 @@ private:
 
 	void updateTitleGeometry(int newWidth);
 	void updateTitlePosition();
-	void paintShadowBorder(Painter &p) const;
-	void paintOpaqueBorder(Painter &p) const;
+	void paintShadowBorder(QPainter &p) const;
+	void paintOpaqueBorder(QPainter &p) const;
 
 	void toggleOpacityAnimation(bool visible);
 	void finishAnimating();

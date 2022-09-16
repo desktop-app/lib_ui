@@ -58,7 +58,7 @@ class RadialBlob final : public Blob {
 public:
 	RadialBlob(int n, float minScale, float minSpeed = 0, float maxSpeed = 0);
 
-	void paint(Painter &p, const QBrush &brush, float outerScale = 1.);
+	void paint(QPainter &p, const QBrush &brush, float outerScale = 1.);
 	void update(float level, float speedScale, float64 rate);
 
 private:
@@ -94,7 +94,7 @@ public:
 		float minSpeed = 0,
 		float maxSpeed = 0);
 
-	void paint(Painter &p, const QBrush &brush, int width);
+	void paint(QPainter &p, const QBrush &brush, int width);
 
 private:
 	struct Segment : Blob::Segment {

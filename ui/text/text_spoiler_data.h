@@ -6,16 +6,18 @@
 //
 #pragma once
 
+#include "ui/effects/spoiler_mess.h"
+
 class SpoilerClickHandler;
 
 namespace Ui::Text {
 
 struct SpoilerData {
-	struct {
-		std::array<QImage, 4> corners;
-		QColor color;
-	} spoilerCache, spoilerShownCache;
+	explicit SpoilerData(Fn<void()> repaint)
+	: animation(std::move(repaint)) {
+	}
 
+	SpoilerAnimation animation;
 	QVector<std::shared_ptr<SpoilerClickHandler>> links;
 };
 

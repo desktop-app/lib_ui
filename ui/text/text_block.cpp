@@ -758,5 +758,15 @@ void Block::destroy() {
 	}
 }
 
+int CountBlockHeight(
+		const AbstractBlock *block,
+		const style::TextStyle *st) {
+	return (block->type() == TextBlockTSkip)
+		? static_cast<const SkipBlock*>(block)->height()
+		: (st->lineHeight > st->font->height)
+		? st->lineHeight
+		: st->font->height;
+}
+
 } // namespace Text
 } // namespace Ui

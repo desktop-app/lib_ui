@@ -29,7 +29,7 @@ public:
 		Direction direction);
 
 	void paint(
-		Painter &p,
+		QPainter &p,
 		std::optional<QColor> colorOverride = std::nullopt);
 
 	void setValue(float64 value);

@@ -38,7 +38,7 @@ public:
 
 	void setLevel(float value);
 	void resetLevel();
-	void paint(Painter &p, const QBrush &brush, float outerScale = 1.);
+	void paint(QPainter &p, const QBrush &brush, float outerScale = 1.);
 	void updateLevel(crl::time dt);
 
 	[[nodiscard]] float maxRadius() const;

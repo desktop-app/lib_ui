@@ -9,8 +9,6 @@
 #include "ui/effects/animation_value.h"
 #include "ui/paint/blob.h"
 
-class Painter;
-
 namespace Ui::Paint {
 
 class LinearBlobs final {
@@ -38,7 +36,7 @@ public:
 	Blob::Radiuses radiusesAt(int index);
 
 	void setLevel(float value);
-	void paint(Painter &p, const QBrush &brush, int width);
+	void paint(QPainter &p, const QBrush &brush, int width);
 	void updateLevel(crl::time dt);
 
 	[[nodiscard]] float maxRadius() const;

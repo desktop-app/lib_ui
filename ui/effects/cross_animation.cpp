@@ -99,7 +99,7 @@ void transformLoadingCross(float64 loading, std::array<QPointF, kPointCount> &po
 } // namespace
 
 void CrossAnimation::paintStaticLoading(
-		Painter &p,
+		QPainter &p,
 		const style::CrossAnimation &st,
 		style::color color,
 		int x,
@@ -110,7 +110,7 @@ void CrossAnimation::paintStaticLoading(
 }
 
 void CrossAnimation::paint(
-		Painter &p,
+		QPainter &p,
 		const style::CrossAnimation &st,
 		style::color color,
 		int x,

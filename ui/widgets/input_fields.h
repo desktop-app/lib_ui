@@ -698,14 +698,14 @@ protected:
 	}
 	void setCorrectedText(QString &now, int &nowCursor, const QString &newText, int newPos);
 
-	virtual void paintAdditionalPlaceholder(Painter &p) {
+	virtual void paintAdditionalPlaceholder(QPainter &p) {
 	}
 
 	style::font phFont() {
 		return _st.font;
 	}
 
-	void placeholderAdditionalPrepare(Painter &p);
+	void placeholderAdditionalPrepare(QPainter &p);
 	QRect placeholderRect() const;
 
 	void setTextMargins(const QMargins &mrg);

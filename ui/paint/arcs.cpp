@@ -186,7 +186,7 @@ bool ArcsAnimation::isArcFinished(const Arc &arc) const {
 		|| ((arc.threshold <= _currentValue) && (arc.progress == 0.));
 }
 
-void ArcsAnimation::paint(Painter &p, std::optional<QColor> colorOverride) {
+void ArcsAnimation::paint(QPainter &p, std::optional<QColor> colorOverride) {
 	PainterHighQualityEnabler hq(p);
 	QPen pen;
 	if (_strokeRatio) {

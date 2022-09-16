@@ -82,7 +82,7 @@ void Action::paintEvent(QPaintEvent *e) {
 	paint(p);
 }
 
-void Action::paintBackground(Painter &p, bool selected) {
+void Action::paintBackground(QPainter &p, bool selected) {
 	if (selected && _st.itemBgOver->c.alpha() < 255) {
 		p.fillRect(0, 0, width(), _height, _st.itemBg);
 	}

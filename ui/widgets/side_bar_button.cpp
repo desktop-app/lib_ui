@@ -7,6 +7,7 @@
 #include "ui/widgets/side_bar_button.h"
 
 #include "ui/effects/ripple_animation.h"
+#include "ui/painter.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>

@@ -8,8 +8,6 @@
 
 #include "styles/style_widgets.h"
 
-class Painter;
-
 namespace Ui {
 
 class CrossLineAnimation {
@@ -20,12 +18,12 @@ public:
 		float angle = 315);
 
 	void paint(
-		Painter &p,
+		QPainter &p,
 		QPoint position,
 		float64 progress,
 		std::optional<QColor> colorOverride = std::nullopt);
 	void paint(
-		Painter &p,
+		QPainter &p,
 		int left,
 		int top,
 		float64 progress,

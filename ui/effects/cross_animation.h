@@ -15,7 +15,7 @@ namespace Ui {
 class CrossAnimation {
 public:
 	static void paint(
-		Painter &p,
+		QPainter &p,
 		const style::CrossAnimation &st,
 		style::color color,
 		int x,
@@ -24,7 +24,7 @@ public:
 		float64 shown,
 		float64 loading = 0.);
 	static void paintStaticLoading(
-		Painter &p,
+		QPainter &p,
 		const style::CrossAnimation &st,
 		style::color color,
 		int x,

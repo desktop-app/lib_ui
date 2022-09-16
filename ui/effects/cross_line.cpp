@@ -36,7 +36,7 @@ CrossLineAnimation::CrossLineAnimation(
 }
 
 void CrossLineAnimation::paint(
-		Painter &p,
+		QPainter &p,
 		QPoint position,
 		float64 progress,
 		std::optional<QColor> colorOverride) {
@@ -44,7 +44,7 @@ void CrossLineAnimation::paint(
 }
 
 void CrossLineAnimation::paint(
-		Painter &p,
+		QPainter &p,
 		int left,
 		int top,
 		float64 progress,
@@ -86,7 +86,7 @@ void CrossLineAnimation::fillFrame(
 	topLine.setLength(topLine.length() * progress);
 	auto bottomLine = topLine.translated(0, _strokePen.widthF() + 1);
 
-	Painter q(&_frame);
+	auto q = QPainter(&_frame);
 	PainterHighQualityEnabler hq(q);
 	const auto colorize = ((colorOverride && colorOverride->alpha() != 255)
 		|| (!colorOverride && _st.fg->c.alpha() != 255));

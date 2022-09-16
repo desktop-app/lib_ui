@@ -76,6 +76,10 @@ std::unique_ptr<Text::CustomEmoji> Integration::createCustomEmoji(
 	return nullptr;
 }
 
+Fn<void()> Integration::createSpoilerRepaint(const std::any &context) {
+	return nullptr;
+}
+
 bool Integration::handleUrlClick(
 		const QString &url,
 		const QVariant &context) {

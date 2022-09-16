@@ -7,10 +7,11 @@
 #include "ui/widgets/tooltip.h"
 
 #include "ui/ui_utility.h"
+#include "ui/painter.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "base/invoke_queued.h"
-#include "styles/style_widgets.h"
 #include "base/platform/base_platform_info.h"
+#include "styles/style_widgets.h"
 
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>

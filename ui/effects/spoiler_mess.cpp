@@ -31,22 +31,77 @@ constexpr auto kImageSpoilerDarkenAlpha = 32;
 constexpr auto kMaxCacheSize = 5 * 1024 * 1024;
 constexpr auto kDefaultFrameDuration = crl::time(33);
 constexpr auto kDefaultFramesCount = 60;
-constexpr auto kDefaultCanvasSize = 128;
-constexpr auto kDefaultParticlesCount = 3000;
-constexpr auto kDefaultFadeInDuration = crl::time(300);
-constexpr auto kDefaultParticleShownDuration = crl::time(0);
-constexpr auto kDefaultFadeOutDuration = crl::time(300);
+constexpr auto kAutoPauseTimeout = crl::time(1000);
 
-std::atomic<const SpoilerMessCached*> DefaultMask/* = nullptr*/;
-std::condition_variable *DefaultMaskSignal/* = nullptr*/;
-std::mutex *DefaultMaskMutex/* = nullptr*/;
+[[nodiscard]] SpoilerMessDescriptor DefaultDescriptorText() {
+	const auto ratio = style::DevicePixelRatio();
+	const auto size = style::ConvertScale(128) * ratio;
+	return {
+		.particleFadeInDuration = crl::time(200),
+		.particleShownDuration = crl::time(200),
+		.particleFadeOutDuration = crl::time(200),
+		.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
+		.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
+		.particleSpeedMin = style::ConvertScaleExact(4.),
+		.particleSpeedMax = style::ConvertScaleExact(8.),
+		.particleSpritesCount = 5,
+		.particlesCount = 9000,
+		.canvasSize = size,
+		.framesCount = kDefaultFramesCount,
+		.frameDuration = kDefaultFrameDuration,
+	};
+}
 
-struct AnimationManager {
-	Ui::Animations::Basic animation;
-	base::flat_set<not_null<SpoilerAnimation*>> list;
+[[nodiscard]] SpoilerMessDescriptor DefaultDescriptorImage() {
+	const auto ratio = style::DevicePixelRatio();
+	const auto size = style::ConvertScale(128) * ratio;
+	return {
+		.particleFadeInDuration = crl::time(300),
+		.particleShownDuration = crl::time(0),
+		.particleFadeOutDuration = crl::time(300),
+		.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
+		.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
+		.particleSpeedMin = style::ConvertScaleExact(10.),
+		.particleSpeedMax = style::ConvertScaleExact(20.),
+		.particleSpritesCount = 5,
+		.particlesCount = 3000,
+		.canvasSize = size,
+		.framesCount = kDefaultFramesCount,
+		.frameDuration = kDefaultFrameDuration,
+	};
+}
+
+} // namespace
+
+class SpoilerAnimationManager final {
+public:
+	explicit SpoilerAnimationManager(not_null<SpoilerAnimation*> animation);
+
+	void add(not_null<SpoilerAnimation*> animation);
+	void remove(not_null<SpoilerAnimation*> animation);
+
+private:
+	void destroyIfEmpty();
+
+	Ui::Animations::Basic _animation;
+	base::flat_set<not_null<SpoilerAnimation*>> _list;
+
 };
 
-AnimationManager *DefaultAnimationManager/* = nullptr*/;
+namespace {
+
+struct DefaultSpoilerWaiter {
+	std::condition_variable variable;
+	std::mutex mutex;
+};
+struct DefaultSpoiler {
+	std::atomic<const SpoilerMessCached*> cached/* = nullptr*/;
+	std::atomic<DefaultSpoilerWaiter*> waiter/* = nullptr*/;
+};
+DefaultSpoiler DefaultTextMask;
+DefaultSpoiler DefaultImageCached;
+
+SpoilerAnimationManager *DefaultAnimationManager/* = nullptr*/;
 
 struct Header {
 	uint32 version = 0;
@@ -137,57 +192,138 @@ struct Particle {
 	return base.isEmpty() ? QString() : (base + "/spoiler");
 }
 
-[[nodiscard]] QString DefaultMaskCachePath(const QString &folder) {
-	return folder + "/mask";
-}
-
 [[nodiscard]] std::optional<SpoilerMessCached> ReadDefaultMask(
+		const QString &name,
 		std::optional<SpoilerMessCached::Validator> validator) {
 	const auto folder = DefaultMaskCacheFolder();
 	if (folder.isEmpty()) {
 		return {};
 	}
-	auto file = QFile(DefaultMaskCachePath(folder));
+	auto file = QFile(folder + '/' + name);
 	return (file.open(QIODevice::ReadOnly) && file.size() <= kMaxCacheSize)
 		? SpoilerMessCached::FromSerialized(file.readAll(), validator)
 		: std::nullopt;
 }
 
-void WriteDefaultMask(const SpoilerMessCached &mask) {
+void WriteDefaultMask(
+		const QString &name,
+		const SpoilerMessCached &mask) {
 	const auto folder = DefaultMaskCacheFolder();
 	if (!QDir().mkpath(folder)) {
 		return;
 	}
 	const auto bytes = mask.serialize();
-	auto file = QFile(DefaultMaskCachePath(folder));
+	auto file = QFile(folder + '/' + name);
 	if (file.open(QIODevice::WriteOnly) && bytes.size() <= kMaxCacheSize) {
 		file.write(bytes);
 	}
 }
 
 void Register(not_null<SpoilerAnimation*> animation) {
-	if (!DefaultAnimationManager) {
-		DefaultAnimationManager = new AnimationManager();
-		DefaultAnimationManager->animation.init([] {
-			for (const auto &animation : DefaultAnimationManager->list) {
-				animation->repaint();
-			}
-		});
-		DefaultAnimationManager->animation.start();
+	if (DefaultAnimationManager) {
+		DefaultAnimationManager->add(animation);
+	} else {
+		new SpoilerAnimationManager(animation);
 	}
-	DefaultAnimationManager->list.emplace(animation);
 }
 
 void Unregister(not_null<SpoilerAnimation*> animation) {
 	Expects(DefaultAnimationManager != nullptr);
 
-	DefaultAnimationManager->list.remove(animation);
-	if (DefaultAnimationManager->list.empty()) {
-		delete base::take(DefaultAnimationManager);
+	DefaultAnimationManager->remove(animation);
+}
+
+// DescriptorFactory: (void) -> SpoilerMessDescriptor.
+// Postprocess: (unique_ptr<MessCached>) -> unique_ptr<MessCached>.
+template <typename DescriptorFactory, typename Postprocess>
+void PrepareDefaultSpoiler(
+		DefaultSpoiler &spoiler,
+		const char *nameFactory,
+		DescriptorFactory descriptorFactory,
+		Postprocess postprocess) {
+	if (spoiler.waiter.load()) {
+		return;
+	}
+	const auto waiter = new DefaultSpoilerWaiter();
+	auto expected = (DefaultSpoilerWaiter*)nullptr;
+	if (!spoiler.waiter.compare_exchange_strong(expected, waiter)) {
+		delete waiter;
+		return;
+	}
+	const auto name = QString::fromUtf8(nameFactory);
+	crl::async([=, &spoiler] {
+		const auto descriptor = descriptorFactory();
+		auto cached = ReadDefaultMask(name, SpoilerMessCached::Validator{
+			.frameDuration = descriptor.frameDuration,
+			.framesCount = descriptor.framesCount,
+			.canvasSize = descriptor.canvasSize,
+		});
+		spoiler.cached = postprocess(cached
+			? std::make_unique<SpoilerMessCached>(std::move(*cached))
+			: std::make_unique<SpoilerMessCached>(
+				GenerateSpoilerMess(descriptor))
+		).release();
+		auto lock = std::unique_lock(waiter->mutex);
+		waiter->variable.notify_all();
+		if (!cached) {
+			WriteDefaultMask(name, *spoiler.cached);
+		}
+	});
+}
+
+[[nodiscard]] const SpoilerMessCached &WaitDefaultSpoiler(
+		DefaultSpoiler &spoiler) {
+	const auto &cached = spoiler.cached;
+	if (const auto result = cached.load()) {
+		return *result;
+	}
+	const auto waiter = spoiler.waiter.load();
+	Assert(waiter != nullptr);
+	while (true) {
+		auto lock = std::unique_lock(waiter->mutex);
+		if (const auto result = cached.load()) {
+			return *result;
+		}
+		waiter->variable.wait(lock);
 	}
 }
 
 } // namespace
+
+SpoilerAnimationManager::SpoilerAnimationManager(
+	not_null<SpoilerAnimation*> animation)
+: _animation([=](crl::time now) {
+	for (auto i = begin(_list); i != end(_list);) {
+		if ((*i)->repaint(now)) {
+			++i;
+		} else {
+			i = _list.erase(i);
+		}
+	}
+	destroyIfEmpty();
+})
+, _list{ { animation } } {
+	Expects(!DefaultAnimationManager);
+
+	DefaultAnimationManager = this;
+	_animation.start();
+}
+
+void SpoilerAnimationManager::add(not_null<SpoilerAnimation*> animation) {
+	_list.emplace(animation);
+}
+
+void SpoilerAnimationManager::remove(not_null<SpoilerAnimation*> animation) {
+	_list.remove(animation);
+	destroyIfEmpty();
+}
+
+void SpoilerAnimationManager::destroyIfEmpty() {
+	if (_list.empty()) {
+		Assert(DefaultAnimationManager == this);
+		delete base::take(DefaultAnimationManager);
+	}
+}
 
 SpoilerMessCached GenerateSpoilerMess(
 		const SpoilerMessDescriptor &descriptor) {
@@ -619,6 +755,7 @@ SpoilerAnimation::~SpoilerAnimation() {
 }
 
 int SpoilerAnimation::index(crl::time now, bool paused) {
+	_scheduled = false;
 	const auto add = std::min(now - _last, kDefaultFrameDuration);
 	if (anim::Disabled()) {
 		paused = true;
@@ -638,66 +775,34 @@ int SpoilerAnimation::index(crl::time now, bool paused) {
 	return absolute % kDefaultFramesCount;
 }
 
-void SpoilerAnimation::repaint() {
-	_repaint();
-}
-
-void PrepareDefaultSpoilerMess() {
-	DefaultMaskSignal = new std::condition_variable();
-	DefaultMaskMutex = new std::mutex();
-	crl::async([] {
-		const auto ratio = style::DevicePixelRatio();
-		const auto size = style::ConvertScale(kDefaultCanvasSize) * ratio;
-		auto cached = ReadDefaultMask(SpoilerMessCached::Validator{
-			.frameDuration = kDefaultFrameDuration,
-			.framesCount = kDefaultFramesCount,
-			.canvasSize = size,
-		});
-		if (cached) {
-			DefaultMask = new SpoilerMessCached(std::move(*cached));
-		} else {
-			DefaultMask = new SpoilerMessCached(GenerateSpoilerMess({
-				.particleFadeInDuration = kDefaultFadeInDuration,
-				.particleShownDuration = kDefaultParticleShownDuration,
-				.particleFadeOutDuration = kDefaultFadeOutDuration,
-				.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
-				.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
-				.particleSpeedMin = style::ConvertScaleExact(10.),
-				.particleSpeedMax = style::ConvertScaleExact(20.),
-				.particleSpritesCount = 5,
-				.particlesCount = kDefaultParticlesCount,
-				.canvasSize = size,
-				.framesCount = kDefaultFramesCount,
-				.frameDuration = kDefaultFrameDuration,
-			}));
-		}
-		auto lock = std::unique_lock(*DefaultMaskMutex);
-		DefaultMaskSignal->notify_all();
-		if (!cached) {
-			WriteDefaultMask(*DefaultMask);
-		}
-	});
-}
-
-const SpoilerMessCached &DefaultSpoilerMask() {
-	if (const auto result = DefaultMask.load()) {
-		return *result;
+bool SpoilerAnimation::repaint(crl::time now) {
+	if (!_scheduled) {
+		_scheduled = true;
+		_repaint();
+	} else if (_animating && _last && _last + kAutoPauseTimeout <= now) {
+		_animating = false;
+		return false;
 	}
-	Assert(DefaultMaskSignal != nullptr);
-	Assert(DefaultMaskMutex != nullptr);
-	while (true) {
-		auto lock = std::unique_lock(*DefaultMaskMutex);
-		if (const auto result = DefaultMask.load()) {
-			return *result;
-		}
-		DefaultMaskSignal->wait(lock);
-	}
+	return true;
 }
 
-const SpoilerMessCached &DefaultImageSpoiler() {
-	static const auto result = [&] {
-		const auto mask = Ui::DefaultSpoilerMask();
-		const auto frame = mask.frame(0);
+void PrepareTextSpoilerMask() {
+	PrepareDefaultSpoiler(
+		DefaultTextMask,
+		"text",
+		DefaultDescriptorText,
+		[](std::unique_ptr<SpoilerMessCached> cached) { return cached; });
+}
+
+const SpoilerMessCached &DefaultTextSpoilerMask() {
+	return WaitDefaultSpoiler(DefaultTextMask);
+}
+
+void PrepareImageSpoiler() {
+	const auto postprocess = [](std::unique_ptr<SpoilerMessCached> cached) {
+		Expects(cached != nullptr);
+
+		const auto frame = cached->frame(0);
 		auto image = QImage(
 			frame.image->size(),
 			QImage::Format_ARGB32_Premultiplied);
@@ -705,13 +810,21 @@ const SpoilerMessCached &DefaultImageSpoiler() {
 		auto p = QPainter(&image);
 		p.drawImage(0, 0, *frame.image);
 		p.end();
-		return Ui::SpoilerMessCached(
+		return std::make_unique<SpoilerMessCached>(
 			std::move(image),
-			mask.framesCount(),
-			mask.frameDuration(),
-			mask.canvasSize());
-	}();
-	return result;
+			cached->framesCount(),
+			cached->frameDuration(),
+			cached->canvasSize());
+	};
+	PrepareDefaultSpoiler(
+		DefaultImageCached,
+		"image",
+		DefaultDescriptorImage,
+		postprocess);
+}
+
+const SpoilerMessCached &DefaultImageSpoiler() {
+	return WaitDefaultSpoiler(DefaultImageCached);
 }
 
 } // namespace Ui

@@ -78,7 +78,7 @@ void LinearBlobs::setLevel(float value) {
 	_levelValue.start(to);
 }
 
-void LinearBlobs::paint(Painter &p, const QBrush &brush, int width) {
+void LinearBlobs::paint(QPainter &p, const QBrush &brush, int width) {
 	PainterHighQualityEnabler hq(p);
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {

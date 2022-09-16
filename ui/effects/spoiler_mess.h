@@ -90,6 +90,7 @@ private:
 };
 
 // Works with default frame duration and default frame count.
+class SpoilerAnimationManager;
 class SpoilerAnimation final {
 public:
 	explicit SpoilerAnimation(Fn<void()> repaint);
@@ -97,21 +98,25 @@ public:
 
 	int index(crl::time now, bool paused);
 
-	void repaint();
-
 private:
+	friend class SpoilerAnimationManager;
+
+	[[nodiscard]] bool repaint(crl::time now);
+
 	const Fn<void()> _repaint;
 	crl::time _accumulated = 0;
 	crl::time _last = 0;
-	bool _animating = false;
+	bool _animating : 1 = false;
+	bool _scheduled : 1 = false;
 
 };
 
 [[nodiscard]] SpoilerMessCached GenerateSpoilerMess(
 	const SpoilerMessDescriptor &descriptor);
 
-void PrepareDefaultSpoilerMess();
-[[nodiscard]] const SpoilerMessCached &DefaultSpoilerMask();
+void PrepareTextSpoilerMask();
+[[nodiscard]] const SpoilerMessCached &DefaultTextSpoilerMask();
+void PrepareImageSpoiler();
 [[nodiscard]] const SpoilerMessCached &DefaultImageSpoiler();
 
 } // namespace Ui

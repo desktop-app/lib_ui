@@ -11,6 +11,10 @@
 #include <QtCore/QPoint>
 #include <QtGui/QPainter>
 
+namespace Ui::Text {
+struct SpoilerMess;
+} // namespace Ui::Text
+
 class Painter : public QPainter {
 public:
 	explicit Painter(QPaintDevice *device) : QPainter(device) {
@@ -78,9 +82,19 @@ public:
 	[[nodiscard]] bool inactive() const {
 		return _inactive;
 	}
+	void setTextSpoilerMess(not_null<Ui::Text::SpoilerMess*> mess) {
+		_spoilerMess = mess;
+	}
+	void restoreTextSpoilerMess() {
+		_spoilerMess = nullptr;
+	}
+	[[nodiscard]] Ui::Text::SpoilerMess *textSpoilerMess() const {
+		return _spoilerMess;
+	}
 
 private:
 	const style::TextPalette *_textPalette = nullptr;
+	Ui::Text::SpoilerMess *_spoilerMess = nullptr;
 	bool _inactive = false;
 
 };

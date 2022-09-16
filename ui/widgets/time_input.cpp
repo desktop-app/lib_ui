@@ -195,7 +195,7 @@ rpl::producer<> TimeInput::focuses() const {
 }
 
 void TimeInput::paintEvent(QPaintEvent *e) {
-	Painter p(this);
+	auto p = QPainter(this);
 
 	const auto &_st = _stDateField;
 	const auto height = _st.heightMin;

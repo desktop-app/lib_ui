@@ -14,8 +14,11 @@
 
 #include <crl/crl_time.h>
 
-namespace Ui {
-namespace Text {
+namespace style {
+struct TextStyle;
+} // namespace style
+
+namespace Ui::Text {
 
 enum TextBlockType {
 	TextBlockTNewline = 0x01,
@@ -318,5 +321,12 @@ private:
 
 };
 
-} // namespace Text
-} // namespace Ui
+[[nodiscard]] int CountBlockHeight(
+	const AbstractBlock *block,
+	const style::TextStyle *st);
+
+[[nodiscard]] inline bool IsMono(int32 flags) {
+	return (flags & TextBlockFPre) || (flags & TextBlockFCode);
+}
+
+} // namespace Ui::Text

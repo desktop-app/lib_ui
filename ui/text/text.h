@@ -8,14 +8,19 @@
 
 #include "ui/text/text_entity.h"
 #include "ui/text/text_block.h"
-#include "ui/painter.h"
+#include "ui/effects/spoiler_mess.h"
 #include "ui/click_handler.h"
 #include "base/flags.h"
 
 #include <private/qfixed_p.h>
 #include <any>
 
+class Painter;
 class SpoilerClickHandler;
+
+namespace style {
+struct TextPalette;
+} // namespace style
 
 namespace Ui {
 static const auto kQEllipsis = QStringLiteral("...");
@@ -90,13 +95,55 @@ struct StateResult {
 	uint16 symbol = 0;
 };
 
-struct StateRequestElided : public StateRequest {
+struct StateRequestElided : StateRequest {
 	StateRequestElided() {
 	}
 	StateRequestElided(const StateRequest &other) : StateRequest(other) {
 	}
 	int lines = 1;
 	int removeFromEnd = 0;
+};
+
+class SpoilerMessCache {
+public:
+	explicit SpoilerMessCache(int capacity);
+
+	[[nodiscard]] not_null<SpoilerMessCached*> lookup(QColor color);
+	void reset();
+
+private:
+	struct Entry {
+		SpoilerMessCached mess;
+		QColor color;
+		int generation = 0;
+	};
+
+	std::vector<Entry> _cache;
+	const int _capacity = 0;
+	int _generation = 0;
+
+};
+
+[[nodiscard]] not_null<SpoilerMessCache*> DefaultSpoilerCache();
+
+struct PaintContext {
+	QPoint position;
+	int outerWidth = 0; // For automatic RTL Ui inversion.
+	int availableWidth = 0;
+	style::align align = style::al_left;
+	QRect clip;
+
+	const style::TextPalette *palette = nullptr;
+	SpoilerMessCache *spoiler = nullptr;
+	crl::time now = 0;
+	bool paused = false;
+
+	TextSelection selection;
+	bool fullWidthSelection = true;
+
+	int elisionLines = 0;
+	int elisionRemoveFromEnd = 0;
+	bool elisionBreakEverywhere = false;
 };
 
 class String {
@@ -107,9 +154,9 @@ public:
 		const QString &text,
 		const TextParseOptions &options = kDefaultTextOptions,
 		int32 minResizeWidth = QFIXED_MAX);
-	String(String &&other) = default;
-	String &operator=(String &&other) = default;
-	~String() = default;
+	String(String &&other);
+	String &operator=(String &&other);
+	~String();
 
 	[[nodiscard]] int countWidth(int width, bool breakEverywhere = false) const;
 	[[nodiscard]] int countHeight(int width, bool breakEverywhere = false) const;
@@ -136,6 +183,8 @@ public:
 		return _minHeight;
 	}
 	[[nodiscard]] int countMaxMonospaceWidth() const;
+
+	void draw(QPainter &p, const PaintContext &context) const;
 
 	void draw(Painter &p, int32 left, int32 top, int32 width, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, TextSelection selection = { 0, 0 }, bool fullWidthSelection = true) const;
 	void drawElided(Painter &p, int32 left, int32 top, int32 width, int32 lines = 1, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, int32 removeFromEnd = 0, bool breakEverywhere = false, TextSelection selection = { 0, 0 }) const;
@@ -169,8 +218,8 @@ public:
 	[[nodiscard]] TextForMimeData toTextForMimeData(
 		TextSelection selection = AllTextSelection) const;
 
-	[[nodiscard]] bool hasCustomEmoji() const;
-	void unloadCustomEmoji();
+	[[nodiscard]] bool hasPersistentAnimation() const;
+	void unloadPersistentAnimation();
 
 	[[nodiscard]] bool isIsolatedEmoji() const;
 	[[nodiscard]] IsolatedEmoji toIsolatedEmoji() const;
@@ -217,9 +266,9 @@ private:
 	QFixed _minResizeWidth;
 	QFixed _maxWidth = 0;
 	int32 _minHeight = 0;
-	bool _hasCustomEmoji : 1;
-	bool _isIsolatedEmoji : 1;
-	bool _isOnlyCustomEmoji : 1;
+	bool _hasCustomEmoji : 1 = false;
+	bool _isIsolatedEmoji : 1 = false;
+	bool _isOnlyCustomEmoji : 1 = false;
 
 	QString _text;
 	const style::TextStyle *_st = nullptr;
@@ -229,13 +278,14 @@ private:
 
 	Qt::LayoutDirection _startDir = Qt::LayoutDirectionAuto;
 
-	std::shared_ptr<SpoilerData> _spoiler;
+	std::unique_ptr<SpoilerData> _spoiler;
 
 	friend class Parser;
 	friend class Renderer;
 
 };
 
+[[nodiscard]] bool IsBad(QChar ch);
 [[nodiscard]] bool IsWordSeparator(QChar ch);
 [[nodiscard]] bool IsAlmostLinkEnd(QChar ch);
 [[nodiscard]] bool IsLinkEnd(QChar ch);

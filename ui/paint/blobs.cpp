@@ -80,7 +80,7 @@ void Blobs::resetLevel() {
 	_levelValue.reset();
 }
 
-void Blobs::paint(Painter &p, const QBrush &brush, float outerScale) {
+void Blobs::paint(QPainter &p, const QBrush &brush, float outerScale) {
 	const auto opacity = p.opacity();
 	for (auto i = 0; i < _blobs.size(); i++) {
 		const auto alpha = _blobDatas[i].alpha;
