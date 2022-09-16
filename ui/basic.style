@@ -9,15 +9,14 @@ using "ui/colors.palette";
 TextPalette {
 	linkFg: color;
 	monoFg: color;
+	spoilerFg: color;
 	selectBg: color;
 	selectFg: color;
 	selectLinkFg: color;
 	selectMonoFg: color;
+	selectSpoilerFg: color;
 	selectOverlay: color;
 	linkAlwaysActive: int;
-	spoilerBg: color;
-	spoilerActiveBg: color;
-	spoilerActiveFg: color;
 }
 
 TextStyle {
@@ -42,14 +41,13 @@ lineWidth: 1px;
 defaultTextPalette: TextPalette {
 	linkFg: windowActiveTextFg;
 	monoFg: msgInMonoFg;
+	spoilerFg: msgInDateFg;
 	selectBg: msgInBgSelected;
 	selectFg: transparent; // use painter current pen instead
 	selectLinkFg: historyLinkInFgSelected;
 	selectMonoFg: msgInMonoFgSelected;
+	selectSpoilerFg: msgInDateFgSelected;
 	selectOverlay: msgSelectOverlay;
-	spoilerBg: msgInDateFg;
-	spoilerActiveBg: msgInDateFg;
-	spoilerActiveFg: msgInBg;
 }
 defaultTextStyle: TextStyle {
 	font: normalFont;
@@ -126,10 +124,12 @@ msgDateTextStyle: defaultTextStyle;
 serviceTextPalette: TextPalette(defaultTextPalette) {
 	linkFg: msgServiceFg;
 	monoFg: msgServiceFg;
+	spoilerFg: msgServiceFg;
 	selectBg: msgServiceBgSelected;
 	selectFg: msgServiceFg;
 	selectLinkFg: msgServiceFg;
 	selectMonoFg: msgServiceFg;
+	selectSpoilerFg: msgServiceFg;
 	selectOverlay: msgServiceBgSelected;
 }
 serviceTextStyle: TextStyle(defaultTextStyle) {
@@ -140,34 +140,34 @@ serviceTextStyle: TextStyle(defaultTextStyle) {
 inTextPalette: TextPalette(defaultTextPalette) {
 	linkFg: historyLinkInFg;
 	monoFg: msgInMonoFg;
+	spoilerFg: msgInDateFg;
 	selectBg: msgInBgSelected;
 	selectFg: historyTextInFgSelected;
 	selectLinkFg: historyLinkInFgSelected;
 	selectMonoFg: msgInMonoFgSelected;
+	selectSpoilerFg: msgInDateFgSelected;
 	selectOverlay: msgSelectOverlay;
-	spoilerBg: msgInDateFg;
-	spoilerActiveBg: msgInDateFg;
-	spoilerActiveFg: msgInBg;
 }
 inTextPaletteSelected: TextPalette(inTextPalette) {
 	linkFg: historyLinkInFgSelected;
 	monoFg: msgInMonoFgSelected;
+	spoilerFg: msgInDateFgSelected;
 }
 outTextPalette: TextPalette(defaultTextPalette) {
 	linkFg: historyLinkOutFg;
 	monoFg: msgOutMonoFg;
+	spoilerFg: msgOutDateFg;
 	selectBg: msgOutBgSelected;
 	selectFg: historyTextOutFgSelected;
 	selectLinkFg: historyLinkOutFgSelected;
 	selectMonoFg: msgOutMonoFgSelected;
+	selectSpoilerFg: msgOutDateFgSelected;
 	selectOverlay: msgSelectOverlay;
-	spoilerBg: msgOutDateFg;
-	spoilerActiveBg: msgOutDateFg;
-	spoilerActiveFg: msgOutBg;
 }
 outTextPaletteSelected: TextPalette(outTextPalette) {
 	linkFg: historyLinkOutFgSelected;
 	monoFg: msgOutMonoFgSelected;
+	spoilerFg: msgOutDateFgSelected;
 }
 fwdTextStyle: TextStyle(semiboldTextStyle) {
 	linkFontOver: semiboldFont;

@@ -765,7 +765,7 @@ QTextCharFormat PrepareTagFormat(
 			color = st::defaultTextPalette.monoFg;
 			font = font->monospace();
 		} else if (tag == kTagSpoiler) {
-			bg = st::defaultTextPalette.spoilerActiveBg;
+			bg = st::msgInDateFg;
 		}
 	};
 	for (const auto &tag : TextUtilities::SplitTags(tag)) {
@@ -1426,7 +1426,7 @@ void CustomEmojiObject::drawObject(
 		return;
 	}
 	i->second->paint(*painter, {
-		.preview = st::defaultTextPalette.spoilerActiveBg->c,
+		.preview = st::windowBgRipple->c,
 		.now = _now,
 		.position = QPoint(
 			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,

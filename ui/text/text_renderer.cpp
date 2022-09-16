@@ -757,7 +757,7 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 						}
 					}
 				}
-				const auto hasSpoiler = _background.color &&
+				const auto hasSpoiler = _background.spoiler &&
 					(_background.inFront || _background.startMs);
 				if (hasSpoiler) {
 					fillSpoiler = { x, si.width };
@@ -789,7 +789,7 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
 						}
 						custom->paint(*_p, {
-							.preview = _palette->spoilerActiveBg->c,
+							.preview = _palette->spoilerFg->c,
 							.now = now(),
 							.position = { x + _customEmojiSkip, y + _customEmojiSkip },
 							.paused = _paused,
@@ -1072,7 +1072,7 @@ void Renderer::fillSpoilerRange(
 		int currentBlockIndex,
 		int positionFrom,
 		int positionTill) {
-	if (!_background.color || !_t->_spoiler) {
+	if (!_background.spoiler || !_t->_spoiler) {
 		return;
 	}
 	const auto elided = (_indexOfElidedBlock == currentBlockIndex)
@@ -1089,7 +1089,7 @@ void Renderer::fillSpoilerRange(
 		useWidth,
 		_fontHeight);
 	if (_spoilerCache) {
-		const auto mess = _spoilerCache->lookup((*_background.color)->c);
+		const auto mess = _spoilerCache->lookup((*_background.spoiler)->c);
 		const auto spoiler = _t->_spoiler.get();
 		const auto frame = mess->frame(
 			spoiler->animation.index(now(), _paused));
@@ -1920,9 +1920,8 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 				= _t->_spoiler->links.at(block->spoilerIndex() - 1);
 			const auto inBack = (handler && handler->shown());
 			_background.inFront = !inBack;
-			_background.color = inBack
-				? &_palette->spoilerActiveBg
-				: &_palette->spoilerBg;
+			_background.spoiler = &_palette->spoilerFg;
+			_background.spoilerSelected = &_palette->selectSpoilerFg;
 			_background.startMs = handler ? handler->startMs() : 0;
 			_background.spoilerIndex = block->spoilerIndex();
 		}

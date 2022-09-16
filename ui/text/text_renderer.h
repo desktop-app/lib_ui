@@ -100,7 +100,8 @@ private:
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
 	struct {
-		const style::color *color = nullptr;
+		const style::color *spoiler = nullptr;
+		const style::color *spoilerSelected = nullptr;
 		bool inFront = false;
 		crl::time startMs = 0;
 		uint16 spoilerIndex = 0;
