@@ -16,7 +16,10 @@
 #include <any>
 
 class Painter;
-class SpoilerClickHandler;
+
+namespace anim {
+enum class type : uchar;
+} // namespace anim
 
 namespace style {
 struct TextPalette;
@@ -162,13 +165,12 @@ public:
 	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = kDefaultTextOptions);
 	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = kMarkupTextOptions, const std::any &context = {});
 
-	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
 	[[nodiscard]] bool hasLinks() const;
-	void setSpoiler(
-		uint16 lnkIndex,
-		const std::shared_ptr<SpoilerClickHandler> &lnk);
-	void setSpoilerShown(uint16 lnkIndex, bool shown);
-	[[nodiscard]] int spoilersCount() const;
+	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
+
+	[[nodiscard]] bool hasSpoilers() const;
+	void setSpoilerRevealed(bool revealed, anim::type animated);
+	void setSpoilerLink(const ClickHandlerPtr &lnk);
 
 	[[nodiscard]] bool hasSkipBlock() const;
 	bool updateSkipBlock(int width, int height);
@@ -253,8 +255,6 @@ private:
 	// clear() deletes all blocks and calls this method
 	// it is also called from move constructor / assignment operator
 	void clearFields();
-
-	[[nodiscard]] ClickHandlerPtr spoilerLink(uint16 spoilerIndex) const;
 
 	TextForMimeData toText(
 		TextSelection selection,

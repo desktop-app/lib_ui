@@ -7,7 +7,6 @@
 #include "ui/text/text_renderer.h"
 
 #include "ui/text/text_spoiler_data.h"
-#include "ui/spoiler_click_handler.h"
 #include "styles/style_basic.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -200,6 +199,10 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_align = context.align;
 	_cachedNow = context.now;
 	_paused = context.paused;
+	_spoilerOpacity = _t->_spoiler
+		? (1. - _t->_spoiler->revealAnimation.value(
+			_t->_spoiler->revealed ? 1. : 0.))
+		: 0.;
 	enumerate();
 }
 
@@ -720,12 +723,8 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 			if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
 				if (_lookupLink) {
 					if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
-						const auto spoilerLink = _t->spoilerLink(currentBlock->spoilerIndex());
-						const auto resultLink = (spoilerLink || !currentBlock->lnkIndex())
-							? spoilerLink
-							: _t->_links.at(currentBlock->lnkIndex() - 1);
-						if (resultLink) {
-							_lookupResult.link = resultLink;
+						if (const auto link = lookupLink(currentBlock)) {
+							_lookupResult.link = link;
 						}
 					}
 				}
@@ -802,19 +801,16 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 						}
 					}
 				}
-				const auto hasSpoiler = _background.inFront
-					|| _background.startMs;
+				const auto hasSpoiler = _background.spoiler
+					&& (_spoilerOpacity > 0.);
 				if (hasSpoiler) {
 					fillSpoiler = { x, x + si.width };
 				}
-				const auto spoilerOpacity = hasSpoiler
-					? fillSpoilerOpacity()
-					: 0.;
 				fillSelectRange(fillSelect);
 				const auto opacity = _p->opacity();
-				if (spoilerOpacity < 1.) {
+				if (!hasSpoiler || _spoilerOpacity < 1.) {
 					if (hasSpoiler) {
-						_p->setOpacity(opacity * (1. - spoilerOpacity));
+						_p->setOpacity(opacity * (1. - _spoilerOpacity));
 					}
 					const auto x = (glyphX + st::emojiPadding).toInt();
 					const auto y = _y + _yDelta + emojiY;
@@ -872,12 +868,8 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 		if (!_p && _lookupX >= x && _lookupX < x + itemWidth) { // _lookupRequest
 			if (_lookupLink) {
 				if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
-					const auto spoilerLink = _t->spoilerLink(currentBlock->spoilerIndex());
-					const auto resultLink = (spoilerLink || !currentBlock->lnkIndex())
-						? spoilerLink
-						: _t->_links.at(currentBlock->lnkIndex() - 1);
-					if (resultLink) {
-						_lookupResult.link = resultLink;
+					if (const auto link = lookupLink(currentBlock)) {
+						_lookupResult.link = link;
 					}
 				}
 			}
@@ -987,17 +979,15 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 				fillSelect = { selX, selX + selWidth };
 				fillSelectRange(fillSelect);
 			}
-			const auto hasSpoiler = (_background.inFront || _background.startMs);
-			const auto spoilerOpacity = hasSpoiler
-				? fillSpoilerOpacity()
-				: 0.;
+			const auto hasSpoiler = _background.spoiler
+				&& (_spoilerOpacity > 0.);
 			const auto opacity = _p->opacity();
 			const auto isElidedBlock = !rtl
 				&& (_indexOfElidedBlock == blockIndex);
 			const auto complexClipping = hasSpoiler
 				&& isElidedBlock
-				&& spoilerOpacity == 1.;
-			if ((spoilerOpacity < 1.) || isElidedBlock) {
+				&& (_spoilerOpacity == 1.);
+			if (!hasSpoiler || (_spoilerOpacity < 1.) || isElidedBlock) {
 				const auto complexClippingEnabled = complexClipping
 					&& _p->hasClipping();
 				const auto complexClippingRegion = complexClipping
@@ -1015,7 +1005,7 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 							_y + 2 * _lineHeight),
 						Qt::IntersectClip);
 				} else if (hasSpoiler && !isElidedBlock) {
-					_p->setOpacity(opacity * (1. - spoilerOpacity));
+					_p->setOpacity(opacity * (1. - _spoilerOpacity));
 				}
 				if (Q_UNLIKELY(hasSelected)) {
 					if (Q_UNLIKELY(hasNotSelected)) {
@@ -1091,22 +1081,6 @@ void Renderer::fillSelectRange(FixedRange range) {
 	_p->fillRect(left, _y + _yDelta, width, _fontHeight, _palette->selectBg);
 }
 
-float64 Renderer::fillSpoilerOpacity() {
-	if (!_background.startMs) {
-		return 1.;
-	}
-	const auto progress = float64(now() - _background.startMs)
-		/ st::fadeWrapDuration;
-	if ((progress > 1.) && _background.spoilerIndex && _t->_spoiler) {
-		const auto link = _t->_spoiler->links.at(
-			_background.spoilerIndex - 1);
-		if (link) {
-			link->setStartMs(0);
-		}
-	}
-	return (1. - std::min(progress, 1.));
-}
-
 void Renderer::pushSpoilerRange(
 		FixedRange range,
 		FixedRange selected,
@@ -1159,8 +1133,14 @@ void Renderer::fillSpoilerRects(
 }
 
 void Renderer::paintSpoilerRects() {
+	Expects(_p != nullptr);
+
 	if (!_t->_spoiler) {
 		return;
+	}
+	const auto opacity = _p->opacity();
+	if (_spoilerOpacity < 1.) {
+		_p->setOpacity(opacity * _spoilerOpacity);
 	}
 	const auto index = _t->_spoiler->animation.index(now(), _paused);
 	paintSpoilerRects(
@@ -1171,6 +1151,9 @@ void Renderer::paintSpoilerRects() {
 		_spoilerSelectedRects,
 		_palette->selectSpoilerFg,
 		index);
+	if (_spoilerOpacity < 1.) {
+		_p->setOpacity(opacity);
+	}
 }
 
 void Renderer::paintSpoilerRects(
@@ -2009,15 +1992,11 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 		const auto isMono = IsMono(block->flags());
 		_background = {};
 		if (block->spoilerIndex() && _t->_spoiler) {
-			const auto handler
-				= _t->_spoiler->links.at(block->spoilerIndex() - 1);
-			const auto inBack = (handler && handler->shown());
-			_background.inFront = !inBack;
 			_background.spoiler = true;
-			_background.startMs = handler ? handler->startMs() : 0;
-			_background.spoilerIndex = block->spoilerIndex();
 		}
-		if (isMono && block->lnkIndex() && !_background.inFront) {
+		if (isMono
+			&& block->lnkIndex()
+			&& (!_background.spoiler || _t->_spoiler->revealed)) {
 			_background.selectActiveBlock = ClickHandler::showAsPressed(
 				_t->_links.at(block->lnkIndex() - 1));
 		}
@@ -2034,6 +2013,17 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 			_currentPenSelected = &_originalPenSelected;
 		}
 	}
+}
+
+ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
+	const auto spoilerLink = (_t->_spoiler
+		&& !_t->_spoiler->revealed
+		&& block->spoilerIndex())
+		? _t->_spoiler->link
+		: ClickHandlerPtr();
+	return (spoilerLink || !block->lnkIndex())
+		? spoilerLink
+		: _t->_links.at(block->lnkIndex() - 1);
 }
 
 } // namespace Ui::Text

@@ -59,7 +59,6 @@ private:
 		const String::TextBlocks::const_iterator &_endBlockIter,
 		const String::TextBlocks::const_iterator &_end);
 	void fillSelectRange(FixedRange range);
-	[[nodiscard]] float64 fillSpoilerOpacity();
 	void pushSpoilerRange(
 		FixedRange range,
 		FixedRange selected,
@@ -108,6 +107,8 @@ private:
 	bool eBidiItemize(QScriptAnalysis *analysis, BidiControl &control);
 
 	void applyBlockProperties(const AbstractBlock *block);
+	[[nodiscard]] ClickHandlerPtr lookupLink(
+		const AbstractBlock *block) const;
 
 	const String *_t = nullptr;
 	SpoilerMessCache *_spoilerCache = nullptr;
@@ -123,11 +124,7 @@ private:
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
 	struct {
-		bool inFront = false;
-		bool spoiler = true;
-		crl::time startMs = 0;
-		uint16 spoilerIndex = 0;
-
+		bool spoiler = false;
 		bool selectActiveBlock = false; // For monospace.
 	} _background;
 	int _yFrom = 0;
@@ -137,6 +134,7 @@ private:
 	bool _fullWidthSelection = true;
 	const QChar *_str = nullptr;
 	mutable crl::time _cachedNow = 0;
+	float64 _spoilerOpacity = 0.;
 	QVarLengthArray<FixedRange> _spoilerRanges;
 	QVarLengthArray<FixedRange> _spoilerSelectedRanges;
 	QVarLengthArray<QRect, kSpoilersRectsSize> _spoilerRects;

@@ -10,7 +10,6 @@
 #include "ui/integration.h"
 #include "ui/text/text_isolated_emoji.h"
 #include "ui/text/text_spoiler_data.h"
-#include "ui/spoiler_click_handler.h"
 #include "styles/style_basic.h"
 
 #include <QtCore/QUrl>
@@ -634,18 +633,10 @@ void Parser::finalize(const TextParseOptions &options) {
 				_t->_isIsolatedEmoji = false;
 			}
 		}
-		const auto spoilerIndex = block->spoilerIndex();
-		if (spoilerIndex) {
+		if (block->spoilerIndex()) {
 			if (!_t->_spoiler) {
 				_t->_spoiler = std::make_unique<SpoilerData>(
 					Integration::Instance().createSpoilerRepaint(_context));
-			}
-			if (_t->_spoiler->links.size() < spoilerIndex) {
-				_t->_spoiler->links.resize(spoilerIndex);
-				const auto handler = (options.flags & TextParseLinks)
-					? std::make_shared<SpoilerClickHandler>()
-					: nullptr;
-				_t->setSpoiler(spoilerIndex, std::move(handler));
 			}
 		}
 		const auto shiftedIndex = block->lnkIndex();
@@ -712,9 +703,6 @@ void Parser::finalize(const TextParseOptions &options) {
 		_t->_isIsolatedEmoji = false;
 	}
 	_t->_links.squeeze();
-	if (_t->_spoiler) {
-		_t->_spoiler->links.squeeze();
-	}
 	_t->_blocks.shrink_to_fit();
 	_t->_text.squeeze();
 }

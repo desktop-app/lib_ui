@@ -96,7 +96,9 @@ public:
 	explicit SpoilerAnimation(Fn<void()> repaint);
 	~SpoilerAnimation();
 
-	int index(crl::time now, bool paused);
+	[[nodiscard]] int index(crl::time now, bool paused);
+
+	[[nodiscard]] Fn<void()> repaintCallback() const;
 
 private:
 	friend class SpoilerAnimationManager;

@@ -775,6 +775,10 @@ int SpoilerAnimation::index(crl::time now, bool paused) {
 	return absolute % kDefaultFramesCount;
 }
 
+Fn<void()> SpoilerAnimation::repaintCallback() const {
+	return _repaint;
+}
+
 bool SpoilerAnimation::repaint(crl::time now) {
 	if (!_scheduled) {
 		_scheduled = true;

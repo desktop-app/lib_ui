@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/effects/spoiler_mess.h"
+#include "ui/effects/animations.h"
 
 class SpoilerClickHandler;
 
@@ -18,7 +19,9 @@ struct SpoilerData {
 	}
 
 	SpoilerAnimation animation;
-	QVector<std::shared_ptr<SpoilerClickHandler>> links;
+	ClickHandlerPtr link;
+	Animations::Simple revealAnimation;
+	bool revealed = false;
 };
 
 } // namespace Ui::Text

@@ -12,7 +12,6 @@
 #include "ui/text/text_spoiler_data.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/painter.h"
-#include "ui/spoiler_click_handler.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/style_basic.h"
 
@@ -318,31 +317,40 @@ void String::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {
 	_links[lnkIndex - 1] = lnk;
 }
 
-void String::setSpoiler(
-		uint16 lnkIndex,
-		const std::shared_ptr<SpoilerClickHandler> &lnk) {
-	if (!lnkIndex || !_spoiler || lnkIndex > _spoiler->links.size()) {
+void String::setSpoilerRevealed(bool revealed, anim::type animated) {
+	if (!_spoiler) {
+		return;
+	} else if (_spoiler->revealed == revealed) {
+		if (animated == anim::type::instant
+			&& _spoiler->revealAnimation.animating()) {
+			_spoiler->revealAnimation.stop();
+			_spoiler->animation.repaintCallback()();
+		}
 		return;
 	}
-	_spoiler->links[lnkIndex - 1] = lnk;
+	_spoiler->revealed = revealed;
+	if (animated == anim::type::instant) {
+		_spoiler->revealAnimation.stop();
+		_spoiler->animation.repaintCallback()();
+	} else {
+		_spoiler->revealAnimation.start(
+			_spoiler->animation.repaintCallback(),
+			revealed ? 0. : 1.,
+			revealed ? 1. : 0.,
+			st::fadeWrapDuration);
+	}
 }
 
-void String::setSpoilerShown(uint16 lnkIndex, bool shown) {
-	if (!lnkIndex
-		|| !_spoiler
-		|| (lnkIndex > _spoiler->links.size())
-		|| !_spoiler->links[lnkIndex - 1]) {
-		return;
-	}
-	_spoiler->links[lnkIndex - 1]->setShown(shown);
+void String::setSpoilerLink(const ClickHandlerPtr &lnk) {
+	_spoiler->link = lnk;
 }
 
 bool String::hasLinks() const {
 	return !_links.isEmpty();
 }
 
-int String::spoilersCount() const {
-	return !_spoiler ? 0 : int(_spoiler->links.size());
+bool String::hasSpoilers() const {
+	return (_spoiler != nullptr);
 }
 
 bool String::hasSkipBlock() const {
@@ -752,9 +760,11 @@ void String::enumerateText(
 				if (rangeTo > rangeFrom) { // handle click handler
 					const auto r = base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom);
 					// Ignore links that are partially copied.
-					const auto handler = (spoilerFrom != rangeFrom || blockFrom != rangeTo || !_spoiler)
+					const auto handler = (spoilerFrom != rangeFrom
+						|| blockFrom != rangeTo
+						|| !_spoiler)
 						? nullptr
-						: _spoiler->links.at(spoilerIndex - 1);
+						: _spoiler->link;
 					const auto type = EntityType::Spoiler;
 					clickHandlerFinishCallback(r, handler, type);
 				}
@@ -1038,14 +1048,6 @@ void String::clearFields() {
 	_spoiler = nullptr;
 	_maxWidth = _minHeight = 0;
 	_startDir = Qt::LayoutDirectionAuto;
-}
-
-ClickHandlerPtr String::spoilerLink(uint16 spoilerIndex) const {
-	if (spoilerIndex && _spoiler) {
-		const auto &handler = _spoiler->links.at(spoilerIndex - 1);
-		return (handler && !handler->shown()) ? handler : nullptr;
-	}
-	return nullptr;
 }
 
 bool IsBad(QChar ch) {
