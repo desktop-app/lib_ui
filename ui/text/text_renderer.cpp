@@ -61,8 +61,31 @@ void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
 		ti.flags |= QTextItem::StrikeOut;
 }
 
-} // namespace
+void AppendRange(
+		QVarLengthArray<FixedRange> &ranges,
+		FixedRange range) {
+	for (auto i = ranges.begin(); i != ranges.end(); ++i) {
+		if (range.till < i->from) {
+			ranges.insert(i, range);
+			return;
+		} else if (!Distinct(range, *i)) {
+			*i = United(*i, range);
+			for (auto j = i + 1; j != ranges.end(); ++j) {
+				if (j->from > i->till) {
+					ranges.erase(i + 1, j);
+					return;
+				} else {
+					*i = United(*i, *j);
+				}
+			}
+			ranges.erase(i + 1, ranges.end());
+			return;
+		}
+	}
+	ranges.push_back(range);
+}
 
+} // namespace
 
 struct Renderer::BidiControl {
 	inline BidiControl(bool rtl)
@@ -108,6 +131,28 @@ struct Renderer::BidiControl {
 	unsigned int level;
 	bool override = false;
 };
+
+FixedRange Intersected(FixedRange a, FixedRange b) {
+	return {
+		.from = std::max(a.from, b.from),
+		.till = std::min(a.till, b.till),
+	};
+}
+
+bool Intersects(FixedRange a, FixedRange b) {
+	return (a.till > b.from) && (b.till > a.from);
+}
+
+FixedRange United(FixedRange a, FixedRange b) {
+	return {
+		.from = std::min(a.from, b.from),
+		.till = std::max(a.till, b.till),
+	};
+}
+
+bool Distinct(FixedRange a, FixedRange b) {
+	return (a.till < b.from) || (b.till < a.from);
+}
 
 Renderer::Renderer(const Ui::Text::String &t)
 : _t(&t) {
@@ -193,6 +238,12 @@ void Renderer::enumerate() {
 	_fontHeight = _t->_st->font->height;
 	auto last_rBearing = QFixed(0);
 	_last_rPadding = QFixed(0);
+
+	const auto guard = gsl::finally([&] {
+		if (_p) {
+			paintSpoilerRects();
+		}
+	});
 
 	auto blockIndex = 0;
 	bool longWordLine = true;
@@ -572,13 +623,13 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 		if ((selectFromStart && _parDirection == Qt::LeftToRight)
 			|| (selectTillEnd && _parDirection == Qt::RightToLeft)) {
 			if (x > _x) {
-				fillSelectRange(_x, x);
+				fillSelectRange({ _x, x });
 			}
 		}
 		if ((selectTillEnd && _parDirection == Qt::LeftToRight)
 			|| (selectFromStart && _parDirection == Qt::RightToLeft)) {
 			if (x < _x + _wLeft) {
-				fillSelectRange(x + _w - _wLeft, _x + _w);
+				fillSelectRange({ x + _w - _wLeft, _x + _w });
 			}
 		}
 	}
@@ -730,14 +781,8 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 				if (rtl) {
 					glyphX += spacesWidth;
 				}
-				struct {
-					QFixed from;
-					QFixed to;
-				} fillSelect;
-				struct {
-					QFixed from;
-					QFixed width;
-				} fillSpoiler;
+				FixedRange fillSelect;
+				FixedRange fillSpoiler;
 				if (_background.selectActiveBlock) {
 					fillSelect = { x, x + si.width };
 				} else if (_localFrom + si.position < _selection.to) {
@@ -757,18 +802,15 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 						}
 					}
 				}
-				const auto hasSpoiler = _background.spoiler &&
-					(_background.inFront || _background.startMs);
+				const auto hasSpoiler = _background.inFront
+					|| _background.startMs;
 				if (hasSpoiler) {
-					fillSpoiler = { x, si.width };
+					fillSpoiler = { x, x + si.width };
 				}
 				const auto spoilerOpacity = hasSpoiler
 					? fillSpoilerOpacity()
 					: 0.;
-				const auto hasSelect = fillSelect.to != QFixed();
-				if (hasSelect) {
-					fillSelectRange(fillSelect.from, fillSelect.to);
-				}
+				fillSelectRange(fillSelect);
 				const auto opacity = _p->opacity();
 				if (spoilerOpacity < 1.) {
 					if (hasSpoiler) {
@@ -795,16 +837,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 							.paused = _paused,
 						});
 					}
+					if (hasSpoiler) {
+						_p->setOpacity(opacity);
+					}
 				}
 				if (hasSpoiler) {
-					_p->setOpacity(opacity * spoilerOpacity);
-					fillSpoilerRange(
-						fillSpoiler.from,
-						fillSpoiler.width,
-						blockIndex,
-						currentBlock->from(),
-						(nextBlock ? nextBlock->from() : _t->_text.size()));
-					_p->setOpacity(opacity);
+					pushSpoilerRange(fillSpoiler, fillSelect, blockIndex);
 				}
 			//} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
 			//	_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
@@ -896,11 +934,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 			gf.justified = false;
 			InitTextItemWithScriptItem(gf, si);
 
+			auto itemRange = FixedRange{ x, x + itemWidth };
+			auto fillSelect = FixedRange();
 			auto hasSelected = false;
 			auto hasNotSelected = true;
 			auto selectedRect = QRect();
 			if (_background.selectActiveBlock) {
-				fillSelectRange(x, x + itemWidth);
+				fillSelect = itemRange;
+				fillSelectRange(fillSelect);
 			} else if (_localFrom + itemStart < _selection.to && _localFrom + itemEnd > _selection.from) {
 				hasSelected = true;
 				auto selX = x;
@@ -943,7 +984,8 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 				}
 				if (rtl) selX = x + itemWidth - (selX - x) - selWidth;
 				selectedRect = QRect(selX.toInt(), _y + _yDelta, (selX + selWidth).toInt() - selX.toInt(), _fontHeight);
-				fillSelectRange(selX, selX + selWidth);
+				fillSelect = { selX, selX + selWidth };
+				fillSelectRange(fillSelect);
 			}
 			const auto hasSpoiler = (_background.inFront || _background.startMs);
 			const auto spoilerOpacity = hasSpoiler
@@ -1024,29 +1066,28 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 					} else {
 						_p->setClipping(false);
 					}
+				} else if (hasSpoiler && !isElidedBlock) {
+					_p->setOpacity(opacity);
 				}
 			}
 
 			if (hasSpoiler) {
-				_p->setOpacity(opacity * spoilerOpacity);
-				fillSpoilerRange(
-					x,
-					itemWidth,
-					blockIndex,
-					_localFrom + itemStart,
-					_localFrom + itemEnd);
-				_p->setOpacity(opacity);
+				pushSpoilerRange(itemRange, fillSelect, blockIndex);
 			}
 		}
 
 		x += itemWidth;
 	}
+	fillSpoilerRects();
 	return true;
 }
 
-void Renderer::fillSelectRange(QFixed from, QFixed to) {
-	auto left = from.toInt();
-	auto width = to.toInt() - left;
+void Renderer::fillSelectRange(FixedRange range) {
+	if (range.empty()) {
+		return;
+	}
+	const auto left = range.from.toInt();
+	const auto width = range.till.toInt() - left;
 	_p->fillRect(left, _y + _yDelta, width, _fontHeight, _palette->selectBg);
 }
 
@@ -1066,37 +1107,89 @@ float64 Renderer::fillSpoilerOpacity() {
 	return (1. - std::min(progress, 1.));
 }
 
-void Renderer::fillSpoilerRange(
-		QFixed x,
-		QFixed width,
-		int currentBlockIndex,
-		int positionFrom,
-		int positionTill) {
+void Renderer::pushSpoilerRange(
+		FixedRange range,
+		FixedRange selected,
+		int currentBlockIndex) {
 	if (!_background.spoiler || !_t->_spoiler) {
 		return;
 	}
 	const auto elided = (_indexOfElidedBlock == currentBlockIndex)
 		? (_elideRemoveFromEnd + _f->elidew)
 		: 0;
-	const auto left = x.toInt();
-	const auto useWidth = ((x + width).toInt() - left) - elided;
-	if (useWidth <= 0) {
+	range.till -= elided;
+	if (range.empty()) {
+		return;
+	} else if (selected.empty() || !Intersects(range, selected)) {
+		AppendRange(_spoilerRanges, range);
+	} else {
+		AppendRange(_spoilerRanges, { range.from, selected.from });
+		AppendRange(_spoilerSelectedRanges, Intersected(range, selected));
+		AppendRange(_spoilerRanges, { selected.till, range.till });
+	}
+}
+
+void Renderer::fillSpoilerRects() {
+	fillSpoilerRects(_spoilerRects, _spoilerRanges);
+	fillSpoilerRects(_spoilerSelectedRects, _spoilerSelectedRanges);
+}
+
+void Renderer::fillSpoilerRects(
+		QVarLengthArray<QRect, kSpoilersRectsSize> &rects,
+		QVarLengthArray<FixedRange> &ranges) {
+	if (ranges.empty()) {
 		return;
 	}
-	const auto rect = QRect(
-		left,
-		_y + _yDelta,
-		useWidth,
-		_fontHeight);
+	auto lastTill = ranges.front().from.toInt() - 1;
+	const auto y = _y + _yDelta;
+	for (const auto &range : ranges) {
+		auto from = range.from.toInt();
+		auto till = range.till.toInt();
+		if (from <= lastTill) {
+			auto &last = rects.back();
+			from = std::min(from, last.x());
+			till = std::max(till, last.x() + last.width());
+			last = { from, y, till - from, _fontHeight };
+		} else {
+			rects.push_back({ from, y, till - from, _fontHeight });
+		}
+		lastTill = till;
+	}
+	ranges.clear();
+}
+
+void Renderer::paintSpoilerRects() {
+	if (!_t->_spoiler) {
+		return;
+	}
+	const auto index = _t->_spoiler->animation.index(now(), _paused);
+	paintSpoilerRects(
+		_spoilerRects,
+		_palette->spoilerFg,
+		index);
+	paintSpoilerRects(
+		_spoilerSelectedRects,
+		_palette->selectSpoilerFg,
+		index);
+}
+
+void Renderer::paintSpoilerRects(
+		const QVarLengthArray<QRect, kSpoilersRectsSize> &rects,
+		const style::color &color,
+		int index) {
+	if (rects.empty()) {
+		return;
+	}
+	const auto frame = _spoilerCache->lookup(color->c)->frame(index);
 	if (_spoilerCache) {
-		const auto mess = _spoilerCache->lookup((*_background.spoiler)->c);
-		const auto spoiler = _t->_spoiler.get();
-		const auto frame = mess->frame(
-			spoiler->animation.index(now(), _paused));
-		Ui::FillSpoilerRect(*_p, rect, frame, -rect.topLeft());
+		for (const auto &rect : rects) {
+			Ui::FillSpoilerRect(*_p, rect, frame, -rect.topLeft());
+		}
 	} else {
 		// Show forgotten spoiler context part.
-		_p->fillRect(rect, Qt::red);
+		for (const auto &rect : rects) {
+			_p->fillRect(rect, Qt::red);
+		}
 	}
 }
 
@@ -1920,8 +2013,7 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 				= _t->_spoiler->links.at(block->spoilerIndex() - 1);
 			const auto inBack = (handler && handler->shown());
 			_background.inFront = !inBack;
-			_background.spoiler = &_palette->spoilerFg;
-			_background.spoilerSelected = &_palette->selectSpoilerFg;
+			_background.spoiler = true;
 			_background.startMs = handler ? handler->startMs() : 0;
 			_background.spoilerIndex = block->spoilerIndex();
 		}

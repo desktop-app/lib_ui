@@ -95,24 +95,13 @@ SpoilerMessCache::SpoilerMessCache(int capacity) : _capacity(capacity) {
 not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
 	for (auto &entry : _cache) {
 		if (entry.color == color) {
-			entry.generation = ++_generation;
 			return &entry.mess;
 		}
 	}
-	if (_cache.size() == _capacity) {
-		const auto i = ranges::min_element(
-			_cache,
-			ranges::less(),
-			&Entry::generation);
-		i->generation = ++_generation;
-		i->color = color;
-		i->mess = Ui::SpoilerMessCached(DefaultTextSpoilerMask(), color);
-		return &i->mess;
-	}
+	Assert(_cache.size() < _capacity);
 	_cache.push_back({
 		.mess = Ui::SpoilerMessCached(DefaultTextSpoilerMask(), color),
 		.color = color,
-		.generation = ++_generation,
 	});
 	return &_cache.back().mess;
 }

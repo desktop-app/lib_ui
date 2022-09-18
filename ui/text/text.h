@@ -115,12 +115,10 @@ private:
 	struct Entry {
 		SpoilerMessCached mess;
 		QColor color;
-		int generation = 0;
 	};
 
 	std::vector<Entry> _cache;
 	const int _capacity = 0;
-	int _generation = 0;
 
 };
 

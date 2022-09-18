@@ -15,6 +15,20 @@ struct QScriptLine;
 
 namespace Ui::Text {
 
+struct FixedRange {
+	QFixed from;
+	QFixed till;
+
+	[[nodiscard]] bool empty() const {
+		return (till <= from);
+	}
+};
+
+[[nodiscard]] FixedRange Intersected(FixedRange a, FixedRange b);
+[[nodiscard]] bool Intersects(FixedRange a, FixedRange b);
+[[nodiscard]] FixedRange United(FixedRange a, FixedRange b);
+[[nodiscard]] bool Distinct(FixedRange a, FixedRange b);
+
 class Renderer final {
 public:
 	explicit Renderer(const Ui::Text::String &t);
@@ -31,6 +45,8 @@ public:
 		StateRequestElided request);
 
 private:
+	static constexpr int kSpoilersRectsSize = 512;
+
 	struct BidiControl;
 
 	void enumerate();
@@ -42,14 +58,21 @@ private:
 		uint16 _lineEnd,
 		const String::TextBlocks::const_iterator &_endBlockIter,
 		const String::TextBlocks::const_iterator &_end);
-	void fillSelectRange(QFixed from, QFixed to);
+	void fillSelectRange(FixedRange range);
 	[[nodiscard]] float64 fillSpoilerOpacity();
-	void fillSpoilerRange(
-		QFixed x,
-		QFixed width,
-		int currentBlockIndex,
-		int positionFrom,
-		int positionTill);
+	void pushSpoilerRange(
+		FixedRange range,
+		FixedRange selected,
+		int currentBlockIndex);
+	void fillSpoilerRects();
+	void fillSpoilerRects(
+		QVarLengthArray<QRect, kSpoilersRectsSize> &rects,
+		QVarLengthArray<FixedRange> &ranges);
+	void paintSpoilerRects();
+	void paintSpoilerRects(
+		const QVarLengthArray<QRect, kSpoilersRectsSize> &rects,
+		const style::color &color,
+		int index);
 	void elideSaveBlock(
 		int32 blockIndex,
 		const AbstractBlock *&_endBlock,
@@ -100,9 +123,8 @@ private:
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
 	struct {
-		const style::color *spoiler = nullptr;
-		const style::color *spoilerSelected = nullptr;
 		bool inFront = false;
+		bool spoiler = true;
 		crl::time startMs = 0;
 		uint16 spoilerIndex = 0;
 
@@ -115,6 +137,10 @@ private:
 	bool _fullWidthSelection = true;
 	const QChar *_str = nullptr;
 	mutable crl::time _cachedNow = 0;
+	QVarLengthArray<FixedRange> _spoilerRanges;
+	QVarLengthArray<FixedRange> _spoilerSelectedRanges;
+	QVarLengthArray<QRect, kSpoilersRectsSize> _spoilerRects;
+	QVarLengthArray<QRect, kSpoilersRectsSize> _spoilerSelectedRects;
 
 	int _customEmojiSize = 0;
 	int _customEmojiSkip = 0;
@@ -122,7 +148,7 @@ private:
 
 	// current paragraph data
 	String::TextBlocks::const_iterator _parStartBlock;
-	Qt::LayoutDirection _parDirection;
+	Qt::LayoutDirection _parDirection = Qt::LayoutDirectionAuto;
 	int _parStart = 0;
 	int _parLength = 0;
 	bool _parHasBidi = false;
