@@ -45,6 +45,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	} else if (std::exchange(Window, widget.get())) {
 		return;
 	}
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	const auto focusAncestor = [&] {
 		const auto focusWidget = QApplication::focusWidget();
 		if (!focusWidget || !widget->window()) {
@@ -52,6 +53,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		}
 		return widget->window()->isAncestorOf(focusWidget);
 	}();
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 	crl::on_main(Window, [=] {
 		const auto widget = base::take(Window);
 		if (!widget) {
