@@ -98,6 +98,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 
 [[nodiscard]] QString ManualMonospaceFont() {
 	const auto kTryFirst = std::initializer_list<QString>{
+		"Cascadia Code",
 		"Consolas",
 		"Liberation Mono",
 		"Menlo",
@@ -259,15 +260,15 @@ QString MonospaceFont() {
 		const auto manual = ManualMonospaceFont();
 		const auto system = SystemMonospaceFont();
 
-#if defined Q_OS_WIN || defined Q_OS_MAC
+#ifdef Q_OS_WIN
 		// Prefer our monospace font.
 		const auto useSystem = manual.isEmpty();
-#else // Q_OS_WIN || Q_OS_MAC
+#else // Q_OS_WIN
 		// Prefer system monospace font.
 		const auto metrics = QFontMetrics(QFont(system));
 		const auto useSystem = manual.isEmpty()
 			|| (metrics.horizontalAdvance(QChar('i')) == metrics.horizontalAdvance(QChar('W')));
-#endif // Q_OS_WIN || Q_OS_MAC
+#endif // Q_OS_WIN
 		return useSystem ? system : manual;
 	}();
 
