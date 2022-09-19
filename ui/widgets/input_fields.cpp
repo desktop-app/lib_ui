@@ -976,6 +976,16 @@ protected:
 		return outer()->paintEventInner(e);
 	}
 
+	void mousePressEvent(QMouseEvent *e) override {
+		return outer()->mousePressEventInner(e);
+	}
+	void mouseReleaseEvent(QMouseEvent *e) override {
+		return outer()->mouseReleaseEventInner(e);
+	}
+	void mouseMoveEvent(QMouseEvent *e) override {
+		return outer()->mouseMoveEventInner(e);
+	}
+
 	bool canInsertFromMimeData(const QMimeData *source) const override {
 		return outer()->canInsertFromMimeDataInner(source);
 	}
@@ -1147,41 +1157,27 @@ bool FlatInput::eventHook(QEvent *e) {
 void FlatInput::touchEvent(QTouchEvent *e) {
 	switch (e->type()) {
 	case QEvent::TouchBegin: {
-		if (_touchPress || e->touchPoints().isEmpty()) return;
+		if (_touchPress || e->touchPoints().isEmpty()) {
+			return;
+		}
 		_touchTimer.start(QApplication::startDragTime());
 		_touchPress = true;
-		_touchMove = _touchRightButton = false;
+		_touchMove = _touchRightButton = _mousePressedInTouch = false;
 		_touchStart = e->touchPoints().cbegin()->screenPos().toPoint();
 	} break;
 
 	case QEvent::TouchUpdate: {
-		if (!_touchPress || e->touchPoints().isEmpty()) return;
-		if (!_touchMove && (e->touchPoints().cbegin()->screenPos().toPoint() - _touchStart).manhattanLength() >= QApplication::startDragDistance()) {
-			_touchMove = true;
+		if (!e->touchPoints().isEmpty()) {
+			touchUpdate(e->touchPoints().cbegin()->screenPos().toPoint());
 		}
 	} break;
 
 	case QEvent::TouchEnd: {
-		if (!_touchPress) return;
-		auto weak = MakeWeak(this);
-		if (!_touchMove && window()) {
-			QPoint mapped(mapFromGlobal(_touchStart));
-
-			if (_touchRightButton) {
-				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
-				contextMenuEvent(&contextEvent);
-			} else {
-				QGuiApplication::inputMethod()->show();
-			}
-		}
-		if (weak) {
-			_touchTimer.stop();
-			_touchPress = _touchMove = _touchRightButton = false;
-		}
+		touchFinish();
 	} break;
 
 	case QEvent::TouchCancel: {
-		_touchPress = false;
+		_touchPress = _mousePressedInTouch = false;
 		_touchTimer.stop();
 	} break;
 	}
@@ -1320,6 +1316,64 @@ void FlatInput::inputMethodEvent(QInputMethodEvent *e) {
 	if (_lastPreEditTextNotEmpty != lastPreEditTextNotEmpty) {
 		_lastPreEditTextNotEmpty = lastPreEditTextNotEmpty;
 		updatePlaceholder();
+	}
+}
+
+void FlatInput::mousePressEvent(QMouseEvent *e) {
+	if (_touchPress && e->button() == Qt::LeftButton) {
+		_mousePressedInTouch = true;
+		_touchStart = e->globalPos();
+	}
+	return QLineEdit::mousePressEvent(e);
+}
+
+void FlatInput::mouseReleaseEvent(QMouseEvent *e) {
+	if (_mousePressedInTouch) {
+		touchFinish();
+	}
+	return QLineEdit::mouseReleaseEvent(e);
+}
+
+void FlatInput::mouseMoveEvent(QMouseEvent *e) {
+	if (_mousePressedInTouch) {
+		touchUpdate(e->globalPos());
+	}
+	return QLineEdit::mouseMoveEvent(e);
+}
+
+void FlatInput::touchUpdate(QPoint globalPosition) {
+	if (_touchPress
+		&& !_touchMove
+		&& ((globalPosition - _touchStart).manhattanLength()
+			>= QApplication::startDragDistance())) {
+		_touchMove = true;
+	}
+}
+
+void FlatInput::touchFinish() {
+	if (!_touchPress) {
+		return;
+	}
+	const auto weak = MakeWeak(this);
+	if (!_touchMove && window()) {
+		QPoint mapped(mapFromGlobal(_touchStart));
+
+		if (_touchRightButton) {
+			QContextMenuEvent contextEvent(
+				QContextMenuEvent::Mouse,
+				mapped,
+				_touchStart);
+			contextMenuEvent(&contextEvent);
+		} else {
+			QGuiApplication::inputMethod()->show();
+		}
+	}
+	if (weak) {
+		_touchTimer.stop();
+		_touchPress
+			= _touchMove
+			= _touchRightButton
+			= _mousePressedInTouch = false;
 	}
 }
 
@@ -1572,6 +1626,7 @@ bool InputField::viewportEventInner(QEvent *e) {
 		const auto ev = static_cast<QTouchEvent*>(e);
 		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
 			handleTouchEvent(ev);
+			return false;
 		}
 	} else if (e->type() == QEvent::Paint && _customEmojiObject) {
 		_customEmojiObject->setNow(crl::now());
@@ -1846,7 +1901,9 @@ void InputField::checkContentHeight() {
 void InputField::handleTouchEvent(QTouchEvent *e) {
 	switch (e->type()) {
 	case QEvent::TouchBegin: {
-		if (_touchPress || e->touchPoints().isEmpty()) return;
+		if (_touchPress || e->touchPoints().isEmpty()) {
+			return;
+		}
 		_touchTimer.start(QApplication::startDragTime());
 		_touchPress = true;
 		_touchMove = _touchRightButton = false;
@@ -1854,35 +1911,55 @@ void InputField::handleTouchEvent(QTouchEvent *e) {
 	} break;
 
 	case QEvent::TouchUpdate: {
-		if (!_touchPress || e->touchPoints().isEmpty()) return;
-		if (!_touchMove && (e->touchPoints().cbegin()->screenPos().toPoint() - _touchStart).manhattanLength() >= QApplication::startDragDistance()) {
-			_touchMove = true;
+		if (!e->touchPoints().isEmpty()) {
+			touchUpdate(e->touchPoints().cbegin()->screenPos().toPoint());
 		}
 	} break;
 
 	case QEvent::TouchEnd: {
-		if (!_touchPress) return;
-		auto weak = MakeWeak(this);
-		if (!_touchMove && window()) {
-			QPoint mapped(mapFromGlobal(_touchStart));
-
-			if (_touchRightButton) {
-				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
-				contextMenuEvent(&contextEvent);
-			} else {
-				QGuiApplication::inputMethod()->show();
-			}
-		}
-		if (weak) {
-			_touchTimer.stop();
-			_touchPress = _touchMove = _touchRightButton = false;
-		}
+		touchFinish();
 	} break;
 
 	case QEvent::TouchCancel: {
 		_touchPress = false;
 		_touchTimer.stop();
 	} break;
+	}
+}
+
+void InputField::touchUpdate(QPoint globalPosition) {
+	if (_touchPress
+		&& !_touchMove
+		&& ((globalPosition - _touchStart).manhattanLength()
+			>= QApplication::startDragDistance())) {
+		_touchMove = true;
+	}
+}
+
+void InputField::touchFinish() {
+	if (!_touchPress) {
+		return;
+	}
+	const auto weak = MakeWeak(this);
+	if (!_touchMove && window()) {
+		QPoint mapped(mapFromGlobal(_touchStart));
+
+		if (_touchRightButton) {
+			QContextMenuEvent contextEvent(
+				QContextMenuEvent::Mouse,
+				mapped,
+				_touchStart);
+			contextMenuEvent(&contextEvent);
+		} else {
+			QGuiApplication::inputMethod()->show();
+		}
+	}
+	if (weak) {
+		_touchTimer.stop();
+		_touchPress
+			= _touchMove
+			= _touchRightButton
+			= _mousePressedInTouch = false;
 	}
 }
 
@@ -2004,6 +2081,29 @@ void InputField::focusInEvent(QFocusEvent *e) {
 void InputField::mousePressEvent(QMouseEvent *e) {
 	_borderAnimationStart = e->pos().x();
 	InvokeQueued(this, [=] { onFocusInner(); });
+}
+
+void InputField::mousePressEventInner(QMouseEvent *e) {
+	if (_touchPress && e->button() == Qt::LeftButton) {
+		_mousePressedInTouch = true;
+		_touchStart = e->globalPos();
+	}
+	_inner->QTextEdit::mousePressEvent(e);
+}
+
+void InputField::mouseReleaseEventInner(QMouseEvent *e) {
+	if (_mousePressedInTouch) {
+		touchFinish();
+	} else {
+		_inner->QTextEdit::mouseReleaseEvent(e);
+	}
+}
+
+void InputField::mouseMoveEventInner(QMouseEvent *e) {
+	if (_mousePressedInTouch) {
+		touchUpdate(e->globalPos());
+	}
+	_inner->QTextEdit::mouseMoveEvent(e);
 }
 
 void InputField::onFocusInner() {
@@ -4165,43 +4265,65 @@ bool MaskedInputField::eventHook(QEvent *e) {
 void MaskedInputField::touchEvent(QTouchEvent *e) {
 	switch (e->type()) {
 	case QEvent::TouchBegin: {
-		if (_touchPress || e->touchPoints().isEmpty()) return;
+		if (_touchPress || e->touchPoints().isEmpty()) {
+			return;
+		}
 		_touchTimer.start(QApplication::startDragTime());
 		_touchPress = true;
-		_touchMove = _touchRightButton = false;
+		_touchMove = _touchRightButton = _mousePressedInTouch = false;
 		_touchStart = e->touchPoints().cbegin()->screenPos().toPoint();
 	} break;
 
 	case QEvent::TouchUpdate: {
-		if (!_touchPress || e->touchPoints().isEmpty()) return;
-		if (!_touchMove && (e->touchPoints().cbegin()->screenPos().toPoint() - _touchStart).manhattanLength() >= QApplication::startDragDistance()) {
-			_touchMove = true;
+		if (!e->touchPoints().isEmpty()) {
+			touchUpdate(e->touchPoints().cbegin()->screenPos().toPoint());
 		}
 	} break;
 
 	case QEvent::TouchEnd: {
-		if (!_touchPress) return;
-		auto weak = MakeWeak(this);
-		if (!_touchMove && window()) {
-			QPoint mapped(mapFromGlobal(_touchStart));
-
-			if (_touchRightButton) {
-				QContextMenuEvent contextEvent(QContextMenuEvent::Mouse, mapped, _touchStart);
-				contextMenuEvent(&contextEvent);
-			} else {
-				QGuiApplication::inputMethod()->show();
-			}
-		}
-		if (weak) {
-			_touchTimer.stop();
-			_touchPress = _touchMove = _touchRightButton = false;
-		}
+		touchFinish();
 	} break;
 
 	case QEvent::TouchCancel: {
 		_touchPress = false;
 		_touchTimer.stop();
 	} break;
+	}
+}
+
+void MaskedInputField::touchUpdate(QPoint globalPosition) {
+	if (_touchPress
+		&& !_touchMove
+		&& ((globalPosition - _touchStart).manhattanLength()
+			>= QApplication::startDragDistance())) {
+		_touchMove = true;
+	}
+}
+
+void MaskedInputField::touchFinish() {
+	if (!_touchPress) {
+		return;
+	}
+	const auto weak = MakeWeak(this);
+	if (!_touchMove && window()) {
+		QPoint mapped(mapFromGlobal(_touchStart));
+
+		if (_touchRightButton) {
+			QContextMenuEvent contextEvent(
+				QContextMenuEvent::Mouse,
+				mapped,
+				_touchStart);
+			contextMenuEvent(&contextEvent);
+		} else {
+			QGuiApplication::inputMethod()->show();
+		}
+	}
+	if (weak) {
+		_touchTimer.stop();
+		_touchPress
+			= _touchMove
+			= _touchRightButton
+			= _mousePressedInTouch = false;
 	}
 }
 
@@ -4277,6 +4399,28 @@ void MaskedInputField::paintEvent(QPaintEvent *e) {
 
 	paintAdditionalPlaceholder(p);
 	QLineEdit::paintEvent(e);
+}
+
+void MaskedInputField::mousePressEvent(QMouseEvent *e) {
+	if (_touchPress && e->button() == Qt::LeftButton) {
+		_mousePressedInTouch = true;
+		_touchStart = e->globalPos();
+	}
+	return QLineEdit::mousePressEvent(e);
+}
+
+void MaskedInputField::mouseReleaseEvent(QMouseEvent *e) {
+	if (_mousePressedInTouch) {
+		touchFinish();
+	}
+	return QLineEdit::mouseReleaseEvent(e);
+}
+
+void MaskedInputField::mouseMoveEvent(QMouseEvent *e) {
+	if (_mousePressedInTouch) {
+		touchUpdate(e->globalPos());
+	}
+	return QLineEdit::mouseMoveEvent(e);
 }
 
 void MaskedInputField::startBorderAnimation() {

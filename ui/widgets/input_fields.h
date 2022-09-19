@@ -118,6 +118,10 @@ protected:
 	void contextMenuEvent(QContextMenuEvent *e) override;
 	void inputMethodEvent(QInputMethodEvent *e) override;
 
+	void mousePressEvent(QMouseEvent *e) override;
+	void mouseReleaseEvent(QMouseEvent *e) override;
+	void mouseMoveEvent(QMouseEvent *e) override;
+
 	virtual void correctValue(const QString &was, QString &now);
 
 	style::font phFont() {
@@ -129,6 +133,9 @@ protected:
 private:
 	void updatePalette();
 	void refreshPlaceholder(const QString &text);
+
+	void touchUpdate(QPoint globalPosition);
+	void touchFinish();
 
 	QString _oldtext;
 	rpl::variable<QString> _placeholderFull;
@@ -146,7 +153,10 @@ private:
 	QMargins _textMrg;
 
 	QTimer _touchTimer;
-	bool _touchPress, _touchRightButton, _touchMove;
+	bool _touchPress = false;
+	bool _touchRightButton = false;
+	bool _touchMove = false;
+	bool _mousePressedInTouch = false;
 	QPoint _touchStart;
 
 	base::unique_qptr<PopupMenu> _contextMenu;
@@ -448,6 +458,10 @@ private:
 	void inputMethodEventInner(QInputMethodEvent *e);
 	void paintEventInner(QPaintEvent *e);
 
+	void mousePressEventInner(QMouseEvent *e);
+	void mouseReleaseEventInner(QMouseEvent *e);
+	void mouseMoveEventInner(QMouseEvent *e);
+
 	QMimeData *createMimeDataFromSelectionInner() const;
 	bool canInsertFromMimeDataInner(const QMimeData *source) const;
 	void insertFromMimeDataInner(const QMimeData *source);
@@ -522,6 +536,9 @@ private:
 	void customEmojiRepaint();
 	void highlightMarkdown();
 
+	void touchUpdate(QPoint globalPosition);
+	void touchFinish();
+
 	const style::InputField &_st;
 
 	Mode _mode = Mode::SingleLine;
@@ -594,6 +611,7 @@ private:
 	bool _touchPress = false;
 	bool _touchRightButton = false;
 	bool _touchMove = false;
+	bool _mousePressedInTouch = false;
 	QPoint _touchStart;
 
 	bool _correcting = false;
@@ -690,6 +708,10 @@ protected:
 	void contextMenuEvent(QContextMenuEvent *e) override;
 	void inputMethodEvent(QInputMethodEvent *e) override;
 
+	void mousePressEvent(QMouseEvent *e) override;
+	void mouseReleaseEvent(QMouseEvent *e) override;
+	void mouseMoveEvent(QMouseEvent *e) override;
+
 	virtual void correctValue(
 		const QString &was,
 		int wasCursor,
@@ -715,6 +737,9 @@ private:
 	void updatePalette();
 	void refreshPlaceholder(const QString &text);
 	void setErrorShown(bool error);
+
+	void touchUpdate(QPoint globalPosition);
+	void touchFinish();
 
 	void setFocused(bool focused);
 
@@ -753,6 +778,7 @@ private:
 	bool _touchPress = false;
 	bool _touchRightButton = false;
 	bool _touchMove = false;
+	bool _mousePressedInTouch = false;
 	QPoint _touchStart;
 
 	base::unique_qptr<PopupMenu> _contextMenu;
