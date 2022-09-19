@@ -23,6 +23,7 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <private/qapplication_p.h>
 
 namespace Ui {
 namespace {
@@ -202,6 +203,8 @@ void PopupMenu::init() {
 	) | rpl::start_with_next([=] {
 		hideMenu(true);
 	}, lifetime());
+
+	installEventFilter(this);
 
 	const auto paddingWrap = static_cast<PaddingWrap<Menu::Menu>*>(
 		_menu->parentWidget());
@@ -620,6 +623,37 @@ void PopupMenu::mousePressEvent(QMouseEvent *e) {
 	forwardMousePress(e->globalPos());
 }
 
+bool PopupMenu::eventFilter(QObject *o, QEvent *e) {
+	const auto type = e->type();
+	if (type == QEvent::TouchBegin
+		|| type == QEvent::TouchUpdate
+		|| type == QEvent::TouchEnd) {
+		if (o == windowHandle() && isActiveWindow()) {
+			const auto event = static_cast<QTouchEvent*>(e);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+			e->setAccepted(
+				QApplicationPrivate::translateRawTouchEvent(
+					this,
+					event->device(),
+					event->touchPoints(),
+					event->timestamp()));
+#elif QT_VERSION < QT_VERSION_CHECK(6, 3, 0) // Qt < 6.0.0
+			e->setAccepted(
+				QApplicationPrivate::translateRawTouchEvent(
+					this,
+					event->pointingDevice(),
+					const_cast<QList<QEventPoint> &>(event->points()),
+					event->timestamp()));
+#else // Qt < 6.3.0
+			e->setAccepted(
+				QApplicationPrivate::translateRawTouchEvent(this, event));
+#endif
+			return e->isAccepted();
+		}
+	}
+	return false;
+}
+
 void PopupMenu::hideMenu(bool fast) {
 	if (isHidden()) {
 		return;
@@ -901,6 +935,8 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 	_parent = parent;
 
 	createWinId();
+	windowHandle()->removeEventFilter(this);
+	windowHandle()->installEventFilter(this);
 	if (_parent) {
 		windowHandle()->setScreen(_parent->screen());
 	} else if (screen) {

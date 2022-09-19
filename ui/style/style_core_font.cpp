@@ -98,7 +98,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 
 [[nodiscard]] QString ManualMonospaceFont() {
 	const auto kTryFirst = std::initializer_list<QString>{
-		"Cascadia Code",
+		"Cascadia Mono",
 		"Consolas",
 		"Liberation Mono",
 		"Menlo",

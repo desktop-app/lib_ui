@@ -109,6 +109,8 @@ protected:
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 
+	bool eventFilter(QObject *o, QEvent *e) override;
+
 private:
 	void paintBg(QPainter &p);
 	void hideFast();
