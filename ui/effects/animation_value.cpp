@@ -23,51 +23,109 @@ transition linear = [](const float64 &delta, const float64 &dt) {
 	Expects(!std::isnan(dt));
 
 	const auto result = delta * dt;
+
 	Ensures(!std::isnan(result));
 	return result;
 };
 
 transition sineInOut = [](const float64 &delta, const float64 &dt) {
-	return -(delta / 2) * (cos(M_PI * dt) - 1);
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto result = -(delta / 2) * (cos(M_PI * dt) - 1);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition halfSine = [](const float64 &delta, const float64 &dt) {
-	return delta * sin(M_PI * dt / 2);
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto result = delta * sin(M_PI * dt / 2);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeOutBack = [](const float64 &delta, const float64 &dt) {
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
 	static constexpr auto s = 1.70158;
 
-	const float64 t = dt - 1;
-	return delta * (t * t * ((s + 1) * t + s) + 1);
+	const auto t = dt - 1;
+	Assert(!std::isnan(t));
+	const auto result = delta * (t * t * ((s + 1) * t + s) + 1);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeInCirc = [](const float64 &delta, const float64 &dt) {
-	return -delta * (sqrt(1 - dt * dt) - 1);
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto result = -delta * (sqrt(1 - dt * dt) - 1);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeOutCirc = [](const float64 &delta, const float64 &dt) {
-	const float64 t = dt - 1;
-	return delta * sqrt(1 - t * t);
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto t = dt - 1;
+	Assert(!std::isnan(t));
+	const auto result = delta * sqrt(1 - t * t);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeInCubic = [](const float64 &delta, const float64 &dt) {
-	return delta * dt * dt * dt;
+	const auto result = delta * dt * dt * dt;
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeOutCubic = [](const float64 &delta, const float64 &dt) {
-	const float64 t = dt - 1;
-	return delta * (t * t * t + 1);
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto t = dt - 1;
+	Assert(!std::isnan(t));
+	const auto result = delta * (t * t * t + 1);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeInQuint = [](const float64 &delta, const float64 &dt) {
-	const float64 t2 = dt * dt;
-	return delta * t2 * t2 * dt;
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto t2 = dt * dt;
+	Assert(!std::isnan(t2));
+	const auto result = delta * t2 * t2 * dt;
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 transition easeOutQuint = [](const float64 &delta, const float64 &dt) {
-	const float64 t = dt - 1, t2 = t * t;
-	return delta * (t2 * t2 * t + 1);
+	Expects(!std::isnan(delta));
+	Expects(!std::isnan(dt));
+
+	const auto t = dt - 1, t2 = t * t;
+	Assert(!std::isnan(t));
+	Assert(!std::isnan(t2));
+	const auto result = delta * (t2 * t2 * t + 1);
+
+	Ensures(!std::isnan(result));
+	return result;
 };
 
 rpl::producer<bool> Disables() {
