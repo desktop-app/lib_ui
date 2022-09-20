@@ -65,20 +65,13 @@ QString UrlClickHandler::EncodeForOpening(const QString &originalUrl) {
 	if (IsEmail(originalUrl)) {
 		return originalUrl;
 	}
-
-	const auto u = QUrl(originalUrl);
-	const auto good = QUrl(u.isValid() ? u.toEncoded() : QString());
-	const auto result = good.isValid()
-		? QString::fromUtf8(good.toEncoded())
-		: originalUrl;
-
-	if (!result.isEmpty()
+	const auto withProtocol = (!originalUrl.isEmpty()
 		&& !QRegularExpression(
-			QStringLiteral("^[a-zA-Z]+:")).match(result).hasMatch()) {
-		// No protocol.
-		return QStringLiteral("http://") + result;
-	}
-	return result;
+			u"^[a-zA-Z]+:"_q).match(originalUrl).hasMatch())
+		? (u"https://"_q + originalUrl)
+		: originalUrl;
+	const auto url = QUrl(withProtocol);
+	return url.isValid() ? QString::fromUtf8(url.toEncoded()) : withProtocol;
 }
 
 void UrlClickHandler::Open(QString url, QVariant context) {
@@ -86,7 +79,7 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 	if (!Ui::Integration::Instance().handleUrlClick(url, context)
 		&& !url.isEmpty()) {
 		if (IsEmail(url)) {
-			url = "mailto: " + url;
+			url = "mailto:" + url;
 		}
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 		// Desktop entry spec implementation,
@@ -111,15 +104,19 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 	}
 }
 
-bool UrlClickHandler::IsSuspicious(const QString &url) {
+QString UrlClickHandler::ExtractDomain(const QString &url) {
 	static const auto Check1 = QRegularExpression(
 		"^((https?|s?ftp)://)?([^/#\\:]+)([/#\\:]|$)",
 		QRegularExpression::CaseInsensitiveOption);
 	const auto match1 = Check1.match(url);
-	if (!match1.hasMatch()) {
+	return match1.hasMatch() ? match1.captured(3) : QString();
+}
+
+bool UrlClickHandler::IsSuspicious(const QString &url) {
+	const auto domain = ExtractDomain(url);
+	if (domain.isEmpty()) {
 		return false;
 	}
-	const auto domain = match1.capturedView(3);
 	static const auto Check2 = QRegularExpression("^(.*)\\.[a-zA-Z]+$");
 	const auto match2 = Check2.match(domain);
 	if (!match2.hasMatch()) {
