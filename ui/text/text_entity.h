@@ -222,6 +222,7 @@ struct TextForMimeData {
 		return *this;
 	}
 
+	static TextForMimeData WithExpandedLinks(const TextWithEntities &text);
 	static TextForMimeData Rich(TextWithEntities &&rich) {
 		auto result = TextForMimeData();
 		result.expanded = rich.text;

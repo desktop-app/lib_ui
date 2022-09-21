@@ -12,6 +12,7 @@
 #include "ui/text/text.h"
 #include "ui/widgets/input_fields.h"
 #include "ui/emoji_config.h"
+#include "ui/basic_click_handlers.h"
 #include "base/qt/qt_common_adapters.h"
 
 #include <QtCore/QStack>
@@ -2261,6 +2262,42 @@ void SetClipboardText(
 }
 
 } // namespace TextUtilities
+
+TextForMimeData TextForMimeData::WithExpandedLinks(
+		const TextWithEntities &text) {
+	auto result = TextForMimeData{ .rich = text };
+	if (!ranges::contains(
+			text.entities,
+			EntityType::CustomUrl,
+			&EntityInText::type)) {
+		result.expanded = text.text;
+	} else {
+		auto from = 0;
+		for (const auto &entity : text.entities) {
+			if (entity.type() != EntityType::CustomUrl) {
+				continue;
+			}
+			// This logic is duplicated in Ui::Text::String::toText.
+			const auto &data = entity.data();
+			if (!data.startsWith(qstr("internal:"))
+				&& (data != UrlClickHandler::EncodeForOpening(
+					text.text.mid(entity.offset(), entity.length())))) {
+				const auto till = entity.offset() + entity.length();
+				if (const auto add = till - from; add > 0) {
+					result.expanded.append(text.text.data() + from, add);
+					from = till;
+				}
+				result.expanded.append(qstr(" (")).append(data).append(')');
+			}
+		}
+		const auto till = text.text.size();
+		if (const auto add = till - from; add > 0) {
+			result.expanded.append(text.text.data() + from, add);
+			from = till;
+		}
+	}
+	return result;
+}
 
 EntityInText::EntityInText(
 	EntityType type,

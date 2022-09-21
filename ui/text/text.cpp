@@ -932,6 +932,7 @@ TextForMimeData String::toText(
 		if (!handler || (!composeExpanded && !composeEntities)) {
 			return;
 		}
+		// This logic is duplicated in TextForMimeData::WithExpandedLinks.
 		const auto entity = handler->getTextEntity();
 		const auto plainUrl = (entity.type == EntityType::Url)
 			|| (entity.type == EntityType::Email);
