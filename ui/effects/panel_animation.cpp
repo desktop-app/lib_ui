@@ -373,25 +373,20 @@ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
 	const auto heightProgress = (_startHeight < 0 || dt >= _heightDuration)
 		? 1.
 		: transition(1., dt / _heightDuration);
-	auto frameWidth = (widthProgress < 1.)
+	const auto frameWidth = (widthProgress < 1.)
 		? anim::interpolate(_startWidth, _finalInnerWidth, widthProgress)
 		: _finalInnerWidth;
-	auto frameHeight = (heightProgress < 1.)
+	const auto frameHeight = (heightProgress < 1.)
 		? anim::interpolate(_startHeight, _finalInnerHeight, heightProgress)
 		: _finalInnerHeight;
-	if (auto decrease = (frameWidth % style::DevicePixelRatio())) {
-		frameWidth -= decrease;
-	}
-	if (auto decrease = (frameHeight % style::DevicePixelRatio())) {
-		frameHeight -= decrease;
-	}
+	const auto ratio = style::DevicePixelRatio();
 	return {
 		.opacity = opacity,
 		.widthProgress = widthProgress,
 		.heightProgress = heightProgress,
 		.fade = transition(1., dt),
-		.width = frameWidth,
-		.height = frameHeight,
+		.width = frameWidth / ratio,
+		.height = frameHeight / ratio,
 	};
 }
 
@@ -411,8 +406,8 @@ auto PanelAnimation::paintFrame(
 	const auto state = computeState(dt, opacity);
 	opacity = state.opacity;
 	_frameAlpha = anim::interpolate(1, 256, opacity);
-	const auto frameWidth = state.width;
-	const auto frameHeight = state.height;
+	const auto frameWidth = state.width * pixelRatio;
+	const auto frameHeight = state.height * pixelRatio;
 	auto frameLeft = (_origin == Origin::TopLeft || _origin == Origin::BottomLeft) ? _finalInnerLeft : (_finalInnerRight - frameWidth);
 	auto frameTop = (_origin == Origin::TopLeft || _origin == Origin::TopRight) ? _finalInnerTop : (_finalInnerBottom - frameHeight);
 	auto frameRight = frameLeft + frameWidth;
