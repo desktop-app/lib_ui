@@ -399,48 +399,52 @@ void Renderer::enumerate() {
 }
 
 StateResult Renderer::getState(QPoint point, int w, StateRequest request) {
-	if (!_t->isNull() && point.y() >= 0) {
-		_lookupRequest = request;
-		_lookupX = point.x();
-		_lookupY = point.y();
-
-		_breakEverywhere = (_lookupRequest.flags & StateRequest::Flag::BreakEverywhere);
-		_lookupSymbol = (_lookupRequest.flags & StateRequest::Flag::LookupSymbol);
-		_lookupLink = (_lookupRequest.flags & StateRequest::Flag::LookupLink);
-		if (_lookupSymbol || (_lookupX >= 0 && _lookupX < w)) {
-			_w = w;
-			_yFrom = _lookupY;
-			_yTo = _lookupY + 1;
-			_align = _lookupRequest.align;
-			enumerate();
-		}
+	if (_t->isEmpty() || point.y() < 0) {
+		return {};
 	}
+	_lookupRequest = request;
+	_lookupX = point.x();
+	_lookupY = point.y();
+
+	_breakEverywhere = (_lookupRequest.flags & StateRequest::Flag::BreakEverywhere);
+	_lookupSymbol = (_lookupRequest.flags & StateRequest::Flag::LookupSymbol);
+	_lookupLink = (_lookupRequest.flags & StateRequest::Flag::LookupLink);
+	if (!_lookupSymbol && (_lookupX < 0 || _lookupX >= w)) {
+		return {};
+	}
+	_w = w;
+	_yFrom = _lookupY;
+	_yTo = _lookupY + 1;
+	_align = _lookupRequest.align;
+	enumerate();
 	return _lookupResult;
 }
 
 StateResult Renderer::getStateElided(QPoint point, int w, StateRequestElided request) {
-	if (!_t->isNull() && point.y() >= 0 && request.lines > 0) {
-		_lookupRequest = request;
-		_lookupX = point.x();
-		_lookupY = point.y();
-
-		_breakEverywhere = (_lookupRequest.flags & StateRequest::Flag::BreakEverywhere);
-		_lookupSymbol = (_lookupRequest.flags & StateRequest::Flag::LookupSymbol);
-		_lookupLink = (_lookupRequest.flags & StateRequest::Flag::LookupLink);
-		if (_lookupSymbol || (_lookupX >= 0 && _lookupX < w)) {
-			int yTo = _lookupY + 1;
-			if (yTo < 0 || (request.lines - 1) * _t->_st->font->height < yTo) {
-				yTo = request.lines * _t->_st->font->height;
-				_elideLast = true;
-				_elideRemoveFromEnd = request.removeFromEnd;
-			}
-			_w = w;
-			_yFrom = _lookupY;
-			_yTo = _lookupY + 1;
-			_align = _lookupRequest.align;
-			enumerate();
-		}
+	if (_t->isEmpty() || point.y() < 0 || request.lines <= 0) {
+		return {};
 	}
+	_lookupRequest = request;
+	_lookupX = point.x();
+	_lookupY = point.y();
+
+	_breakEverywhere = (_lookupRequest.flags & StateRequest::Flag::BreakEverywhere);
+	_lookupSymbol = (_lookupRequest.flags & StateRequest::Flag::LookupSymbol);
+	_lookupLink = (_lookupRequest.flags & StateRequest::Flag::LookupLink);
+	if (!_lookupSymbol && (_lookupX < 0 || _lookupX >= w)) {
+		return {};
+	}
+	int yTo = _lookupY + 1;
+	if (yTo < 0 || (request.lines - 1) * _t->_st->font->height < yTo) {
+		yTo = request.lines * _t->_st->font->height;
+		_elideLast = true;
+		_elideRemoveFromEnd = request.removeFromEnd;
+	}
+	_w = w;
+	_yFrom = _lookupY;
+	_yTo = _lookupY + 1;
+	_align = _lookupRequest.align;
+	enumerate();
 	return _lookupResult;
 }
 
