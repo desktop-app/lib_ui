@@ -111,6 +111,7 @@ private:
 		const AbstractBlock *block) const;
 
 	const String *_t = nullptr;
+	SpoilerData *_spoiler = nullptr;
 	SpoilerMessCache *_spoilerCache = nullptr;
 	QPainter *_p = nullptr;
 	const style::TextPalette *_palette = nullptr;

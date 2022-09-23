@@ -170,7 +170,7 @@ public:
 
 	[[nodiscard]] bool hasSpoilers() const;
 	void setSpoilerRevealed(bool revealed, anim::type animated);
-	void setSpoilerLink(const ClickHandlerPtr &lnk);
+	void setSpoilerLinkFilter(Fn<bool(const ClickContext&)> filter);
 
 	[[nodiscard]] bool hasSkipBlock() const;
 	bool updateSkipBlock(int width, int height);
@@ -237,6 +237,19 @@ private:
 	using TextBlocks = std::vector<Block>;
 	using TextLinks = QVector<ClickHandlerPtr>;
 
+	class SpoilerDataWrap {
+	public:
+		SpoilerDataWrap() noexcept;
+		SpoilerDataWrap(SpoilerDataWrap &&other) noexcept;
+		SpoilerDataWrap &operator=(SpoilerDataWrap &&other) noexcept;
+
+		std::unique_ptr<SpoilerData> data;
+
+	private:
+		void adjustFrom(const SpoilerDataWrap *other);
+
+	};
+
 	uint16 countBlockEnd(const TextBlocks::const_iterator &i, const TextBlocks::const_iterator &e) const;
 	uint16 countBlockLength(const TextBlocks::const_iterator &i, const TextBlocks::const_iterator &e) const;
 
@@ -276,7 +289,7 @@ private:
 
 	Qt::LayoutDirection _startDir = Qt::LayoutDirectionAuto;
 
-	std::unique_ptr<SpoilerData> _spoiler;
+	SpoilerDataWrap _spoiler;
 
 	friend class Parser;
 	friend class Renderer;

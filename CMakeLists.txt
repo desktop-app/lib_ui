@@ -166,6 +166,7 @@ PRIVATE
     ui/text/text_parser.h
     ui/text/text_renderer.cpp
     ui/text/text_renderer.h
+    ui/text/text_spoiler_data.cpp
     ui/text/text_spoiler_data.h
     ui/text/text_utilities.cpp
     ui/text/text_utilities.h

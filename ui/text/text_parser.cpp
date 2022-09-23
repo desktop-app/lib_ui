@@ -207,14 +207,6 @@ void Parser::createBlock(int32 skipBack) {
 	}
 }
 
-// Unused.
-// void Parser::createSkipBlock(int32 w, int32 h) {
-// 	createBlock();
-// 	_t->_text.push_back('_');
-// 	_t->_blocks.push_back(Block::Skip(_t->_st->font, _t->_text, _blockStart++, w, h, _monoIndex ? _monoIndex : _lnkIndex, _spoilerIndex));
-// 	blockCreated();
-// }
-
 void Parser::createNewlineBlock() {
 	createBlock();
 	_t->_text.push_back(QChar::LineFeed);
@@ -634,8 +626,8 @@ void Parser::finalize(const TextParseOptions &options) {
 			}
 		}
 		if (block->spoilerIndex()) {
-			if (!_t->_spoiler) {
-				_t->_spoiler = std::make_unique<SpoilerData>(
+			if (!_t->_spoiler.data) {
+				_t->_spoiler.data = std::make_unique<SpoilerData>(
 					Integration::Instance().createSpoilerRepaint(_context));
 			}
 		}
@@ -696,10 +688,10 @@ void Parser::finalize(const TextParseOptions &options) {
 		}
 		lastHandlerIndex.lnk = realIndex;
 	}
-	if (!_t->_hasCustomEmoji || _t->_spoiler) {
+	if (!_t->_hasCustomEmoji || _t->_spoiler.data) {
 		_t->_isOnlyCustomEmoji = false;
 	}
-	if (_t->_blocks.empty() || _t->_spoiler) {
+	if (_t->_blocks.empty() || _t->_spoiler.data) {
 		_t->_isIsolatedEmoji = false;
 	}
 	_t->_links.squeeze();

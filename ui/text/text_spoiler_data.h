@@ -8,10 +8,28 @@
 
 #include "ui/effects/spoiler_mess.h"
 #include "ui/effects/animations.h"
-
-class SpoilerClickHandler;
+#include "ui/click_handler.h"
 
 namespace Ui::Text {
+
+class String;
+
+class SpoilerClickHandler final : public ClickHandler {
+public:
+	SpoilerClickHandler(
+		not_null<String*> text,
+		Fn<bool(const ClickContext&)> filter);
+
+	[[nodiscard]] not_null<String*> text() const;
+	void setText(not_null<String*> text);
+
+	void onClick(ClickContext context) const override;
+
+private:
+	not_null<String*> _text;
+	const Fn<bool(const ClickContext &)> _filter;
+
+};
 
 struct SpoilerData {
 	explicit SpoilerData(Fn<void()> repaint)
@@ -19,7 +37,7 @@ struct SpoilerData {
 	}
 
 	SpoilerAnimation animation;
-	ClickHandlerPtr link;
+	std::shared_ptr<SpoilerClickHandler> link;
 	Animations::Simple revealAnimation;
 	bool revealed = false;
 };

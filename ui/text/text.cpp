@@ -125,6 +125,30 @@ not_null<SpoilerMessCache*> DefaultSpoilerCache() {
 	return &data.cache;
 }
 
+String::SpoilerDataWrap::SpoilerDataWrap() noexcept = default;
+
+String::SpoilerDataWrap::SpoilerDataWrap(SpoilerDataWrap &&other) noexcept
+: data(std::move(other.data)) {
+	adjustFrom(&other);
+}
+
+String::SpoilerDataWrap &String::SpoilerDataWrap::operator=(
+		SpoilerDataWrap &&other) noexcept {
+	data = std::move(other.data);
+	adjustFrom(&other);
+	return *this;
+}
+
+void String::SpoilerDataWrap::adjustFrom(const SpoilerDataWrap *other) {
+	if (data && data->link) {
+		const auto raw = [](auto pointer) {
+			return reinterpret_cast<quintptr>(pointer);
+		};
+		data->link->setText(reinterpret_cast<String*>(
+			raw(data->link->text().get()) + raw(this) - raw(other)));
+	}
+}
+
 String::String(int32 minResizeWidth)
 : _minResizeWidth(minResizeWidth) {
 }
@@ -318,31 +342,36 @@ void String::setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk) {
 }
 
 void String::setSpoilerRevealed(bool revealed, anim::type animated) {
-	if (!_spoiler) {
+	const auto data = _spoiler.data.get();
+	if (!data) {
 		return;
-	} else if (_spoiler->revealed == revealed) {
+	} else if (data->revealed == revealed) {
 		if (animated == anim::type::instant
-			&& _spoiler->revealAnimation.animating()) {
-			_spoiler->revealAnimation.stop();
-			_spoiler->animation.repaintCallback()();
+			&& data->revealAnimation.animating()) {
+			data->revealAnimation.stop();
+			data->animation.repaintCallback()();
 		}
 		return;
 	}
-	_spoiler->revealed = revealed;
+	data->revealed = revealed;
 	if (animated == anim::type::instant) {
-		_spoiler->revealAnimation.stop();
-		_spoiler->animation.repaintCallback()();
+		data->revealAnimation.stop();
+		data->animation.repaintCallback()();
 	} else {
-		_spoiler->revealAnimation.start(
-			_spoiler->animation.repaintCallback(),
+		data->revealAnimation.start(
+			data->animation.repaintCallback(),
 			revealed ? 0. : 1.,
 			revealed ? 1. : 0.,
 			st::fadeWrapDuration);
 	}
 }
 
-void String::setSpoilerLink(const ClickHandlerPtr &lnk) {
-	_spoiler->link = lnk;
+void String::setSpoilerLinkFilter(Fn<bool(const ClickContext&)> filter) {
+	Expects(_spoiler.data != nullptr);
+
+	_spoiler.data->link = std::make_shared<SpoilerClickHandler>(
+		this,
+		std::move(filter));
 }
 
 bool String::hasLinks() const {
@@ -350,7 +379,7 @@ bool String::hasLinks() const {
 }
 
 bool String::hasSpoilers() const {
-	return (_spoiler != nullptr);
+	return (_spoiler.data != nullptr);
 }
 
 bool String::hasSkipBlock() const {
@@ -762,9 +791,9 @@ void String::enumerateText(
 					// Ignore links that are partially copied.
 					const auto handler = (spoilerFrom != rangeFrom
 						|| blockFrom != rangeTo
-						|| !_spoiler)
+						|| !_spoiler.data)
 						? nullptr
-						: _spoiler->link;
+						: _spoiler.data->link;
 					const auto type = EntityType::Spoiler;
 					clickHandlerFinishCallback(r, handler, type);
 				}
@@ -805,7 +834,7 @@ void String::enumerateText(
 }
 
 bool String::hasPersistentAnimation() const {
-	return _hasCustomEmoji || _spoiler;
+	return _hasCustomEmoji || _spoiler.data;
 }
 
 void String::unloadPersistentAnimation() {
@@ -1018,7 +1047,7 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 	auto result = IsolatedEmoji();
 	const auto skip = (_blocks.empty()
 		|| _blocks.back()->type() != TextBlockTSkip) ? 0 : 1;
-	if ((_blocks.size() > kIsolatedEmojiLimit + skip) || _spoiler) {
+	if ((_blocks.size() > kIsolatedEmojiLimit + skip) || hasSpoilers()) {
 		return {};
 	}
 	auto index = 0;
@@ -1046,7 +1075,7 @@ void String::clear() {
 void String::clearFields() {
 	_blocks.clear();
 	_links.clear();
-	_spoiler = nullptr;
+	_spoiler.data = nullptr;
 	_maxWidth = _minHeight = 0;
 	_startDir = Qt::LayoutDirectionAuto;
 }

@@ -154,7 +154,8 @@ bool Distinct(FixedRange a, FixedRange b) {
 }
 
 Renderer::Renderer(const Ui::Text::String &t)
-: _t(&t) {
+: _t(&t)
+, _spoiler(_t->_spoiler.data.get()) {
 }
 
 Renderer::~Renderer() {
@@ -199,9 +200,9 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_align = context.align;
 	_cachedNow = context.now;
 	_paused = context.paused;
-	_spoilerOpacity = _t->_spoiler
-		? (1. - _t->_spoiler->revealAnimation.value(
-			_t->_spoiler->revealed ? 1. : 0.))
+	_spoilerOpacity = _spoiler
+		? (1. - _spoiler->revealAnimation.value(
+			_spoiler->revealed ? 1. : 0.))
 		: 0.;
 	enumerate();
 }
@@ -1085,7 +1086,7 @@ void Renderer::pushSpoilerRange(
 		FixedRange range,
 		FixedRange selected,
 		int currentBlockIndex) {
-	if (!_background.spoiler || !_t->_spoiler) {
+	if (!_background.spoiler || !_spoiler) {
 		return;
 	}
 	const auto elided = (_indexOfElidedBlock == currentBlockIndex)
@@ -1135,14 +1136,14 @@ void Renderer::fillSpoilerRects(
 void Renderer::paintSpoilerRects() {
 	Expects(_p != nullptr);
 
-	if (!_t->_spoiler) {
+	if (!_spoiler) {
 		return;
 	}
 	const auto opacity = _p->opacity();
 	if (_spoilerOpacity < 1.) {
 		_p->setOpacity(opacity * _spoilerOpacity);
 	}
-	const auto index = _t->_spoiler->animation.index(now(), _paused);
+	const auto index = _spoiler->animation.index(now(), _paused);
 	paintSpoilerRects(
 		_spoilerRects,
 		_palette->spoilerFg,
@@ -1991,12 +1992,12 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 	if (_p) {
 		const auto isMono = IsMono(block->flags());
 		_background = {};
-		if (block->spoilerIndex() && _t->_spoiler) {
+		if (block->spoilerIndex() && _spoiler) {
 			_background.spoiler = true;
 		}
 		if (isMono
 			&& block->lnkIndex()
-			&& (!_background.spoiler || _t->_spoiler->revealed)) {
+			&& (!_background.spoiler || _spoiler->revealed)) {
 			_background.selectActiveBlock = ClickHandler::showAsPressed(
 				_t->_links.at(block->lnkIndex() - 1));
 		}
@@ -2016,10 +2017,10 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 }
 
 ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
-	const auto spoilerLink = (_t->_spoiler
-		&& !_t->_spoiler->revealed
+	const auto spoilerLink = (_spoiler
+		&& !_spoiler->revealed
 		&& block->spoilerIndex())
-		? _t->_spoiler->link
+		? _spoiler->link
 		: ClickHandlerPtr();
 	return (spoilerLink || !block->lnkIndex())
 		? spoilerLink
