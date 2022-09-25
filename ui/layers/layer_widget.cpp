@@ -13,6 +13,7 @@
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/round_rect.h"
+#include "base/integration.h"
 #include "styles/style_layers.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
@@ -678,16 +679,20 @@ void LayerStackWidget::prepareForAnimation() {
 }
 
 void LayerStackWidget::animationDone() {
+	auto &integration = base::Integration::Instance();
 	bool hidden = true;
 	if (_mainMenu) {
+		integration.setCrashAnnotation("ShowingWidget", u"MainMenu"_q);
 		_mainMenu->show();
 		hidden = false;
 	}
 	if (_specialLayer) {
+		integration.setCrashAnnotation("ShowingWidget", u"SpecialLayer"_q);
 		_specialLayer->show();
 		hidden = false;
 	}
 	if (auto layer = currentLayer()) {
+		integration.setCrashAnnotation("ShowingWidget", u"Box"_q);
 		layer->show();
 		hidden = false;
 	}
@@ -695,7 +700,9 @@ void LayerStackWidget::animationDone() {
 	if (hidden) {
 		_hideFinishStream.fire({});
 	} else {
+		integration.setCrashAnnotation("ShowingWidget", u"Finished"_q);
 		showFinished();
+		integration.setCrashAnnotation("ShowingWidget", QString());
 	}
 }
 
