@@ -7,6 +7,7 @@
 #include "ui/widgets/time_input.h"
 
 #include "ui/widgets/fields/time_part_input.h"
+#include "base/invoke_queued.h"
 
 #include <QtCore/QRegularExpression>
 #include <QTime>
@@ -146,7 +147,7 @@ void TimeInput::putNext(const object_ptr<TimePart> &field, QChar ch) {
 		field->setCursorPosition(1);
 	}
 	field->onTextEdited();
-	field->setFocus();
+	setFocusQueued(field);
 }
 
 void TimeInput::erasePrevious(const object_ptr<TimePart> &field) {
@@ -155,7 +156,37 @@ void TimeInput::erasePrevious(const object_ptr<TimePart> &field) {
 		field->setCursorPosition(text.size() - 1);
 		field->setText(text.mid(0, text.size() - 1));
 	}
-	field->setFocus();
+	setFocusQueued(field);
+}
+
+void TimeInput::setFocusQueued(const object_ptr<TimePart> &field) {
+	// There was a "Stack Overflow" crash in some input method handling.
+	//
+	// See https://github.com/telegramdesktop/tdesktop/issues/25129
+	//
+	// The stack is something like:
+	//
+	// ...
+	// QApplicationPrivate::sendMouseEvent
+	// ----
+	// QWidget::setFocus
+	// QWindow::focusObjectChanged
+	// QWindowsInputContext::setFocusObject
+	// QWindowsInputContext::reset
+	// QLineEdit::inputMethodEvent
+	// QWidgetLineControl::finishChange
+	// QLineEdit::textEdited
+	// MaskedInputField::onTextEdited
+	// TimePart::correctValue
+	// TimeInput::putNext
+	// ----
+	// QWidget::setFocus
+	// QWindow::focusObjectChanged
+	// ...
+	//
+	// So we try to break this loop by focusing the widget async.
+	const auto raw = field.data();
+	InvokeQueued(raw, [raw] { raw->setFocus(); });
 }
 
 bool TimeInput::setFocusFast() {

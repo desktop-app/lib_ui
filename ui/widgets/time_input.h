@@ -43,6 +43,7 @@ private:
 	void setInnerFocus();
 	void putNext(const object_ptr<TimePart> &field, QChar ch);
 	void erasePrevious(const object_ptr<TimePart> &field);
+	void setFocusQueued(const object_ptr<TimePart> &field);
 	void setErrorShown(bool error);
 	void setFocused(bool focused);
 	void startBorderAnimation();
