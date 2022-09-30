@@ -1009,8 +1009,7 @@ QImage Circle(QImage &&image, QRect target) {
 
 QImage Round(
 		QImage &&image,
-		gsl::span<const QImage, 4> cornerMasks,
-		RectParts corners,
+		CornersMaskRef mask,
 		QRect target) {
 	if (target.isNull()) {
 		target = QRect(QPoint(), image.size());
@@ -1035,23 +1034,24 @@ QImage Round(
 	Assert(image.depth() == ((kImageIntsPerPixel * sizeof(uint32)) << 3));
 	Assert(image.bytesPerLine() == (imageIntsPerLine << 2));
 	const auto maskCorner = [&](
-			const QImage &mask,
+			const QImage *mask,
 			bool right = false,
 			bool bottom = false) {
-		const auto maskWidth = mask.width();
-		const auto maskHeight = mask.height();
-		if (mask.isNull()
+		const auto maskWidth = mask ? mask->width() : 0;
+		const auto maskHeight = mask ? mask->height() : 0;
+		if (!maskWidth
+			|| !maskHeight
 			|| targetWidth < maskWidth
 			|| targetHeight < maskHeight) {
 			return;
 		}
 
-		const auto maskBytesPerPixel = (mask.depth() >> 3);
-		const auto maskBytesPerLine = mask.bytesPerLine();
+		const auto maskBytesPerPixel = (mask->depth() >> 3);
+		const auto maskBytesPerLine = mask->bytesPerLine();
 		const auto maskBytesAdded = maskBytesPerLine
 			- maskWidth * maskBytesPerPixel;
 		Assert(maskBytesAdded >= 0);
-		Assert(mask.depth() == (maskBytesPerPixel << 3));
+		Assert(mask->depth() == (maskBytesPerPixel << 3));
 		const auto imageIntsAdded = imageIntsPerLine
 			- maskWidth * kImageIntsPerPixel;
 		Assert(imageIntsAdded >= 0);
@@ -1062,7 +1062,7 @@ QImage Round(
 		if (bottom) {
 			imageInts += (targetHeight - maskHeight) * imageIntsPerLine;
 		}
-		auto maskBytes = mask.constBits();
+		auto maskBytes = mask->constBits();
 		for (auto y = 0; y != maskHeight; ++y) {
 			for (auto x = 0; x != maskWidth; ++x) {
 				auto opacity = static_cast<anim::ShiftedMultiplier>(*maskBytes) + 1;
@@ -1075,16 +1075,25 @@ QImage Round(
 		}
 	};
 
-	if (corners & RectPart::TopLeft) maskCorner(cornerMasks[0]);
-	if (corners & RectPart::TopRight) maskCorner(cornerMasks[1], true);
-	if (corners & RectPart::BottomLeft) {
-		maskCorner(cornerMasks[2], false, true);
-	}
-	if (corners & RectPart::BottomRight) {
-		maskCorner(cornerMasks[3], true, true);
-	}
+	maskCorner(mask.p[0]);
+	maskCorner(mask.p[1], true);
+	maskCorner(mask.p[2], false, true);
+	maskCorner(mask.p[3], true, true);
 
 	return std::move(image);
+}
+
+QImage Round(
+		QImage &&image,
+		gsl::span<const QImage, 4> cornerMasks,
+		RectParts corners,
+		QRect target) {
+	return Round(std::move(image), CornersMaskRef({
+		(corners & RectPart::TopLeft) ? &cornerMasks[0] : nullptr,
+		(corners & RectPart::TopRight) ? &cornerMasks[1] : nullptr,
+		(corners & RectPart::BottomLeft) ? &cornerMasks[2] : nullptr,
+		(corners & RectPart::BottomRight) ? &cornerMasks[3] : nullptr,
+	}), target);
 }
 
 QImage Round(

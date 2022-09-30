@@ -8,15 +8,9 @@
 
 #include <crl/crl_time.h>
 
-enum class ImageRoundRadius;
-
-namespace base {
-template <typename EnumType>
-class flags;
-} // namespace base
-
-enum class RectPart;
-using RectParts = base::flags<RectPart>;
+namespace Images {
+struct CornersMaskRef;
+} // namespace Images
 
 namespace Ui {
 
@@ -49,8 +43,7 @@ void FillSpoilerRect(
 void FillSpoilerRect(
 	QPainter &p,
 	QRect rect,
-	ImageRoundRadius radius,
-	RectParts corners,
+	Images::CornersMaskRef mask,
 	const SpoilerMessFrame &frame,
 	QImage &cornerCache,
 	QPoint originShift = {});

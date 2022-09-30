@@ -46,6 +46,24 @@ namespace Images {
 	int bottomAlpha,
 	QColor color = QColor(0, 0, 0));
 
+struct CornersMaskRef {
+	CornersMaskRef() = default;
+	explicit CornersMaskRef(gsl::span<const QImage, 4> masks)
+	: p{ &masks[0], &masks[1], &masks[2], &masks[3] } {
+	}
+	explicit CornersMaskRef(std::array<const QImage, 4> masks)
+	: p{ &masks[0], &masks[1], &masks[2], &masks[3] } {
+	}
+	explicit CornersMaskRef(gsl::span<const QImage*, 4> masks)
+	: p{ masks[0], masks[1], masks[2], masks[3] } {
+	}
+	explicit CornersMaskRef(std::array<const QImage*, 4> masks)
+	: p{ masks[0], masks[1], masks[2], masks[3] } {
+	}
+
+	std::array<const QImage*, 4> p{};
+};
+
 [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 	ImageRoundRadius radius);
 [[nodiscard]] std::array<QImage, 4> PrepareCorners(
@@ -99,6 +117,11 @@ inline constexpr auto is_flag_type(Option) { return true; };
 [[nodiscard]] Options RoundOptions(
 	ImageRoundRadius radius,
 	RectParts corners = RectPart::AllCorners);
+
+[[nodiscard]] QImage Round(
+	QImage &&image,
+	CornersMaskRef mask,
+	QRect target = QRect());
 
 [[nodiscard]] QImage Blur(QImage &&image, bool ignoreAlpha = false);
 [[nodiscard]] QImage Round(

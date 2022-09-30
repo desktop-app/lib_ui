@@ -501,48 +501,52 @@ void FillSpoilerRect(
 void FillSpoilerRect(
 		QPainter &p,
 		QRect rect,
-		ImageRoundRadius radius,
-		RectParts corners,
+		Images::CornersMaskRef mask,
 		const SpoilerMessFrame &frame,
 		QImage &cornerCache,
 		QPoint originShift) {
-	if (radius == ImageRoundRadius::None || !corners) {
-		FillSpoilerRect(p, rect, frame, originShift);
-		return;
-	}
-	const auto &mask = Images::CornersMask(radius);
-	const auto side = mask[0].width() / style::DevicePixelRatio();
-	const auto xFillFrom = (corners & RectPart::FullLeft) ? side : 0;
-	const auto xFillTo = rect.width()
-		- ((corners & RectPart::FullRight) ? side : 0);
-	const auto yFillFrom = (corners & RectPart::FullTop) ? side : 0;
-	const auto yFillTo = rect.height()
-		- ((corners & RectPart::FullBottom) ? side : 0);
-	const auto xFill = xFillTo - xFillFrom;
-	const auto yFill = yFillTo - yFillFrom;
-	if (xFill < 0 || yFill < 0) {
-		// Unexpected.. but maybe not fatal, just glitchy.
+	constexpr auto kTopLeft = 0;
+	constexpr auto kTopRight = 1;
+	constexpr auto kBottomLeft = 2;
+	constexpr auto kBottomRight = 3;
+
+	if ((!mask.p[kTopLeft] || mask.p[kTopLeft]->isNull())
+		&& (!mask.p[kTopRight] || mask.p[kTopRight]->isNull())
+		&& (!mask.p[kBottomLeft] || mask.p[kBottomLeft]->isNull())
+		&& (!mask.p[kBottomRight] || mask.p[kBottomRight]->isNull())) {
 		FillSpoilerRect(p, rect, frame, originShift);
 		return;
 	}
 	const auto ratio = style::DevicePixelRatio();
-	const auto paintPart = [&](int x, int y, int w, int h) {
+	const auto cornerSize = [&](int index) {
+		const auto corner = mask.p[index];
+		return (!corner || corner->isNull()) ? 0 : (corner->width() / ratio);
+	};
+	const auto verticalSkip = [&](int left, int right) {
+		return std::max(cornerSize(left), cornerSize(right));
+	};
+	const auto fillBg = [&](QRect part) {
 		FillSpoilerRect(
 			p,
-			{ rect.x() + x, rect.y() + y, w, h },
+			part.translated(rect.topLeft()),
 			frame,
-			originShift - QPoint(x, y));
+			originShift - part.topLeft());
 	};
-	const auto paintCorner = [&](QPoint position, const QImage &mask) {
-		if (cornerCache.width() < mask.width()
-			|| cornerCache.height() < mask.height()) {
+	const auto fillCorner = [&](int x, int y, int index) {
+		const auto position = QPoint(x, y);
+		const auto corner = mask.p[index];
+		if (!corner || corner->isNull()) {
+			return;
+		}
+		if (cornerCache.width() < corner->width()
+			|| cornerCache.height() < corner->height()) {
 			cornerCache = QImage(
-				std::max(cornerCache.width(), mask.width()),
-				std::max(cornerCache.height(), mask.height()),
+				std::max(cornerCache.width(), corner->width()),
+				std::max(cornerCache.height(), corner->height()),
 				QImage::Format_ARGB32_Premultiplied);
 			cornerCache.setDevicePixelRatio(ratio);
 		}
-		const auto size = mask.size() / ratio;
+		const auto size = corner->size() / ratio;
 		const auto target = QRect(QPoint(), size);
 		auto q = QPainter(&cornerCache);
 		q.setCompositionMode(QPainter::CompositionMode_Source);
@@ -552,36 +556,83 @@ void FillSpoilerRect(
 			frame,
 			originShift - rect.topLeft() - position);
 		q.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-		q.drawImage(target, mask);
+		q.drawImage(target, *corner);
 		q.end();
 		p.drawImage(
 			QRect(rect.topLeft() + position, size),
 			cornerCache,
-			QRect(QPoint(), mask.size()));
+			QRect(QPoint(), corner->size()));
 	};
-	if (yFillFrom > 0) {
-		if (xFillFrom > 0) {
-			paintCorner({}, mask[0]);
+	const auto top = verticalSkip(kTopLeft, kTopRight);
+	const auto bottom = verticalSkip(kBottomLeft, kBottomRight);
+		if (top) {
+		const auto left = cornerSize(kTopLeft);
+		const auto right = cornerSize(kTopRight);
+		if (left) {
+			fillCorner(rect.left(), rect.top(), kTopLeft);
+			if (const auto add = top - left) {
+				fillBg({ rect.left(), rect.top() + left, left, add });
+			}
 		}
-		if (xFill) {
-			paintPart(xFillFrom, 0, xFill, yFillFrom);
+		if (const auto fill = rect.width() - left - right; fill > 0) {
+			fillBg({ rect.left() + left, rect.top(), fill, top });
 		}
-		if (xFillTo < rect.width()) {
-			paintCorner({ xFillTo, 0 }, mask[1]);
+		if (right) {
+			fillCorner(
+				rect.left() + rect.width() - right,
+				rect.top(),
+				kTopRight);
+			if (const auto add = top - right) {
+				fillBg({
+					rect.left() + rect.width() - right,
+					rect.top() + right,
+					right,
+					add,
+				});
+			}
 		}
 	}
-	if (yFill) {
-		paintPart(0, yFillFrom, rect.width(), yFill);
+	if (const auto h = rect.height() - top - bottom; h > 0) {
+		fillBg({ rect.left(), rect.top() + top, rect.width(), h });
 	}
-	if (yFillTo < rect.height()) {
-		if (xFillFrom > 0) {
-			paintCorner({ 0, yFillTo }, mask[2]);
+	if (bottom) {
+		const auto left = cornerSize(kBottomLeft);
+		const auto right = cornerSize(kBottomRight);
+		if (left) {
+			fillCorner(
+				rect.left(),
+				rect.top() + rect.height() - left,
+				kBottomLeft);
+			if (const auto add = bottom - left) {
+				fillBg({
+					rect.left(),
+					rect.top() + rect.height() - bottom,
+					left,
+					add,
+				});
+			}
 		}
-		if (xFill) {
-			paintPart(xFillFrom, yFillTo, xFill, rect.height() - yFillTo);
+		if (const auto fill = rect.width() - left - right; fill > 0) {
+			fillBg({
+				rect.left() + left,
+				rect.top() + rect.height() - bottom,
+				fill,
+				bottom,
+			});
 		}
-		if (xFillTo < rect.width()) {
-			paintCorner({ xFillTo, yFillTo }, mask[3]);
+		if (right) {
+			fillCorner(
+				rect.left() + rect.width() - right,
+				rect.top() + rect.height() - right,
+				kBottomRight);
+			if (const auto add = bottom - right) {
+				fillBg({
+					rect.left() + rect.width() - right,
+					rect.top() + rect.height() - bottom,
+					right,
+					add,
+				});
+			}
 		}
 	}
 }
