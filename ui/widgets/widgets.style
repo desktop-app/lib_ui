@@ -1453,7 +1453,7 @@ defaultToast: Toast {
 }
 
 defaultMultilineToast: Toast(defaultToast) {
-	minWidth: msgMinWidth;
+	minWidth: 160px;
 }
 
 shakeShift: 4px;
