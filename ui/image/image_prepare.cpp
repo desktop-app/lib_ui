@@ -1017,13 +1017,8 @@ QImage Round(
 	} else {
 		Assert(QRect(QPoint(), image.size()).contains(target));
 	}
-	auto cornerWidth = cornerMasks[0].width();
-	auto cornerHeight = cornerMasks[0].height();
-	auto targetWidth = target.width();
-	auto targetHeight = target.height();
-	if (targetWidth < cornerWidth || targetHeight < cornerHeight) {
-		return std::move(image);
-	}
+	const auto targetWidth = target.width();
+	const auto targetHeight = target.height();
 
 	image = std::move(image).convertToFormat(
 		QImage::Format_ARGB32_Premultiplied);
@@ -1035,40 +1030,59 @@ QImage Round(
 	// Real image bytesPerLine is smaller than the one we use for offsets.
 	auto ints = reinterpret_cast<uint32*>(image.bits());
 
-	constexpr auto imageIntsPerPixel = 1;
-	auto imageIntsPerLine = (image.bytesPerLine() >> 2);
-	Assert(image.depth() == static_cast<int>((imageIntsPerPixel * sizeof(uint32)) << 3));
+	constexpr auto kImageIntsPerPixel = 1;
+	const auto imageIntsPerLine = (image.bytesPerLine() >> 2);
+	Assert(image.depth() == ((kImageIntsPerPixel * sizeof(uint32)) << 3));
 	Assert(image.bytesPerLine() == (imageIntsPerLine << 2));
-	auto intsTopLeft = ints + target.x() + target.y() * imageIntsPerLine;
-	auto intsTopRight = ints + target.x() + targetWidth - cornerWidth + target.y() * imageIntsPerLine;
-	auto intsBottomLeft = ints + target.x() + (target.y() + targetHeight - cornerHeight) * imageIntsPerLine;
-	auto intsBottomRight = ints + target.x() + targetWidth - cornerWidth + (target.y() + targetHeight - cornerHeight) * imageIntsPerLine;
-	auto maskCorner = [&](uint32 *imageInts, const QImage &mask) {
-		auto maskWidth = mask.width();
-		auto maskHeight = mask.height();
-		auto maskBytesPerPixel = (mask.depth() >> 3);
-		auto maskBytesPerLine = mask.bytesPerLine();
-		auto maskBytesAdded = maskBytesPerLine - maskWidth * maskBytesPerPixel;
-		auto maskBytes = mask.constBits();
+	const auto maskCorner = [&](
+			const QImage &mask,
+			bool right = false,
+			bool bottom = false) {
+		const auto maskWidth = mask.width();
+		const auto maskHeight = mask.height();
+		if (mask.isNull()
+			|| targetWidth < maskWidth
+			|| targetHeight < maskHeight) {
+			return;
+		}
+
+		const auto maskBytesPerPixel = (mask.depth() >> 3);
+		const auto maskBytesPerLine = mask.bytesPerLine();
+		const auto maskBytesAdded = maskBytesPerLine
+			- maskWidth * maskBytesPerPixel;
 		Assert(maskBytesAdded >= 0);
 		Assert(mask.depth() == (maskBytesPerPixel << 3));
-		auto imageIntsAdded = imageIntsPerLine - maskWidth * imageIntsPerPixel;
+		const auto imageIntsAdded = imageIntsPerLine
+			- maskWidth * kImageIntsPerPixel;
 		Assert(imageIntsAdded >= 0);
+		auto imageInts = ints + target.x() + target.y() * imageIntsPerLine;
+		if (right) {
+			imageInts += targetWidth - maskWidth;
+		}
+		if (bottom) {
+			imageInts += (targetHeight - maskHeight) * imageIntsPerLine;
+		}
+		auto maskBytes = mask.constBits();
 		for (auto y = 0; y != maskHeight; ++y) {
 			for (auto x = 0; x != maskWidth; ++x) {
 				auto opacity = static_cast<anim::ShiftedMultiplier>(*maskBytes) + 1;
 				*imageInts = anim::unshifted(anim::shifted(*imageInts) * opacity);
 				maskBytes += maskBytesPerPixel;
-				imageInts += imageIntsPerPixel;
+				imageInts += kImageIntsPerPixel;
 			}
 			maskBytes += maskBytesAdded;
 			imageInts += imageIntsAdded;
 		}
 	};
-	if (corners & RectPart::TopLeft) maskCorner(intsTopLeft, cornerMasks[0]);
-	if (corners & RectPart::TopRight) maskCorner(intsTopRight, cornerMasks[1]);
-	if (corners & RectPart::BottomLeft) maskCorner(intsBottomLeft, cornerMasks[2]);
-	if (corners & RectPart::BottomRight) maskCorner(intsBottomRight, cornerMasks[3]);
+
+	if (corners & RectPart::TopLeft) maskCorner(cornerMasks[0]);
+	if (corners & RectPart::TopRight) maskCorner(cornerMasks[1], true);
+	if (corners & RectPart::BottomLeft) {
+		maskCorner(cornerMasks[2], false, true);
+	}
+	if (corners & RectPart::BottomRight) {
+		maskCorner(cornerMasks[3], true, true);
+	}
 
 	return std::move(image);
 }
