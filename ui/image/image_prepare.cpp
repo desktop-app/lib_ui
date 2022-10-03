@@ -51,7 +51,7 @@ TG_FORCE_INLINE uint64 BlurGetColors(const uchar *p) {
 		+ ((uint64)p[3] << 48);
 }
 
-const QImage &CircleMask(QSize size) {
+const QImage &EllipseMaskCached(QSize size) {
 	const auto key = (uint64(uint32(size.width())) << 32)
 		| uint64(uint32(size.height()));
 
@@ -64,17 +64,7 @@ const QImage &CircleMask(QSize size) {
 	}
 	lock.unlock();
 
-	auto mask = QImage(
-		size,
-		QImage::Format_ARGB32_Premultiplied);
-	mask.fill(Qt::transparent);
-	{
-		QPainter p(&mask);
-		PainterHighQualityEnabler hq(p);
-		p.setBrush(Qt::white);
-		p.setPen(Qt::NoPen);
-		p.drawEllipse(QRect(QPoint(), size));
-	}
+	auto mask = EllipseMask(size);
 
 	lock.relock();
 	return Masks.emplace(key, std::move(mask)).first->second;
@@ -343,6 +333,24 @@ std::array<QImage, 4> PrepareCorners(
 
 std::array<QImage, 4> CornersMask(int radius) {
 	return PrepareCornersMask(radius);
+}
+
+QImage EllipseMask(QSize size) {
+	const auto ratio = style::DevicePixelRatio();
+
+	size *= ratio;
+	auto result = QImage(size, QImage::Format_ARGB32_Premultiplied);
+	result.fill(Qt::transparent);
+
+	QPainter p(&result);
+	PainterHighQualityEnabler hq(p);
+	p.setBrush(Qt::white);
+	p.setPen(Qt::NoPen);
+	p.drawEllipse(QRect(QPoint(), size));
+	p.end();
+
+	result.setDevicePixelRatio(ratio);
+	return result;
 }
 
 std::array<QImage, 4> PrepareCorners(
@@ -987,7 +995,7 @@ QImage Circle(QImage &&image, QRect target) {
 	Expects(!image.isNull());
 
 	if (target.isNull()) {
-		target = QRect(QPoint(), image.size());
+		target = QRect(QPoint( ), image.size());
 	} else {
 		Assert(QRect(QPoint(), image.size()).contains(target));
 	}
@@ -1001,7 +1009,7 @@ QImage Circle(QImage &&image, QRect target) {
 	p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 	p.drawImage(
 		QRectF(target.topLeft() / ratio, target.size() / ratio),
-		CircleMask(target.size()));
+		EllipseMaskCached(target.size()));
 	p.end();
 
 	return std::move(image);

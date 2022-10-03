@@ -505,10 +505,7 @@ void FillSpoilerRect(
 		const SpoilerMessFrame &frame,
 		QImage &cornerCache,
 		QPoint originShift) {
-	constexpr auto kTopLeft = 0;
-	constexpr auto kTopRight = 1;
-	constexpr auto kBottomLeft = 2;
-	constexpr auto kBottomRight = 3;
+	using namespace Images;
 
 	if ((!mask.p[kTopLeft] || mask.p[kTopLeft]->isNull())
 		&& (!mask.p[kTopRight] || mask.p[kTopRight]->isNull())
