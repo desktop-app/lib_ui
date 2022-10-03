@@ -25,7 +25,6 @@ generate_styles(lib_ui ${src_loc} "${style_files}" ui/colors.palette)
 generate_emoji(lib_ui emoji.txt emoji_suggestions/emoji_autocomplete.json)
 
 set_target_properties(lib_ui PROPERTIES AUTOMOC ON)
-target_prepare_qrc(lib_ui)
 
 target_precompile_headers(lib_ui PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:${src_loc}/ui/ui_pch.h>)
 nice_target_sources(lib_ui ${src_loc}
@@ -319,3 +318,5 @@ PRIVATE
     desktop-app::external_lz4
     desktop-app::external_xxhash
 )
+
+target_prepare_qrc(lib_ui)
