@@ -165,7 +165,7 @@ void RippleButton::ensureRipple() {
 }
 
 QImage RippleButton::prepareRippleMask() const {
-	return RippleAnimation::rectMask(size());
+	return RippleAnimation::RectMask(size());
 }
 
 QPoint RippleButton::prepareRippleStartPosition() const {
@@ -449,7 +449,7 @@ QImage RoundButton::prepareRippleMask() const {
 	if (_fullWidthOverride < 0) {
 		rounded = QRect(0, rounded.top(), innerWidth - _fullWidthOverride, rounded.height());
 	}
-	return RippleAnimation::roundRectMask(
+	return RippleAnimation::RoundRectMask(
 		rounded.size(),
 		(_fullRadius
 			? (rounded.height() / 2)
@@ -551,7 +551,7 @@ QPoint IconButton::prepareRippleStartPosition() const {
 }
 
 QImage IconButton::prepareRippleMask() const {
-	return RippleAnimation::ellipseMask(QSize(_st.rippleAreaSize, _st.rippleAreaSize));
+	return RippleAnimation::EllipseMask(QSize(_st.rippleAreaSize, _st.rippleAreaSize));
 }
 
 CrossButton::CrossButton(QWidget *parent, const style::CrossButton &st) : RippleButton(parent, st.ripple)
@@ -684,7 +684,7 @@ QPoint CrossButton::prepareRippleStartPosition() const {
 }
 
 QImage CrossButton::prepareRippleMask() const {
-	return RippleAnimation::ellipseMask(QSize(_st.cross.size, _st.cross.size));
+	return RippleAnimation::EllipseMask(QSize(_st.cross.size, _st.cross.size));
 }
 
 SettingsButton::SettingsButton(

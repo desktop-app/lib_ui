@@ -32,7 +32,7 @@ CallButton::CallButton(
 void CallButton::init() {
 	resize(_stFrom->button.width, _stFrom->button.height);
 
-	_bgMask = RippleAnimation::ellipseMask(QSize(_stFrom->bgSize, _stFrom->bgSize));
+	_bgMask = RippleAnimation::EllipseMask(QSize(_stFrom->bgSize, _stFrom->bgSize));
 	_bgFrom = Ui::PixmapFromImage(style::colorizeImage(_bgMask, _stFrom->bg));
 	if (_stTo) {
 		Assert(_stFrom->button.width == _stTo->button.width);
@@ -242,7 +242,7 @@ QPoint CallButton::prepareRippleStartPosition() const {
 }
 
 QImage CallButton::prepareRippleMask() const {
-	return RippleAnimation::ellipseMask(QSize(_stFrom->button.rippleAreaSize, _stFrom->button.rippleAreaSize));
+	return RippleAnimation::EllipseMask(QSize(_stFrom->button.rippleAreaSize, _stFrom->button.rippleAreaSize));
 }
 
 } // namespace Ui

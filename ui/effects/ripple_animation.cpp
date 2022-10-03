@@ -9,15 +9,27 @@
 #include "ui/effects/animations.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
+#include "ui/image/image_prepare.h"
 
 namespace Ui {
 
 class RippleAnimation::Ripple {
 public:
-	Ripple(const style::RippleAnimation &st, QPoint origin, int startRadius, const QPixmap &mask, Fn<void()> update);
-	Ripple(const style::RippleAnimation &st, const QPixmap &mask, Fn<void()> update);
+	Ripple(
+		const style::RippleAnimation &st,
+		QPoint origin,
+		int startRadius,
+		const QPixmap &mask,
+		Fn<void()> update);
+	Ripple(
+		const style::RippleAnimation &st,
+		const QPixmap &mask,
+		Fn<void()> update);
 
-	void paint(QPainter &p, const QPixmap &mask, const QColor *colorOverride);
+	void paint(
+		QPainter &p,
+		const QPixmap &mask,
+		const QColor *colorOverride);
 
 	void stop();
 	void unstop();
@@ -43,7 +55,12 @@ private:
 
 };
 
-RippleAnimation::Ripple::Ripple(const style::RippleAnimation &st, QPoint origin, int startRadius, const QPixmap &mask, Fn<void()> update)
+RippleAnimation::Ripple::Ripple(
+	const style::RippleAnimation &st,
+	QPoint origin,
+	int startRadius,
+	const QPixmap &mask,
+	Fn<void()> update)
 : _st(st)
 , _update(update)
 , _origin(origin)
@@ -59,7 +76,9 @@ RippleAnimation::Ripple::Ripple(const style::RippleAnimation &st, QPoint origin,
 		{ 0, _frame.height() / pixelRatio },
 	};
 	for (auto point : points) {
-		accumulate_max(_radiusTo, style::point::dotProduct(_origin - point, _origin - point));
+		accumulate_max(
+			_radiusTo,
+			style::point::dotProduct(_origin - point, _origin - point));
 	}
 	_radiusTo = qRound(sqrt(_radiusTo));
 
@@ -79,7 +98,10 @@ RippleAnimation::Ripple::Ripple(const style::RippleAnimation &st, const QPixmap 
 	_hide.start(_update, 0., 1., _st.hideDuration);
 }
 
-void RippleAnimation::Ripple::paint(QPainter &p, const QPixmap &mask, const QColor *colorOverride) {
+void RippleAnimation::Ripple::paint(
+		QPainter &p,
+		const QPixmap &mask,
+		const QColor *colorOverride) {
 	auto opacity = _hide.value(_hiding ? 0. : 1.);
 	if (opacity == 0.) {
 		return;
@@ -92,9 +114,11 @@ void RippleAnimation::Ripple::paint(QPainter &p, const QPixmap &mask, const QCol
 		Assert(!std::isnan(diff));
 		const auto mult = diff * shown;
 		Assert(!std::isnan(mult));
-		const auto interpolated = _radiusFrom + mult;//anim::interpolateF(_radiusFrom, _radiusTo, shown);
+		const auto interpolated = _radiusFrom + mult;
+		//anim::interpolateF(_radiusFrom, _radiusTo, shown);
 		Assert(!std::isnan(interpolated));
-		auto radius = int(base::SafeRound(interpolated));//anim::interpolate(_radiusFrom, _radiusTo, _show.value(1.));
+		auto radius = int(base::SafeRound(interpolated));
+		//anim::interpolate(_radiusFrom, _radiusTo, _show.value(1.));
 		_frame.fill(Qt::transparent);
 		{
 			QPainter p(&_frame);
@@ -151,7 +175,10 @@ void RippleAnimation::Ripple::clearCache() {
 	_cache = QPixmap();
 }
 
-RippleAnimation::RippleAnimation(const style::RippleAnimation &st, QImage mask, Fn<void()> callback)
+RippleAnimation::RippleAnimation(
+	const style::RippleAnimation &st,
+	QImage mask,
+	Fn<void()> callback)
 : _st(st)
 , _mask(PixmapFromImage(std::move(mask)))
 , _update(callback) {
@@ -160,7 +187,8 @@ RippleAnimation::RippleAnimation(const style::RippleAnimation &st, QImage mask, 
 
 void RippleAnimation::add(QPoint origin, int startRadius) {
 	lastStop();
-	_ripples.push_back(std::make_unique<Ripple>(_st, origin, startRadius, _mask, _update));
+	_ripples.push_back(
+		std::make_unique<Ripple>(_st, origin, startRadius, _mask, _update));
 }
 
 void RippleAnimation::addFading() {
@@ -195,7 +223,12 @@ void RippleAnimation::forceRepaint() {
 	}
 }
 
-void RippleAnimation::paint(QPainter &p, int x, int y, int outerWidth, const QColor *colorOverride) {
+void RippleAnimation::paint(
+		QPainter &p,
+		int x,
+		int y,
+		int outerWidth,
+		const QColor *colorOverride) {
 	if (_ripples.empty()) {
 		return;
 	}
@@ -211,8 +244,13 @@ void RippleAnimation::paint(QPainter &p, int x, int y, int outerWidth, const QCo
 	clearFinished();
 }
 
-QImage RippleAnimation::maskByDrawer(QSize size, bool filled, Fn<void(QPainter &p)> drawer) {
-	auto result = QImage(size * style::DevicePixelRatio(), QImage::Format_ARGB32_Premultiplied);
+QImage RippleAnimation::MaskByDrawer(
+		QSize size,
+		bool filled,
+		Fn<void(QPainter &p)> drawer) {
+	auto result = QImage(
+		size * style::DevicePixelRatio(),
+		QImage::Format_ARGB32_Premultiplied);
 	result.setDevicePixelRatio(style::DevicePixelRatio());
 	result.fill(filled ? QColor(255, 255, 255) : Qt::transparent);
 	if (drawer) {
@@ -226,18 +264,46 @@ QImage RippleAnimation::maskByDrawer(QSize size, bool filled, Fn<void(QPainter &
 	return result;
 }
 
-QImage RippleAnimation::rectMask(QSize size) {
-	return maskByDrawer(size, true, Fn<void(QPainter&)>());
+QImage RippleAnimation::RectMask(QSize size) {
+	return MaskByDrawer(size, true, nullptr);
 }
 
-QImage RippleAnimation::roundRectMask(QSize size, int radius) {
-	return maskByDrawer(size, false, [size, radius](QPainter &p) {
+QImage RippleAnimation::RoundRectMask(QSize size, int radius) {
+	return MaskByDrawer(size, false, [&](QPainter &p) {
 		p.drawRoundedRect(0, 0, size.width(), size.height(), radius, radius);
 	});
 }
 
-QImage RippleAnimation::ellipseMask(QSize size) {
-	return maskByDrawer(size, false, [size](QPainter &p) {
+QImage RippleAnimation::RoundRectMask(
+		QSize size,
+		Images::CornersMaskRef corners) {
+	return MaskByDrawer(size, true, [&](QPainter &p) {
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		const auto ratio = style::DevicePixelRatio();
+		const auto corner = [&](int index, bool right, bool bottom) {
+			if (const auto image = corners.p[index]) {
+				if (!image->isNull()) {
+					const auto width = image->width() / ratio;
+					const auto height = image->height() / ratio;
+					p.drawImage(
+						QRect(
+							right ? (size.width() - width) : 0,
+							bottom ? (size.height() - height) : 0,
+							width,
+							height),
+						*image);
+				}
+			}
+		};
+		corner(0, false, false);
+		corner(1, true, false);
+		corner(2, false, true);
+		corner(3, true, true);
+	});
+}
+
+QImage RippleAnimation::EllipseMask(QSize size) {
+	return MaskByDrawer(size, false, [&](QPainter &p) {
 		p.drawEllipse(0, 0, size.width(), size.height());
 	});
 }

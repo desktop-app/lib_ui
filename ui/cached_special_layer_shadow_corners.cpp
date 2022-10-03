@@ -18,7 +18,7 @@ namespace {
 	const auto s = QSize(
 		st::boxRadius * 2 + st.extend.left(),
 		st::boxRadius * 2 + st.extend.right());
-	const auto mask = Ui::RippleAnimation::maskByDrawer(s, false, [&](
+	const auto mask = Ui::RippleAnimation::MaskByDrawer(s, false, [&](
 			QPainter &p) {
 		p.drawRoundedRect(QRect(QPoint(), s), st::boxRadius, st::boxRadius);
 	});
