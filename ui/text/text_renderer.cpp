@@ -185,7 +185,6 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 		? -1
 		: (context.clip.y() + context.clip.height());
 	if (const auto lines = context.elisionLines) {
-		if (context.clip.isNull())
 		if (_yTo < 0 || (_y + (lines - 1) * _t->_st->font->height) < _yTo) {
 			_yTo = _y + (lines * _t->_st->font->height);
 			_elideLast = true;
