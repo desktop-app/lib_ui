@@ -37,6 +37,7 @@ struct Config {
 	bool dark = false;
 	RectPart slideSide = RectPart::None;
 	ClickHandlerFilter filter;
+	Fn<std::any(not_null<QWidget*>)> textContext;
 };
 
 void SetDefaultParent(not_null<QWidget*> parent);

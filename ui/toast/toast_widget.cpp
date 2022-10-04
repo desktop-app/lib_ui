@@ -38,9 +38,15 @@ Widget::Widget(QWidget *parent, const Config &config)
 	_text.setMarkedText(
 		_st->style,
 		_multiline ? config.text : TextUtilities::SingleLine(config.text),
-		toastOptions);
+		toastOptions,
+		config.textContext ? config.textContext(this) : std::any());
+	const auto weak = Ui::MakeWeak(this);
+	_text.setSpoilerLinkFilter([=](const ClickContext &context) {
+		return (weak != nullptr);
+	});
 
-	if (_text.hasLinks()) {
+	_processMouse = _text.hasLinks() || _text.hasSpoilers();
+	if (_processMouse) {
 		setMouseTracking(true);
 	} else {
 		setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -51,9 +57,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 }
 
 void Widget::setInputUsed(bool used) {
-	setAttribute(
-		Qt::WA_TransparentForMouseEvents,
-		!used && !_text.hasLinks());
+	setAttribute(Qt::WA_TransparentForMouseEvents, !used && !_processMouse);
 }
 
 void Widget::onParentResized() {
@@ -147,16 +151,16 @@ void Widget::paintEvent(QPaintEvent *e) {
 
 	const auto lines = _maxTextHeight / _st->style.font->height;
 	p.setPen(st::toastFg);
-	_text.drawElided(
-		p,
-		_st->padding.left(),
-		_textTop,
-		_textWidth + 1,
-		lines);
+	_text.draw(p, {
+		.position = { _st->padding.left(), _textTop },
+		.availableWidth = _textWidth + 1,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.elisionLines = lines,
+	});
 }
 
 void Widget::leaveEventHook(QEvent *e) {
-	if (!_text.hasLinks()) {
+	if (!_processMouse) {
 		return;
 	}
 	if (ClickHandler::getActive()) {
@@ -167,7 +171,7 @@ void Widget::leaveEventHook(QEvent *e) {
 }
 
 void Widget::mouseMoveEvent(QMouseEvent *e) {
-	if (!_text.hasLinks()) {
+	if (!_processMouse) {
 		return;
 	}
 	const auto point = e->pos()
@@ -184,14 +188,14 @@ void Widget::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void Widget::mousePressEvent(QMouseEvent *e) {
-	if (!_text.hasLinks() || e->button() != Qt::LeftButton) {
+	if (!_processMouse || e->button() != Qt::LeftButton) {
 		return;
 	}
 	ClickHandler::pressed();
 }
 
 void Widget::mouseReleaseEvent(QMouseEvent *e) {
-	if (!_text.hasLinks() || e->button() != Qt::LeftButton) {
+	if (!_processMouse || e->button() != Qt::LeftButton) {
 		return;
 	}
 	if (const auto handler = ClickHandler::unpressed()) {
