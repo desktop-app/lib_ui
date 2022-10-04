@@ -40,10 +40,12 @@ Widget::Widget(QWidget *parent, const Config &config)
 		_multiline ? config.text : TextUtilities::SingleLine(config.text),
 		toastOptions,
 		config.textContext ? config.textContext(this) : std::any());
-	const auto weak = Ui::MakeWeak(this);
-	_text.setSpoilerLinkFilter([=](const ClickContext &context) {
-		return (weak != nullptr);
-	});
+	if (_text.hasSpoilers()) {
+		const auto weak = Ui::MakeWeak(this);
+		_text.setSpoilerLinkFilter([=](const ClickContext &context) {
+			return (weak != nullptr);
+		});
+	}
 
 	_processMouse = _text.hasLinks() || _text.hasSpoilers();
 	if (_processMouse) {
