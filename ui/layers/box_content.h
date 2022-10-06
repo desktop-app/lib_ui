@@ -31,6 +31,10 @@ struct ScrollArea;
 struct Box;
 } // namespace style
 
+namespace st {
+extern const style::ScrollArea &boxScroll;
+} // namespace st
+
 namespace Ui {
 class GenericBox;
 } // namespace Ui
@@ -242,11 +246,11 @@ protected:
 			object_ptr<Widget> inner,
 			int topSkip = 0,
 			int bottomSkip = 0) {
-		auto result = QPointer<Widget>(inner.data());
-		setInnerTopSkip(topSkip);
-		setInnerBottomSkip(bottomSkip);
-		setInner(std::move(inner));
-		return result;
+		return setInnerWidget(
+			std::move(inner),
+			st::boxScroll,
+			topSkip,
+			bottomSkip);
 	}
 
 	template <typename Widget>
@@ -265,7 +269,6 @@ protected:
 private:
 	void finishPrepare();
 	void finishScrollCreate();
-	void setInner(object_ptr<TWidget> inner);
 	void setInner(object_ptr<TWidget> inner, const style::ScrollArea &st);
 	void updateScrollAreaGeometry();
 	void updateInnerVisibleTopBottom();

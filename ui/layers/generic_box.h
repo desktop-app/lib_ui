@@ -71,6 +71,13 @@ public:
 
 	void addSkip(int height);
 
+	void setMaxHeight(int maxHeight) {
+		_maxHeight = maxHeight;
+	}
+	void setScrollStyle(const style::ScrollArea &st) {
+		_scrollSt = &st;
+	}
+
 	void setInnerFocus() override {
 		if (_focus) {
 			_focus();
@@ -128,7 +135,9 @@ private:
 	Fn<void()> _showFinished;
 	object_ptr<Ui::VerticalLayout> _owned;
 	not_null<Ui::VerticalLayout*> _content;
+	const style::ScrollArea *_scrollSt = nullptr;
 	int _width = 0;
+	int _maxHeight = 0;
 
 	object_ptr<Ui::RpWidget> _pinnedToTopContent = { nullptr };
 

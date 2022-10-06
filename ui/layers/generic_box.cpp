@@ -29,10 +29,16 @@ void GenericBox::prepare() {
 		wrap->heightValue()
 	) | rpl::start_with_next([=](int top, int height) {
 		setInnerTopSkip(top);
-		setDimensions(currentWidth, top + height);
+		const auto desired = top + height;
+		setDimensions(
+			currentWidth,
+			_maxHeight ? std::min(desired, _maxHeight) : desired);
 	}, wrap->lifetime());
 
-	setInnerWidget(std::move(wrap), pinned ? pinned->height() : 0);
+	setInnerWidget(
+		std::move(wrap),
+		_scrollSt ? *_scrollSt : st::boxScroll,
+		pinned ? pinned->height() : 0);
 }
 
 void GenericBox::addSkip(int height) {

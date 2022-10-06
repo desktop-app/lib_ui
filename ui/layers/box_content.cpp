@@ -103,10 +103,6 @@ QPointer<IconButton> BoxContent::addTopButton(
 	return result;
 }
 
-void BoxContent::setInner(object_ptr<TWidget> inner) {
-	setInner(std::move(inner), st::boxScroll);
-}
-
 void BoxContent::setInner(
 		object_ptr<TWidget> inner,
 		const style::ScrollArea &st) {
