@@ -16,6 +16,7 @@ class VerticalLayout;
 
 class VerticalLayoutReorder final {
 public:
+	using ProxyCallback = Fn<not_null<Ui::RpWidget*>(int)>;
 	enum class State : uchar {
 		Started,
 		Applied,
@@ -38,6 +39,7 @@ public:
 	void finishReordering();
 	void addPinnedInterval(int from, int length);
 	void clearPinnedIntervals();
+	void setMouseEventProxy(ProxyCallback callback);
 	[[nodiscard]] rpl::producer<Single> updates() const;
 
 private:
@@ -84,6 +86,8 @@ private:
 	Ui::Animations::Basic _scrollAnimation;
 
 	std::vector<Interval> _pinnedIntervals;
+
+	ProxyCallback _proxyWidgetCallback = nullptr;
 
 	RpWidget *_currentWidget = nullptr;
 	int _currentStart = 0;

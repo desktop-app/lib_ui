@@ -50,7 +50,10 @@ void VerticalLayoutReorder::start() {
 	}
 	for (auto i = 0; i != count; ++i) {
 		const auto widget = _layout->widgetAt(i);
-		widget->events(
+		const auto eventsProducer = _proxyWidgetCallback
+			? _proxyWidgetCallback(i)
+			: widget;
+		eventsProducer->events(
 		) | rpl::start_with_next_done([=](not_null<QEvent*> e) {
 			switch (e->type()) {
 			case QEvent::MouseMove:
@@ -81,6 +84,10 @@ void VerticalLayoutReorder::addPinnedInterval(int from, int length) {
 
 void VerticalLayoutReorder::clearPinnedIntervals() {
 	_pinnedIntervals.clear();
+}
+
+void VerticalLayoutReorder::setMouseEventProxy(ProxyCallback callback) {
+	_proxyWidgetCallback = std::move(callback);
 }
 
 bool VerticalLayoutReorder::Interval::isIn(int index) const {
