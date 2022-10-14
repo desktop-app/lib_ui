@@ -274,6 +274,7 @@ public:
 	void setPaddingOverride(style::margins padding);
 
 	[[nodiscard]] const style::SettingsButton &st() const;
+	[[nodiscard]] int fullTextWidth() const;
 
 protected:
 	int resizeGetHeight(int newWidth) override;

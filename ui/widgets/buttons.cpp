@@ -765,6 +765,10 @@ const style::SettingsButton &SettingsButton::st() const {
 	return _st;
 }
 
+int SettingsButton::fullTextWidth() const {
+	return _text.maxWidth();
+}
+
 void SettingsButton::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
