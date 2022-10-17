@@ -151,6 +151,9 @@ void SlideWrap<RpWidget>::wrappedSizeUpdated(QSize size) {
 }
 
 rpl::producer<bool> MultiSlideTracker::atLeastOneShownValue() const {
+	if (_widgets.empty()) {
+		return rpl::single(false);
+	}
 	auto shown = std::vector<rpl::producer<bool>>();
 	shown.reserve(_widgets.size());
 	for (auto &widget : _widgets) {
