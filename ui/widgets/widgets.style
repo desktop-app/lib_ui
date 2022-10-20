@@ -258,32 +258,9 @@ PopupMenu {
 	showDuration: int;
 }
 
-FlatInput {
-	textColor: color;
-	bgColor: color;
-	bgActive: color;
-	width: pixels;
-	height: pixels;
-	textMrg: margins;
-	align: align;
-	font: font;
-
-	icon: icon;
-
-	borderWidth: pixels;
-	borderColor: color;
-	borderActive: color;
-
-	phColor: color;
-	phFocusColor: color;
-	phPos: point;
-	phAlign: align;
-	phShift: pixels;
-	phDuration: int;
-}
-
 InputField {
 	textBg: color;
+	textBgActive: color; // Used only with borderRadius.
 	textFg: color;
 	textMargins: margins;
 	textAlign: align;
@@ -305,6 +282,7 @@ InputField {
 
 	border: pixels;
 	borderActive: pixels;
+	borderRadius: pixels;
 
 	font: font;
 	menu: PopupMenu;
@@ -731,29 +709,6 @@ defaultSolidScroll: ScrollArea(defaultScrollArea) {
 	hiding: 0;
 }
 
-defaultInputFont: font(17px);
-defaultFlatInput: FlatInput {
-	textColor: windowFg;
-	bgColor: filterInputInactiveBg;
-	bgActive: filterInputActiveBg;
-	width: 210px;
-	height: 40px;
-	align: align(left);
-	textMrg: margins(5px, 5px, 5px, 5px);
-	font: defaultInputFont;
-
-	borderWidth: 2px;
-	borderColor: filterInputInactiveBg;
-	borderActive: filterInputBorderFg;
-
-	phColor: placeholderFg;
-	phFocusColor: placeholderFgActive;
-	phAlign: align(left);
-	phPos: point(2px, 0px);
-	phShift: 50px;
-	phDuration: 100;
-}
-
 defaultCheckboxIcon: icon {{ "default_checkbox_check", overviewCheckFgActive, point(4px, 7px) }};
 
 defaultCheck: Check {
@@ -897,6 +852,7 @@ defaultPopupMenu: PopupMenu {
 
 defaultInputField: InputField {
 	textBg: windowBg;
+	textBgActive: windowBg;
 	textFg: windowFg;
 	textMargins: margins(0px, 28px, 0px, 4px);
 	textAlign: align(topleft);
@@ -917,6 +873,7 @@ defaultInputField: InputField {
 
 	border: 1px;
 	borderActive: 2px;
+	borderRadius: 0px;
 
 	font: boxTextFont;
 	menu: defaultPopupMenu;

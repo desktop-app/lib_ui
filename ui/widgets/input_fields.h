@@ -67,102 +67,6 @@ enum class InputSubmitSettings {
 	None,
 };
 
-class FlatInput : public RpWidgetBase<QLineEdit> {
-	Q_OBJECT
-
-	using Parent = RpWidgetBase<QLineEdit>;
-public:
-	FlatInput(
-		QWidget *parent,
-		const style::FlatInput &st,
-		rpl::producer<QString> placeholder = nullptr,
-		const QString &val = QString());
-
-	void updatePlaceholder();
-	void setPlaceholder(rpl::producer<QString> placeholder);
-	QRect placeholderRect() const;
-
-	void finishAnimations();
-
-	void setTextMrg(const QMargins &textMrg);
-
-	QSize sizeHint() const override;
-	QSize minimumSizeHint() const override;
-
-	void customUpDown(bool isCustom);
-	const QString &getLastText() const {
-		return _oldtext;
-	}
-
-public Q_SLOTS:
-	void onTextChange(const QString &text);
-	void onTextEdited();
-
-	void onTouchTimer();
-
-Q_SIGNALS:
-	void changed();
-	void cancelled();
-	void submitted(Qt::KeyboardModifiers);
-	void focused();
-	void blurred();
-
-protected:
-	bool eventHook(QEvent *e) override;
-	void touchEvent(QTouchEvent *e);
-	void paintEvent(QPaintEvent *e) override;
-	void focusInEvent(QFocusEvent *e) override;
-	void focusOutEvent(QFocusEvent *e) override;
-	void keyPressEvent(QKeyEvent *e) override;
-	void resizeEvent(QResizeEvent *e) override;
-	void contextMenuEvent(QContextMenuEvent *e) override;
-	void inputMethodEvent(QInputMethodEvent *e) override;
-
-	void mousePressEvent(QMouseEvent *e) override;
-	void mouseReleaseEvent(QMouseEvent *e) override;
-	void mouseMoveEvent(QMouseEvent *e) override;
-
-	virtual void correctValue(const QString &was, QString &now);
-
-	style::font phFont() {
-		return _st.font;
-	}
-
-	void phPrepare(QPainter &p, float64 placeholderFocused);
-
-private:
-	void updatePalette();
-	void refreshPlaceholder(const QString &text);
-
-	void touchUpdate(QPoint globalPosition);
-	void touchFinish();
-
-	QString _oldtext;
-	rpl::variable<QString> _placeholderFull;
-	QString _placeholder;
-
-	bool _customUpDown = false;
-
-	bool _focused = false;
-	bool _placeholderVisible = true;
-	Animations::Simple _placeholderFocusedAnimation;
-	Animations::Simple _placeholderVisibleAnimation;
-	bool _lastPreEditTextNotEmpty = false;
-
-	const style::FlatInput &_st;
-	QMargins _textMrg;
-
-	QTimer _touchTimer;
-	bool _touchPress = false;
-	bool _touchRightButton = false;
-	bool _touchMove = false;
-	bool _mousePressedInTouch = false;
-	QPoint _touchStart;
-
-	base::unique_qptr<PopupMenu> _contextMenu;
-
-};
-
 class CustomEmojiObject : public QObject, public QTextObjectInterface {
 	Q_OBJECT
 	Q_INTERFACES(QTextObjectInterface)
@@ -305,6 +209,7 @@ public:
 	};
 
 	void setAdditionalMargin(int margin);
+	void setAdditionalMargins(QMargins margins);
 
 	void setInstantReplaces(const InstantReplaces &replaces);
 	void setInstantReplacesEnabled(rpl::producer<bool> enabled);
@@ -533,6 +438,21 @@ private:
 
 	bool revertFormatReplace();
 
+	void paintSurrounding(
+		QPainter &p,
+		QRect clip,
+		float64 errorDegree,
+		float64 focusedDegree);
+	void paintRoundSurrounding(
+		QPainter &p,
+		QRect clip,
+		float64 errorDegree,
+		float64 focusedDegree);
+	void paintFlatSurrounding(
+		QPainter &p,
+		QRect clip,
+		float64 errorDegree,
+		float64 focusedDegree);
 	void customEmojiRepaint();
 	void highlightMarkdown();
 
@@ -557,6 +477,8 @@ private:
 	std::vector<MarkdownTag> _lastMarkdownTags;
 	QString _lastPreEditText;
 	std::optional<QString> _inputMethodCommit;
+
+	QMargins _additionalMargins;
 
 	bool _forcePlaceholderHidden = false;
 	bool _reverseMarkdownReplacement = false;
@@ -584,7 +506,6 @@ private:
 	bool _redoAvailable = false;
 	bool _inDrop = false;
 	bool _inHeightCheck = false;
-	int _additionalMargin = 0;
 
 	bool _customUpDown = false;
 	bool _customTab = false;
