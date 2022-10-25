@@ -256,6 +256,10 @@ struct TextWithTags {
 
 	QString text;
 	Tags tags;
+
+	[[nodiscard]] bool empty() const {
+		return text.isEmpty();
+	}
 };
 
 inline bool operator==(const TextWithTags::Tag &a, const TextWithTags::Tag &b) {
