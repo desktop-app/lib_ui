@@ -121,7 +121,7 @@ void ToggleView::paint(QPainter &p, int left, int top, int outerWidth) {
 	p.setBrush(anim::brush(_st->untoggledBg, _st->toggledBg, toggled));
 	p.drawEllipse(fgRect);
 
-	if (_st->xsize > 0) {
+	if (_locked || _st->xsize > 0) {
 		p.setPen(Qt::NoPen);
 		p.setBrush(fgBrush);
 		if (_locked) {

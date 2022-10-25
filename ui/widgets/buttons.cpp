@@ -736,6 +736,12 @@ bool SettingsButton::toggled() const {
 	return _toggle ? _toggle->checked() : false;
 }
 
+void SettingsButton::setToggleLocked(bool locked) {
+	if (_toggle) {
+		_toggle->setLocked(locked);
+	}
+}
+
 rpl::producer<bool> SettingsButton::toggledChanges() const {
 	if (_toggle) {
 		return _toggle->checkedChanges();
