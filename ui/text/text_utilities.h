@@ -29,8 +29,12 @@ inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] TextWithEntities Italic(const QString &text);
 [[nodiscard]] TextWithEntities Link(
 	const QString &text,
-	const QString &url = "internal:action");
+	const QString &url = u"internal:action"_q);
 [[nodiscard]] TextWithEntities Link(const QString &text, int index);
+[[nodiscard]] TextWithEntities Link(
+	TextWithEntities text,
+	const QString &url = u"internal:action"_q);
+[[nodiscard]] TextWithEntities Link(TextWithEntities text, int index);
 [[nodiscard]] TextWithEntities PlainLink(const QString &text);
 [[nodiscard]] TextWithEntities Wrapped(
 	TextWithEntities text,

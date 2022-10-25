@@ -43,7 +43,15 @@ TextWithEntities Link(const QString &text, const QString &url) {
 }
 
 TextWithEntities Link(const QString &text, int index) {
-	return Link(text, QString("internal:index") + QChar(index));
+	return Link(text, u"internal:index"_q + QChar(index));
+}
+
+TextWithEntities Link(TextWithEntities text, const QString &url) {
+	return Wrapped(std::move(text), EntityType::CustomUrl, url);
+}
+
+TextWithEntities Link(TextWithEntities text, int index) {
+	return Link(std::move(text), u"internal:index"_q + QChar(index));
 }
 
 TextWithEntities PlainLink(const QString &text) {
