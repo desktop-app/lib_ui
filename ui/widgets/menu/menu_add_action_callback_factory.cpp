@@ -14,9 +14,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui::Menu {
 
-MenuCallback CreateAddActionCallback(
-		const base::unique_qptr<Ui::PopupMenu> &menu) {
-	return MenuCallback([&](MenuCallback::Args a) {
+MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
+	return MenuCallback([=](MenuCallback::Args a) {
 		if (a.fillSubmenu) {
 			const auto action = menu->addAction(
 				a.text,
@@ -41,6 +40,11 @@ MenuCallback CreateAddActionCallback(
 		}
 		return menu->addAction(a.text, std::move(a.handler), a.icon);
 	});
+}
+
+MenuCallback CreateAddActionCallback(
+		const base::unique_qptr<Ui::PopupMenu> &menu) {
+	return CreateAddActionCallback(menu.get());
 }
 
 } // namespace Ui::Menu

@@ -18,6 +18,8 @@ namespace Ui::Menu {
 struct MenuCallback;
 
 [[nodiscard]] MenuCallback CreateAddActionCallback(
+	not_null<Ui::PopupMenu*> menu);
+[[nodiscard]] MenuCallback CreateAddActionCallback(
 	const base::unique_qptr<Ui::PopupMenu> &menu);
 
 } // namespace Ui::Menu
