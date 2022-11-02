@@ -36,6 +36,7 @@ inline constexpr auto Upper = details::ToUpperType{};
 	const QString &url = u"internal:action"_q);
 [[nodiscard]] TextWithEntities Link(TextWithEntities text, int index);
 [[nodiscard]] TextWithEntities PlainLink(const QString &text);
+[[nodiscard]] TextWithEntities PlainLink(TextWithEntities text);
 [[nodiscard]] TextWithEntities Wrapped(
 	TextWithEntities text,
 	EntityType type,
@@ -44,6 +45,8 @@ inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] inline TextWithEntities WithEntities(const QString &text) {
 	return { text };
 }
+
+[[nodiscard]] TextWithEntities SingleCustomEmoji(QString data);
 
 [[nodiscard]] inline auto ToUpper() {
 	return rpl::map(Upper);

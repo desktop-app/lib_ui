@@ -58,6 +58,10 @@ TextWithEntities PlainLink(const QString &text) {
 	return WithSingleEntity(text, EntityType::PlainLink);
 }
 
+TextWithEntities PlainLink(TextWithEntities text) {
+	return Wrapped(std::move(text), EntityType::PlainLink, QString());
+}
+
 TextWithEntities Wrapped(
 		TextWithEntities text,
 		EntityType type,
@@ -98,6 +102,13 @@ TextWithEntities RichLangValue(const QString &text) {
 		offset = till + tag.size();
 	}
 	return result;
+}
+
+TextWithEntities SingleCustomEmoji(QString data) {
+	return {
+		u"@"_q,
+		{ EntityInText(EntityType::CustomEmoji, 0, 1, data) },
+	};
 }
 
 TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
