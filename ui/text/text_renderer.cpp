@@ -185,7 +185,6 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 		? -1
 		: (context.clip.y() + context.clip.height());
 	if (const auto lines = context.elisionLines) {
-		if (context.clip.isNull())
 		if (_yTo < 0 || (_y + (lines - 1) * _t->_st->font->height) < _yTo) {
 			_yTo = _y + (lines * _t->_st->font->height);
 			_elideLast = true;
@@ -709,9 +708,10 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 
 	applyBlockProperties(currentBlock);
 	for (int i = 0; i < nItems; ++i) {
-		int item = firstItem + visualOrder[i];
-		const QScriptItem &si = engine.layoutData->items.at(item);
-		bool rtl = (si.analysis.bidiLevel % 2);
+		const auto item = firstItem + visualOrder[i];
+		const auto isLastItem = (item == lastItem);
+		const auto &si = engine.layoutData->items.at(item);
+		const auto rtl = (si.analysis.bidiLevel % 2);
 
 		while (blockIndex > _lineStartBlock + 1 && _t->_blocks[blockIndex - 1]->from() > _localFrom + si.position) {
 			nextBlock = currentBlock;
@@ -843,7 +843,10 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 					}
 				}
 				if (hasSpoiler) {
-					pushSpoilerRange(fillSpoiler, fillSelect, blockIndex);
+					// Elided item should be a text item
+					// with '...' at the end, so this should not be it.
+					const auto isElidedItem = false;
+					pushSpoilerRange(fillSpoiler, fillSelect, isElidedItem);
 				}
 			//} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
 			//	_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
@@ -987,12 +990,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 			const auto hasSpoiler = _background.spoiler
 				&& (_spoilerOpacity > 0.);
 			const auto opacity = _p->opacity();
-			const auto isElidedBlock = !rtl
-				&& (_indexOfElidedBlock == blockIndex);
+			const auto isElidedItem = (_indexOfElidedBlock == blockIndex)
+				&& isLastItem;
 			const auto complexClipping = hasSpoiler
-				&& isElidedBlock
+				&& isElidedItem
 				&& (_spoilerOpacity == 1.);
-			if (!hasSpoiler || (_spoilerOpacity < 1.) || isElidedBlock) {
+			if (!hasSpoiler || (_spoilerOpacity < 1.) || isElidedItem) {
 				const auto complexClippingEnabled = complexClipping
 					&& _p->hasClipping();
 				const auto complexClippingRegion = complexClipping
@@ -1009,7 +1012,7 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 							elided,
 							_y + 2 * _lineHeight),
 						Qt::IntersectClip);
-				} else if (hasSpoiler && !isElidedBlock) {
+				} else if (hasSpoiler && !isElidedItem) {
 					_p->setOpacity(opacity * (1. - _spoilerOpacity));
 				}
 				if (Q_UNLIKELY(hasSelected)) {
@@ -1061,13 +1064,13 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 					} else {
 						_p->setClipping(false);
 					}
-				} else if (hasSpoiler && !isElidedBlock) {
+				} else if (hasSpoiler && !isElidedItem) {
 					_p->setOpacity(opacity);
 				}
 			}
 
 			if (hasSpoiler) {
-				pushSpoilerRange(itemRange, fillSelect, blockIndex);
+				pushSpoilerRange(itemRange, fillSelect, isElidedItem);
 			}
 		}
 
@@ -1089,11 +1092,11 @@ void Renderer::fillSelectRange(FixedRange range) {
 void Renderer::pushSpoilerRange(
 		FixedRange range,
 		FixedRange selected,
-		int currentBlockIndex) {
+		bool isElidedItem) {
 	if (!_background.spoiler || !_spoiler) {
 		return;
 	}
-	const auto elided = (_indexOfElidedBlock == currentBlockIndex)
+	const auto elided = isElidedItem
 		? (_elideRemoveFromEnd + _f->elidew)
 		: 0;
 	range.till -= elided;
