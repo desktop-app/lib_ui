@@ -62,7 +62,7 @@ private:
 	void pushSpoilerRange(
 		FixedRange range,
 		FixedRange selected,
-		int currentBlockIndex);
+		bool isElidedItem);
 	void fillSpoilerRects();
 	void fillSpoilerRects(
 		QVarLengthArray<QRect, kSpoilersRectsSize> &rects,
