@@ -17,10 +17,8 @@ std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 }
 
 bool NativeWindowFrameSupported() {
-	const auto waylandIntegration = WaylandIntegration::Instance();
-	if (waylandIntegration) {
-		waylandIntegration->waitForInterfaceAnnounce();
-		return waylandIntegration->xdgDecorationSupported();
+	if (const auto integration = WaylandIntegration::Instance()) {
+		return integration->xdgDecorationSupported();
 	}
 	return true;
 }

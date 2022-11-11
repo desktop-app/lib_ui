@@ -16,7 +16,6 @@ class WaylandIntegration {
 public:
 	[[nodiscard]] static WaylandIntegration *Instance();
 
-	void waitForInterfaceAnnounce();
 	[[nodiscard]] bool xdgDecorationSupported();
 	[[nodiscard]] bool windowExtentsSupported();
 	void setWindowExtents(not_null<QWidget*> widget, const QMargins &extents);
