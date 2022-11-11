@@ -30,25 +30,15 @@ struct WlRegistryDeleter {
 	}
 };
 
-struct WlCallbackDeleter {
-	void operator()(wl_callback *value) {
-		wl_callback_destroy(value);
-	}
-};
-
 } // namespace
 
 struct WaylandIntegration::Private {
 	std::unique_ptr<wl_registry, WlRegistryDeleter> registry;
-	std::unique_ptr<wl_callback, WlCallbackDeleter> callback;
-	QEventLoop interfacesLoop;
-	bool interfacesAnnounced = false;
 	bool xdgDecorationSupported = false;
 	uint32_t xdgDecorationName = 0;
 	rpl::lifetime lifetime;
 
 	static const struct wl_registry_listener RegistryListener;
-	static const struct wl_callback_listener CallbackListener;
 };
 
 const struct wl_registry_listener WaylandIntegration::Private::RegistryListener = {
@@ -72,19 +62,6 @@ const struct wl_registry_listener WaylandIntegration::Private::RegistryListener 
 	}),
 };
 
-const struct wl_callback_listener WaylandIntegration::Private::CallbackListener = {
-	decltype(wl_callback_listener::done)(+[](
-			Private *data,
-			wl_callback *callback,
-			uint32_t serial) {
-		data->interfacesAnnounced = true;
-		if (data->interfacesLoop.isRunning()) {
-			data->interfacesLoop.quit();
-		}
-		data->callback = nullptr;
-	}),
-};
-
 WaylandIntegration::WaylandIntegration()
 : _private(std::make_unique<Private>()) {
 	const auto native = QGuiApplication::platformNativeInterface();
@@ -100,16 +77,9 @@ WaylandIntegration::WaylandIntegration()
 	}
 
 	_private->registry.reset(wl_display_get_registry(display));
-	_private->callback.reset(wl_display_sync(display));
-
 	wl_registry_add_listener(
 		_private->registry.get(),
 		&Private::RegistryListener,
-		_private.get());
-
-	wl_callback_add_listener(
-		_private->callback.get(),
-		&Private::CallbackListener,
 		_private.get());
 
 	base::qt_signal_producer(
@@ -117,9 +87,10 @@ WaylandIntegration::WaylandIntegration()
 		&QObject::destroyed
 	) | rpl::start_with_next([=] {
 		// too late for standard destructors, just free
-		free(_private->callback.release());
 		free(_private->registry.release());
 	}, _private->lifetime);
+
+	wl_display_roundtrip(display);
 }
 
 WaylandIntegration::~WaylandIntegration() = default;
@@ -128,13 +99,6 @@ WaylandIntegration *WaylandIntegration::Instance() {
 	if (!::Platform::IsWayland()) return nullptr;
 	static WaylandIntegration instance;
 	return &instance;
-}
-
-void WaylandIntegration::waitForInterfaceAnnounce() {
-	Expects(!_private->interfacesLoop.isRunning());
-	if (!_private->interfacesAnnounced) {
-		_private->interfacesLoop.exec();
-	}
 }
 
 bool WaylandIntegration::xdgDecorationSupported() {

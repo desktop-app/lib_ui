@@ -26,9 +26,6 @@ WaylandIntegration *WaylandIntegration::Instance() {
 	return &instance;
 }
 
-void WaylandIntegration::waitForInterfaceAnnounce() {
-}
-
 bool WaylandIntegration::xdgDecorationSupported() {
 	return false;
 }
