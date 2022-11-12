@@ -96,6 +96,10 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggleOn(
 	return this;
 }
 
+void SlideWrap<RpWidget>::setMinimalHeight(int height) {
+	_minimalHeight = height;
+}
+
 void SlideWrap<RpWidget>::animationStep() {
 	const auto weak = wrapped();
 	if (weak && !_up) {
@@ -106,8 +110,11 @@ void SlideWrap<RpWidget>::animationStep() {
 	const auto current = _animation.value(_toggled ? 1. : 0.);
 	const auto newHeight = weak
 		? (_animation.animating()
-			? anim::interpolate(0, weak->heightNoMargins(), current)
-			: (_toggled ? weak->height() : 0))
+			? anim::interpolate(
+				_minimalHeight,
+				weak->heightNoMargins(),
+				current)
+			: (_toggled ? weak->height() : _minimalHeight))
 		: 0;
 	if (weak && _up) {
 		const auto margins = getMargins();
@@ -121,7 +128,7 @@ void SlideWrap<RpWidget>::animationStep() {
 	const auto shouldBeHidden = !_toggled && !_animation.animating();
 	if (shouldBeHidden != isHidden()) {
 		const auto guard = MakeWeak(this);
-		setVisible(!shouldBeHidden);
+		setVisible(!shouldBeHidden || _minimalHeight);
 		if (shouldBeHidden && guard) {
 			SendPendingMoveResizeEvents(this);
 		}

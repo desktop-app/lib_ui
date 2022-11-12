@@ -53,6 +53,7 @@ public:
 	auto toggledValue() const {
 		return _toggledChanged.events_starting_with_copy(_toggled);
 	}
+	void setMinimalHeight(int height);
 
 	QMargins getMargins() const override;
 
@@ -68,6 +69,7 @@ private:
 	int _duration = 0;
 	bool _toggled = true;
 	bool _up = false;
+	int _minimalHeight = 0;
 
 };
 
