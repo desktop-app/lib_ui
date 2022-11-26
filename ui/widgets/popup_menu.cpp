@@ -380,7 +380,16 @@ void PopupMenu::handleMenuResize() {
 	_scroll->resize(
 		newWidth - _padding.left() - _padding.right(),
 		scrollHeight);
-	resize(newWidth, _padding.top() + scrollHeight + _padding.bottom());
+	{
+		const auto newSize = QSize(
+			newWidth,
+			_padding.top() + scrollHeight + _padding.bottom());
+		if (::Platform::IsMac()) {
+			setMaximumSize(newSize);
+			setMinimumSize(newSize);
+		}
+		resize(newSize);
+	}
 	_inner = rect().marginsRemoved(_padding);
 }
 
