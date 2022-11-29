@@ -403,6 +403,10 @@ void FlatLabel::overrideLinkClickHandler(Fn<void(QString url)> handler) {
 	});
 }
 
+void FlatLabel::setContextMenuHook(Fn<void(ContextMenuRequest)> hook) {
+	_contextMenuHook = std::move(hook);
+}
+
 void FlatLabel::mouseMoveEvent(QMouseEvent *e) {
 	_lastMousePos = e->globalPos();
 	dragActionUpdate();
@@ -579,7 +583,7 @@ void FlatLabel::keyPressEvent(QKeyEvent *e) {
 }
 
 void FlatLabel::contextMenuEvent(QContextMenuEvent *e) {
-	if (!_selectable && !_text.hasLinks()) {
+	if (!_contextMenuHook && !_selectable && !_text.hasLinks()) {
 		return;
 	}
 
@@ -661,42 +665,27 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	} else {
 		_lastMousePos = QCursor::pos();
 	}
-	auto state = dragActionUpdate();
-
+	const auto state = dragActionUpdate();
 	const auto hasSelection = _selectable && !_selection.empty();
 	const auto uponSelection = _selectable
 		&& ((reason == ContextMenuReason::FromTouch && hasSelection)
 			|| (state.uponSymbol
 				&& (state.symbol >= _selection.from)
 				&& (state.symbol < _selection.to)));
-	const auto fullSelection = _selectable
-		&& _text.isFullSelection(_selection);
 
 	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
+	const auto request = ContextMenuRequest{
+		.menu = _contextMenu.get(),
+		.link = ClickHandler::getActive(),
+		.hasSelection = hasSelection,
+		.uponSelection = uponSelection,
+		.fullSelection = _selectable && _text.isFullSelection(_selection),
+	};
 
-	if (fullSelection && !_contextCopyText.isEmpty()) {
-		_contextMenu->addAction(
-			_contextCopyText,
-			[=] { copyContextText(); });
-	} else if (uponSelection && !fullSelection) {
-		_contextMenu->addAction(
-			Integration::Instance().phraseContextCopySelected(),
-			[=] { copySelectedText(); });
-	} else if (_selectable && !hasSelection && !_contextCopyText.isEmpty()) {
-		_contextMenu->addAction(
-			_contextCopyText,
-			[=] { copyContextText(); });
-	}
-
-	if (const auto link = ClickHandler::getActive()) {
-		const auto actionText = link->copyToClipboardContextItemText();
-		if (!actionText.isEmpty()) {
-			_contextMenu->addAction(
-				actionText,
-				[text = link->copyToClipboardText()] {
-					QGuiApplication::clipboard()->setText(text);
-				});
-		}
+	if (_contextMenuHook) {
+		_contextMenuHook(request);
+	} else {
+		fillContextMenu(request);
 	}
 
 	if (_contextMenu->empty()) {
@@ -704,6 +693,35 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	} else {
 		_contextMenu->popup(e->globalPos());
 		e->accept();
+	}
+}
+
+void FlatLabel::fillContextMenu(ContextMenuRequest request) {
+	if (request.fullSelection && !_contextCopyText.isEmpty()) {
+		request.menu->addAction(
+			_contextCopyText,
+			[=] { copyContextText(); });
+	} else if (request.uponSelection && !request.fullSelection) {
+		request.menu->addAction(
+			Integration::Instance().phraseContextCopySelected(),
+			[=] { copySelectedText(); });
+	} else if (_selectable
+		&& !request.hasSelection
+		&& !_contextCopyText.isEmpty()) {
+		request.menu->addAction(
+			_contextCopyText,
+			[=] { copyContextText(); });
+	}
+
+	if (request.link) {
+		const auto label = request.link->copyToClipboardContextItemText();
+		if (!label.isEmpty()) {
+			request.menu->addAction(
+				label,
+				[text = request.link->copyToClipboardText()] {
+					QGuiApplication::clipboard()->setText(text);
+				});
+		}
 	}
 }
 

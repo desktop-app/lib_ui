@@ -142,6 +142,15 @@ public:
 	void overrideLinkClickHandler(Fn<void()> handler);
 	void overrideLinkClickHandler(Fn<void(QString url)> handler);
 
+	struct ContextMenuRequest {
+		not_null<PopupMenu*> menu;
+		ClickHandlerPtr link;
+		bool hasSelection = false;
+		bool uponSelection = false;
+		bool fullSelection = false;
+	};
+	void setContextMenuHook(Fn<void(ContextMenuRequest)> hook);
+
 	// ClickHandlerHost interface
 	void clickHandlerActiveChanged(const ClickHandlerPtr &action, bool active) override;
 	void clickHandlerPressedChanged(const ClickHandlerPtr &action, bool pressed) override;
@@ -201,6 +210,7 @@ private:
 		FromTouch,
 	};
 	void showContextMenu(QContextMenuEvent *e, ContextMenuReason reason);
+	void fillContextMenu(ContextMenuRequest request);
 
 	Text::String _text;
 	const style::FlatLabel &_st;
@@ -237,6 +247,7 @@ private:
 	base::Timer _trippleClickTimer;
 
 	base::unique_qptr<PopupMenu> _contextMenu;
+	Fn<void(ContextMenuRequest)> _contextMenuHook;
 	QString _contextCopyText;
 
 	ClickHandlerFilter _clickHandlerFilter;
