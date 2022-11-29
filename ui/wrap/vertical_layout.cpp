@@ -198,4 +198,10 @@ void VerticalLayout::removeChild(RpWidget *child) {
 	resize(width(), margins.top() + top + margins.bottom());
 }
 
+void VerticalLayout::clear() {
+	while (!_rows.empty()) {
+		removeChild(_rows.front().widget.data());
+	}
+}
+
 } // namespace Ui
