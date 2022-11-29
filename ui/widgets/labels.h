@@ -150,6 +150,7 @@ public:
 		bool fullSelection = false;
 	};
 	void setContextMenuHook(Fn<void(ContextMenuRequest)> hook);
+	void fillContextMenu(ContextMenuRequest request);
 
 	// ClickHandlerHost interface
 	void clickHandlerActiveChanged(const ClickHandlerPtr &action, bool active) override;
@@ -210,7 +211,6 @@ private:
 		FromTouch,
 	};
 	void showContextMenu(QContextMenuEvent *e, ContextMenuReason reason);
-	void fillContextMenu(ContextMenuRequest request);
 
 	Text::String _text;
 	const style::FlatLabel &_st;
