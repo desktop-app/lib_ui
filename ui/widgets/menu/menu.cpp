@@ -218,6 +218,24 @@ void Menu::clearActions() {
 	resizeFromInner(_forceWidth ? _forceWidth : _st.widthMin, _st.skip * 2);
 }
 
+void Menu::clearLastSeparator() {
+	if (_actionWidgets.empty() || _actions.empty()) {
+		return;
+	}
+	if (_actionWidgets.back()->action() == _actions.back()) {
+		if (_actions.back()->isSeparator()) {
+			resizeFromInner(
+				width(),
+				height() - _actionWidgets.back()->height());
+			_actionWidgets.pop_back();
+			if (_actions.back()->parent() == this) {
+				delete _actions.back();
+				_actions.pop_back();
+			}
+		}
+	}
+}
+
 void Menu::finishAnimating() {
 	for (const auto &widget : _actionWidgets) {
 		widget->finishAnimating();

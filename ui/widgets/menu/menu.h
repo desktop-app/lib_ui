@@ -57,6 +57,7 @@ public:
 		int position,
 		base::unique_qptr<ItemBase> widget);
 	void clearActions();
+	void clearLastSeparator();
 	void finishAnimating();
 
 	bool empty() const;

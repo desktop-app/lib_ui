@@ -101,6 +101,8 @@ public:
 	};
 	[[nodiscard]] rpl::producer<ShowState> showStateValue() const;
 
+	void setClearLastSeparator(bool clear);
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void focusOutEvent(QFocusEvent *e) override;
@@ -201,6 +203,8 @@ private:
 	bool _deleteLater = false;
 	bool _reactivateParent = true;
 	bool _grabbingForPanelAnimation = false;
+
+	bool _clearLastSeparator = true;
 
 	Fn<void()> _destroyedCallback;
 

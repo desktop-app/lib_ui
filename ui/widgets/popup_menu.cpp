@@ -888,6 +888,12 @@ void PopupMenu::deleteOnHide(bool del) {
 }
 
 void PopupMenu::popup(const QPoint &p) {
+	if (_clearLastSeparator) {
+		_menu->clearLastSeparator();
+		for (const auto &[action, submenu] : _submenus) {
+			submenu->menu()->clearLastSeparator();
+		}
+	}
 	if (prepareGeometryFor(p)) {
 		popupPrepared();
 		return;
@@ -1044,6 +1050,10 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 	Platform::ShowOverAll(this);
 	raise();
 	activateWindow();
+}
+
+void PopupMenu::setClearLastSeparator(bool clear) {
+	_clearLastSeparator = clear;
 }
 
 PopupMenu::~PopupMenu() {
