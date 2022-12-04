@@ -320,6 +320,7 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 		updateCustomTitleVisibility();
 	}
 	init();
+	_title->setControlsRect(_private->controlsRect());
 }
 
 WindowHelper::~WindowHelper() {

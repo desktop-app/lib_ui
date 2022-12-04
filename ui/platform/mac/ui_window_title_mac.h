@@ -28,6 +28,7 @@ public:
 
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
+	void setControlsRect(const QRect &rect);
 	[[nodiscard]] QString text() const;
 	[[nodiscard]] bool shouldBeHidden() const;
 
@@ -44,6 +45,8 @@ private:
 	not_null<const style::WindowTitle*> _st;
 	object_ptr<Ui::PlainShadow> _shadow;
 	QString _text;
+	int _textWidth = 0;
+	int _controlsRight = 0;
 	QFont _font;
 
 };

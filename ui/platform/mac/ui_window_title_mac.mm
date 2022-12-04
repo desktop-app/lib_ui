@@ -30,6 +30,7 @@ TitleWidget::TitleWidget(not_null<RpWidget*> parent, int height)
 void TitleWidget::setText(const QString &text) {
 	if (_text != text) {
 		_text = text;
+		_textWidth = QFontMetrics(_font).horizontalAdvance(_text);
 		update();
 	}
 }
@@ -37,6 +38,10 @@ void TitleWidget::setText(const QString &text) {
 void TitleWidget::setStyle(const style::WindowTitle &st) {
 	_st = &st;
 	update();
+}
+
+void TitleWidget::setControlsRect(const QRect &rect) {
+	_controlsRight = rect.left() * 2 + rect.width();
 }
 
 bool TitleWidget::shouldBeHidden() const {
@@ -94,7 +99,17 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 
 	p.setFont(_font);
 	p.setPen(active ? _st->fgActive : _st->fg);
-	p.drawText(rect(), _text, style::al_center);
+
+	if ((width() - _controlsRight * 2) < _textWidth) {
+		const auto elided = QFontMetrics(_font).elidedText(
+			_text,
+			Qt::ElideRight,
+			width() - _controlsRight);
+		const auto padding = QMargins(_controlsRight, 0, 0, 0);
+		p.drawText(rect() - padding, elided, style::al_left);
+	} else {
+		p.drawText(rect(), _text, style::al_center);
+	}
 }
 
 void TitleWidget::resizeEvent(QResizeEvent *e) {
