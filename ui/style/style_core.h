@@ -39,6 +39,7 @@ void startManager(int scale);
 void stopManager();
 
 [[nodiscard]] rpl::producer<> PaletteChanged();
+[[nodiscard]] int PaletteVersion();
 void NotifyPaletteChanged();
 
 [[nodiscard]] rpl::producer<bool> ShortAnimationPlaying();

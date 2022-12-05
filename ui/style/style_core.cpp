@@ -25,6 +25,7 @@ constexpr auto kMinContrastDistance = 64 * 64 * 4;
 constexpr auto kContrastDeltaL = 64;
 
 auto PaletteChanges = rpl::event_stream<>();
+auto PaletteVersion = 0;
 auto ShortAnimationRunning = rpl::variable<bool>(false);
 auto RunningShortAnimations = 0;
 
@@ -73,7 +74,12 @@ rpl::producer<> PaletteChanged() {
 	return internal::PaletteChanges.events();
 }
 
+int PaletteVersion() {
+	return internal::PaletteVersion;
+}
+
 void NotifyPaletteChanged() {
+	++internal::PaletteVersion;
 	internal::PaletteChanges.fire({});
 }
 
