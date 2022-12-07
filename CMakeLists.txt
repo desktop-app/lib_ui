@@ -6,7 +6,7 @@
 
 add_library(lib_ui STATIC)
 add_library(desktop-app::lib_ui ALIAS lib_ui)
-init_target(lib_ui)
+init_target(lib_ui ltcg)
 
 include(cmake/generate_palette.cmake)
 include(cmake/generate_styles.cmake)
