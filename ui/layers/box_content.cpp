@@ -327,14 +327,14 @@ BoxShow::~BoxShow() = default;
 void BoxShow::showBox(
 		object_ptr<BoxContent> content,
 		LayerOptions options) const {
-	if (_weak && _weak->isBoxShown()) {
-		_weak->getDelegate()->show(std::move(content), options);
+	if (const auto strong = _weak.data()) {
+		strong->getDelegate()->show(std::move(content), options);
 	}
 }
 
 void BoxShow::hideLayer() const {
-	if (_weak && _weak->isBoxShown()) {
-		_weak->getDelegate()->hideLayer();
+	if (const auto strong = _weak.data()) {
+		strong->getDelegate()->hideLayer();
 	}
 }
 
