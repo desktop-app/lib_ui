@@ -289,6 +289,8 @@ protected:
 	void paintText(Painter &p, bool over, int outerw) const;
 	void paintToggle(Painter &p, int outerw) const;
 
+	[[nodiscard]] QRect maybeToggleRect() const;
+
 private:
 	void setText(QString &&text);
 	QRect toggleRect() const;

@@ -832,6 +832,10 @@ QRect SettingsButton::toggleRect() const {
 	return { QPoint(left, top), size };
 }
 
+QRect SettingsButton::maybeToggleRect() const {
+	return _toggle ? toggleRect() : QRect(0, 0, 0, 0);
+}
+
 int SettingsButton::resizeGetHeight(int newWidth) {
 	return _padding.top() + _st.height + _padding.bottom();
 }
