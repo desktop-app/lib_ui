@@ -136,8 +136,12 @@ struct Particle {
 		+ descriptor.particleFadeOutDuration;
 	const auto max = int(std::ceil(speedMax * lifetime));
 	const auto k = speed / lifetime;
-	const auto x = (RandomIndex(2 * max + 1, random) - max) / float64(max);
-	const auto y = sqrt(1 - x * x) * (negative ? -1 : 1);
+	const auto x = (speedMax > 0)
+		? ((RandomIndex(2 * max + 1, random) - max) / float64(max))
+		: 0.;
+	const auto y = (speedMax > 0)
+		? (sqrt(1 - x * x) * (negative ? -1 : 1))
+		: 0.;
 	return { k * x, k * y };
 }
 
@@ -370,10 +374,13 @@ SpoilerMessCached GenerateSpoilerMess(
 		if (now <= 0 || now >= singleDuration) {
 			return;
 		}
-		const auto x = (particle.x + int(base::SafeRound(now * particle.dx)))
-			% size;
-		const auto y = (particle.y + int(base::SafeRound(now * particle.dy)))
-			% size;
+		const auto clamp = [&](int value) {
+			return ((value % size) + size) % size;
+		};
+		const auto x = clamp(
+			particle.x + int(base::SafeRound(now * particle.dx)));
+		const auto y = clamp(
+			particle.y + int(base::SafeRound(now * particle.dy)));
 		const auto opacity = (now < descriptor.particleFadeInDuration)
 			? (now / float64(descriptor.particleFadeInDuration))
 			: (now > singleDuration - descriptor.particleFadeOutDuration)
@@ -527,7 +534,7 @@ void FillSpoilerRect(
 			p,
 			part.translated(rect.topLeft()),
 			frame,
-			originShift - part.topLeft());
+			originShift - rect.topLeft() - part.topLeft());
 	};
 	const auto fillCorner = [&](int x, int y, int index) {
 		const auto position = QPoint(x, y);
@@ -562,70 +569,49 @@ void FillSpoilerRect(
 	};
 	const auto top = verticalSkip(kTopLeft, kTopRight);
 	const auto bottom = verticalSkip(kBottomLeft, kBottomRight);
-		if (top) {
+	if (top) {
 		const auto left = cornerSize(kTopLeft);
 		const auto right = cornerSize(kTopRight);
 		if (left) {
-			fillCorner(rect.left(), rect.top(), kTopLeft);
+			fillCorner(0, 0, kTopLeft);
 			if (const auto add = top - left) {
-				fillBg({ rect.left(), rect.top() + left, left, add });
+				fillBg({ 0, left, left, add });
 			}
 		}
 		if (const auto fill = rect.width() - left - right; fill > 0) {
-			fillBg({ rect.left() + left, rect.top(), fill, top });
+			fillBg({ left, 0, fill, top });
 		}
 		if (right) {
-			fillCorner(
-				rect.left() + rect.width() - right,
-				rect.top(),
-				kTopRight);
+			fillCorner(rect.width() - right, 0, kTopRight);
 			if (const auto add = top - right) {
-				fillBg({
-					rect.left() + rect.width() - right,
-					rect.top() + right,
-					right,
-					add,
-				});
+				fillBg({ rect.width() - right, right, right, add });
 			}
 		}
 	}
 	if (const auto h = rect.height() - top - bottom; h > 0) {
-		fillBg({ rect.left(), rect.top() + top, rect.width(), h });
+		fillBg({ 0, top, rect.width(), h });
 	}
 	if (bottom) {
 		const auto left = cornerSize(kBottomLeft);
 		const auto right = cornerSize(kBottomRight);
 		if (left) {
-			fillCorner(
-				rect.left(),
-				rect.top() + rect.height() - left,
-				kBottomLeft);
+			fillCorner(0, rect.height() - left, kBottomLeft);
 			if (const auto add = bottom - left) {
-				fillBg({
-					rect.left(),
-					rect.top() + rect.height() - bottom,
-					left,
-					add,
-				});
+				fillBg({ 0, rect.height() - bottom, left, add });
 			}
 		}
 		if (const auto fill = rect.width() - left - right; fill > 0) {
-			fillBg({
-				rect.left() + left,
-				rect.top() + rect.height() - bottom,
-				fill,
-				bottom,
-			});
+			fillBg({ left, rect.height() - bottom, fill, bottom });
 		}
 		if (right) {
 			fillCorner(
-				rect.left() + rect.width() - right,
-				rect.top() + rect.height() - right,
+				rect.width() - right,
+				rect.height() - right,
 				kBottomRight);
 			if (const auto add = bottom - right) {
 				fillBg({
-					rect.left() + rect.width() - right,
-					rect.top() + rect.height() - bottom,
+					rect.width() - right,
+					rect.height() - bottom,
 					right,
 					add,
 				});
