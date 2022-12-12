@@ -32,7 +32,10 @@ void GenericBox::prepare() {
 		const auto desired = top + height;
 		setDimensions(
 			currentWidth,
-			_maxHeight ? std::min(desired, _maxHeight) : desired,
+			std::clamp(
+				desired,
+				_minHeight ? _minHeight : desired,
+				_maxHeight ? _maxHeight : desired),
 			true);
 	}, wrap->lifetime());
 

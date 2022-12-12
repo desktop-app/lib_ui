@@ -74,6 +74,9 @@ public:
 	void setMaxHeight(int maxHeight) {
 		_maxHeight = maxHeight;
 	}
+	void setMinHeight(int minHeight) {
+		_minHeight = minHeight;
+	}
 	void setScrollStyle(const style::ScrollArea &st) {
 		_scrollSt = &st;
 	}
@@ -137,6 +140,7 @@ private:
 	not_null<Ui::VerticalLayout*> _content;
 	const style::ScrollArea *_scrollSt = nullptr;
 	int _width = 0;
+	int _minHeight = 0;
 	int _maxHeight = 0;
 
 	object_ptr<Ui::RpWidget> _pinnedToTopContent = { nullptr };
