@@ -25,6 +25,8 @@ namespace Ui::CustomEmoji {
 
 using Context = Ui::Text::CustomEmoji::Context;
 
+[[nodiscard]] QColor PreviewColorFromTextColor(QColor color);
+
 class Preview final {
 public:
 	Preview() = default;

@@ -89,6 +89,11 @@ void PaintScaledImage(
 
 } // namespace
 
+QColor PreviewColorFromTextColor(QColor color) {
+	color.setAlpha((color.alpha() + 1) / 8);
+	return color;
+}
+
 Preview::Preview(QPainterPath path, float64 scale)
 : _data(ScaledPath{ std::move(path), scale }) {
 }
@@ -131,9 +136,7 @@ void Preview::paintPath(
 		const Context &context,
 		const ScaledPath &path) {
 	auto hq = PainterHighQualityEnabler(p);
-	auto copy = context.textColor.value();
-	copy.setAlpha((copy.alpha() + 1) / 8);
-	p.setBrush(copy);
+	p.setBrush(PreviewColorFromTextColor(context.textColor));
 	p.setPen(Qt::NoPen);
 	const auto scale = path.scale;
 	const auto required = (scale != 1.) || context.scaled;
