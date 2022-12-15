@@ -20,13 +20,13 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 	IconButton::paintEvent(e);
 
 	const auto r = rect() - _st.textPadding;
+	const auto overIconOpacity = IconButton::iconOverOpacity();
 
 	auto p = QPainter(this);
 	p.setFont(_st.font);
-	p.setPen(_st.textFg);
+	p.setPen((overIconOpacity == 1.) ? _st.textFgOver : _st.textFg);
 	p.drawText(r, _text, _st.textAlign);
 
-	const auto overIconOpacity = IconButton::iconOverOpacity();
 	if (overIconOpacity > 0. && overIconOpacity < 1.) {
 		p.setPen(_st.textFgOver);
 		p.setOpacity(overIconOpacity);
