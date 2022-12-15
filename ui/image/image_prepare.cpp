@@ -1155,25 +1155,21 @@ QImage Colored(QImage &&image, QColor add) {
 	}
 
 	if (const auto pix = image.bits()) {
-		const auto ca = int(add.alphaF() * 0xFF);
-		const auto cr = int(add.redF() * 0xFF);
-		const auto cg = int(add.greenF() * 0xFF);
-		const auto cb = int(add.blueF() * 0xFF);
+		const auto ca = add.alpha();
+		const auto cr = add.red() * (ca + 1);
+		const auto cg = add.green() * (ca + 1);
+		const auto cb = add.blue() * (ca + 1);
+		const auto ra = (0x100 - ca) * 0x100;
 		const auto w = image.width();
 		const auto h = image.height();
 		const auto add = image.bytesPerLine() - (w * 4);
 		auto i = index_type();
 		for (auto y = 0; y != h; ++y) {
 			for (auto to = i + (w * 4); i != to; i += 4) {
-				const auto b = pix[i];
-				const auto g = pix[i + 1];
-				const auto r = pix[i + 2];
-				const auto a = pix[i + 3];
-				const auto aca = a * ca;
-				pix[i + 0] = uchar(b + ((aca * (cb - b)) >> 16));
-				pix[i + 1] = uchar(g + ((aca * (cg - g)) >> 16));
-				pix[i + 2] = uchar(r + ((aca * (cr - r)) >> 16));
-				pix[i + 3] = uchar(a + ((aca * (0xFF - a)) >> 16));
+				const auto a = pix[i + 3] + 1;
+				pix[i + 0] = (ra * pix[i + 0] + a * cb) >> 16;
+				pix[i + 1] = (ra * pix[i + 1] + a * cg) >> 16;
+				pix[i + 2] = (ra * pix[i + 2] + a * cr) >> 16;
 			}
 			i += add;
 		}
