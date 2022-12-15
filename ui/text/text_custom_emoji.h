@@ -19,21 +19,19 @@ namespace Ui::Text {
 
 [[nodiscard]] int AdjustCustomEmojiSize(int emojiSize);
 
-struct CustomEmojiColored {
-	QColor color;
-	QImage cache;
-};
-
 struct CustomEmojiPaintContext {
-	QColor preview;
-	mutable CustomEmojiColored *colored = nullptr;
+	required<QColor> textColor;
 	QSize size; // Required only when scaled = true, for path scaling.
 	crl::time now = 0;
 	float64 scale = 0.;
 	QPoint position;
-	mutable bool firstFrameOnly = false;
 	bool paused = false;
 	bool scaled = false;
+
+	mutable struct {
+		bool colorized = false;
+		bool forceFirstFrame = false;
+	} internal;
 };
 
 class CustomEmoji {

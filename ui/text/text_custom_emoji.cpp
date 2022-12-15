@@ -50,9 +50,10 @@ QString FirstFrameEmoji::entityData() {
 }
 
 void FirstFrameEmoji::paint(QPainter &p, const Context &context) {
-	auto copy = context;
-	copy.firstFrameOnly = true;
-	_wrapped->paint(p, copy);
+	const auto was = context.internal.forceFirstFrame;
+	context.internal.forceFirstFrame = true;
+	_wrapped->paint(p, context);
+	context.internal.forceFirstFrame = was;
 }
 
 void FirstFrameEmoji::unload() {
@@ -90,10 +91,10 @@ void LimitedLoopsEmoji::paint(QPainter &p, const Context &context) {
 		}
 	}
 	if (_played == _limit) {
-		const auto was = context.firstFrameOnly;
-		context.firstFrameOnly = true;
+		const auto was = context.internal.forceFirstFrame;
+		context.internal.forceFirstFrame = true;
 		_wrapped->paint(p, context);
-		context.firstFrameOnly = was;
+		context.internal.forceFirstFrame = was;
 	} else {
 		_wrapped->paint(p, context);
 	}

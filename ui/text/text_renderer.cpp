@@ -827,16 +827,27 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 							x,
 							y);
 					} else if (const auto custom = static_cast<const CustomEmojiBlock*>(currentBlock)->_custom.get()) {
+						const auto selected = (fillSelect.from <= glyphX)
+							&& (fillSelect.till > glyphX);
+						const auto color = (selected
+							? _currentPenSelected
+							: _currentPen)->color();
 						if (!_customEmojiSize) {
 							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
 							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+							_customEmojiContext = CustomEmoji::Context{
+								.textColor = color,
+								.now = now(),
+								.paused = _paused,
+							};
+						} else {
+							_customEmojiContext->textColor = color;
 						}
-						custom->paint(*_p, {
-							.preview = _palette->spoilerFg->c,
-							.now = now(),
-							.position = { x + _customEmojiSkip, y + _customEmojiSkip },
-							.paused = _paused,
-						});
+						_customEmojiContext->position = {
+							x + _customEmojiSkip,
+							y + _customEmojiSkip,
+						};
+						custom->paint(*_p, *_customEmojiContext);
 					}
 					if (hasSpoiler) {
 						_p->setOpacity(opacity);

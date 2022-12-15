@@ -37,14 +37,14 @@ void PaintScaledImage(
 		const QRect &target,
 		const Cache::Frame &frame,
 		const Context &context) {
-	const auto colored = context.colored;
-	const auto cache = colored ? &colored->cache : nullptr;
+	static QImage PaintCache;
+	const auto cache = context.internal.colorized ? &PaintCache : nullptr;
 	auto q = std::optional<QPainter>();
-	if (colored) {
+	if (cache) {
 		const auto ratio = style::DevicePixelRatio();
 		if (cache->width() < target.width() * ratio
 			|| cache->height() < target.height() * ratio) {
-			colored->cache = QImage(
+			*cache = QImage(
 				std::max(cache->width(), target.width() * ratio),
 				std::max(cache->height(), target.height() * ratio),
 				QImage::Format_ARGB32_Premultiplied);
@@ -52,7 +52,9 @@ void PaintScaledImage(
 		}
 		q.emplace(cache);
 		q->setCompositionMode(QPainter::CompositionMode_Source);
-		q->fillRect(QRect(QPoint(), target.size()), Qt::transparent);
+		if (context.scaled) {
+			q->fillRect(QRect(QPoint(), target.size()), Qt::transparent);
+		}
 		q->translate(-target.topLeft());
 	}
 	const auto to = q ? &*q : &p;
@@ -79,7 +81,8 @@ void PaintScaledImage(
 		q.reset();
 		const auto ratio = style::DevicePixelRatio();
 		const auto source = QRect(QPoint(), target.size() * ratio);
-		style::colorizeImage(*cache, colored->color, cache, source);
+		const auto &color = context.textColor;
+		style::colorizeImage(*cache, color, cache, source, {}, true);
 		p.drawImage(target, *cache, source);
 	}
 }
@@ -128,7 +131,9 @@ void Preview::paintPath(
 		const Context &context,
 		const ScaledPath &path) {
 	auto hq = PainterHighQualityEnabler(p);
-	p.setBrush(context.preview);
+	auto copy = context.textColor.value();
+	copy.setAlpha((copy.alpha() + 1) / 8);
+	p.setBrush(copy);
 	p.setPen(Qt::NoPen);
 	const auto scale = path.scale;
 	const auto required = (scale != 1.) || context.scaled;
@@ -374,7 +379,7 @@ PaintFrameResult Cache::paintCurrentFrame(
 	if (!_frames) {
 		return {};
 	}
-	const auto first = context.firstFrameOnly;
+	const auto first = context.internal.forceFirstFrame;
 	if (!first) {
 		const auto now = context.paused ? 0 : context.now;
 		const auto finishes = now ? currentFrameFinishes() : 0;
@@ -657,9 +662,8 @@ QString Instance::entityData() const {
 }
 
 void Instance::paint(QPainter &p, const Context &context) {
-	const auto colored = (context.colored && !_colored)
-		? base::take(context.colored)
-		: nullptr;
+	context.internal.colorized = _colored;
+
 	v::match(_state, [&](Loading &state) {
 		state.paint(p, context);
 		load(state);
@@ -684,9 +688,6 @@ void Instance::paint(QPainter &p, const Context &context) {
 			_repaintLater(this, { result.next, result.duration });
 		}
 	});
-	if (colored) {
-		context.colored = colored;
-	}
 }
 
 bool Instance::ready() {

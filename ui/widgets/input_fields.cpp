@@ -1126,7 +1126,7 @@ void CustomEmojiObject::drawObject(
 		return;
 	}
 	i->second->paint(*painter, {
-		.preview = st::windowBgRipple->c,
+		.textColor = format.foreground().color(),
 		.now = _now,
 		.position = QPoint(
 			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,

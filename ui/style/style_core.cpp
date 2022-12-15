@@ -87,7 +87,13 @@ rpl::producer<bool> ShortAnimationPlaying() {
 	return internal::ShortAnimationRunning.value();
 }
 
-void colorizeImage(const QImage &src, QColor c, QImage *outResult, QRect srcRect, QPoint dstPoint) {
+void colorizeImage(
+		const QImage &src,
+		const QColor &color,
+		not_null<QImage*> outResult,
+		QRect srcRect,
+		QPoint dstPoint,
+		bool useAlpha) {
 	// In background_box ColorizePattern we use the fact that
 	// colorizeImage takes only first byte of the mask, so it
 	// could be used for wallpaper patterns, which have values
@@ -99,22 +105,28 @@ void colorizeImage(const QImage &src, QColor c, QImage *outResult, QRect srcRect
 	}
 	auto width = srcRect.width();
 	auto height = srcRect.height();
-	Assert(outResult && outResult->rect().contains(QRect(dstPoint, srcRect.size())));
+	Assert(outResult->rect().contains(QRect(dstPoint, srcRect.size())));
 
-	auto pattern = anim::shifted(c);
+	auto pattern = anim::shifted(color);
 
 	constexpr auto resultIntsPerPixel = 1;
 	auto resultIntsPerLine = (outResult->bytesPerLine() >> 2);
 	auto resultIntsAdded = resultIntsPerLine - width * resultIntsPerPixel;
-	auto resultInts = reinterpret_cast<uint32*>(outResult->bits()) + dstPoint.y() * resultIntsPerLine + dstPoint.x() * resultIntsPerPixel;
+	auto resultInts = reinterpret_cast<uint32*>(outResult->bits())
+		+ (dstPoint.y() * resultIntsPerLine)
+		+ (dstPoint.x() * resultIntsPerPixel);
 	Assert(resultIntsAdded >= 0);
-	Assert(outResult->depth() == static_cast<int>((resultIntsPerPixel * sizeof(uint32)) << 3));
+	Assert(outResult->depth()
+		== static_cast<int>((resultIntsPerPixel * sizeof(uint32)) << 3));
 	Assert(outResult->bytesPerLine() == (resultIntsPerLine << 2));
 
 	auto maskBytesPerPixel = (src.depth() >> 3);
 	auto maskBytesPerLine = src.bytesPerLine();
 	auto maskBytesAdded = maskBytesPerLine - width * maskBytesPerPixel;
-	auto maskBytes = src.constBits() + srcRect.y() * maskBytesPerLine + srcRect.x() * maskBytesPerPixel;
+	auto maskBytes = src.constBits()
+		+ (srcRect.y() * maskBytesPerLine)
+		+ (srcRect.x() * maskBytesPerPixel)
+		+ (useAlpha ? 3 : 0);
 	Assert(maskBytesAdded >= 0);
 	Assert(src.depth() == (maskBytesPerPixel << 3));
 	for (int y = 0; y != height; ++y) {
