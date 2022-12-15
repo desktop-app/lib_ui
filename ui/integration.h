@@ -49,7 +49,6 @@ public:
 	virtual void activationFromTopPanel();
 
 	[[nodiscard]] virtual bool screenIsLocked();
-	[[nodiscard]] virtual QString timeFormat();
 
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(
 		const EntityLinkData &data,
