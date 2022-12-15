@@ -822,8 +822,12 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 	}
 	to.setProperty(kReplaceTagId, from.property(kReplaceTagId));
 	to.setFont(from.font());
-	to.setForeground(from.foreground());
-	to.setBackground(from.background());
+	if (from.hasProperty(QTextFormat::ForegroundBrush)) {
+		to.setForeground(from.brushProperty(QTextFormat::ForegroundBrush));
+	}
+	if (from.hasProperty(QTextFormat::BackgroundBrush)) {
+		to.setBackground(from.brushProperty(QTextFormat::BackgroundBrush));
+	}
 }
 
 // Returns the position of the first inserted tag or "changedEnd" value if none found.
@@ -1012,6 +1016,7 @@ void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 }
 
 void InsertCustomEmojiAtCursor(
+		not_null<InputField*> field,
 		QTextCursor cursor,
 		const QString &text,
 		const QString &link) {
@@ -1023,6 +1028,9 @@ void InsertCustomEmojiAtCursor(
 	format.setProperty(kCustomEmojiLink, unique);
 	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
 	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
+	format.setFont(field->st().font);
+	format.setForeground(field->st().textFg);
+	format.setBackground(QBrush());
 	ApplyTagFormat(format, currentFormat);
 	format.setProperty(kTagProperty, TextUtilities::TagWithAdded(
 		format.property(kTagProperty).toString(),
@@ -2239,6 +2247,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					InsertEmojiAtCursor(cursor, action.emoji);
 				} else {
 					InsertCustomEmojiAtCursor(
+						this,
 						cursor,
 						action.customEmojiText,
 						action.customEmojiLink);

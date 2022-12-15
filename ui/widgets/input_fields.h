@@ -37,9 +37,11 @@ const auto kEditLinkSequence = QKeySequence("ctrl+k");
 const auto kSpoilerSequence = QKeySequence("ctrl+shift+p");
 
 class PopupMenu;
+class InputField;
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji);
 void InsertCustomEmojiAtCursor(
+	not_null<InputField*> field,
 	QTextCursor cursor,
 	const QString &text,
 	const QString &link);
@@ -151,6 +153,10 @@ public:
 		Mode mode = Mode::SingleLine,
 		rpl::producer<QString> placeholder = nullptr,
 		const TextWithTags &value = TextWithTags());
+
+	[[nodiscard]] const style::InputField &st() const {
+		return _st;
+	}
 
 	void showError();
 	void showErrorNoFocus();
