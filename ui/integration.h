@@ -55,8 +55,8 @@ public:
 		const EntityLinkData &data,
 		const std::any &context);
 	[[nodiscard]] virtual bool handleUrlClick(
-		const QString &url,
-		const QVariant &context);
+		QString &url,
+		QVariant &context);
 	[[nodiscard]] virtual QString convertTagToMimeTag(const QString &tagId);
 	[[nodiscard]] virtual const Emoji::One *defaultEmojiVariant(
 		const Emoji::One *emoji);

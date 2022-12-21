@@ -81,8 +81,8 @@ Fn<void()> Integration::createSpoilerRepaint(const std::any &context) {
 }
 
 bool Integration::handleUrlClick(
-		const QString &url,
-		const QVariant &context) {
+		QString &url,
+		QVariant &context) {
 	return false;
 }
 
