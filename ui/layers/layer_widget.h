@@ -69,12 +69,13 @@ public:
 		return true;
 	}
 
-protected:
 	void closeLayer() {
 		if (const auto callback = base::take(_closedCallback)) {
 			callback();
 		}
 	}
+
+protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 	virtual void doSetInnerFocus() {
