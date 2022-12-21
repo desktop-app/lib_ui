@@ -717,6 +717,9 @@ void LayerStackWidget::showFinished() {
 	if (_specialLayer) {
 		_specialLayer->showFinished();
 	}
+	if (_mainMenu) {
+		_mainMenu->showFinished();
+	}
 	if (auto layer = currentLayer()) {
 		layer->showFinished();
 	}
