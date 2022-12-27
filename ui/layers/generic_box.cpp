@@ -28,14 +28,17 @@ void GenericBox::prepare() {
 		pinned ? pinned->heightValue() : rpl::single(0),
 		wrap->heightValue()
 	) | rpl::start_with_next([=](int top, int height) {
+		Expects(_minHeight >= 0);
+		Expects(!_maxHeight || _minHeight <= _maxHeight);
+
 		setInnerTopSkip(top);
 		const auto desired = top + height;
 		setDimensions(
 			currentWidth,
 			std::clamp(
 				desired,
-				_minHeight ? _minHeight : desired,
-				_maxHeight ? _maxHeight : desired),
+				_minHeight,
+				_maxHeight ? _maxHeight : std::max(_minHeight, desired)),
 			true);
 	}, wrap->lifetime());
 
