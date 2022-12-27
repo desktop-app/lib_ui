@@ -824,7 +824,7 @@ bool SpoilerAnimation::repaint(crl::time now) {
 	return true;
 }
 
-void PrepareTextSpoilerMask() {
+void PreloadTextSpoilerMask() {
 	PrepareDefaultSpoiler(
 		DefaultTextMask,
 		"text",
@@ -833,10 +833,14 @@ void PrepareTextSpoilerMask() {
 }
 
 const SpoilerMessCached &DefaultTextSpoilerMask() {
+	static const auto once = [&] {
+		PreloadTextSpoilerMask();
+		return 0;
+	}();
 	return WaitDefaultSpoiler(DefaultTextMask);
 }
 
-void PrepareImageSpoiler() {
+void PreloadImageSpoiler() {
 	const auto postprocess = [](std::unique_ptr<SpoilerMessCached> cached) {
 		Expects(cached != nullptr);
 
@@ -862,6 +866,10 @@ void PrepareImageSpoiler() {
 }
 
 const SpoilerMessCached &DefaultImageSpoiler() {
+	static const auto once = [&] {
+		PreloadImageSpoiler();
+		return 0;
+	}();
 	return WaitDefaultSpoiler(DefaultImageCached);
 }
 

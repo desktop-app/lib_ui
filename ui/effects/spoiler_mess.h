@@ -109,9 +109,9 @@ private:
 [[nodiscard]] SpoilerMessCached GenerateSpoilerMess(
 	const SpoilerMessDescriptor &descriptor);
 
-void PrepareTextSpoilerMask();
+void PreloadTextSpoilerMask();
 [[nodiscard]] const SpoilerMessCached &DefaultTextSpoilerMask();
-void PrepareImageSpoiler();
+void PreloadImageSpoiler();
 [[nodiscard]] const SpoilerMessCached &DefaultImageSpoiler();
 
 } // namespace Ui
