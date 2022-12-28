@@ -833,7 +833,7 @@ void PreloadTextSpoilerMask() {
 }
 
 const SpoilerMessCached &DefaultTextSpoilerMask() {
-	static const auto once = [&] {
+	[[maybe_unused]] static const auto once = [&] {
 		PreloadTextSpoilerMask();
 		return 0;
 	}();
@@ -866,7 +866,7 @@ void PreloadImageSpoiler() {
 }
 
 const SpoilerMessCached &DefaultImageSpoiler() {
-	static const auto once = [&] {
+	[[maybe_unused]] static const auto once = [&] {
 		PreloadImageSpoiler();
 		return 0;
 	}();
