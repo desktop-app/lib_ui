@@ -288,6 +288,7 @@ const QRegularExpression &RegExpHashtag();
 const QRegularExpression &RegExpHashtagExclude();
 const QRegularExpression &RegExpMention();
 const QRegularExpression &RegExpBotCommand();
+QRegularExpression RegExpDigitsExclude();
 QString MarkdownBoldGoodBefore();
 QString MarkdownBoldBadAfter();
 QString MarkdownItalicGoodBefore();

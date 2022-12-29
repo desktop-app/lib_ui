@@ -1236,6 +1236,10 @@ const QRegularExpression &RegExpBotCommand() {
 	return result;
 }
 
+QRegularExpression RegExpDigitsExclude() {
+	return QRegularExpression("[^\\d]");
+}
+
 QString MarkdownBoldGoodBefore() {
 	return SeparatorsBold();
 }
