@@ -636,12 +636,13 @@ void Checkbox::paintEvent(QPaintEvent *e) {
 
 	const auto alignLeft = (_checkAlignment & Qt::AlignLeft);
 	const auto alignRight = (_checkAlignment & Qt::AlignRight);
+	const auto centered = ((_checkAlignment & Qt::AlignHCenter) != 0);
 	const auto textSkip = _st.checkPosition.x()
 		+ check.width()
 		+ _st.textPosition.x();
-	const auto availableTextWidth = (alignLeft || alignRight)
-		? std::max(width() - textSkip, 1)
-		: std::max(width() - _st.margin.left() - _st.margin.right(), 1);
+	const auto availableTextWidth = centered
+		? std::max(width() - _st.margin.left() - _st.margin.right(), 1)
+		: std::max(width() - textSkip, 1);
 	const auto textTop = _st.margin.top() + _st.textPosition.y();
 
 	p.setPen(anim::pen(_st.textFg, _st.textFgActive, active));
@@ -822,12 +823,13 @@ int Checkbox::resizeGetHeight(int newWidth) {
 	if (!centered && _allowTextLines == 1) {
 		return result;
 	}
-	const auto leftSkip = _st.checkPosition.x()
+	const auto textSkip = _st.checkPosition.x()
 		+ checkRect().width()
 		+ _st.textPosition.x();
+	const auto fullWidth = _st.margin.left() + newWidth + _st.margin.right();
 	const auto availableTextWidth = centered
-		? (newWidth - _st.margin.left() - _st.margin.right())
-		: std::max(width() - leftSkip, 1);
+		? std::max(newWidth, 1)
+		: std::max(fullWidth - textSkip, 1);
 	const auto textHeight = _text.countHeight(availableTextWidth);
 	const auto textBottom = _st.textPosition.y()
 		+ (_allowTextLines
