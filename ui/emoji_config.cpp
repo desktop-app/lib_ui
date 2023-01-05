@@ -363,11 +363,13 @@ std::vector<QImage> LoadAndValidateSprites(int id) {
 void ClearUniversalChecked() {
 	Expects(InstanceNormal != nullptr && InstanceLarge != nullptr);
 
-	if (CanClearUniversal
-		&& Universal
+	if (Universal
 		&& InstanceNormal->cached()
 		&& InstanceLarge->cached()) {
-		Universal->clear();
+		if (CanClearUniversal) {
+			Universal->clear();
+		}
+		ClearIrrelevantCache();
 	}
 }
 
