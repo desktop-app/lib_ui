@@ -259,7 +259,7 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 		if (topCorners || bottomCorners) {
 			p.setClipRegion(QRegion(rect()) - specialLayerBox.marginsRemoved(QMargins(st::boxRadius, 0, st::boxRadius, 0)) - specialLayerBox.marginsRemoved(QMargins(0, st::boxRadius, 0, st::boxRadius)));
 		}
-		Ui::Shadow::paint(p, specialLayerBox, width(), st::boxRoundShadow, sides, Ui::SpecialLayerShadowCorners());
+		Ui::Shadow::paint(p, specialLayerBox, width(), st::boxRoundShadow, Ui::SpecialLayerShadowCorners(), sides);
 		if (topCorners || bottomCorners) {
 			p.setClipping(false);
 		}

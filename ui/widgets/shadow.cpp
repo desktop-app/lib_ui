@@ -16,35 +16,53 @@
 namespace Ui {
 namespace {
 
+struct CustomImage {
+public:
+	explicit CustomImage(const QImage &image)
+	: _image(image) {
+	}
+	void paint(QPainter &p, int x, int y, int outerw) const {
+		p.drawImage(x, y, _image);
+	}
+	void fill(QPainter &p, QRect rect) const {
+		p.drawImage(rect, _image);
+	}
+	[[nodiscard]] bool empty() const {
+		return _image.isNull();
+	}
+	[[nodiscard]] int width() const {
+		return _image.width() / style::DevicePixelRatio();
+	}
+	[[nodiscard]] int height() const {
+		return _image.height() / style::DevicePixelRatio();
+	}
+
+private:
+	const QImage &_image;
+
+};
+
 struct CustomShadowCorners {
-	struct Image {
-	public:
-		Image(const QImage &image)
-		: _image(image) {
-		}
-		void paint(QPainter &p, int x, int y, int outerw) const {
-			p.drawImage(x, y, _image);
-		}
-		[[nodiscard]] bool empty() const {
-			return _image.isNull();
-		}
-		[[nodiscard]] int width() const {
-			return _image.width() / style::DevicePixelRatio();
-		}
-		[[nodiscard]] int height() const {
-			return _image.height() / style::DevicePixelRatio();
-		}
-	private:
-		const QImage &_image;
-	};
 	const style::icon &left;
-	Image topLeft;
+	CustomImage topLeft;
 	const style::icon &top;
-	Image topRight;
+	CustomImage topRight;
 	const style::icon &right;
-	Image bottomRight;
+	CustomImage bottomRight;
 	const style::icon &bottom;
-	Image bottomLeft;
+	CustomImage bottomLeft;
+	const style::margins &extend;
+};
+
+struct CustomShadow {
+	CustomImage left;
+	CustomImage topLeft;
+	CustomImage top;
+	CustomImage topRight;
+	CustomImage right;
+	CustomImage bottomRight;
+	CustomImage bottom;
+	CustomImage bottomLeft;
 	const style::margins &extend;
 };
 
@@ -121,7 +139,7 @@ void PlainShadow::paintEvent(QPaintEvent *e) {
 }
 
 void Shadow::paint(QPainter &p, const QRect &box, int outerWidth, const style::Shadow &st, RectParts sides) {
-	ShadowPaint<style::Shadow>(p, box, outerWidth, st, std::move(sides));
+	ShadowPaint<style::Shadow>(p, box, outerWidth, st, sides);
 }
 
 void Shadow::paint(
@@ -129,20 +147,45 @@ void Shadow::paint(
 		const QRect &box,
 		int outerWidth,
 		const style::Shadow &st,
-		RectParts sides,
-		const std::array<QImage, 4> &corners) {
+		const std::array<QImage, 4> &corners,
+		RectParts sides) {
 	const auto shadow = CustomShadowCorners{
 		.left = st.left,
-		.topLeft = CustomShadowCorners::Image(corners[0]),
+		.topLeft = CustomImage(corners[0]),
 		.top = st.top,
-		.topRight = CustomShadowCorners::Image(corners[2]),
+		.topRight = CustomImage(corners[2]),
 		.right = st.right,
-		.bottomRight = CustomShadowCorners::Image(corners[3]),
+		.bottomRight = CustomImage(corners[3]),
 		.bottom = st.bottom,
-		.bottomLeft = CustomShadowCorners::Image(corners[1]),
+		.bottomLeft = CustomImage(corners[1]),
 		.extend = st.extend,
 	};
-	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
+	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, sides);
+}
+
+void Shadow::paint(
+		QPainter &p,
+		const QRect &box,
+		int outerWidth,
+		const style::Shadow &st,
+		const std::array<QImage, 4> &sides,
+		const std::array<QImage, 4> &corners) {
+	const auto shadow = CustomShadow{
+		.left = CustomImage(sides[0]),
+		.topLeft = CustomImage(corners[0]),
+		.top = CustomImage(sides[1]),
+		.topRight = CustomImage(corners[2]),
+		.right = CustomImage(sides[2]),
+		.bottomRight = CustomImage(corners[3]),
+		.bottom = CustomImage(sides[3]),
+		.bottomLeft = CustomImage(corners[1]),
+		.extend = st.extend,
+	};
+	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
+		| (sides[0].isNull() ? RectPart() : RectPart::Left)
+		| (sides[1].isNull() ? RectPart() : RectPart::Top)
+		| (sides[2].isNull() ? RectPart() : RectPart::Right)
+		| (sides[3].isNull() ? RectPart() : RectPart::Bottom));
 }
 
 QPixmap Shadow::grab(
