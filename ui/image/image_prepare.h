@@ -204,5 +204,6 @@ struct PrepareArgs {
 }
 
 [[nodiscard]] bool IsProgressiveJpeg(const QByteArray &bytes);
+[[nodiscard]] QByteArray MakeProgressiveJpeg(const QByteArray &bytes);
 
 } // namespace Images
