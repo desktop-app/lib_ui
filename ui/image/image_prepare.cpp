@@ -32,6 +32,7 @@ struct my_error_mgr : public jpeg_error_mgr {
 extern "C" {
 
 static void my_error_exit(j_common_ptr cinfo) {
+	(*cinfo->err->output_message)(cinfo);
 	my_error_mgr* myerr = (my_error_mgr*)cinfo->err;
 	longjmp(myerr->setjmp_buffer, 1);
 }
