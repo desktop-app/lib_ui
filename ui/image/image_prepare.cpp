@@ -1362,9 +1362,7 @@ QByteArray MakeProgressiveJpeg(const QByteArray &bytes) {
 		jpeg_finish_compress(&dstinfo);
 		jpeg_finish_decompress(&srcinfo);
 
-		return QByteArray::fromRawData(
-			reinterpret_cast<char*>(outbuffer),
-			outsize);
+		return QByteArray(reinterpret_cast<char*>(outbuffer), outsize);
 	} catch (...) {
 		return {};
 	}
