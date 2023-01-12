@@ -398,7 +398,7 @@ void FlatLabel::overrideLinkClickHandler(Fn<void(QString url)> handler) {
 		if (button != Qt::LeftButton) {
 			return true;
 		}
-		handler(link->dragText());
+		handler(link->url());
 		return false;
 	});
 }

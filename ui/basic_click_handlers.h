@@ -28,7 +28,6 @@ public:
 	}
 
 protected:
-	virtual QString url() const = 0;
 	virtual QString readable() const;
 
 	bool _fullDisplayed;

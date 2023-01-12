@@ -38,6 +38,11 @@ public:
 
 	virtual void onClick(ClickContext context) const = 0;
 
+	// Some sort of `id`, for text links contains urls.
+	virtual QString url() const {
+		return QString();
+	}
+
 	// What text to show in a tooltip when mouse is over that click handler as a link in Text.
 	virtual QString tooltip() const {
 		return QString();
