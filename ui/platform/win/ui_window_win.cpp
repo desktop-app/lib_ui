@@ -581,12 +581,9 @@ bool WindowHelper::handleNativeEvent(
 		_systemButtonOver.fire(systemButtonHitTest(*result));
 	} return true;
 
-	// should return true for Qt not to change window size
-	// when moving the window between screens
-	// change to false once runtime scale change would be supported
 	case WM_DPICHANGED: {
 		_dpi = LOWORD(wParam);
-	} return true;
+	} return false;
 
 	}
 	return false;
