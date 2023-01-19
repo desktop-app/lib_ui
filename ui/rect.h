@@ -18,11 +18,11 @@ namespace sum {
 	Horizontal.
 	rect::m::sum::h(mypadding);
 */
-[[nodiscard]] int h(const QMargins &margins) {
+[[nodiscard]] inline int h(const QMargins &margins) {
 	return margins.left() + margins.right();
 }
 
-[[nodiscard]] float64 h(const QMarginsF &margins) {
+[[nodiscard]] inline float64 h(const QMarginsF &margins) {
 	return margins.left() + margins.right();
 }
 
@@ -30,11 +30,11 @@ namespace sum {
 	Vertical.
 	rect::m::sum::v(mypadding);
 */
-[[nodiscard]] int v(const QMargins &margins) {
+[[nodiscard]] inline int v(const QMargins &margins) {
 	return margins.top() + margins.bottom();
 }
 
-[[nodiscard]] float64 v(const QMarginsF &margins) {
+[[nodiscard]] inline float64 v(const QMarginsF &margins) {
 	return margins.top() + margins.bottom();
 }
 
@@ -44,30 +44,30 @@ namespace sum {
 /*
 	rect::right(mywidget);
 */
-[[nodiscard]] int right(const QRect &r) {
+[[nodiscard]] inline int right(const QRect &r) {
 	return r.left() + r.width();
 }
 
-[[nodiscard]] float64 right(const QRectF &r) {
+[[nodiscard]] inline float64 right(const QRectF &r) {
 	return r.left() + r.width();
 }
 
-[[nodiscard]] int right(not_null<QWidget*> w) {
+[[nodiscard]] inline int right(not_null<QWidget*> w) {
 	return w->x() + w->width();
 }
 
 /*
 	rect::bottom(mywidget);
 */
-[[nodiscard]] int bottom(const QRect &r) {
+[[nodiscard]] inline int bottom(const QRect &r) {
 	return r.top() + r.height();
 }
 
-[[nodiscard]] float64 bottom(const QRectF &r) {
+[[nodiscard]] inline float64 bottom(const QRectF &r) {
 	return r.top() + r.height();
 }
 
-[[nodiscard]] int bottom(not_null<const QWidget*> w) {
+[[nodiscard]] inline int bottom(not_null<const QWidget*> w) {
 	return w->y() + w->height();
 }
 
@@ -76,32 +76,32 @@ namespace sum {
 /*
 	Rect(mysize);
 */
-[[nodiscard]] QRect Rect(const QSize &s) {
+[[nodiscard]] inline QRect Rect(const QSize &s) {
 	return QRect(QPoint(), s);
 }
 
-[[nodiscard]] QRectF Rect(const QSizeF &s) {
+[[nodiscard]] inline QRectF Rect(const QSizeF &s) {
 	return QRectF(QPointF(), s);
 }
 
 /*
 	Size(myside);
 */
-[[nodiscard]] QSize Size(int side) {
+[[nodiscard]] inline QSize Size(int side) {
 	return QSize(side, side);
 }
 
-[[nodiscard]] QSizeF Size(float64 side) {
+[[nodiscard]] inline QSizeF Size(float64 side) {
 	return QSizeF(side, side);
 }
 
 /*
 	Margins(myvalue);
 */
-[[nodiscard]] QMargins Margins(int side) {
+[[nodiscard]] inline QMargins Margins(int side) {
 	return QMargins{ side, side, side, side };
 }
 
-[[nodiscard]] QMarginsF Margins(float64 side) {
+[[nodiscard]] inline QMarginsF Margins(float64 side) {
 	return QMarginsF{ side, side, side, side };
 }
