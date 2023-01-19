@@ -37,6 +37,9 @@ public:
 	[[nodiscard]] const style::PopupMenu &st() const {
 		return _st;
 	}
+	[[nodiscard]] QRect inner() const {
+		return _inner;
+	}
 
 	not_null<QAction*> addAction(base::unique_qptr<Menu::ItemBase> widget);
 	not_null<QAction*> addAction(

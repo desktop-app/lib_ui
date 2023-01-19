@@ -545,7 +545,10 @@ void PopupMenu::popupSubmenu(
 		currentSubmenu->hideMenu(true);
 	}
 	if (submenu) {
-		QPoint p(_inner.x() + (style::RightToLeft() ? _padding.right() : (_inner.width() - _padding.left())), _inner.y() + actionTop);
+		const auto padding = _useTransparency
+			? _st.shadow.extend
+			: QMargins(st::lineWidth, 0, st::lineWidth, 0);
+		QPoint p(_inner.x() + (style::RightToLeft() ? padding.right() : (_inner.width() - padding.left())), _inner.y() + actionTop);
 		_activeSubmenu = submenu;
 		if (_activeSubmenu->prepareGeometryFor(geometry().topLeft() + p, this)) {
 			_activeSubmenu->showPrepared(source);
@@ -983,11 +986,12 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 			0),
 		_padding.top());
 	auto r = screen ? screen->availableGeometry() : QRect();
+	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {
 		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _extents.left();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && (r.isNull() || w.x() + _parent->width() - _extents.left() - _extents.right() + width() - _extents.right() <= r.x() + r.width())) {
-				w.setX(w.x() + _parent->width() - _extents.left() - _extents.right());
+			if (_parent && (r.isNull() || w.x() + parentWidth - _extents.left() - _extents.right() + width() - _extents.right() <= r.x() + r.width())) {
+				w.setX(w.x() + parentWidth - _extents.left() - _extents.right());
 			} else {
 				w.setX(r.x() - _extents.left());
 			}
@@ -997,8 +1001,8 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 	} else {
 		const auto badLeft = !r.isNull() && w.x() + width() - _extents.right() > r.x() + r.width();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && (r.isNull() || w.x() - _parent->width() + _extents.left() + _extents.right() - width() + _extents.right() >= r.x() - _extents.left())) {
-				w.setX(w.x() + _extents.left() + _extents.right() - _parent->width() - width() + _extents.left() + _extents.right());
+			if (_parent && (r.isNull() || w.x() - parentWidth + _extents.left() + _extents.right() - width() + _extents.right() >= r.x() - _extents.left())) {
+				w.setX(w.x() + _extents.left() + _extents.right() - parentWidth - width() + _extents.left() + _extents.right());
 			} else {
 				w.setX(p.x() - width() + std::max(
 					_additionalMenuPadding.right() - _st.shadow.extend.right(),
