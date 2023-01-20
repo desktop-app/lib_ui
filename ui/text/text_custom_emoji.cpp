@@ -70,9 +70,11 @@ bool FirstFrameEmoji::readyInDefaultState() {
 
 LimitedLoopsEmoji::LimitedLoopsEmoji(
 	std::unique_ptr<CustomEmoji> wrapped,
-	int limit)
+	int limit,
+	bool stopOnLast)
 : _wrapped(std::move(wrapped))
-, _limit(limit) {
+, _limit(limit)
+, _stopOnLast(stopOnLast) {
 }
 
 QString LimitedLoopsEmoji::entityData() {
@@ -91,10 +93,18 @@ void LimitedLoopsEmoji::paint(QPainter &p, const Context &context) {
 		}
 	}
 	if (_played == _limit) {
-		const auto was = context.internal.forceFirstFrame;
-		context.internal.forceFirstFrame = true;
+		const auto wasFirst = context.internal.forceFirstFrame;
+		const auto wasLast = context.internal.forceLastFrame;
+		(_stopOnLast
+			? context.internal.forceLastFrame
+			: context.internal.forceFirstFrame) = true;
 		_wrapped->paint(p, context);
-		context.internal.forceFirstFrame = was;
+		context.internal.forceFirstFrame = wasFirst;
+		context.internal.forceLastFrame = wasLast;
+	} else if (_played + 1 == _limit && _inLoop && _stopOnLast) {
+		const auto wasLast = context.internal.overrideFirstWithLastFrame;
+		_wrapped->paint(p, context);
+		context.internal.overrideFirstWithLastFrame = wasLast;
 	} else {
 		_wrapped->paint(p, context);
 	}

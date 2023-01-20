@@ -31,6 +31,8 @@ struct CustomEmojiPaintContext {
 	mutable struct {
 		bool colorized = false;
 		bool forceFirstFrame = false;
+		bool forceLastFrame = false;
+		bool overrideFirstWithLastFrame = false;
 	} internal;
 };
 
@@ -85,7 +87,10 @@ private:
 
 class LimitedLoopsEmoji final : public CustomEmoji {
 public:
-	LimitedLoopsEmoji(std::unique_ptr<CustomEmoji> wrapped, int limit);
+	LimitedLoopsEmoji(
+		std::unique_ptr<CustomEmoji> wrapped,
+		int limit,
+		bool stopOnLast = false);
 
 	QString entityData() override;
 	void paint(QPainter &p, const Context &context) override;
@@ -98,6 +103,7 @@ private:
 	const int _limit = 0;
 	int _played = 0;
 	bool _inLoop = false;
+	bool _stopOnLast = false;
 
 };
 

@@ -383,20 +383,28 @@ PaintFrameResult Cache::paintCurrentFrame(
 		return {};
 	}
 	const auto first = context.internal.forceFirstFrame;
-	if (!first) {
+	auto last = context.internal.forceLastFrame;
+	if (!first && !last) {
 		const auto now = context.paused ? 0 : context.now;
 		const auto finishes = now ? currentFrameFinishes() : 0;
 		if (finishes && now >= finishes) {
 			++_frame;
 			if (_finished && _frame == _frames) {
 				_frame = 0;
+				if (context.internal.overrideFirstWithLastFrame) {
+					last = true;
+				}
 			}
 			_shown = now;
 		} else if (!_shown) {
 			_shown = now;
 		}
 	}
-	const auto index = first ? 0 : std::min(_frame, _frames - 1);
+	const auto index = first
+		? 0
+		: last
+		? (_frames - 1)
+		: std::min(_frame, _frames - 1);
 	const auto info = frame(index);
 	const auto size = _size / style::DevicePixelRatio();
 	const auto rect = QRect(context.position, QSize(size, size));
