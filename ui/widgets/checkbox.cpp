@@ -12,6 +12,7 @@
 #include "ui/painter.h"
 
 #include <QtGui/QtEvents>
+#include <QtCore/QtMath>
 
 namespace Ui {
 namespace {
