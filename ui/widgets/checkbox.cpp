@@ -137,8 +137,7 @@ void ToggleView::paintXV(QPainter &p, int left, int top, int outerWidth, float64
 	Expects(_st->vsize > 0);
 	Expects(_st->stroke > 0);
 
-	static const auto sqrt2 = sqrt(2.);
-	const auto stroke = (0. + _st->stroke) / sqrt2;
+	const auto stroke = (0. + _st->stroke) / M_SQRT2;
 	if (toggled < 1) {
 		// Just X or X->V.
 		const auto xSize = 0. + _st->xsize;

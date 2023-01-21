@@ -122,7 +122,6 @@ void CrossAnimation::paint(
 
 	const auto stroke = style::ConvertScaleExact(st.stroke);
 
-	const auto sqrt2 = sqrt(2.);
 	const auto deleteScale = shown + st.minScale * (1. - shown);
 	const auto deleteSkip = (deleteScale * st.skip)
 		+ (1. - deleteScale) * (st.size / 2);
@@ -131,7 +130,7 @@ void CrossAnimation::paint(
 	const auto deleteTop = y + deleteSkip + 0.;
 	const auto deleteWidth = st.size - 2 * deleteSkip;
 	const auto deleteHeight = st.size - 2 * deleteSkip;
-	const auto deleteStroke = stroke / sqrt2;
+	const auto deleteStroke = stroke / M_SQRT2;
 	std::array<QPointF, kPointCount> pathDelete = { {
 		{ deleteLeft, deleteTop + deleteStroke },
 		{ deleteLeft + deleteStroke, deleteTop },
@@ -180,7 +179,7 @@ void CrossAnimation::paint(
 		p.fillPath(path, color);
 	}
 	if (loadingArcLength != 0) {
-		auto roundSkip = (st.size * (1 - sqrt2) + 2 * sqrt2 * deleteSkip + stroke) / 2;
+		auto roundSkip = (st.size * (1 - M_SQRT2) + 2 * M_SQRT2 * deleteSkip + stroke) / 2;
 		auto roundPart = QRectF(x + roundSkip, y + roundSkip, st.size - 2 * roundSkip, st.size - 2 * roundSkip);
 		if (staticLoading) {
 			anim::DrawStaticLoading(p, roundPart, stroke, color);
