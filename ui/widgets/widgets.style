@@ -1557,3 +1557,7 @@ dropdownMenuWithIcons: DropdownMenu(defaultDropdownMenu) {
 	}
 	menu: menuWithIcons;
 }
+
+universalRippleAnimation: RippleAnimation(defaultRippleAnimation) {
+	color: shadowFg;
+}
