@@ -103,6 +103,7 @@ void LimitedLoopsEmoji::paint(QPainter &p, const Context &context) {
 		context.internal.forceLastFrame = wasLast;
 	} else if (_played + 1 == _limit && _inLoop && _stopOnLast) {
 		const auto wasLast = context.internal.overrideFirstWithLastFrame;
+		context.internal.overrideFirstWithLastFrame = true;
 		_wrapped->paint(p, context);
 		context.internal.overrideFirstWithLastFrame = wasLast;
 	} else {
