@@ -35,6 +35,9 @@ PRIVATE
 
     qt_conf/win.qrc
 
+    ui/dpr/dpr_icon.cpp
+    ui/dpr/dpr_icon.h
+    ui/dpr/dpr_image.h
     ui/effects/animation_value.cpp
     ui/effects/animation_value.h
     ui/effects/animation_value_f.h
