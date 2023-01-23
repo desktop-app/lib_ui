@@ -85,6 +85,7 @@ int CenterWrap<RpWidget>::resizeGetHeight(int newWidth) {
 }
 
 void CenterWrap<RpWidget>::wrappedSizeUpdated(QSize size) {
+	resize(width(), size.height());
 	updateWrappedPosition(width());
 }
 
