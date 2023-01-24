@@ -66,46 +66,48 @@ enum FontFlags {
 	FontDifferentFlags = 0x40,
 };
 
+[[nodiscard]] int CeilTextWidth(const QFont &font, const QString &text);
+
 class FontData {
 public:
-	int width(const QString &str) const {
-		return m.horizontalAdvance(str);
+	[[nodiscard]] int width(const QString &text) const {
+		return CeilTextWidth(f, text);
 	}
-	int width(const QString &str, int32 from, int32 to) const {
-		return width(str.mid(from, to));
+	[[nodiscard]] int width(const QString &text, int from, int to) const {
+		return width(text.mid(from, to));
 	}
-	int width(QChar ch) const {
-		return m.horizontalAdvance(ch);
+	[[nodiscard]] int width(QChar ch) const {
+		return int(std::ceil(_m.horizontalAdvance(ch)));
 	}
-	QString elided(
+	[[nodiscard]] QString elided(
 			const QString &str,
 			int width,
 			Qt::TextElideMode mode = Qt::ElideRight) const {
-		return m.elidedText(str, mode, width);
+		return _m.elidedText(str, mode, width);
 	}
 
-	Font bold(bool set = true) const;
-	Font italic(bool set = true) const;
-	Font underline(bool set = true) const;
-	Font strikeout(bool set = true) const;
-	Font semibold(bool set = true) const;
-	Font monospace(bool set = true) const;
+	[[nodiscard]] Font bold(bool set = true) const;
+	[[nodiscard]] Font italic(bool set = true) const;
+	[[nodiscard]] Font underline(bool set = true) const;
+	[[nodiscard]] Font strikeout(bool set = true) const;
+	[[nodiscard]] Font semibold(bool set = true) const;
+	[[nodiscard]] Font monospace(bool set = true) const;
 
 	int size() const;
 	uint32 flags() const;
 	int family() const;
 
 	QFont f;
-	QFontMetrics m;
 	int32 height, ascent, descent, spacew, elidew;
 
 private:
-	mutable Font modified[FontDifferentFlags];
+	mutable Font _modified[FontDifferentFlags];
 
 	Font otherFlagsFont(uint32 flag, bool set) const;
 	FontData(int size, uint32 flags, int family, Font *other);
 
 	friend class Font;
+	QFontMetricsF _m;
 	int _size;
 	uint32 _flags;
 	int _family;

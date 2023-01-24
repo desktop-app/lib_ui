@@ -17,6 +17,7 @@
 #include <QtGui/QFontInfo>
 #include <QtGui/QFontDatabase>
 #include <QtWidgets/QApplication>
+#include <private/qfontengine_p.h>
 
 void style_InitFontsResource() {
 #ifdef Q_OS_MAC // Use resources from the .app bundle on macOS.
@@ -292,20 +293,26 @@ int registerFontFamily(const QString &family) {
 	return result;
 }
 
+int CeilTextWidth(const QFont &font, const QString &text) {
+	return text.isEmpty()
+		? 0
+		: QStackTextEngine(text, font).width(0, text.size()).ceil().toInt();
+}
+
 FontData::FontData(int size, uint32 flags, int family, Font *other)
 : f(ResolveFont(flags, size))
-, m(f)
+, _m(f)
 , _size(size)
 , _flags(flags)
 , _family(family) {
 	if (other) {
-		memcpy(modified, other, sizeof(modified));
+		memcpy(_modified, other, sizeof(_modified));
 	}
-	modified[_flags] = Font(this);
+	_modified[_flags] = Font(this);
 
-	height = m.height();
-	ascent = m.ascent();
-	descent = m.descent();
+	height = int(base::SafeRound(_m.height()));
+	ascent = int(base::SafeRound(_m.ascent()));
+	descent = int(base::SafeRound(_m.descent()));
 	spacew = width(QLatin1Char(' '));
 	elidew = width("...");
 }
@@ -348,10 +355,10 @@ int FontData::family() const {
 
 Font FontData::otherFlagsFont(uint32 flag, bool set) const {
 	int32 newFlags = set ? (_flags | flag) : (_flags & ~flag);
-	if (!modified[newFlags].v()) {
-		modified[newFlags] = Font(_size, newFlags, _family, modified);
+	if (!_modified[newFlags].v()) {
+		_modified[newFlags] = Font(_size, newFlags, _family, _modified);
 	}
-	return modified[newFlags];
+	return _modified[newFlags];
 }
 
 Font::Font(int size, uint32 flags, const QString &family) {

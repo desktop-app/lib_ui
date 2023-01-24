@@ -20,7 +20,7 @@ NumbersAnimation::NumbersAnimation(
 , _duration(st::slideWrapDuration)
 , _animationCallback(std::move(animationCallback)) {
 	for (auto ch = '0'; ch != '9'; ++ch) {
-		accumulate_max(_digitWidth, _font->m.horizontalAdvance(ch));
+		accumulate_max(_digitWidth, _font->width(ch));
 	}
 }
 
@@ -76,7 +76,7 @@ void NumbersAnimation::realSetText(QString text, int value) {
 		digit.from = digit.to;
 		digit.fromWidth = digit.toWidth;
 		digit.to = (newSize + i < size) ? QChar(0) : text[newSize + i - size];
-		digit.toWidth = digit.to.unicode() ? _font->m.horizontalAdvance(digit.to) : 0;
+		digit.toWidth = digit.to.unicode() ? _font->width(digit.to) : 0;
 		if (digit.from != digit.to) {
 			animating = true;
 		}
@@ -86,7 +86,7 @@ void NumbersAnimation::realSetText(QString text, int value) {
 	}
 	if (_disabledMonospace) {
 		_fromWidth = _toWidth;
-		_toWidth = _font->m.horizontalAdvance(text);
+		_toWidth = _font->width(text);
 	} else {
 		_fromWidth = oldSize * _digitWidth;
 		_toWidth = newSize * _digitWidth;
@@ -141,10 +141,10 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 		auto to = digit.to;
 		const auto toCharWidth = (!_disabledMonospace || to.isDigit())
 			? _digitWidth
-			: _font->m.horizontalAdvance(to);
+			: _font->width(to);
 		const auto fromCharWidth = (!_disabledMonospace || from.isDigit())
 			? _digitWidth
-			: _font->m.horizontalAdvance(from);
+			: _font->width(from);
 		if (from == to) {
 			p.setOpacity(1.);
 			singleChar[0] = from;
