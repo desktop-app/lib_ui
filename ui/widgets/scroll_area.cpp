@@ -198,14 +198,18 @@ void ScrollBar::paintEvent(QPaintEvent *e) {
 	bg.setAlpha(anim::interpolate(0, bg.alpha(), opacity));
 	auto bar = anim::color(_st->barBg, _st->barBgOver, _a_barOver.value((_overbar || _moving) ? 1. : 0.));
 	bar.setAlpha(anim::interpolate(0, bar.alpha(), opacity));
-	if (_st->round) {
+	const auto outer = QRect(deltal, deltat, width() - deltal - deltar, height() - deltat - deltab);
+	const auto radius = (_st->round < 0)
+		? (std::min(outer.width(), outer.height()) / 2.)
+		: _st->round;
+	if (radius) {
 		PainterHighQualityEnabler hq(p);
 		p.setBrush(bg);
-		p.drawRoundedRect(QRect(deltal, deltat, width() - deltal - deltar, height() - deltat - deltab), _st->round, _st->round);
+		p.drawRoundedRect(outer, radius, radius);
 		p.setBrush(bar);
-		p.drawRoundedRect(_bar, _st->round, _st->round);
+		p.drawRoundedRect(_bar, radius, radius);
 	} else {
-		p.fillRect(QRect(deltal, deltat, width() - deltal - deltar, height() - deltat - deltab), bg);
+		p.fillRect(outer, bg);
 		p.fillRect(_bar, bar);
 	}
 }
