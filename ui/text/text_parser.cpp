@@ -606,6 +606,9 @@ void Parser::finalize(const TextParseOptions &options) {
 	_t->_hasCustomEmoji = false;
 	_t->_isIsolatedEmoji = true;
 	_t->_isOnlyCustomEmoji = true;
+	_t->_isOnlyEmojiAndSpaces = true;
+	auto spacesCheckFrom = uint16(-1);
+	const auto length = int(_t->_text.size());
 	for (auto &block : _t->_blocks) {
 		if (block->type() == TextBlockTCustomEmoji) {
 			_t->_hasCustomEmoji = true;
@@ -614,6 +617,23 @@ void Parser::finalize(const TextParseOptions &options) {
 			_t->_isOnlyCustomEmoji = false;
 		} else if (block->lnkIndex()) {
 			_t->_isOnlyCustomEmoji = _t->_isIsolatedEmoji = false;
+		}
+		if (_t->_isOnlyEmojiAndSpaces) {
+			if (block->type() == TextBlockTText) {
+				if (spacesCheckFrom == uint16(-1)) {
+					spacesCheckFrom = block->from();
+				}
+			} else if (spacesCheckFrom != uint16(-1)) {
+				const auto checkTill = block->from();
+				for (auto i = spacesCheckFrom; i != checkTill; ++i) {
+					Assert(i < length);
+					if (!_t->_text[i].isSpace()) {
+						_t->_isOnlyEmojiAndSpaces = false;
+						break;
+					}
+				}
+				spacesCheckFrom = uint16(-1);
+			}
 		}
 		if (_t->_isIsolatedEmoji) {
 			if (block->type() == TextBlockTCustomEmoji
@@ -693,6 +713,16 @@ void Parser::finalize(const TextParseOptions &options) {
 	}
 	if (_t->_blocks.empty() || _t->_spoiler.data) {
 		_t->_isIsolatedEmoji = false;
+	}
+	if (_t->_isOnlyEmojiAndSpaces && spacesCheckFrom != uint16(-1)) {
+		Assert(spacesCheckFrom < length);
+		for (auto i = spacesCheckFrom; i != length; ++i) {
+			Assert(i < length);
+			if (!_t->_text[i].isSpace()) {
+				_t->_isOnlyEmojiAndSpaces = false;
+				break;
+			}
+		}
 	}
 	_t->_links.squeeze();
 	_t->_blocks.shrink_to_fit();

@@ -872,6 +872,10 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
 	return result;
 }
 
+bool String::isOnlyEmojiAndSpaces() const {
+	return _isOnlyEmojiAndSpaces;
+}
+
 QString String::toString(TextSelection selection) const {
 	return toText(selection, false, false).rich.text;
 }
