@@ -152,6 +152,16 @@ struct TextWithEntities {
 		entities.append(other.entities);
 		return *this;
 	}
+	TextWithEntities &append(const TextWithEntities &other) {
+		const auto shift = text.size();
+		text.append(other.text);
+		entities.reserve(entities.size() + other.entities.size());
+		for (auto entity : other.entities) {
+			entity.shiftRight(shift);
+			entities.append(entity);
+		}
+		return *this;
+	}
 	TextWithEntities &append(const QString &other) {
 		text.append(other);
 		return *this;
