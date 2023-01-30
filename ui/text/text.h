@@ -227,7 +227,7 @@ public:
 	[[nodiscard]] bool isOnlyCustomEmoji() const;
 	[[nodiscard]] OnlyCustomEmoji toOnlyCustomEmoji() const;
 
-	[[nodiscard]] bool isOnlyEmojiAndSpaces() const;
+	[[nodiscard]] bool hasNotEmojiAndSpaces() const;
 
 	[[nodiscard]] const style::TextStyle *style() const {
 		return _st;
@@ -282,7 +282,7 @@ private:
 	bool _hasCustomEmoji : 1 = false;
 	bool _isIsolatedEmoji : 1 = false;
 	bool _isOnlyCustomEmoji : 1 = false;
-	bool _isOnlyEmojiAndSpaces : 1 = false;
+	bool _hasNotEmojiAndSpaces : 1 = false;
 
 	QString _text;
 	const style::TextStyle *_st = nullptr;

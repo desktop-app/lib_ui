@@ -606,7 +606,7 @@ void Parser::finalize(const TextParseOptions &options) {
 	_t->_hasCustomEmoji = false;
 	_t->_isIsolatedEmoji = true;
 	_t->_isOnlyCustomEmoji = true;
-	_t->_isOnlyEmojiAndSpaces = true;
+	_t->_hasNotEmojiAndSpaces = false;
 	auto spacesCheckFrom = uint16(-1);
 	const auto length = int(_t->_text.size());
 	for (auto &block : _t->_blocks) {
@@ -618,7 +618,7 @@ void Parser::finalize(const TextParseOptions &options) {
 		} else if (block->lnkIndex()) {
 			_t->_isOnlyCustomEmoji = _t->_isIsolatedEmoji = false;
 		}
-		if (_t->_isOnlyEmojiAndSpaces) {
+		if (!_t->_hasNotEmojiAndSpaces) {
 			if (block->type() == TextBlockTText) {
 				if (spacesCheckFrom == uint16(-1)) {
 					spacesCheckFrom = block->from();
@@ -628,7 +628,7 @@ void Parser::finalize(const TextParseOptions &options) {
 				for (auto i = spacesCheckFrom; i != checkTill; ++i) {
 					Assert(i < length);
 					if (!_t->_text[i].isSpace()) {
-						_t->_isOnlyEmojiAndSpaces = false;
+						_t->_hasNotEmojiAndSpaces = true;
 						break;
 					}
 				}
@@ -714,12 +714,12 @@ void Parser::finalize(const TextParseOptions &options) {
 	if (_t->_blocks.empty() || _t->_spoiler.data) {
 		_t->_isIsolatedEmoji = false;
 	}
-	if (_t->_isOnlyEmojiAndSpaces && spacesCheckFrom != uint16(-1)) {
+	if (!_t->_hasNotEmojiAndSpaces && spacesCheckFrom != uint16(-1)) {
 		Assert(spacesCheckFrom < length);
 		for (auto i = spacesCheckFrom; i != length; ++i) {
 			Assert(i < length);
 			if (!_t->_text[i].isSpace()) {
-				_t->_isOnlyEmojiAndSpaces = false;
+				_t->_hasNotEmojiAndSpaces = true;
 				break;
 			}
 		}
