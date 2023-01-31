@@ -32,7 +32,6 @@ semiboldFont: font(fsize semibold);
 boxFontSize: 14px;
 boxTextFont: font(boxFontSize);
 
-emojiImgSize: 18px; // exceptional value for retina
 emojiSize: 18px;
 emojiPadding: 1px;
 
@@ -61,8 +60,6 @@ semiboldTextStyle: TextStyle(defaultTextStyle) {
 	linkFontOver: font(fsize semibold underline);
 }
 
-shadowToggleDuration: 200;
-
 slideDuration: 240;
 slideShift: 100px;
 slideShadow: icon {{ "slide_shadow", slideFadeOutShadowFg }};
@@ -79,8 +76,6 @@ roundRadiusSmall: 3px;
 
 dateRadius: roundRadiusLarge;
 
-setLittleSkip: 9px;
-
 noContactsHeight: 100px;
 noContactsFont: font(fsize);
 noContactsColor: windowSubTextFg;
@@ -88,21 +83,12 @@ noContactsColor: windowSubTextFg;
 activeFadeInDuration: 500;
 activeFadeOutDuration: 3000;
 
-textRectMargins: margins(-2px, -1px, -2px, -1px);
-
 searchedBarHeight: 32px;
 searchedBarFont: normalFont;
 searchedBarPosition: point(17px, 7px);
 
 smallCloseIcon: icon {{ "simple_close", smallCloseIconFg }};
 smallCloseIconOver: icon {{ "simple_close", smallCloseIconFgOver }};
-dialogsForwardCancelIcon: icon {{ "simple_close", dialogsForwardFg }};
-
-emojiTextFont: font(15px);
-emojiReplaceWidth: 52px;
-emojiReplaceHeight: 56px;
-emojiReplaceInnerHeight: 42px;
-emojiReplacePadding: 14px;
 
 dragFont: font(27px semibold);
 dragSubfont: font(19px semibold);

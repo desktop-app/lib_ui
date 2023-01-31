@@ -116,7 +116,6 @@ boxLinkButton: LinkButton(defaultLinkButton) {
 
 boxOptionListPadding: margins(0px, 0px, 0px, 0px);
 boxOptionListSkip: 20px;
-boxOptionInputSkip: 6px;
 
 boxWidth: 320px;
 boxWideWidth: 364px;
