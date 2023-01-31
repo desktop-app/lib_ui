@@ -709,6 +709,13 @@ SettingsButton::SettingsButton(
 
 SettingsButton::~SettingsButton() = default;
 
+void SettingsButton::finishAnimating() {
+	if (_toggle) {
+		_toggle->finishAnimating();
+	}
+	Ui::RippleButton::finishAnimating();
+}
+
 SettingsButton *SettingsButton::toggleOn(
 		rpl::producer<bool> &&toggled,
 		bool ignoreClick) {

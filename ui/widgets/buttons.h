@@ -277,6 +277,8 @@ public:
 	[[nodiscard]] const style::SettingsButton &st() const;
 	[[nodiscard]] int fullTextWidth() const;
 
+	void finishAnimating();
+
 protected:
 	int resizeGetHeight(int newWidth) override;
 	void onStateChanged(
