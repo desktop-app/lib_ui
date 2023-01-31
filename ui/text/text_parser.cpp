@@ -182,7 +182,6 @@ void Parser::createBlock(int32 skipBack) {
 				createBlock(skipBack - len);
 			}
 		}
-		_lastSkipped = false;
 		const auto lnkIndex = _monoIndex ? _monoIndex : _lnkIndex;
 		auto custom = _customEmojiData.isEmpty()
 			? nullptr
@@ -191,15 +190,15 @@ void Parser::createBlock(int32 skipBack) {
 				_context);
 		if (custom) {
 			_t->_blocks.push_back(Block::CustomEmoji(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex, std::move(custom)));
-			_lastSkipped = true;
 		} else if (_emoji) {
 			_t->_blocks.push_back(Block::Emoji(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex, _emoji));
-			_lastSkipped = true;
 		} else if (newline) {
 			_t->_blocks.push_back(Block::Newline(_t->_st->font, _t->_text, _blockStart, len, _flags, lnkIndex, _spoilerIndex));
 		} else {
 			_t->_blocks.push_back(Block::Text(_t->_st->font, _t->_text, _t->_minResizeWidth, _blockStart, len, _flags, lnkIndex, _spoilerIndex));
 		}
+		// Diacritic can't attach from the next block to this one.
+		_allowDiacritic = false;
 		_blockStart += len;
 		_customEmojiData = QByteArray();
 		_emoji = nullptr;
@@ -210,6 +209,7 @@ void Parser::createBlock(int32 skipBack) {
 void Parser::createNewlineBlock() {
 	createBlock();
 	_t->_text.push_back(QChar::LineFeed);
+	_allowDiacritic = false;
 	createBlock();
 }
 
@@ -432,7 +432,7 @@ void Parser::parseCurrentChar() {
 			// Some sequences like 0x0E53 0xFE0F crash OS X harfbuzz text processing :(
 			return true;
 		} else if (isDiac) {
-			if (_lastSkipped || _emoji || ++_diacs > kMaxDiacAfterSymbol) {
+			if (!_allowDiacritic || _emoji || ++_diacs > kMaxDiacAfterSymbol) {
 				return true;
 			}
 		} else if (_ch.isHighSurrogate()) {
@@ -470,9 +470,9 @@ void Parser::parseCurrentChar() {
 		_emojiLookback = 1;
 	}
 
-	_lastSkipped = skip;
 	if (skip) {
 		_ch = 0;
+		_allowDiacritic = false;
 	} else {
 		if (isTilde) { // tilde fix in OpenSans
 			if (!(_flags & TextBlockFTilde)) {
@@ -489,13 +489,17 @@ void Parser::parseCurrentChar() {
 			createNewlineBlock();
 		} else if (isSpace) {
 			_t->_text.push_back(QChar::Space);
+			_allowDiacritic = false;
 		} else {
 			if (_emoji) {
 				createBlock(-_emojiLookback);
 			}
 			_t->_text.push_back(_ch);
+			_allowDiacritic = true;
 		}
-		if (!isDiac) _diacs = 0;
+		if (!isDiac) {
+			_diacs = 0;
+		}
 	}
 }
 

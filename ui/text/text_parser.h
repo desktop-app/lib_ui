@@ -120,7 +120,7 @@ private:
 	// current char data
 	QChar _ch; // current char (low surrogate, if current char is surrogate pair)
 	int32 _emojiLookback = 0; // how far behind the current ptr to look for current emoji
-	bool _lastSkipped = false; // did we skip current char
+	bool _allowDiacritic = false; // did we add last char to the current block
 
 };
 
