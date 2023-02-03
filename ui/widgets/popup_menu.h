@@ -82,6 +82,7 @@ public:
 	bool prepareGeometryFor(const QPoint &p);
 	void popupPrepared();
 	void hideMenu(bool fast = false);
+	void setTopShift(int topShift);
 	void setForceWidth(int forceWidth);
 	void setForcedOrigin(PanelAnimation::Origin origin);
 	void setForcedVerticalOrigin(VerticalOrigin origin);
@@ -218,6 +219,7 @@ private:
 	bool _reactivateParent = true;
 	bool _grabbingForPanelAnimation = false;
 
+	int _topShift = 0;
 	bool _clearLastSeparator = true;
 
 	Fn<void()> _destroyedCallback;

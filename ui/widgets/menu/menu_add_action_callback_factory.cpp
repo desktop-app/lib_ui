@@ -15,8 +15,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Ui::Menu {
 
 MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
-	return MenuCallback([=](MenuCallback::Args a) {
-		if (a.fillSubmenu) {
+	return MenuCallback([=](MenuCallback::Args a) -> QAction* {
+		if (a.addTopShift) {
+			menu->setTopShift(a.addTopShift);
+			return nullptr;
+		} else if (a.fillSubmenu) {
 			const auto action = menu->addAction(
 				a.text,
 				std::move(a.handler),

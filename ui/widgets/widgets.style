@@ -230,6 +230,7 @@ Menu {
 	itemFgShortcutOver: color;
 	itemFgShortcutDisabled: color;
 	itemPadding: margins;
+	itemRightSkip: pixels;
 	itemIconPosition: point;
 	itemStyle: TextStyle;
 	itemToggle: Toggle;
@@ -823,6 +824,7 @@ defaultMenu: Menu {
 	itemFgShortcutDisabled: menuFgDisabled;
 	itemIconPosition: point(0px, 0px);
 	itemPadding: margins(17px, 8px, 17px, 7px);
+	itemRightSkip: 6px;
 	itemStyle: defaultTextStyle;
 	itemToggle: defaultMenuToggle;
 	itemToggleOver: defaultMenuToggleOver;

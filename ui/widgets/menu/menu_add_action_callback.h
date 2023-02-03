@@ -22,6 +22,7 @@ public:
 		Fn<void()> handler;
 		const style::icon *icon;
 		Fn<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
+		int addTopShift = 0;
 		bool isSeparator = false;
 		bool isAttention = false;
 	};

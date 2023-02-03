@@ -440,6 +440,10 @@ void PopupMenu::clearActions() {
 	return _menu->clearActions();
 }
 
+void PopupMenu::setTopShift(int topShift) {
+	_topShift = topShift;
+}
+
 void PopupMenu::setForceWidth(int forceWidth) {
 	_menu->setForceWidth(forceWidth);
 }
@@ -993,7 +997,7 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 		std::max(
 			_additionalMenuPadding.left() - _st.shadow.extend.left(),
 			0),
-		_padding.top());
+		_padding.top() - _topShift);
 	auto r = screen ? screen->availableGeometry() : QRect();
 	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {
