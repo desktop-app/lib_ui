@@ -799,7 +799,7 @@ defaultPanelAnimation: PanelAnimation {
 	shadow: defaultRoundShadow;
 }
 
-defaultMenuArrow: icon {{ "dropdown_submenu_arrow", menuSubmenuArrowFg }};
+defaultMenuArrow: icon {{ "menu/submenu_arrow", windowBoldFg }};
 defaultMenuToggle: Toggle(defaultToggle) {
 	untoggledFg: menuIconFg;
 }
@@ -1534,7 +1534,7 @@ sideBarButtonLockPenWidthDivider: 2;
 menuIconColor: windowBoldFg;
 menuIconAttentionColor: attentionButtonFg;
 
-menuIconSubmenuArrow: icon {{ "menu/submenu_arrow", menuIconColor }};
+menuIconSubmenuArrow: defaultMenuArrow;
 
 menuWithIcons: Menu(defaultMenu) {
 	itemIconPosition: point(15px, 5px);
