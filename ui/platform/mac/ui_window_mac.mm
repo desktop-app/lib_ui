@@ -130,6 +130,7 @@ public:
 	[[nodiscard]] bool checkNativeMove(void *nswindow) const;
 	void activateBeforeNativeMove();
 	void setStaysOnTop(bool enabled);
+	void setNativeTitleVisibility(bool visible);
 	void close();
 
 private:
@@ -220,6 +221,15 @@ void WindowHelper::Private::setStaysOnTop(bool enabled) {
 	_owner->BasicWindowHelper::setStaysOnTop(enabled);
 	resolveWeakPointers();
 	initCustomTitle();
+	_owner->updateCustomTitleVisibility(true);
+}
+
+void WindowHelper::Private::setNativeTitleVisibility(bool visible) {
+	if (!_nativeWindow) {
+		return;
+	}
+	const auto value = visible ? NSWindowTitleVisible : NSWindowTitleHidden;
+	[_nativeWindow setTitleVisibility:value];
 }
 
 void WindowHelper::Private::close() {
@@ -316,9 +326,6 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 	window.get(),
 	_private->customTitleHeight()))
 , _body(Ui::CreateChild<RpWidget>(window.get())) {
-	if (_title->shouldBeHidden()) {
-		updateCustomTitleVisibility();
-	}
 	init();
 	_title->setControlsRect(_private->controlsRect());
 }
@@ -337,14 +344,12 @@ QMargins WindowHelper::frameMargins() {
 
 void WindowHelper::setTitle(const QString &title) {
 	_title->setText(title);
-	window()->setWindowTitle(_titleVisible ? QString() : title);
+	window()->setWindowTitle(title);
 }
 
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 	_title->setStyle(st);
-	if (_title->shouldBeHidden()) {
-		updateCustomTitleVisibility();
-	}
+	updateCustomTitleVisibility();
 }
 
 void WindowHelper::updateCustomTitleVisibility(bool force) {
@@ -353,7 +358,7 @@ void WindowHelper::updateCustomTitleVisibility(bool force) {
 		return;
 	}
 	_title->setVisible(visible);
-	window()->setWindowTitle(_titleVisible ? QString() : _title->text());
+	_private->setNativeTitleVisibility(!_titleVisible);
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
@@ -395,6 +400,8 @@ void WindowHelper::close() {
 }
 
 void WindowHelper::init() {
+	updateCustomTitleVisibility(true);
+
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
 		Ui::ForceFullRepaint(window());
