@@ -11,6 +11,8 @@
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
 
+#include <cmath>
+
 namespace style {
 namespace internal {
 
