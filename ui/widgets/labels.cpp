@@ -262,6 +262,12 @@ void FlatLabel::init() {
 void FlatLabel::textUpdated() {
 	refreshSize();
 	setMouseTracking(_selectable || _text.hasLinks());
+	if (_text.hasSpoilers()) {
+		_text.setSpoilerLinkFilter([weak = Ui::MakeWeak(this)](
+				const ClickContext &context) {
+			return (context.button == Qt::LeftButton) && weak;
+		});
+	}
 	update();
 }
 
@@ -942,16 +948,32 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 			? ((width() - _textWidth) / 2)
 			: (width() - _st.margin.right() - _textWidth))
 		: _st.margin.left();
-	auto selection = _selection.empty() ? (_contextMenu ? _savedSelection : _selection) : _selection;
-	bool heightExceeded = _st.maxHeight && (_st.maxHeight < _fullTextHeight || textWidth < _text.maxWidth());
-	bool renderElided = _breakEverywhere || heightExceeded;
-	if (renderElided) {
-		auto lineHeight = qMax(_st.style.lineHeight, _st.style.font->height);
-		auto lines = _st.maxHeight ? qMax(_st.maxHeight / lineHeight, 1) : ((height() / lineHeight) + 2);
-		_text.drawElided(p, textLeft, _st.margin.top(), textWidth, lines, _st.align, e->rect().y(), e->rect().bottom(), 0, _breakEverywhere, selection);
-	} else {
-		_text.draw(p, textLeft, _st.margin.top(), textWidth, _st.align, e->rect().y(), e->rect().bottom(), selection);
-	}
+	const auto selection = !_selection.empty()
+		? _selection
+		: _contextMenu
+		? _savedSelection
+		: _selection;
+	const auto heightExceeded = _st.maxHeight
+		&& (_st.maxHeight < _fullTextHeight || textWidth < _text.maxWidth());
+	const auto renderElided = _breakEverywhere || heightExceeded;
+	const auto lineHeight = qMax(_st.style.lineHeight, _st.style.font->height);
+	const auto lines = !renderElided
+		? 0
+		: _st.maxHeight
+		? qMax(_st.maxHeight / lineHeight, 1)
+		: ((height() / lineHeight) + 2);
+	_text.draw(p, {
+		.position = { textLeft, _st.margin.top() },
+		.availableWidth = textWidth,
+		.align = _st.align,
+		.clip = e->rect(),
+		.palette = &_st.palette,
+		.spoiler = Text::DefaultSpoilerCache(),
+		.now = crl::now(),
+		.selection = selection,
+		.elisionLines = lines,
+		.elisionBreakEverywhere = renderElided && _breakEverywhere,
+	});
 }
 
 DividerLabel::DividerLabel(
