@@ -24,11 +24,24 @@ namespace {
 
 constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
 
+[[nodiscard]] Backend DefaultChooseBackend(Capabilities capabilities) {
+	const auto use = ::Platform::IsMac()
+		? true
+		: ::Platform::IsWindows()
+		? capabilities.supported
+		: capabilities.transparency;
+	LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
+	return use ? Backend::OpenGL : Backend::Raster;
+}
+
 } // namespace
 
-Window::Window()
-: _window(createWindow())
-, _bodyNativeWrap(createNativeBodyWrap())
+Window::Window() : Window(DefaultChooseBackend) {
+}
+
+Window::Window(Fn<Backend(Capabilities)> chooseBackend)
+: _window(createWindow(chooseBackend))
+, _bodyNativeWrap(createNativeBodyWrap(chooseBackend))
 , _body(_bodyNativeWrap ? _bodyNativeWrap.get() : _window->body().get()) {
 }
 
@@ -46,19 +59,12 @@ not_null<RpWidget*> Window::widget() const {
 	return _body.get();
 }
 
-std::unique_ptr<RpWindow> Window::createWindow() {
+std::unique_ptr<RpWindow> Window::createWindow(
+		const Fn<Backend(Capabilities)> &chooseBackend) {
 	auto result = std::make_unique<RpWindow>();
 	if constexpr (!kUseNativeChild) {
-		const auto capabilities = CheckCapabilities(result.get());
-		const auto use = ::Platform::IsMac()
-			? true
-			: ::Platform::IsWindows()
-			? capabilities.supported
-			: capabilities.transparency;
-		LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
-		_backend = use ? Backend::OpenGL : Backend::Raster;
-
-		if (!use) {
+		_backend = chooseBackend(CheckCapabilities(result.get()));
+		if (_backend != Backend::OpenGL) {
 			// We have to create a new window, if OpenGL initialization failed.
 			result = std::make_unique<RpWindow>();
 		}
@@ -66,7 +72,8 @@ std::unique_ptr<RpWindow> Window::createWindow() {
 	return result;
 }
 
-std::unique_ptr<RpWidget> Window::createNativeBodyWrap() {
+std::unique_ptr<RpWidget> Window::createNativeBodyWrap(
+		const Fn<Backend(Capabilities)> &chooseBackend) {
 	if constexpr (!kUseNativeChild) {
 		return nullptr;
 	}
@@ -81,16 +88,8 @@ std::unique_ptr<RpWidget> Window::createNativeBodyWrap() {
 	};
 
 	auto result = create();
-	const auto capabilities = CheckCapabilities(result.get());
-	const auto use = ::Platform::IsMac()
-		? true
-		: ::Platform::IsWindows()
-		? capabilities.supported
-		: capabilities.transparency;
-	LOG(("OpenGL: %1 (WindowBody)").arg(use ? "[TRUE]" : "[FALSE]"));
-	_backend = use ? Backend::OpenGL : Backend::Raster;
-
-	if (!use) {
+	_backend = chooseBackend(CheckCapabilities(result.get()));
+	if (_backend != Backend::OpenGL) {
 		// We have to create a new window, if OpenGL initialization failed.
 		result = create();
 	}
