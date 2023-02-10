@@ -13,6 +13,7 @@
 #include "base/platform/win/base_windows_safe_library.h"
 #include "base/platform/base_platform_info.h"
 #include "base/integration.h"
+#include "base/invoke_queued.h"
 #include "base/debug_log.h"
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
@@ -585,6 +586,9 @@ bool WindowHelper::handleNativeEvent(
 
 	case WM_DPICHANGED: {
 		_dpi = LOWORD(wParam);
+		InvokeQueued(_title, [=] {
+			_title->refreshAdditionalPaddings(_handle);
+		});
 	} return false;
 
 	}
