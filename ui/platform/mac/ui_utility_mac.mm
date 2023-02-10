@@ -72,7 +72,7 @@ void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 	NSWindow *wnd = [reinterpret_cast<NSView*>(widget->winId()) window];
 	[wnd setLevel:NSPopUpMenuWindowLevel];
 	if (!canFocus) {
-		[wnd setStyleMask:NSUtilityWindowMask | NSNonactivatingPanelMask];
+		[wnd setStyleMask:NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel];
 		[wnd setCollectionBehavior:NSWindowCollectionBehaviorMoveToActiveSpace|NSWindowCollectionBehaviorStationary|NSWindowCollectionBehaviorFullScreenAuxiliary|NSWindowCollectionBehaviorIgnoresCycle];
 	}
 }
