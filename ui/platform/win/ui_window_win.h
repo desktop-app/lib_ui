@@ -83,6 +83,7 @@ private:
 	QMargins _marginsDelta;
 	bool _updatingMargins = false;
 	bool _isFullScreen = false;
+	bool _isMaximizedAndTranslucent = false;
 
 };
 

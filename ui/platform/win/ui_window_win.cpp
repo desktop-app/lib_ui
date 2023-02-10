@@ -274,7 +274,9 @@ void WindowHelper::updateCornersRounding() {
 	if (!::Platform::IsWindows11OrGreater()) {
 		return;
 	}
-	auto preference = _isFullScreen ? kDWMWCP_DONOTROUND : kDWMWCP_ROUND;
+	const auto preference = (_isFullScreen || _isMaximizedAndTranslucent)
+		? kDWMWCP_DONOTROUND
+		: kDWMWCP_ROUND;
 	DwmSetWindowAttribute(
 		_handle,
 		kDWMWA_WINDOW_CORNER_PREFERENCE,
@@ -371,6 +373,14 @@ void WindowHelper::init() {
 				window()->setWindowState(
 					window()->windowState() & ~Qt::WindowMaximized);
 			});
+		}
+		if (state != Qt::WindowMinimized) {
+			const auto is = (state == Qt::WindowMaximized)
+				&& window()->testAttribute(Qt::WA_TranslucentBackground);
+			if (_isMaximizedAndTranslucent != is) {
+				_isMaximizedAndTranslucent = is;
+				updateCornersRounding();
+			}
 		}
 	};
 	Ui::Connect(
