@@ -202,7 +202,7 @@ QRect WindowHelper::Private::controlsRect() const {
 
 bool WindowHelper::Private::checkNativeMove(void *nswindow) const {
 	if (_nativeWindow != nswindow
-		|| ([_nativeWindow styleMask] & NSFullScreenWindowMask) == NSFullScreenWindowMask) {
+		|| ([_nativeWindow styleMask] & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen) {
 		return false;
 	}
 	const auto cgReal = [NSEvent mouseLocation];
@@ -254,7 +254,7 @@ Fn<void()> WindowHelper::Private::enforceStyleCallback() {
 
 void WindowHelper::Private::enforceStyle() {
 	if (_nativeWindow && _customTitleHeight > 0) {
-		[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSFullSizeContentViewWindowMask];
+		[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSWindowStyleMaskFullSizeContentView];
 	}
 }
 
@@ -292,7 +292,7 @@ void WindowHelper::Private::initCustomTitle() {
 	// Emulate custom title instead (code below).
 	//
 	// Tried to backport a fix, testing.
-	[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSFullSizeContentViewWindowMask];
+	[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSWindowStyleMaskFullSizeContentView];
 	auto inner = [_nativeWindow contentLayoutRect];
 	auto full = [_nativeView frame];
 	_customTitleHeight = qMax(qRound(full.size.height - inner.size.height), 0);
