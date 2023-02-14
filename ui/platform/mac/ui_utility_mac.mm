@@ -77,11 +77,6 @@ void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 	}
 }
 
-void BringToBack(not_null<QWidget*> widget) {
-	NSWindow *wnd = [reinterpret_cast<NSView*>(widget->winId()) window];
-	[wnd setLevel:NSModalPanelWindowLevel];
-}
-
 void DrainMainQueue() {
 #ifndef OS_MAC_STORE
 	_dispatch_main_queue_callback_4CF(nullptr);

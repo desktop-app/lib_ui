@@ -29,9 +29,6 @@ inline void UpdateOverlayed(not_null<QWidget*> widget) {
 inline void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 }
 
-inline void BringToBack(not_null<QWidget*> widget) {
-}
-
 inline void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio) {
 }
 

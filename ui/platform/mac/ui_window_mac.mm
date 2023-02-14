@@ -137,6 +137,7 @@ private:
 	void init();
 	void initOpenGL();
 	void resolveWeakPointers();
+	void revalidateWeakPointers() const;
 	void initCustomTitle();
 
 	[[nodiscard]] Fn<void(bool)> toggleCustomTitleCallback();
@@ -148,6 +149,7 @@ private:
 
 	NSWindow * __weak _nativeWindow = nil;
 	NSView * __weak _nativeView = nil;
+	bool _hadNativeValues = false;
 
 	std::unique_ptr<LayerCreationChecker> _layerCreationChecker;
 
@@ -171,6 +173,7 @@ int WindowHelper::Private::customTitleHeight() const {
 }
 
 QRect WindowHelper::Private::controlsRect() const {
+	revalidateWeakPointers();
 	const auto button = [&](NSWindowButton type) {
 		auto view = [_nativeWindow standardWindowButton:type];
 		if (!view) {
@@ -201,6 +204,7 @@ QRect WindowHelper::Private::controlsRect() const {
 }
 
 bool WindowHelper::Private::checkNativeMove(void *nswindow) const {
+	revalidateWeakPointers();
 	if (_nativeWindow != nswindow
 		|| ([_nativeWindow styleMask] & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen) {
 		return false;
@@ -214,6 +218,7 @@ bool WindowHelper::Private::checkNativeMove(void *nswindow) const {
 }
 
 void WindowHelper::Private::activateBeforeNativeMove() {
+	revalidateWeakPointers();
 	[_nativeWindow makeKeyAndOrderFront:_nativeWindow];
 }
 
@@ -225,6 +230,7 @@ void WindowHelper::Private::setStaysOnTop(bool enabled) {
 }
 
 void WindowHelper::Private::setNativeTitleVisibility(bool visible) {
+	revalidateWeakPointers();
 	if (!_nativeWindow) {
 		return;
 	}
@@ -236,7 +242,11 @@ void WindowHelper::Private::close() {
 	const auto weak = Ui::MakeWeak(_owner->window());
 	QCloseEvent e;
 	qApp->sendEvent(_owner->window(), &e);
-	if (e.isAccepted() && weak && _nativeWindow) {
+	if (!e.isAccepted() || !weak) {
+		return;
+	}
+	revalidateWeakPointers();
+	if (_nativeWindow) {
 		[_nativeWindow close];
 	}
 }
@@ -253,6 +263,7 @@ Fn<void()> WindowHelper::Private::enforceStyleCallback() {
 }
 
 void WindowHelper::Private::enforceStyle() {
+	revalidateWeakPointers();
 	if (_nativeWindow && _customTitleHeight > 0) {
 		[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSWindowStyleMaskFullSizeContentView];
 	}
@@ -263,12 +274,22 @@ void WindowHelper::Private::initOpenGL() {
 }
 
 void WindowHelper::Private::resolveWeakPointers() {
-	_owner->window()->createWinId();
+	if (!_owner->window()->winId()) {
+		_owner->window()->createWinId();
+	}
 
 	_nativeView = reinterpret_cast<NSView*>(_owner->window()->winId());
 	_nativeWindow = _nativeView ? [_nativeView window] : nullptr;
+	_hadNativeValues = true;
 
 	Ensures(_nativeWindow != nullptr);
+}
+
+void WindowHelper::Private::revalidateWeakPointers() const {
+	if (_nativeWindow || !_hadNativeValues) {
+		return;
+	}
+	const_cast<Private*>(this)->resolveWeakPointers();
 }
 
 void WindowHelper::Private::initCustomTitle() {
