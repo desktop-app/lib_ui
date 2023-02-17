@@ -65,6 +65,7 @@ public:
 	void showFullScreen();
 	void showNormal();
 	void close();
+	[[nodiscard]] int manualRoundingRadius() const;
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
 private:

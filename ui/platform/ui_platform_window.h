@@ -59,6 +59,7 @@ public:
 	virtual void showNormal();
 	virtual void close();
 
+	virtual int manualRoundingRadius() const;
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
 protected:
@@ -91,6 +92,7 @@ public:
 	void setMinimumSize(QSize size) override;
 	void setFixedSize(QSize size) override;
 	void setGeometry(QRect rect) override;
+	int manualRoundingRadius() const override;
 
 protected:
 	bool eventFilter(QObject *obj, QEvent *e) override;

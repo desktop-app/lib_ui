@@ -188,6 +188,10 @@ void BasicWindowHelper::close() {
 	_window->close();
 }
 
+int BasicWindowHelper::manualRoundingRadius() const {
+	return 0;
+}
+
 void BasicWindowHelper::setBodyTitleArea(
 		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	Expects(!_bodyTitleAreaTestMethod || testMethod);
@@ -522,6 +526,10 @@ void DefaultWindowHelper::setFixedSize(QSize size) {
 
 void DefaultWindowHelper::setGeometry(QRect rect) {
 	window()->setGeometry(rect.marginsAdded(bodyPadding()));
+}
+
+int DefaultWindowHelper::manualRoundingRadius() const {
+	return _roundingOverlay ? Radius() : 0;
 }
 
 void DefaultWindowHelper::paintBorders(QPainter &p) {

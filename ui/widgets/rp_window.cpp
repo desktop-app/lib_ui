@@ -99,4 +99,8 @@ void RpWindow::setBodyTitleArea(
 	_helper->setBodyTitleArea(std::move(testMethod));
 }
 
+int RpWindow::manualRoundingRadius() const {
+	return _helper->manualRoundingRadius();
+}
+
 } // namespace Ui
