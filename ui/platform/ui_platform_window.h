@@ -110,6 +110,8 @@ private:
 	const not_null<DefaultTitleWidget*> _title;
 	const not_null<RpWidget*> _body;
 	RoundRect _roundRect;
+	std::array<QImage, 4> _sides;
+	std::array<QImage, 4> _corners;
 	object_ptr<RpWidget> _roundingOverlay = { nullptr };
 	bool _extentsSet = false;
 	rpl::variable<Qt::WindowStates> _windowState = Qt::WindowNoState;

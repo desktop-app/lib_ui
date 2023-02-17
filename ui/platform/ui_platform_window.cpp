@@ -31,6 +31,86 @@ namespace {
 	return st::callRadius;
 }
 
+[[nodiscard]] std::array<QImage, 4> PrepareSides(
+		const style::Shadow &shadow) {
+	auto result = std::array<QImage, 4>();
+	const auto extend = shadow.extend;
+	const auto make = [&](
+			int index,
+			const style::icon &icon,
+			auto &&postprocess) {
+		result[index] = icon.instance(st::windowShadowFg->c);
+		auto p = QPainter(&result[index]);
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		postprocess(p, icon.width(), icon.height());
+	};
+	make(0, shadow.left, [&](QPainter &p, int width, int height) {
+		const auto skip = extend.left();
+		p.fillRect(skip, 0, width - skip, height, Qt::transparent);
+	});
+	make(1, shadow.top, [&](QPainter &p, int width, int height) {
+		const auto skip = extend.top();
+		p.fillRect(0, skip, width, height - skip, Qt::transparent);
+	});
+	make(2, shadow.right, [&](QPainter &p, int width, int height) {
+		const auto skip = extend.right();
+		p.fillRect(0, 0, width - skip, height, Qt::transparent);
+	});
+	make(3, shadow.bottom, [&](QPainter &p, int width, int height) {
+		const auto skip = extend.bottom();
+		p.fillRect(0, 0, width, height - skip, Qt::transparent);
+	});
+	return result;
+}
+
+[[nodiscard]] std::array<QImage, 4> PrepareCorners(
+		const style::Shadow &shadow,
+		int radius) {
+	auto result = std::array<QImage, 4>();
+	const auto extend = shadow.extend;
+	const auto make = [&](
+			int index,
+			const style::icon &icon,
+			auto &&postprocess) {
+		result[index] = icon.instance(st::windowShadowFg->c);
+		auto p = QPainter(&result[index]);
+		auto hq = PainterHighQualityEnabler(p);
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		p.setBrush(Qt::transparent);
+		p.setPen(Qt::NoPen);
+		postprocess(p, icon.width(), icon.height());
+	};
+	make(0, shadow.topLeft, [&](QPainter &p, int width, int height) {
+		const auto skipx = extend.left();
+		const auto skipy = extend.top();
+		width += 2 * radius;
+		height += 2 * radius;
+		p.drawRoundedRect(skipx, skipy, width, height, radius, radius);
+	});
+	make(1, shadow.bottomLeft, [&](QPainter &p, int width, int height) {
+		const auto skipx = extend.left();
+		const auto skipy = extend.bottom() + 2 * radius;
+		width += 2 * radius;
+		height += 2 * radius;
+		p.drawRoundedRect(skipx, -skipy, width, height, radius, radius);
+	});
+	make(2, shadow.topRight, [&](QPainter &p, int width, int height) {
+		const auto skipx = extend.right() + 2 * radius;
+		const auto skipy = extend.top();
+		width += 2 * radius;
+		height += 2 * radius;
+		p.drawRoundedRect(-skipx, skipy, width, height, radius, radius);
+	});
+	make(3, shadow.bottomRight, [&](QPainter &p, int width, int height) {
+		const auto skipx = extend.right() + 2 * radius;
+		const auto skipy = extend.bottom() + 2 * radius;
+		width += 2 * radius;
+		height += 2 * radius;
+		p.drawRoundedRect(-skipx, -skipy, width, height, radius, radius);
+	});
+	return result;
+}
+
 } // namespace
 
 BasicWindowHelper::BasicWindowHelper(not_null<RpWidget*> window)
@@ -187,7 +267,9 @@ DefaultWindowHelper::DefaultWindowHelper(not_null<RpWidget*> window)
 : BasicWindowHelper(window)
 , _title(Ui::CreateChild<DefaultTitleWidget>(window.get()))
 , _body(Ui::CreateChild<RpWidget>(window.get()))
-, _roundRect(Radius(), st::windowBg) {
+, _roundRect(Radius(), st::windowBg)
+, _sides(PrepareSides(Shadow()))
+, _corners(PrepareCorners(Shadow(), Radius())) {
 	init();
 }
 
@@ -323,8 +405,8 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 		const auto rect = window()->rect().marginsRemoved(resizeArea());
 		p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 		_roundRect.paint(p, rect, RectPart::AllCorners);
-		p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
-		Shadow::paint(p, rect, window()->width(), Shadow());
+		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+		Shadow::paint(p, rect, window()->width(), Shadow(), _sides, _corners);
 	}, _roundingOverlay->lifetime());
 }
 
