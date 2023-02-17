@@ -511,8 +511,10 @@ bool WindowHelper::handleNativeEvent(
 		if (wParam == SIZE_MAXIMIZED
 			|| wParam == SIZE_RESTORED
 			|| wParam == SIZE_MINIMIZED) {
+			const auto now = window()->windowState();
 			if (wParam != SIZE_RESTORED
-				|| window()->windowState() != Qt::WindowNoState) {
+				|| (now != Qt::WindowNoState
+					&& now != Qt::WindowFullScreen)) {
 				Qt::WindowState state = Qt::WindowNoState;
 				if (wParam == SIZE_MAXIMIZED) {
 					state = Qt::WindowMaximized;
