@@ -198,7 +198,8 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_w = context.availableWidth;
 	_align = context.align;
 	_cachedNow = context.now;
-	_paused = context.paused;
+	_pausedEmoji = context.paused || context.pausedEmoji;
+	_pausedSpoiler = context.paused || context.pausedSpoiler;
 	_spoilerOpacity = _spoiler
 		? (1. - _spoiler->revealAnimation.value(
 			_spoiler->revealed ? 1. : 0.))
@@ -838,7 +839,7 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 							_customEmojiContext = CustomEmoji::Context{
 								.textColor = color,
 								.now = now(),
-								.paused = _paused,
+								.paused = _pausedEmoji,
 							};
 						} else {
 							_customEmojiContext->textColor = color;
@@ -1161,7 +1162,7 @@ void Renderer::paintSpoilerRects() {
 	if (_spoilerOpacity < 1.) {
 		_p->setOpacity(opacity * _spoilerOpacity);
 	}
-	const auto index = _spoiler->animation.index(now(), _paused);
+	const auto index = _spoiler->animation.index(now(), _pausedSpoiler);
 	paintSpoilerRects(
 		_spoilerRects,
 		_palette->spoilerFg,

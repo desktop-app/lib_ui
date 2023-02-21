@@ -138,6 +138,8 @@ struct PaintContext {
 	SpoilerMessCache *spoiler = nullptr;
 	crl::time now = 0;
 	bool paused = false;
+	bool pausedEmoji = false;
+	bool pausedSpoiler = false;
 
 	TextSelection selection;
 	bool fullWidthSelection = true;

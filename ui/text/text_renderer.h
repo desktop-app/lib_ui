@@ -118,7 +118,8 @@ private:
 	bool _elideLast = false;
 	bool _breakEverywhere = false;
 	int _elideRemoveFromEnd = 0;
-	bool _paused = false;
+	bool _pausedEmoji = false;
+	bool _pausedSpoiler = false;
 	style::align _align = style::al_topleft;
 	QPen _originalPen;
 	QPen _originalPenSelected;
