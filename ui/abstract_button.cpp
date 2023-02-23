@@ -104,18 +104,20 @@ void AbstractButton::setPointerCursor(bool enablePointerCursor) {
 }
 
 void AbstractButton::setOver(bool over, StateChangeSource source) {
-	if (over && !(_state & StateFlag::Over)) {
-		auto was = _state;
+	if (over == isOver()) {
+		return;
+	}
+	const auto was = _state;
+	if (over) {
 		_state |= StateFlag::Over;
 		Integration::Instance().registerLeaveSubscription(this);
-		onStateChanged(was, source);
-	} else if (!over && (_state & StateFlag::Over)) {
-		auto was = _state;
+	} else {
 		_state &= ~State(StateFlag::Over);
 		Integration::Instance().unregisterLeaveSubscription(this);
-		onStateChanged(was, source);
 	}
+	onStateChanged(was, source);
 	updateCursor();
+	update();
 }
 
 bool AbstractButton::setDown(
@@ -149,8 +151,11 @@ bool AbstractButton::setDown(
 }
 
 void AbstractButton::updateCursor() {
-	auto pointerCursor = _enablePointerCursor && (_state & StateFlag::Over);
-	setCursor(pointerCursor ? style::cur_pointer : style::cur_default);
+	const auto pointerCursor = _enablePointerCursor && isOver();
+	if (_pointerCursor != pointerCursor) {
+		_pointerCursor = pointerCursor;
+		setCursor(_pointerCursor ? style::cur_pointer : style::cur_default);
+	}
 }
 
 void AbstractButton::setDisabled(bool disabled) {

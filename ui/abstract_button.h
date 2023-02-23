@@ -16,20 +16,27 @@ class AbstractButton : public RpWidget {
 public:
 	AbstractButton(QWidget *parent);
 
-	Qt::KeyboardModifiers clickModifiers() const {
+	[[nodiscard]] Qt::KeyboardModifiers clickModifiers() const {
 		return _modifiers;
 	}
 
 	void setDisabled(bool disabled = true);
 	virtual void clearState();
-	bool isOver() const {
+	[[nodiscard]] bool isOver() const {
 		return _state & StateFlag::Over;
 	}
-	bool isDown() const {
+	[[nodiscard]] bool isDown() const {
 		return _state & StateFlag::Down;
 	}
-	bool isDisabled() const {
+	[[nodiscard]] bool isDisabled() const {
 		return _state & StateFlag::Disabled;
+	}
+
+	void setSynteticOver(bool over) {
+		setOver(over, StateChangeSource::ByPress);
+	}
+	void setSynteticDown(bool down, Qt::MouseButton button = Qt::LeftButton) {
+		setDown(down, StateChangeSource::ByPress, {}, button);
 	}
 
 	void setPointerCursor(bool enablePointerCursor);
@@ -95,9 +102,10 @@ private:
 
 	State _state = StateFlag::None;
 
-	bool _acceptBoth = false;
 	Qt::KeyboardModifiers _modifiers;
 	bool _enablePointerCursor = true;
+	bool _pointerCursor = false;
+	bool _acceptBoth = false;
 
 	Fn<void()> _clickedCallback;
 
