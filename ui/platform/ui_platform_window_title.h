@@ -74,6 +74,8 @@ public:
 		bool maximized,
 		const style::WindowTitle &st) = 0;
 	virtual void notifySynteticOver(TitleControl control, bool over) = 0;
+
+	virtual ~AbstractTitleButtons() = default;
 };
 
 class IconTitleButtons final : public AbstractTitleButtons {
