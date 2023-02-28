@@ -10,6 +10,7 @@
 #include "ui/integration.h"
 #include "base/debug_log.h"
 #include "base/options.h"
+#include "base/platform/base_platform_info.h"
 
 #include <QtCore/QSet>
 #include <QtCore/QFile>
@@ -204,6 +205,15 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			).arg(version));
 	}
 	return result;
+}
+
+Backend ChooseBackendDefault(Capabilities capabilities) {
+	const auto use = ::Platform::IsMac()
+		? true
+		: ::Platform::IsWindows()
+		? capabilities.supported
+		: capabilities.transparency;
+	return use ? Backend::OpenGL : Backend::Raster;
 }
 
 bool LastCrashCheckFailed() {

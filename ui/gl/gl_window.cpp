@@ -23,25 +23,24 @@ namespace Ui::GL {
 namespace {
 
 constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
-
-[[nodiscard]] Backend DefaultChooseBackend(Capabilities capabilities) {
-	const auto use = ::Platform::IsMac()
-		? true
-		: ::Platform::IsWindows()
-		? capabilities.supported
-		: capabilities.transparency;
-	LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
-	return use ? Backend::OpenGL : Backend::Raster;
+[[nodiscard]] Fn<Backend(Capabilities)> ChooseBackendWrap(
+		Fn<Backend(Capabilities)> chooseBackend) {
+	return [=](Capabilities capabilities) {
+		const auto backend = chooseBackend(capabilities);
+		const auto use = backend == Backend::OpenGL;
+		LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
+		return backend;
+	};
 }
 
 } // namespace
 
-Window::Window() : Window(DefaultChooseBackend) {
+Window::Window() : Window(ChooseBackendDefault) {
 }
 
 Window::Window(Fn<Backend(Capabilities)> chooseBackend)
-: _window(createWindow(chooseBackend))
-, _bodyNativeWrap(createNativeBodyWrap(chooseBackend))
+: _window(createWindow(ChooseBackendWrap(chooseBackend)))
+, _bodyNativeWrap(createNativeBodyWrap(ChooseBackendWrap(chooseBackend)))
 , _body(_bodyNativeWrap ? _bodyNativeWrap.get() : _window->body().get()) {
 }
 
