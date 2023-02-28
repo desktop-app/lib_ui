@@ -25,6 +25,7 @@ struct Capabilities {
 };
 
 [[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
+[[nodiscard]] Backend ChooseBackendDefault(Capabilities capabilities);
 
 void ForceDisable(bool disable);
 
