@@ -383,11 +383,11 @@ void WindowHelper::updateCustomTitleVisibility(bool force) {
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
-	window()->setMinimumSize(size.width(), _title->height() + size.height());
+	window()->setMinimumSize(size.width(), frameMargins().top() + size.height());
 }
 
 void WindowHelper::setFixedSize(QSize size) {
-	window()->setFixedSize(size.width(), _title->height() + size.height());
+	window()->setFixedSize(size.width(), frameMargins().top() + size.height());
 }
 
 void WindowHelper::setStaysOnTop(bool enabled) {
@@ -395,7 +395,7 @@ void WindowHelper::setStaysOnTop(bool enabled) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	window()->setGeometry(rect.marginsAdded({ 0, _title->height(), 0, 0 }));
+	window()->setGeometry(rect.marginsAdded(frameMargins()));
 }
 
 void WindowHelper::setupBodyTitleAreaEvents() {
