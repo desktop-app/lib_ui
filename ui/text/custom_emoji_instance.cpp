@@ -706,7 +706,9 @@ bool Instance::ready() {
 		if (state.hasImagePreview()) {
 			return true;
 		}
-		load(state);
+		if (!_usage.empty()) {
+			load(state);
+		}
 		return false;
 	}, [](Caching &state) {
 		return state.renderer->canMakePreview();
