@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/weak_ptr.h"
 #include "ui/layers/layer_widget.h"
 
 #include <QtCore/QMargins>
@@ -19,7 +20,7 @@ namespace Ui {
 class BoxContent;
 class RpWidget;
 
-class LayerManager final {
+class LayerManager final : public base::has_weak_ptr {
 public:
 	explicit LayerManager(not_null<RpWidget*> widget);
 
@@ -36,7 +37,10 @@ public:
 	void raise();
 	bool setFocus();
 
-	const LayerWidget *topShownLayer() const;
+	[[nodiscard]] not_null<Ui::RpWidget*> toastParent() const {
+		return _widget;
+	}
+	[[nodiscard]] const LayerWidget *topShownLayer() const;
 
 private:
 	void ensureLayerCreated();

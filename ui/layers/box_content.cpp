@@ -317,37 +317,65 @@ void BoxContent::paintEvent(QPaintEvent *e) {
 	}
 }
 
-BoxShow::BoxShow(not_null<Ui::BoxContent*> box)
-: Show()
-, _weak(Ui::MakeWeak(box.get())) {
+BoxShow::BoxShow(not_null<BoxContent*> box)
+: BoxShow(MakeWeak(box.get()), nullptr) {
+}
+
+BoxShow::BoxShow(const BoxShow &other)
+: BoxShow(other._weak, other._wrapped) {
+}
+
+BoxShow::BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped)
+: _weak(weak)
+, _wrapped(std::move(wrapped)) {
+	if (!resolve()) {
+		if (const auto box = _weak.data()) {
+			box->boxClosing(
+			) | rpl::start_with_next([=] {
+				resolve();
+				_lifetime.destroy();
+			}, _lifetime);
+		}
+	}
 }
 
 BoxShow::~BoxShow() = default;
 
+bool BoxShow::resolve() const {
+	if (_wrapped) {
+		return true;
+	} else if (const auto strong = _weak.data()) {
+		if (strong->hasDelegate()) {
+			_wrapped = strong->getDelegate()->showFactory()();
+			return true;
+		}
+	}
+	return false;
+}
+
 void BoxShow::showBox(
 		object_ptr<BoxContent> content,
 		LayerOptions options) const {
-	if (const auto strong = _weak.data()) {
-		strong->getDelegate()->show(std::move(content), options);
+	if (resolve()) {
+		_wrapped->showBox(std::move(content), options);
 	}
 }
 
 void BoxShow::hideLayer() const {
-	if (const auto strong = _weak.data()) {
-		strong->getDelegate()->hideLayer();
+	if (resolve()) {
+		_wrapped->hideLayer();
 	}
 }
 
 not_null<QWidget*> BoxShow::toastParent() const {
-	if (!_toastParent) {
-		Assert(_weak != nullptr);
-		_toastParent = Ui::MakeWeak(_weak->window()); // =(
+	if (resolve()) {
+		return _wrapped->toastParent();
 	}
-	return _toastParent.data();
+	Unexpected("Stale BoxShow::toastParent call.");
 }
 
 bool BoxShow::valid() const {
-	return _weak;
+	return resolve() && _wrapped->valid();
 }
 
 BoxShow::operator bool() const {

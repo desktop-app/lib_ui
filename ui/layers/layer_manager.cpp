@@ -6,7 +6,67 @@
 //
 #include "ui/layers/layer_manager.h"
 
+#include "ui/layers/show.h"
+
 namespace Ui {
+namespace {
+
+class ManagerShow final : public Show {
+public:
+	explicit ManagerShow(not_null<LayerManager*> manager);
+	~ManagerShow();
+	void showBox(
+		object_ptr<Ui::BoxContent> content,
+		Ui::LayerOptions options = Ui::LayerOption::KeepOther) const override;
+	void hideLayer() const override;
+	[[nodiscard]] not_null<QWidget*> toastParent() const override;
+	[[nodiscard]] bool valid() const override;
+	operator bool() const override;
+
+private:
+	const base::weak_ptr<LayerManager> _manager;
+
+};
+
+ManagerShow::ManagerShow(not_null<LayerManager*> manager)
+: _manager(manager.get()) {
+}
+
+ManagerShow::~ManagerShow() = default;
+
+void ManagerShow::showBox(
+		object_ptr<Ui::BoxContent> content,
+		Ui::LayerOptions options) const {
+	if (const auto manager = _manager.get()) {
+		manager->showBox(std::move(content), options, anim::type::normal);
+	}
+}
+
+void ManagerShow::hideLayer() const {
+	if (const auto manager = _manager.get()) {
+		manager->showBox(
+			object_ptr<Ui::BoxContent>{ nullptr },
+			Ui::LayerOption::CloseOther,
+			anim::type::normal);
+	}
+}
+
+not_null<QWidget*> ManagerShow::toastParent() const {
+	const auto manager = _manager.get();
+
+	Ensures(manager != nullptr);
+	return manager->toastParent();
+}
+
+bool ManagerShow::valid() const {
+	return (_manager.get() != nullptr);
+}
+
+ManagerShow::operator bool() const {
+	return valid();
+}
+
+} // namespace
 
 LayerManager::LayerManager(not_null<RpWidget*> widget) : _widget(widget) {
 }
@@ -67,7 +127,9 @@ void LayerManager::ensureLayerCreated() {
 	if (_layer) {
 		return;
 	}
-	_layer.emplace(_widget);
+	_layer.emplace(_widget, crl::guard(this, [=] {
+		return std::make_shared<ManagerShow>(this);
+	}));
 	_layer->setHideByBackgroundClick(_hideByBackgroundClick);
 	_layer->setStyleOverrides(_boxSt, _layerSt);
 

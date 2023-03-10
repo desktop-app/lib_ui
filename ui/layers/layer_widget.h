@@ -32,7 +32,11 @@ enum class LayerOption {
 using LayerOptions = base::flags<LayerOption>;
 inline constexpr auto is_flag_type(LayerOption) { return true; };
 
-class LayerWidget : public Ui::RpWidget {
+class Show;
+using ShowPtr = std::shared_ptr<Show>;
+using ShowFactory = Fn<ShowPtr()>;
+
+class LayerWidget : public RpWidget {
 public:
 	using RpWidget::RpWidget;
 
@@ -91,9 +95,9 @@ private:
 
 };
 
-class LayerStackWidget : public Ui::RpWidget {
+class LayerStackWidget : public RpWidget {
 public:
-	LayerStackWidget(QWidget *parent);
+	LayerStackWidget(QWidget *parent, ShowFactory showFactory);
 
 	void finishAnimating();
 	rpl::producer<> hideFinishEvents() const;
@@ -106,6 +110,9 @@ public:
 	}
 	[[nodiscard]] const style::Box *boxStyleOverride() const {
 		return _boxSt;
+	}
+	[[nodiscard]] ShowFactory showFactory() const {
+		return _showFactory;
 	}
 
 	void showBox(
@@ -221,6 +228,8 @@ private:
 
 	class BackgroundWidget;
 	object_ptr<BackgroundWidget> _background;
+
+	ShowFactory _showFactory;
 
 	const style::Box *_boxSt = nullptr;
 	const style::Box *_layerSt = nullptr;

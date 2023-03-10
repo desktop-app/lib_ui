@@ -425,7 +425,9 @@ void SeparatePanel::ensureLayerCreated() {
 	if (_layer) {
 		return;
 	}
-	_layer = base::make_unique_q<Ui::LayerStackWidget>(_body);
+	_layer = base::make_unique_q<Ui::LayerStackWidget>(
+		_body,
+		crl::guard(this, [=] { return std::make_shared<PanelShow>(this); }));
 	_layer->setHideByBackgroundClick(false);
 	_layer->move(0, 0);
 	_body->sizeValue(

@@ -238,6 +238,10 @@ void BoxLayerWidget::updateButtonsPositions() {
 	}
 }
 
+ShowFactory BoxLayerWidget::showFactory() {
+	return _layer->showFactory();
+}
+
 QPointer<QWidget> BoxLayerWidget::outerContainer() {
 	return parentWidget();
 }

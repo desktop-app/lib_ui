@@ -324,9 +324,10 @@ void LayerStackWidget::BackgroundWidget::animationCallback() {
 	checkIfDone();
 }
 
-LayerStackWidget::LayerStackWidget(QWidget *parent)
+LayerStackWidget::LayerStackWidget(QWidget *parent, ShowFactory showFactory)
 : RpWidget(parent)
-, _background(this) {
+, _background(this)
+, _showFactory(std::move(showFactory)) {
 	setGeometry(parentWidget()->rect());
 	hide();
 	_background->setDoneCallback([this] { animationDone(); });

@@ -95,6 +95,7 @@ public:
 		return result;
 	}
 
+	virtual ShowFactory showFactory() = 0;
 	virtual QPointer<QWidget> outerContainer() = 0;
 
 };
@@ -189,6 +190,9 @@ public:
 		_preparing = true;
 		prepare();
 		finishPrepare();
+	}
+	[[nodiscard]] bool hasDelegate() const {
+		return _delegate != nullptr;
 	}
 	[[nodiscard]] not_null<BoxContentDelegate*> getDelegate() const {
 		return _delegate;
@@ -352,6 +356,7 @@ private:
 class BoxShow : public Show {
 public:
 	explicit BoxShow(not_null<Ui::BoxContent*> box);
+	BoxShow(const BoxShow &other);
 	~BoxShow();
 	void showBox(
 		object_ptr<BoxContent> content,
@@ -360,9 +365,16 @@ public:
 	[[nodiscard]] not_null<QWidget*> toastParent() const override;
 	[[nodiscard]] bool valid() const override;
 	operator bool() const override;
+
 private:
-	mutable QPointer<QWidget> _toastParent;
+	BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped);
+
+	bool resolve() const;
+
 	const QPointer<Ui::BoxContent> _weak;
+	mutable std::shared_ptr<Show> _wrapped;
+	rpl::lifetime _lifetime;
+
 };
 
 } // namespace Ui

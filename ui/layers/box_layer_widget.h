@@ -58,6 +58,7 @@ public:
 	void addTopButton(object_ptr<AbstractButton> button) override;
 	void showLoading(bool show) override;
 	void updateButtonsPositions() override;
+	ShowFactory showFactory() override;
 	QPointer<QWidget> outerContainer() override;
 
 	void setDimensions(

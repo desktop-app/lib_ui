@@ -26,7 +26,4 @@ public:
 
 inline Show::~Show() = default;
 
-using ShowPtr = std::shared_ptr<Show>;
-
-
 } // namespace Ui
