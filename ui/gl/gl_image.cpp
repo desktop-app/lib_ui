@@ -73,6 +73,7 @@ QImage Image::takeImage() {
 
 void Image::invalidate() {
 	_storage = base::take(_image);
+	_subimage = QSize();
 }
 
 void Image::bind(QOpenGLFunctions &f) {
@@ -119,8 +120,10 @@ void Image::bind(QOpenGLFunctions &f) {
 }
 
 void Image::destroy(QOpenGLFunctions *f) {
+	invalidate();
 	_textures.destroy(f);
 	_cacheKey = 0;
+	_textureSize = QSize();
 }
 
 TexturedRect Image::texturedRect(
