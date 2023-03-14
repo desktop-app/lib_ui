@@ -1175,21 +1175,6 @@ historySendActionChooseStickerEyeWidth: 7px;
 historySendActionChooseStickerEyeHeight: 11px;
 historySendActionChooseStickerEyeStep: 2px;
 
-MediaPlayerButton {
-	playPosition: point;
-	playOuter: size;
-	pausePosition: point;
-	pauseOuter: size;
-	pauseStroke: pixels;
-	cancelPosition: point;
-	cancelOuter: size;
-	cancelStroke: pixels;
-
-	rippleAreaPosition: point;
-	rippleAreaSize: pixels;
-	ripple: RippleAnimation;
-}
-
 PeerListItem {
 	left: pixels;
 	bottom: pixels;
