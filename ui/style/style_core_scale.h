@@ -19,6 +19,7 @@ inline constexpr auto kScaleAuto = 0;
 inline constexpr auto kScaleMin = 50;
 inline constexpr auto kScaleDefault = 100;
 inline constexpr auto kScaleMax = 300;
+inline constexpr auto kScaleAlwaysAllowMax = 200;
 
 [[nodiscard]] int DevicePixelRatio();
 void SetDevicePixelRatio(int ratio);
@@ -26,11 +27,8 @@ void SetDevicePixelRatio(int ratio);
 [[nodiscard]] int Scale();
 void SetScale(int scale);
 
-[[nodiscard]] inline int CheckScale(int scale) {
-	return (scale == kScaleAuto)
-		? kScaleAuto
-		: std::clamp(scale, kScaleMin, kScaleMax / DevicePixelRatio());
-}
+[[nodiscard]] int MaxScaleForRatio(int ratio);
+[[nodiscard]] int CheckScale(int scale);
 
 template <typename T>
 [[nodiscard]] inline T ConvertScale(T value, int scale) {

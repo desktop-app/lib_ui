@@ -34,4 +34,16 @@ void SetScale(int scale) {
 	ScaleValue = scale;
 }
 
+int MaxScaleForRatio(int ratio) {
+	Expects(ratio > 0);
+
+	return std::max(kScaleMax / ratio, kScaleAlwaysAllowMax);
+}
+
+int CheckScale(int scale) {
+	return (scale == kScaleAuto)
+		? kScaleAuto
+		: std::clamp(scale, kScaleMin, MaxScaleForRatio(DevicePixelRatio()));
+}
+
 } // namespace style
