@@ -42,14 +42,14 @@ static constexpr cursor cur_sizebdiag = Qt::SizeBDiagCursor;
 static constexpr cursor cur_sizefdiag = Qt::SizeFDiagCursor;
 static constexpr cursor cur_sizeall = Qt::SizeAllCursor;
 
-static const align al_topleft = (Qt::AlignTop | Qt::AlignLeft);
-static const align al_top = (Qt::AlignTop | Qt::AlignHCenter);
-static const align al_topright = (Qt::AlignTop | Qt::AlignRight);
-static const align al_right = (Qt::AlignVCenter | Qt::AlignRight);
-static const align al_bottomright = (Qt::AlignBottom | Qt::AlignRight);
-static const align al_bottom = (Qt::AlignBottom | Qt::AlignHCenter);
-static const align al_bottomleft = (Qt::AlignBottom | Qt::AlignLeft);
-static const align al_left = (Qt::AlignVCenter | Qt::AlignLeft);
-static const align al_center = (Qt::AlignVCenter | Qt::AlignHCenter);
+static constexpr align al_topleft = (Qt::AlignTop | Qt::AlignLeft);
+static constexpr align al_top = (Qt::AlignTop | Qt::AlignHCenter);
+static constexpr align al_topright = (Qt::AlignTop | Qt::AlignRight);
+static constexpr align al_right = (Qt::AlignVCenter | Qt::AlignRight);
+static constexpr align al_bottomright = (Qt::AlignBottom | Qt::AlignRight);
+static constexpr align al_bottom = (Qt::AlignBottom | Qt::AlignHCenter);
+static constexpr align al_bottomleft = (Qt::AlignBottom | Qt::AlignLeft);
+static constexpr align al_left = (Qt::AlignVCenter | Qt::AlignLeft);
+static constexpr align al_center = (Qt::AlignVCenter | Qt::AlignHCenter);
 
 } // namespace style
