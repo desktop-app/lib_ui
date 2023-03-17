@@ -674,7 +674,7 @@ bool PopupMenu::eventFilter(QObject *o, QEvent *e) {
 }
 
 void PopupMenu::hideMenu(bool fast) {
-	if (isHidden()) {
+	if (isHidden() || (_hiding && !fast)) {
 		return;
 	}
 	if (_parent && !_a_opacity.animating()) {
