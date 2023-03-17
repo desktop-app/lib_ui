@@ -13,7 +13,10 @@ class QPainter;
 class QPaintEvent;
 
 namespace Ui {
-namespace Platform {
+class PopupMenu;
+} // namespace Ui
+
+namespace Ui::Platform {
 
 [[nodiscard]] bool IsApplicationActive();
 
@@ -47,8 +50,9 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
 void NotifyTitleControlsLayoutChanged();
 
-} // namespace Platform
-} // namespace Ui
+void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);
+
+} // namespace Ui::Platform
 
 // Platform dependent implementations.
 

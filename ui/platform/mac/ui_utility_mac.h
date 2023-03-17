@@ -40,5 +40,8 @@ inline void UnsetWindowExtents(not_null<QWidget*> widget) {
 inline void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 }
 
+inline void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
+}
+
 } // namespace Platform
 } // namespace Ui

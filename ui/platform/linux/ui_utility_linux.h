@@ -36,5 +36,8 @@ inline constexpr bool UseMainQueueGeneric() {
 	return true;
 }
 
+inline void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
+}
+
 } // namespace Platform
 } // namespace Ui

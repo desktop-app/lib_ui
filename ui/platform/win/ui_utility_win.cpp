@@ -7,17 +7,18 @@
 #include "ui/platform/win/ui_utility_win.h"
 
 #include "base/platform/win/base_windows_h.h"
+#include "ui/widgets/popup_menu.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
+#include <QtCore/QAbstractNativeEventFilter>
 
 #include <wrl/client.h>
 #include <Shobjidl.h>
 
 using namespace Microsoft::WRL;
 
-namespace Ui {
-namespace Platform {
+namespace Ui::Platform {
 
 bool IsApplicationActive() {
 	return QApplication::activeWindow() != nullptr;
@@ -143,5 +144,59 @@ TitleControls::Layout TitleControlsLayout() {
 	};
 }
 
-} // namespace Platform
-} // namespace Ui
+void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
+	// Windows native emoji selector, that can be called by Win+. shortcut,
+	// is behaving strangely within an input field in a popup menu.
+	//
+	// When the selector is shown and a mouse button is pressed the system
+	// sends two events "MousePress + MouseRelease" to the popup menu, even
+	// before the button is physically released. That way we hide the menu
+	// on this MousePress, that we shouldn't have received (in case of
+	// input field in the main window no such events are sent at all).
+	//
+	// To workaround this we detect a WM_MOUSELEAVE event that is sent to
+	// the popup menu when the selector is shown and skip all mouse press
+	// events while we don't receive mouse move events. If we receive mouse
+	// move events that means the selector was hidden and the mouse is
+	// captured by the popup menu again.
+	class Filter final : public QAbstractNativeEventFilter {
+	public:
+		explicit Filter(not_null<PopupMenu*> menu) : _menu(menu) {
+		}
+
+		bool nativeEventFilter(
+				const QByteArray &eventType,
+				void *message,
+				long *result) override {
+			const auto msg = static_cast<MSG*>(message);
+			switch (msg->message) {
+			case WM_MOUSELEAVE: if (msg->hwnd == hwnd()) {
+				_skipMouseDown = true;
+			} break;
+			case WM_MOUSEMOVE: if (msg->hwnd == hwnd()) {
+				_skipMouseDown = false;
+			} break;
+			case WM_LBUTTONDOWN:
+			case WM_LBUTTONDBLCLK: if (msg->hwnd == hwnd()) {
+				return _skipMouseDown;
+			}
+			}
+			return false;
+		}
+
+	private:
+		[[nodiscard]] HWND hwnd() const {
+			const auto top = _menu->window()->windowHandle();
+			return top ? reinterpret_cast<HWND>(top->winId()) : nullptr;
+		}
+
+		not_null<PopupMenu*> _menu;
+		bool _skipMouseDown = false;
+
+	};
+
+	QGuiApplication::instance()->installNativeEventFilter(
+		menu->lifetime().make_state<Filter>(menu));
+}
+
+} // namespace Ui::Platform
