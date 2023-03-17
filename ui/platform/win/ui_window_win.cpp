@@ -30,8 +30,7 @@
 
 Q_DECLARE_METATYPE(QMargins);
 
-namespace Ui {
-namespace Platform {
+namespace Ui::Platform {
 namespace {
 
 constexpr auto kDWMWCP_ROUND = DWORD(2);
@@ -146,46 +145,46 @@ void FixAeroSnap(HWND handle) {
 
 class WindowHelper::NativeFilter final : public QAbstractNativeEventFilter {
 public:
-       void registerWindow(HWND handle, not_null<WindowHelper*> helper);
-       void unregisterWindow(HWND handle);
+	void registerWindow(HWND handle, not_null<WindowHelper*> helper);
+	void unregisterWindow(HWND handle);
 
-       bool nativeEventFilter(
-               const QByteArray &eventType,
-               void *message,
-               long *result) override;
+	bool nativeEventFilter(
+		const QByteArray &eventType,
+		void *message,
+		long *result) override;
 
 private:
-       base::flat_map<HWND, not_null<WindowHelper*>> _windowByHandle;
+	base::flat_map<HWND, not_null<WindowHelper*>> _windowByHandle;
 
 };
 
 void WindowHelper::NativeFilter::registerWindow(
-               HWND handle,
-               not_null<WindowHelper*> helper) {
-       _windowByHandle.emplace(handle, helper);
+		HWND handle,
+		not_null<WindowHelper*> helper) {
+	_windowByHandle.emplace(handle, helper);
 }
 
 void WindowHelper::NativeFilter::unregisterWindow(HWND handle) {
-       _windowByHandle.remove(handle);
+	_windowByHandle.remove(handle);
 }
 
 bool WindowHelper::NativeFilter::nativeEventFilter(
-               const QByteArray &eventType,
-               void *message,
-               long *result) {
-       auto filtered = false;
-       const auto msg = static_cast<MSG*>(message);
-       const auto i = _windowByHandle.find(msg->hwnd);
-       if (i != end(_windowByHandle)) {
-               base::Integration::Instance().enterFromEventLoop([&] {
-                       filtered = i->second->handleNativeEvent(
-                               msg->message,
-                               msg->wParam,
-                               msg->lParam,
-                               reinterpret_cast<LRESULT*>(result));
-               });
-       }
-       return filtered;
+		const QByteArray &eventType,
+		void *message,
+		long *result) {
+	auto filtered = false;
+	const auto msg = static_cast<MSG*>(message);
+	const auto i = _windowByHandle.find(msg->hwnd);
+	if (i != end(_windowByHandle)) {
+		base::Integration::Instance().enterFromEventLoop([&] {
+			filtered = i->second->handleNativeEvent(
+				msg->message,
+				msg->wParam,
+				msg->lParam,
+				reinterpret_cast<LRESULT*>(result));
+		});
+	}
+	return filtered;
 }
 
 WindowHelper::WindowHelper(not_null<RpWidget*> window)
@@ -838,15 +837,15 @@ void WindowHelper::fixMaximizedWindow() {
 }
 
 not_null<WindowHelper::NativeFilter*> WindowHelper::GetNativeFilter() {
-       Expects(QCoreApplication::instance() != nullptr);
+	Expects(QCoreApplication::instance() != nullptr);
 
-       static const auto GlobalFilter = [&] {
-               const auto application = QCoreApplication::instance();
-               const auto filter = Ui::CreateChild<NativeFilter>(application);
-               application->installNativeEventFilter(filter);
-               return filter;
-       }();
-       return GlobalFilter;
+	static const auto GlobalFilter = [&] {
+		const auto application = QCoreApplication::instance();
+		const auto filter = Ui::CreateChild<NativeFilter>(application);
+		application->installNativeEventFilter(filter);
+		return filter;
+	}();
+	return GlobalFilter;
 }
 
 HWND GetWindowHandle(not_null<QWidget*> widget) {
@@ -878,5 +877,4 @@ bool NativeWindowFrameSupported() {
 	return true;
 }
 
-} // namespace Platform
-} // namespace Ui
+} // namespace Ui::Platform
