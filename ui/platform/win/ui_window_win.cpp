@@ -512,7 +512,6 @@ bool WindowHelper::handleNativeEvent(
 			&& (wp.showCmd == SW_SHOWMAXIMIZED)) {
 			const auto r = &((LPNCCALCSIZE_PARAMS)lParam)->rgrc[0];
 			const auto dpi = _dpi.current();
-			const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 			const auto borderWidth = (GetSystemMetricsForDpiSupported() && dpi)
 				? GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi)
 					+ GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)
