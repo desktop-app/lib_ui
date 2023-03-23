@@ -50,6 +50,7 @@ const struct wl_registry_listener WaylandIntegration::Private::RegistryListener 
 			uint32_t version) {
 		if (interface == qstr("zxdg_decoration_manager_v1")) {
 			data->xdgDecorationSupported = true;
+			data->xdgDecorationName = name;
 		}
 	}),
 	decltype(wl_registry_listener::global_remove)(+[](
@@ -58,6 +59,7 @@ const struct wl_registry_listener WaylandIntegration::Private::RegistryListener 
 			uint32_t name) {
 		if (name == data->xdgDecorationName) {
 			data->xdgDecorationSupported = false;
+			data->xdgDecorationName = 0;
 		}
 	}),
 };
