@@ -96,7 +96,7 @@ struct CornersMaskRef {
 	const style::color &color);
 
 [[nodiscard]] std::array<QImage, 4> CornersMask(int radius);
-[[nodiscard]] QImage EllipseMask(QSize size);
+[[nodiscard]] QImage EllipseMask(QSize size, double ratio = style::DevicePixelRatio());
 
 [[nodiscard]] std::array<QImage, 4> PrepareCorners(
 	int radius,
