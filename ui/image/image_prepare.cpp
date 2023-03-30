@@ -50,7 +50,7 @@ const QImage &EllipseMaskCached(QSize size) {
 	}
 	lock.unlock();
 
-	auto mask = EllipseMask(size);
+	auto mask = EllipseMask(size, 1.);
 
 	lock.relock();
 	return Masks.emplace(key, std::move(mask)).first->second;
@@ -321,9 +321,7 @@ std::array<QImage, 4> CornersMask(int radius) {
 	return PrepareCornersMask(radius);
 }
 
-QImage EllipseMask(QSize size) {
-	const auto ratio = style::DevicePixelRatio();
-
+QImage EllipseMask(QSize size, double ratio) {
 	size *= ratio;
 	auto result = QImage(size, QImage::Format_ARGB32_Premultiplied);
 	result.fill(Qt::transparent);
