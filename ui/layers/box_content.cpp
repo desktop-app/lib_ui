@@ -179,6 +179,24 @@ void BoxContent::scrollToY(int top, int bottom) {
 	}
 }
 
+void BoxContent::sendScrollViewportEvent(not_null<QEvent*> event) {
+	if (_scroll) {
+		_scroll->viewportEvent(event);
+	}
+}
+
+rpl::producer<> BoxContent::scrolls() const {
+	return _scroll ? _scroll->scrolls() : rpl::never<>();
+}
+
+int BoxContent::scrollTop() const {
+	return _scroll ? _scroll->scrollTop() : 0;
+}
+
+int BoxContent::scrollHeight() const {
+	return _scroll ? _scroll->height() : 0;
+}
+
 void BoxContent::scrollByDraggingDelta(int delta) {
 	_draggingScroll.checkDeltaScroll(_scroll ? delta : 0);
 }

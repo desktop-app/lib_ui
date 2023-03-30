@@ -209,6 +209,10 @@ public:
 	void scrollByDraggingDelta(int delta);
 
 	void scrollToY(int top, int bottom = -1);
+	void sendScrollViewportEvent(not_null<QEvent*> event);
+	[[nodiscard]] rpl::producer<> scrolls() const;
+	[[nodiscard]] int scrollTop() const;
+	[[nodiscard]] int scrollHeight() const;
 
 protected:
 	virtual void prepare() = 0;
