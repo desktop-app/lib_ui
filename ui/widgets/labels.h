@@ -260,11 +260,11 @@ private:
 
 };
 
-class DividerLabel : public PaddingWrap<FlatLabel> {
+class DividerLabel : public PaddingWrap<> {
 public:
 	DividerLabel(
 		QWidget *parent,
-		object_ptr<FlatLabel> &&child,
+		object_ptr<RpWidget> &&child,
 		const style::margins &padding,
 		RectParts parts = RectPart::Top | RectPart::Bottom);
 

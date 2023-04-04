@@ -978,7 +978,7 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 
 DividerLabel::DividerLabel(
 	QWidget *parent,
-	object_ptr<FlatLabel> &&child,
+	object_ptr<RpWidget> &&child,
 	const style::margins &padding,
 	RectParts parts)
 : PaddingWrap(parent, std::move(child), padding)
