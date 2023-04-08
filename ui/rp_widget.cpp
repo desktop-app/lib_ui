@@ -44,6 +44,12 @@ public:
 
 TWidget::TWidget(QWidget *parent)
 : TWidgetHelper<QWidget>(*(new TWidgetPrivate), parent, {}) {
+	[[maybe_unused]] static const auto Once = [] {
+		auto format = QSurfaceFormat::defaultFormat();
+		format.setSwapInterval(0);
+		QSurfaceFormat::setDefaultFormat(format);
+		return true;
+	}();
 }
 
 namespace Ui {
