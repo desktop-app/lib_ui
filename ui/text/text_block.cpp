@@ -185,6 +185,7 @@ public:
 private:
 	void parseWords(QFixed minResizeWidth, int blockFrom);
 	bool isLineBreak(const QCharAttributes *attributes, int index);
+	bool isSpaceBreak(const QCharAttributes *attributes, int index);
 
 	TextBlock *block;
 	QTextEngine *eng;
@@ -257,7 +258,17 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 		}
 		const QScriptItem &current = eng->layoutData->items[item];
 
-		if (attributes[lbh.currentPosition].whiteSpace) {
+		const auto atSpaceBreak = [&] {
+			for (auto index = lbh.currentPosition; index < end; ++index) {
+				if (!attributes[index].whiteSpace) {
+					return false;
+				} else if (isSpaceBreak(attributes, index)) {
+					return true;
+				}
+			}
+			return false;
+		}();
+		if (atSpaceBreak) {
 			while (lbh.currentPosition < end && attributes[lbh.currentPosition].whiteSpace)
 				addNextCluster(lbh.currentPosition, end, lbh.spaceData, lbh.glyphCount,
 					current, lbh.logClusters, lbh.glyphs);
@@ -281,7 +292,7 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 					current, lbh.logClusters, lbh.glyphs);
 
 				if (lbh.currentPosition >= eng->layoutData->string.length()
-					|| attributes[lbh.currentPosition].whiteSpace
+					|| isSpaceBreak(attributes, lbh.currentPosition)
 					|| isLineBreak(attributes, lbh.currentPosition)) {
 					lbh.calculateRightBearing();
 					block->_words.push_back(TextWord(wordStart + blockFrom, lbh.tmpData.textWidth, -lbh.negativeRightBearing()));
@@ -330,14 +341,19 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 bool BlockParser::isLineBreak(
 		const QCharAttributes *attributes,
 		int index) {
-	bool lineBreak = attributes[index].lineBreak;
-	if (lineBreak
-		&& block->lnkIndex() > 0
-		&& index > 0
-		&& str.at(index - 1) == '/') {
-		return false; // don't break after / in links
-	}
-	return lineBreak;
+	// Don't break after / in links.
+	return attributes[index].lineBreak
+		&& (block->lnkIndex() <= 0
+			|| index <= 0
+			|| str[index - 1] != '/');
+}
+
+bool BlockParser::isSpaceBreak(
+		const QCharAttributes *attributes,
+		int index) {
+	// Don't break on &nbsp;
+	return attributes[index].whiteSpace
+		&& (str[index] != QChar::Nbsp);
 }
 
 AbstractBlock::AbstractBlock(

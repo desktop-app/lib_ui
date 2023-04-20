@@ -422,7 +422,7 @@ void Parser::parseCurrentChar() {
 	_emojiLookback = 0;
 	const auto inCustomEmoji = !_customEmojiData.isEmpty();
 	const auto isNewLine = !inCustomEmoji && _multiline && IsNewline(_ch);
-	const auto isSpace = IsSpace(_ch);
+	const auto replaceWithSpace = IsSpace(_ch) && (_ch != QChar::Nbsp);
 	const auto isDiac = IsDiac(_ch);
 	const auto isTilde = !inCustomEmoji && _checkTilde && (_ch == '~');
 	const auto skip = [&] {
@@ -487,7 +487,7 @@ void Parser::parseCurrentChar() {
 		}
 		if (isNewLine) {
 			createNewlineBlock();
-		} else if (isSpace) {
+		} else if (replaceWithSpace) {
 			_t->_text.push_back(QChar::Space);
 			_allowDiacritic = false;
 		} else {

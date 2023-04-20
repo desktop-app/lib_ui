@@ -1974,9 +1974,6 @@ QString InputField::getTextPart(
 				if (IsNewline(*ch) && ch->unicode() != '\r') {
 					*ch = QLatin1Char('\n');
 				} else switch (ch->unicode()) {
-				case QChar::Nbsp: {
-					*ch = QLatin1Char(' ');
-				} break;
 				case QChar::ObjectReplacementCharacter: {
 					if (ch > begin) {
 						result.append(begin, ch - begin);
