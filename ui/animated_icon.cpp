@@ -195,7 +195,8 @@ void AnimatedIcon::Impl::renderPreloadFrame() {
 }
 
 AnimatedIcon::AnimatedIcon(AnimatedIconDescriptor &&descriptor)
-: _impl(std::make_shared<Impl>(base::make_weak(this))) {
+: _impl(std::make_shared<Impl>(base::make_weak(this)))
+, _colorized(descriptor.colorized) {
 	crl::async([
 		impl = _impl,
 		factory = std::move(descriptor.generator),
@@ -221,11 +222,29 @@ int AnimatedIcon::framesCount() const {
 	return _impl->framesCount();
 }
 
-QImage AnimatedIcon::frame() const {
-	return frame(QSize(), nullptr).image;
+QImage AnimatedIcon::frame(const QColor &textColor) const {
+	return frame(textColor, QSize(), nullptr).image;
+}
+
+QImage AnimatedIcon::notColorizedFrame() const {
+	return notColorizedFrame(QSize(), nullptr).image;
 }
 
 AnimatedIcon::ResizedFrame AnimatedIcon::frame(
+		const QColor &textColor,
+		QSize desiredSize,
+		Fn<void()> updateWithPerfect) const {
+	auto result = notColorizedFrame(
+		desiredSize,
+		std::move(updateWithPerfect));
+	if (_colorized) {
+		auto &image = result.image;
+		style::colorizeImage(image, textColor, &image, {}, {}, true);
+	}
+	return result;
+}
+
+AnimatedIcon::ResizedFrame AnimatedIcon::notColorizedFrame(
 		QSize desiredSize,
 		Fn<void()> updateWithPerfect) const {
 	auto &frame = _impl->frame();
