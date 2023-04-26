@@ -28,6 +28,8 @@ public:
 	void setGeometry(QRect rect) override;
 	void close() override;
 
+	const style::TextStyle &titleTextStyle() const override;
+
 private:
 	class Private;
 	friend class Private;

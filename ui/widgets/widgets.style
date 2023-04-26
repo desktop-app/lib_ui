@@ -555,6 +555,7 @@ WindowTitle {
 	bgActive: color;
 	fg: color;
 	fgActive: color;
+	style: TextStyle;
 	minimize: IconButton;
 	minimizeIconActive: icon;
 	minimizeIconActiveOver: icon;
@@ -1420,6 +1421,11 @@ defaultWindowTitle: WindowTitle {
 	bgActive: titleBgActive;
 	fg: titleFg;
 	fgActive: titleFgActive;
+	style: TextStyle(defaultTextStyle) {
+		font: font(semibold 12px);
+		linkFont: font(semibold 12px);
+		linkFontOver: font(semibold 12px underline);
+	}
 	minimize: IconButton(windowTitleButton) {
 		icon: icon {
 			{ windowTitleButtonSize, titleButtonBg },

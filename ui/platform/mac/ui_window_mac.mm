@@ -422,6 +422,10 @@ void WindowHelper::close() {
 	_private->close();
 }
 
+const style::TextStyle &WindowHelper::titleTextStyle() const {
+	return _title->textStyle();
+}
+
 void WindowHelper::init() {
 	updateCustomTitleVisibility(true);
 

@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "ui/text/text.h"
 #include "ui/rp_widget.h"
 #include "base/object_ptr.h"
 
@@ -14,6 +15,7 @@
 
 namespace style {
 struct WindowTitle;
+struct TextStyle;
 } // namespace style
 
 namespace Ui {
@@ -25,12 +27,14 @@ namespace Platform {
 class TitleWidget : public RpWidget {
 public:
 	TitleWidget(not_null<RpWidget*> parent, int height);
+	~TitleWidget();
 
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);
 	void setControlsRect(const QRect &rect);
 	[[nodiscard]] QString text() const;
 	[[nodiscard]] bool shouldBeHidden() const;
+	[[nodiscard]] const style::TextStyle &textStyle() const;
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
@@ -43,11 +47,11 @@ private:
 	void init(int height);
 
 	not_null<const style::WindowTitle*> _st;
+	std::unique_ptr<style::TextStyle> _textStyle;
 	object_ptr<Ui::PlainShadow> _shadow;
 	QString _text;
-	int _textWidth = 0;
+	Ui::Text::String _string;
 	int _controlsRight = 0;
-	QFont _font;
 
 };
 

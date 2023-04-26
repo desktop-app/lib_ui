@@ -103,4 +103,8 @@ int RpWindow::manualRoundingRadius() const {
 	return _helper->manualRoundingRadius();
 }
 
+const style::TextStyle &RpWindow::titleTextStyle() const {
+	return _helper->titleTextStyle();
+}
+
 } // namespace Ui

@@ -12,6 +12,7 @@
 
 namespace style {
 struct WindowTitle;
+struct TextStyle;
 } // namespace style
 
 namespace Ui {
@@ -61,6 +62,8 @@ public:
 
 	virtual int manualRoundingRadius() const;
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
+
+	[[nodiscard]] virtual const style::TextStyle &titleTextStyle() const;
 
 protected:
 	[[nodiscard]] WindowTitleHitTestFlags bodyTitleAreaHit(

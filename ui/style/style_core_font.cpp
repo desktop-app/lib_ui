@@ -300,7 +300,7 @@ int CeilTextWidth(const QFont &font, const QString &text) {
 }
 
 FontData::FontData(int size, uint32 flags, int family, Font *other)
-: f(ResolveFont(flags, size))
+: f(ResolveFont(family ? fontFamilies[family] : QString(), flags, size))
 , _m(f)
 , _size(size)
 , _flags(flags)

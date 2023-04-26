@@ -26,7 +26,7 @@ void SetCustomFonts(const CustomFont &regular, const CustomFont &bold) {
 	BoldFont = bold;
 }
 
-QFont ResolveFont(uint32 flags, int size) {
+QFont ResolveFont(const QString &familyOverride, uint32 flags, int size) {
 	static auto Database = QFontDatabase();
 
 	const auto bold = ((flags & FontBold) || (flags & FontSemibold));
@@ -35,7 +35,12 @@ QFont ResolveFont(uint32 flags, int size) {
 	const auto useCustom = !custom.family.isEmpty();
 
 	auto result = QFont(QGuiApplication::font().family());
-	if (flags & FontMonospace) {
+	if (!familyOverride.isEmpty()) {
+		result.setFamily(familyOverride);
+		if (bold) {
+			result.setBold(true);
+		}
+	} else if (flags & FontMonospace) {
 		result.setFamily(MonospaceFont());
 	} else if (useCustom) {
 		const auto sizes = Database.smoothSizes(custom.family, custom.style);

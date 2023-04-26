@@ -8,6 +8,7 @@
 
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
+#include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "base/debug_log.h"
 #include "styles/style_widgets.h"
@@ -27,10 +28,12 @@ TitleWidget::TitleWidget(not_null<RpWidget*> parent, int height)
 	init(height);
 }
 
+TitleWidget::~TitleWidget() = default;
+
 void TitleWidget::setText(const QString &text) {
 	if (_text != text) {
 		_text = text;
-		_textWidth = QFontMetrics(_font).horizontalAdvance(_text);
+		_string.setText(textStyle(), text);
 		update();
 	}
 }
@@ -46,6 +49,10 @@ void TitleWidget::setControlsRect(const QRect &rect) {
 
 bool TitleWidget::shouldBeHidden() const {
 	return !_st->height;
+}
+
+const style::TextStyle &TitleWidget::textStyle() const {
+	return *_textStyle;
 }
 
 QString TitleWidget::text() const {
@@ -64,51 +71,55 @@ void TitleWidget::init(int height) {
 		setGeometry(0, 0, width, height);
 	}, lifetime());
 
+	const auto setFromFont = [&](const style::font &font) {
+		_textStyle = std::make_unique<style::TextStyle>(style::TextStyle{
+			.font = font,
+			.linkFont = font,
+			.linkFontOver = font,
+		});
+	};
+
 	const auto families = QStringList{
 		u".AppleSystemUIFont"_q,
 		u".SF NS Text"_q,
 		u"Helvetica Neue"_q,
 	};
 	for (auto family : families) {
-		_font.setFamily(family);
-		if (QFontInfo(_font).family() == _font.family()) {
+		auto font = QFont();
+		font.setFamily(family);
+		if (QFontInfo(font).family() == font.family()) {
 			static const auto logged = [&] {
 				LOG(("Title Font: %1").arg(family));
 				return true;
 			}();
+			const auto apple = (family == u".AppleSystemUIFont"_q);
+			setFromFont(style::font(
+				apple ? 13 : (height * 15) / 24,
+				apple ? style::internal::FontBold : 0,
+				family));
 			break;
 		}
 	}
-
-	if (QFontInfo(_font).family() != _font.family()) {
-		_font = st::semiboldFont;
-		_font.setPixelSize(13);
-	} else if (_font.family() == u".AppleSystemUIFont"_q) {
-		_font.setBold(true);
-		_font.setPixelSize(13);
-	} else {
-		_font.setPixelSize((height * 15) / 24);
+	if (!_textStyle) {
+		setFromFont(style::font(13, style::internal::FontSemibold, 0));
 	}
 }
 
 void TitleWidget::paintEvent(QPaintEvent *e) {
-	QPainter p(this);
+	Painter p(this);
 
 	const auto active = isActiveWindow();
 	p.fillRect(rect(), active ? _st->bgActive : _st->bg);
 
-	p.setFont(_font);
 	p.setPen(active ? _st->fgActive : _st->fg);
 
-	if ((width() - _controlsRight * 2) < _textWidth) {
-		const auto elided = QFontMetrics(_font).elidedText(
-			_text,
-			Qt::ElideRight,
-			width() - _controlsRight);
-		const auto padding = QMargins(_controlsRight, 0, 0, 0);
-		p.drawText(rect() - padding, elided, style::al_left);
+	const auto top = (height() - _textStyle->font->height) / 2;
+	if ((width() - _controlsRight * 2) < _string.maxWidth()) {
+		const auto left = _controlsRight;
+		_string.drawElided(p, left, top, width() - left);
 	} else {
-		p.drawText(rect(), _text, style::al_center);
+		const auto left = (width() - _string.maxWidth()) / 2;
+		_string.draw(p, left, top, width() - left);
 	}
 }
 

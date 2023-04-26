@@ -205,6 +205,10 @@ void BasicWindowHelper::setBodyTitleArea(
 	_bodyTitleAreaTestMethod = std::move(testMethod);
 }
 
+const style::TextStyle &BasicWindowHelper::titleTextStyle() const {
+	return st::defaultWindowTitle.style;
+}
+
 QMargins BasicWindowHelper::nativeFrameMargins() const {
 	const auto inner = window()->geometry();
 	const auto outer = window()->frameGeometry();

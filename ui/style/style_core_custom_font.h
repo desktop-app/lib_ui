@@ -40,6 +40,6 @@ inline bool operator>=(const CustomFont &a, const CustomFont &b) {
 
 void SetCustomFonts(const CustomFont &regular, const CustomFont &bold);
 
-[[nodiscard]] QFont ResolveFont(uint32 flags, int size);
+[[nodiscard]] QFont ResolveFont(const QString &familyOverride, uint32 flags, int size);
 
 } // namespace style
