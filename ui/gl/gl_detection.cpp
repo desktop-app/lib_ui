@@ -86,16 +86,16 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	} else {
 		format.setAlphaBufferSize(8);
 	}
-	auto tester = QOpenGLWidget(widget);
-	tester.setFormat(format);
 
 	CrashCheckStart();
+	auto tester = QOpenGLWidget(widget);
+	tester.setFormat(format);
 	tester.grabFramebuffer(); // Force initialize().
-	CrashCheckFinish();
-
 	if (!tester.window()->windowHandle()) {
 		tester.window()->createWinId();
 	}
+	CrashCheckFinish();
+
 	const auto context = tester.context();
 	if (!context
 		|| !context->isValid()/*
