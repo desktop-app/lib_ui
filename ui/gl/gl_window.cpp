@@ -24,6 +24,15 @@ namespace {
 
 constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
 
+class RpWidgetNoRhi : public RpWidget {
+protected:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+	std::optional<QPlatformBackingStoreRhiConfig> rhiConfig() const override {
+		return QPlatformBackingStoreRhiConfig();
+	}
+#endif // Qt >= 6.4.0
+};
+
 class RpWindowNoRhi : public RpWindow {
 protected:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
@@ -87,7 +96,7 @@ std::unique_ptr<RpWidget> Window::createNativeBodyWrap(
 		return nullptr;
 	}
 	const auto create = [] {
-		auto result = std::make_unique<RpWidget>();
+		auto result = std::make_unique<RpWidgetNoRhi>();
 		result->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
 		result->setAttribute(Qt::WA_NativeWindow);
 		result->setAttribute(Qt::WA_DontCreateNativeAncestors);
