@@ -6,11 +6,21 @@
 //
 #pragma once
 
+#include "base/weak_ptr.h"
 #include "ui/layers/layer_widget.h"
+
+struct TextWithEntities;
+
+namespace Ui::Toast {
+struct Config;
+class Instance;
+} // namespace Ui::Toast
 
 namespace Ui {
 
 class BoxContent;
+
+inline constexpr auto kZOrderBasic = 0;
 
 class Show {
 public:
@@ -22,6 +32,18 @@ public:
 	[[nodiscard]] virtual not_null<QWidget*> toastParent() const = 0;
 	[[nodiscard]] virtual bool valid() const = 0;
 	virtual operator bool() const = 0;
+
+	base::weak_ptr<Toast::Instance> showToast(Toast::Config &&config);
+	base::weak_ptr<Toast::Instance> showToast(
+		TextWithEntities &&text,
+		crl::time duration = 0);
+	base::weak_ptr<Toast::Instance> showToast(
+		const QString &text,
+		crl::time duration = 0);
+
+private:
+	base::weak_ptr<Toast::Instance> _lastToast;
+
 };
 
 inline Show::~Show() = default;

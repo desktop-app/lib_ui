@@ -35,6 +35,11 @@ namespace st {
 extern const style::ScrollArea &boxScroll;
 } // namespace st
 
+namespace Ui::Toast {
+struct Config;
+class Instance;
+} // namespace Ui::Toast
+
 namespace Ui {
 class GenericBox;
 } // namespace Ui
@@ -101,7 +106,6 @@ public:
 };
 
 class BoxContent : public RpWidget {
-
 public:
 	BoxContent() {
 		setAttribute(Qt::WA_OpaquePaintEvent);
@@ -213,6 +217,16 @@ public:
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] int scrollTop() const;
 	[[nodiscard]] int scrollHeight() const;
+
+	base::weak_ptr<Toast::Instance> showToast(Toast::Config &&config);
+	base::weak_ptr<Toast::Instance> showToast(
+		TextWithEntities &&text,
+		crl::time duration = 0);
+	base::weak_ptr<Toast::Instance> showToast(
+		const QString &text,
+		crl::time duration = 0);
+
+	[[nodiscard]] std::shared_ptr<Show> uiShow();
 
 protected:
 	virtual void prepare() = 0;
@@ -354,30 +368,6 @@ private:
 	}
 
 	QPointer<BoxContent> _value;
-
-};
-
-class BoxShow : public Show {
-public:
-	explicit BoxShow(not_null<Ui::BoxContent*> box);
-	BoxShow(const BoxShow &other);
-	~BoxShow();
-	void showBox(
-		object_ptr<BoxContent> content,
-		LayerOptions options = LayerOption::KeepOther) const override;
-	void hideLayer() const override;
-	[[nodiscard]] not_null<QWidget*> toastParent() const override;
-	[[nodiscard]] bool valid() const override;
-	operator bool() const override;
-
-private:
-	BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped);
-
-	bool resolve() const;
-
-	const QPointer<Ui::BoxContent> _weak;
-	mutable std::shared_ptr<Show> _wrapped;
-	rpl::lifetime _lifetime;
 
 };
 

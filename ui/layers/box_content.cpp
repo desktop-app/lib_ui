@@ -19,6 +19,98 @@
 #include "styles/palette.h"
 
 namespace Ui {
+namespace {
+
+class BoxShow final : public Show {
+public:
+	explicit BoxShow(not_null<Ui::BoxContent*> box);
+	BoxShow(const BoxShow &other);
+	~BoxShow();
+	void showBox(
+		object_ptr<BoxContent> content,
+		LayerOptions options = LayerOption::KeepOther) const override;
+	void hideLayer() const override;
+	[[nodiscard]] not_null<QWidget*> toastParent() const override;
+	[[nodiscard]] bool valid() const override;
+	operator bool() const override;
+
+private:
+	BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped);
+
+	bool resolve() const;
+
+	const QPointer<Ui::BoxContent> _weak;
+	mutable std::shared_ptr<Show> _wrapped;
+	rpl::lifetime _lifetime;
+
+};
+
+BoxShow::BoxShow(not_null<BoxContent*> box)
+: BoxShow(MakeWeak(box.get()), nullptr) {
+}
+
+BoxShow::BoxShow(const BoxShow &other)
+: BoxShow(other._weak, other._wrapped) {
+}
+
+BoxShow::BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped)
+: _weak(weak)
+, _wrapped(std::move(wrapped)) {
+	if (!resolve()) {
+		if (const auto box = _weak.data()) {
+			box->boxClosing(
+			) | rpl::start_with_next([=] {
+				resolve();
+				_lifetime.destroy();
+			}, _lifetime);
+		}
+	}
+}
+
+BoxShow::~BoxShow() = default;
+
+bool BoxShow::resolve() const {
+	if (_wrapped) {
+		return true;
+	} else if (const auto strong = _weak.data()) {
+		if (strong->hasDelegate()) {
+			_wrapped = strong->getDelegate()->showFactory()();
+			return true;
+		}
+	}
+	return false;
+}
+
+void BoxShow::showBox(
+		object_ptr<BoxContent> content,
+		LayerOptions options) const {
+	if (resolve()) {
+		_wrapped->showBox(std::move(content), options);
+	}
+}
+
+void BoxShow::hideLayer() const {
+	if (resolve()) {
+		_wrapped->hideLayer();
+	}
+}
+
+not_null<QWidget*> BoxShow::toastParent() const {
+	if (resolve()) {
+		return _wrapped->toastParent();
+	}
+	Unexpected("Stale BoxShow::toastParent call.");
+}
+
+bool BoxShow::valid() const {
+	return resolve() && _wrapped->valid();
+}
+
+BoxShow::operator bool() const {
+	return valid();
+}
+
+} // namespace
 
 void BoxContent::setTitle(rpl::producer<QString> title) {
 	getDelegate()->setTitle(std::move(title) | Text::ToWithEntities());
@@ -197,6 +289,27 @@ int BoxContent::scrollHeight() const {
 	return _scroll ? _scroll->height() : 0;
 }
 
+base::weak_ptr<Toast::Instance> BoxContent::showToast(
+		Toast::Config &&config) {
+	return BoxShow(this).showToast(std::move(config));
+}
+
+base::weak_ptr<Toast::Instance> BoxContent::showToast(
+		TextWithEntities &&text,
+		crl::time duration) {
+	return BoxShow(this).showToast(std::move(text), duration);
+}
+
+base::weak_ptr<Toast::Instance> BoxContent::showToast(
+		const QString &text,
+		crl::time duration) {
+	return BoxShow(this).showToast(text, duration);
+}
+
+std::shared_ptr<Show> BoxContent::uiShow() {
+	return std::make_shared<BoxShow>(this);
+}
+
 void BoxContent::scrollByDraggingDelta(int delta) {
 	_draggingScroll.checkDeltaScroll(_scroll ? delta : 0);
 }
@@ -333,71 +446,6 @@ void BoxContent::paintEvent(QPaintEvent *e) {
 			p.fillRect(rect, color);
 		}
 	}
-}
-
-BoxShow::BoxShow(not_null<BoxContent*> box)
-: BoxShow(MakeWeak(box.get()), nullptr) {
-}
-
-BoxShow::BoxShow(const BoxShow &other)
-: BoxShow(other._weak, other._wrapped) {
-}
-
-BoxShow::BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped)
-: _weak(weak)
-, _wrapped(std::move(wrapped)) {
-	if (!resolve()) {
-		if (const auto box = _weak.data()) {
-			box->boxClosing(
-			) | rpl::start_with_next([=] {
-				resolve();
-				_lifetime.destroy();
-			}, _lifetime);
-		}
-	}
-}
-
-BoxShow::~BoxShow() = default;
-
-bool BoxShow::resolve() const {
-	if (_wrapped) {
-		return true;
-	} else if (const auto strong = _weak.data()) {
-		if (strong->hasDelegate()) {
-			_wrapped = strong->getDelegate()->showFactory()();
-			return true;
-		}
-	}
-	return false;
-}
-
-void BoxShow::showBox(
-		object_ptr<BoxContent> content,
-		LayerOptions options) const {
-	if (resolve()) {
-		_wrapped->showBox(std::move(content), options);
-	}
-}
-
-void BoxShow::hideLayer() const {
-	if (resolve()) {
-		_wrapped->hideLayer();
-	}
-}
-
-not_null<QWidget*> BoxShow::toastParent() const {
-	if (resolve()) {
-		return _wrapped->toastParent();
-	}
-	Unexpected("Stale BoxShow::toastParent call.");
-}
-
-bool BoxShow::valid() const {
-	return resolve() && _wrapped->valid();
-}
-
-BoxShow::operator bool() const {
-	return valid();
 }
 
 } // namespace Ui

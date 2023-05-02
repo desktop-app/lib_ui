@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "base/weak_ptr.h"
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "ui/layers/layer_widget.h"
@@ -17,6 +18,11 @@ class Painter;
 namespace Ui::Menu {
 struct MenuCallback;
 } // namespace Ui::Menu
+
+namespace Ui::Toast {
+struct Config;
+class Instance;
+} // namespace Ui::Toast
 
 namespace Ui {
 
@@ -32,6 +38,7 @@ class FadeWrapScaled;
 struct SeparatePanelArgs {
 	QWidget *parent = nullptr;
 	bool onAllSpaces = false;
+	Fn<bool(int zorder)> animationsPaused;
 };
 
 class SeparatePanel final : public RpWidget {
@@ -52,8 +59,9 @@ public:
 		object_ptr<BoxContent> box,
 		LayerOptions options,
 		anim::type animated);
-	void showToast(const TextWithEntities &text);
 	void destroyLayer();
+
+	[[nodiscard]] bool animationsPaused(int zorder) const;
 
 	[[nodiscard]] rpl::producer<> backRequests() const;
 	[[nodiscard]] rpl::producer<> closeRequests() const;
@@ -61,6 +69,15 @@ public:
 	void setBackAllowed(bool allowed);
 
 	void setMenuAllowed(Fn<void(const Menu::MenuCallback&)> fill);
+
+	base::weak_ptr<Toast::Instance> showToast(Toast::Config &&config);
+	base::weak_ptr<Toast::Instance> showToast(
+		TextWithEntities &&text,
+		crl::time duration = 0);
+	base::weak_ptr<Toast::Instance> showToast(
+		const QString &text,
+		crl::time duration = 0);
+
 	[[nodiscard]] std::shared_ptr<Show> uiShow();
 
 protected:
@@ -126,6 +143,8 @@ private:
 	Animations::Simple _opacityAnimation;
 	QPixmap _animationCache;
 	QPixmap _borderParts;
+
+	Fn<bool(int zorder)> _animationsPaused;
 
 };
 

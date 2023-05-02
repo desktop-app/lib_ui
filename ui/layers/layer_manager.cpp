@@ -68,7 +68,8 @@ ManagerShow::operator bool() const {
 
 } // namespace
 
-LayerManager::LayerManager(not_null<RpWidget*> widget) : _widget(widget) {
+LayerManager::LayerManager(not_null<RpWidget*> widget)
+: _widget(widget) {
 }
 
 void LayerManager::setStyleOverrides(

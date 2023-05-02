@@ -97,6 +97,7 @@ PRIVATE
     ui/layers/layer_manager.h
     ui/layers/layer_widget.cpp
     ui/layers/layer_widget.h
+    ui/layers/show.cpp
     ui/layers/show.h
     ui/paint/arcs.cpp
     ui/paint/arcs.h
@@ -180,8 +181,6 @@ PRIVATE
     ui/toast/toast_manager.h
     ui/toast/toast_widget.cpp
     ui/toast/toast_widget.h
-    ui/toasts/common_toasts.cpp
-    ui/toasts/common_toasts.h
     ui/widgets/box_content_divider.cpp
     ui/widgets/box_content_divider.h
     ui/widgets/buttons.cpp

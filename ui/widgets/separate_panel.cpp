@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/fade_wrap.h"
-#include "ui/toasts/common_toasts.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/layers/layer_widget.h"
 #include "ui/layers/show.h"
@@ -410,15 +409,25 @@ void SeparatePanel::showBox(
 	}
 }
 
-std::shared_ptr<Show> SeparatePanel::uiShow() {
-	return std::make_shared<PanelShow>(this);
+base::weak_ptr<Toast::Instance> SeparatePanel::showToast(
+		Toast::Config &&config) {
+	return PanelShow(this).showToast(std::move(config));
 }
 
-void SeparatePanel::showToast(const TextWithEntities &text) {
-	Ui::ShowMultilineToast({
-		.parentOverride = this,
-		.text = text,
-	});
+base::weak_ptr<Toast::Instance> SeparatePanel::showToast(
+		TextWithEntities &&text,
+		crl::time duration) {
+	return PanelShow(this).showToast(std::move(text), duration);
+}
+
+base::weak_ptr<Toast::Instance> SeparatePanel::showToast(
+		const QString &text,
+		crl::time duration) {
+	return PanelShow(this).showToast(text, duration);
+}
+
+std::shared_ptr<Show> SeparatePanel::uiShow() {
+	return std::make_shared<PanelShow>(this);
 }
 
 void SeparatePanel::ensureLayerCreated() {

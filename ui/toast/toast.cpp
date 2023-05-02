@@ -23,7 +23,8 @@ Instance::Instance(
 	not_null<QWidget*> widgetParent,
 	const Private &)
 : _st(config.st)
-, _hideAt(crl::now() + config.durationMs)
+, _hideAt(crl::now()
+	+ (config.duration ? config.duration : kDefaultDuration))
 , _sliding(config.slideSide != RectPart::None)
 , _widget(std::make_unique<internal::Widget>(widgetParent, config)) {
 	_shownAnimation.start(
