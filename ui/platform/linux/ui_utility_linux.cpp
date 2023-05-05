@@ -7,13 +7,10 @@
 #include "ui/platform/linux/ui_utility_linux.h"
 
 #include "base/platform/base_platform_info.h"
-#include "ui/platform/linux/ui_linux_wayland_integration.h"
-#include "base/const_string.h"
-
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 #include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include "ui/platform/linux/ui_linux_wayland_integration.h"
+#include "base/const_string.h"
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xcb_utilities.h"
@@ -566,7 +563,6 @@ TitleControls::Layout TitleControlsLayout() {
 		}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 		using XDPSettingWatcher = base::Platform::XDP::SettingWatcher;
 		static const XDPSettingWatcher settingWatcher(
 			[=](
@@ -578,7 +574,6 @@ TitleControls::Layout TitleControlsLayout() {
 					NotifyTitleControlsLayoutChanged();
 				}
 			});
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
 		return true;
 	}();
@@ -604,7 +599,6 @@ TitleControls::Layout TitleControlsLayout() {
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 	const auto portalResult = []() -> std::optional<TitleControls::Layout> {
 		try {
 			using namespace base::Platform::XDP;
@@ -630,7 +624,6 @@ TitleControls::Layout TitleControlsLayout() {
 	if (portalResult.has_value()) {
 		return *portalResult;
 	}
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
 	return TitleControls::Layout{
 		.right = {

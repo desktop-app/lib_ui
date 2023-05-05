@@ -11,19 +11,16 @@
 #include "ui/integration.h"
 #include "base/qthelp_url.h"
 #include "base/qt/qt_string_view.h"
-
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 #include "base/platform/linux/base_linux_app_launch_context.h"
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
 #include <QtCore/QUrl>
 #include <QtCore/QRegularExpression>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
 
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#if __has_include(<giomm.h>)
 #include <giomm.h>
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#endif // __has_include(<giomm.h>)
 
 QString TextClickHandler::readable() const {
 	const auto result = url();
@@ -88,7 +85,7 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 		if (IsEmail(url)) {
 			url = "mailto: " + url;
 		}
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#if __has_include(<giomm.h>)
 		// Desktop entry spec implementation,
 		// prefer it over QDesktopServices::openUrl since it just calls
 		// the xdg-open shell script that is known to be bugged:
@@ -106,7 +103,7 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 			}
 		} catch (...) {
 		}
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#endif // __has_include(<giomm.h>)
 		QDesktopServices::openUrl(url);
 	}
 }
