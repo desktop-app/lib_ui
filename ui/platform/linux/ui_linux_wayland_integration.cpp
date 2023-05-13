@@ -13,12 +13,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
-#include <qpa/qplatformnativeinterface.h>
+#include <qpa/qplatformwindow_p.h>
 #include <wayland-client.h>
 
-typedef void (*SetWindowMarginsFunc)(
-	QWindow *window,
-	const QMargins &margins);
+using namespace QNativeInterface;
+using namespace QNativeInterface::Private;
 
 namespace Ui {
 namespace Platform {
@@ -66,14 +65,12 @@ const struct wl_registry_listener WaylandIntegration::Private::RegistryListener 
 
 WaylandIntegration::WaylandIntegration()
 : _private(std::make_unique<Private>()) {
-	const auto native = QGuiApplication::platformNativeInterface();
+	const auto native = qApp->nativeInterface<QWaylandApplication>();
 	if (!native) {
 		return;
 	}
 
-	const auto display = reinterpret_cast<wl_display*>(
-		native->nativeResourceForIntegration(QByteArray("wl_display")));
-
+	const auto display = native->display();
 	if (!display) {
 		return;
 	}
@@ -85,7 +82,7 @@ WaylandIntegration::WaylandIntegration()
 		_private.get());
 
 	base::qt_signal_producer(
-		native,
+		qApp,
 		&QObject::destroyed
 	) | rpl::start_with_next([=] {
 		// too late for standard destructors, just free
@@ -108,77 +105,57 @@ bool WaylandIntegration::xdgDecorationSupported() {
 }
 
 bool WaylandIntegration::windowExtentsSupported() {
-	const auto native = QGuiApplication::platformNativeInterface();
-	if (!native) {
-		return false;
-	}
-
-	const auto setWindowMargins = reinterpret_cast<SetWindowMarginsFunc>(
-		reinterpret_cast<void*>(
-			native->nativeResourceFunctionForWindow("setmargins")));
-
-	if (!setWindowMargins) {
-		return false;
-	}
-
-	return true;
+	QWindow window;
+	window.create();
+	return window.nativeInterface<QWaylandWindow>();
 }
 
 void WaylandIntegration::setWindowExtents(
 		not_null<QWidget*> widget,
 		const QMargins &extents) {
-	const auto native = QGuiApplication::platformNativeInterface();
+	const auto window = widget->windowHandle();
+	if (!window) {
+		return;
+	}
+
+	const auto native = window->nativeInterface<QWaylandWindow>();
 	if (!native) {
 		return;
 	}
 
-	const auto setWindowMargins = reinterpret_cast<SetWindowMarginsFunc>(
-		reinterpret_cast<void*>(
-			native->nativeResourceFunctionForWindow("setmargins")));
-
-	if (!setWindowMargins) {
-		return;
-	}
-
-	setWindowMargins(widget->windowHandle(), extents);
+	native->setCustomMargins(extents);
 }
 
 void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
-	const auto native = QGuiApplication::platformNativeInterface();
+	const auto window = widget->windowHandle();
+	if (!window) {
+		return;
+	}
+
+	const auto native = window->nativeInterface<QWaylandWindow>();
 	if (!native) {
 		return;
 	}
 
-	const auto setWindowMargins = reinterpret_cast<SetWindowMarginsFunc>(
-		reinterpret_cast<void*>(
-			native->nativeResourceFunctionForWindow("setmargins")));
-
-	if (!setWindowMargins) {
-		return;
-	}
-
-	setWindowMargins(widget->windowHandle(), QMargins());
+	native->setCustomMargins(QMargins());
 }
 
 void WaylandIntegration::showWindowMenu(
 		not_null<QWidget*> widget,
 		const QPoint &point) {
-	const auto native = QGuiApplication::platformNativeInterface();
-	if (!native) {
+	const auto window = widget->windowHandle();
+	if (!window) {
 		return;
 	}
 
-	const auto toplevel = reinterpret_cast<xdg_toplevel*>(
-		native->nativeResourceForWindow(
-			QByteArray("xdg_toplevel"),
-			widget->windowHandle()));
+	const auto native = qApp->nativeInterface<QWaylandApplication>();
+	const auto nativeWindow = window->nativeInterface<QWaylandWindow>();
+	if (!native || !nativeWindow) {
+		return;
+	}
 
-	const auto seat = reinterpret_cast<wl_seat*>(
-		native->nativeResourceForIntegration(QByteArray("wl_seat")));
-
-	const auto serial = uint32_t(reinterpret_cast<quintptr>(
-		native->nativeResourceForIntegration(QByteArray("serial"))));
-
+	const auto toplevel = nativeWindow->surfaceRole<xdg_toplevel>();
+	const auto seat = native->lastInputSeat();
 	if (!toplevel || !seat) {
 		return;
 	}
@@ -186,7 +163,7 @@ void WaylandIntegration::showWindowMenu(
 	xdg_toplevel_show_window_menu(
 		toplevel,
 		seat,
-		serial,
+		native->lastInputSerial(),
 		point.x(),
 		point.y());
 }
