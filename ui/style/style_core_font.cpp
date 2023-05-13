@@ -17,7 +17,6 @@
 #include <QtGui/QFontInfo>
 #include <QtGui/QFontDatabase>
 #include <QtWidgets/QApplication>
-#include <private/qfontengine_p.h>
 
 void style_InitFontsResource() {
 #ifdef Q_OS_MAC // Use resources from the .app bundle on macOS.
@@ -291,12 +290,6 @@ int registerFontFamily(const QString &family) {
 		fontFamilies.push_back(family);
 	}
 	return result;
-}
-
-int CeilTextWidth(const QFont &font, const QString &text) {
-	return text.isEmpty()
-		? 0
-		: QStackTextEngine(text, font).width(0, text.size()).ceil().toInt();
 }
 
 FontData::FontData(int size, uint32 flags, int family, Font *other)

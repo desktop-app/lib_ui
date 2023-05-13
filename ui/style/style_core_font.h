@@ -68,12 +68,10 @@ enum FontFlags {
 	FontDifferentFlags = 0x40,
 };
 
-[[nodiscard]] int CeilTextWidth(const QFont &font, const QString &text);
-
 class FontData {
 public:
 	[[nodiscard]] int width(const QString &text) const {
-		return CeilTextWidth(f, text);
+		return int(std::ceil(_m.horizontalAdvance(text)));
 	}
 	[[nodiscard]] int width(const QString &text, int from, int to) const {
 		return width(text.mid(from, to));
