@@ -323,12 +323,10 @@ void PopupMenu::validateCompositingSupport() {
 			std::max(_st.shadow.extend.bottom(), additional.bottom()));
 		_extents = _padding - (additional - _additionalMenuExtents);
 	}
-	if (windowHandle()) {
-		if (_extents.isNull()) {
-			Platform::UnsetWindowExtents(this);
-		} else {
-			Platform::SetWindowExtents(this, _extents);
-		}
+	if (_extents.isNull()) {
+		Platform::UnsetWindowExtents(this);
+	} else {
+		Platform::SetWindowExtents(this, _extents);
 	}
 	_scroll->moveToLeft(_padding.left(), _padding.top());
 	handleMenuResize();
