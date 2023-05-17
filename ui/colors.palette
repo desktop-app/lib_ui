@@ -515,7 +515,7 @@ mediaviewMenuFg: windowFgActive; // context menu item text
 mediaviewBg: #222222eb; // Media Viewer background
 mediaviewVideoBg: imageBg; // Media Viewer background when viewing a video in full screen
 mediaviewControlBg: #0000003c; // controls background (like next photo / previous photo)
-mediaviewControlFg: windowFgActive; // controls icon (like next photo / previous photo)
+mediaviewControlFg: #ffffff; // controls icon (like next photo / previous photo)
 mediaviewCaptionBg: #11111180; // caption text background (when viewing photo with caption)
 mediaviewCaptionFg: mediaviewControlFg; // caption text
 mediaviewTextLinkFg: #91d9ff; // caption text link
