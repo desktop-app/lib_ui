@@ -24,8 +24,8 @@ namespace {
 class BoxShow final : public Show {
 public:
 	explicit BoxShow(not_null<Ui::BoxContent*> box);
-	BoxShow(const BoxShow &other);
 	~BoxShow();
+
 	void showBox(
 		object_ptr<BoxContent> content,
 		LayerOptions options = LayerOption::KeepOther) const override;
@@ -47,10 +47,6 @@ private:
 
 BoxShow::BoxShow(not_null<BoxContent*> box)
 : BoxShow(MakeWeak(box.get()), nullptr) {
-}
-
-BoxShow::BoxShow(const BoxShow &other)
-: BoxShow(other._weak, other._wrapped) {
 }
 
 BoxShow::BoxShow(QPointer<BoxContent> weak, ShowPtr wrapped)
