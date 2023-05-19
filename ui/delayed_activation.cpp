@@ -38,6 +38,13 @@ bool Unpause(bool force = false) {
 
 } // namespace
 
+void ActivateWindow(not_null<QWidget*> widget) {
+	const auto window = widget->window();
+	window->raise();
+	window->activateWindow();
+	ActivateWindowDelayed(window);
+}
+
 void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	if (Paused) {
 		Attempted = true;
