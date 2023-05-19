@@ -31,6 +31,7 @@ class BoxContent;
 class IconButton;
 class PopupMenu;
 class LayerStackWidget;
+class LayerWidget;
 class FlatLabel;
 template <typename Widget>
 class FadeWrapScaled;
@@ -59,9 +60,11 @@ public:
 		object_ptr<BoxContent> box,
 		LayerOptions options,
 		anim::type animated);
-	void destroyLayer();
-
-	[[nodiscard]] bool animationsPaused(int zorder) const;
+	void showLayer(
+		std::unique_ptr<LayerWidget> layer,
+		LayerOptions options,
+		anim::type animated);
+	void hideLayer(anim::type animated);
 
 	[[nodiscard]] rpl::producer<> backRequests() const;
 	[[nodiscard]] rpl::producer<> closeRequests() const;
@@ -103,6 +106,7 @@ private:
 	void createBorderImage();
 	void opacityCallback();
 	void ensureLayerCreated();
+	void destroyLayer();
 
 	void updateTitleGeometry(int newWidth);
 	void updateTitlePosition();

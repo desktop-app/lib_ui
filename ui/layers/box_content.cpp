@@ -26,10 +26,13 @@ public:
 	explicit BoxShow(not_null<Ui::BoxContent*> box);
 	~BoxShow();
 
-	void showBox(
-		object_ptr<BoxContent> content,
-		LayerOptions options = LayerOption::KeepOther) const override;
-	void hideLayer() const override;
+	void showOrHideBoxOrLayer(
+		std::variant<
+			v::null_t,
+			object_ptr<BoxContent>,
+			std::unique_ptr<LayerWidget>> &&layer,
+		LayerOptions options,
+		anim::type animated) const override;
 	[[nodiscard]] not_null<QWidget*> toastParent() const override;
 	[[nodiscard]] bool valid() const override;
 	operator bool() const override;
@@ -77,17 +80,15 @@ bool BoxShow::resolve() const {
 	return false;
 }
 
-void BoxShow::showBox(
-		object_ptr<BoxContent> content,
-		LayerOptions options) const {
+void BoxShow::showOrHideBoxOrLayer(
+		std::variant<
+			v::null_t,
+			object_ptr<BoxContent>,
+			std::unique_ptr<LayerWidget>> &&layer,
+		LayerOptions options,
+		anim::type animated) const {
 	if (resolve()) {
-		_wrapped->showBox(std::move(content), options);
-	}
-}
-
-void BoxShow::hideLayer() const {
-	if (resolve()) {
-		_wrapped->hideLayer();
+		_wrapped->showOrHideBoxOrLayer(std::move(layer), options, animated);
 	}
 }
 

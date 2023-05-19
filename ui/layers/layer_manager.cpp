@@ -9,16 +9,19 @@
 #include "ui/layers/show.h"
 
 namespace Ui {
-namespace {
 
-class ManagerShow final : public Show {
+class LayerManager::ManagerShow final : public Show {
 public:
 	explicit ManagerShow(not_null<LayerManager*> manager);
 	~ManagerShow();
-	void showBox(
-		object_ptr<Ui::BoxContent> content,
-		Ui::LayerOptions options = Ui::LayerOption::KeepOther) const override;
-	void hideLayer() const override;
+
+	void showOrHideBoxOrLayer(
+		std::variant<
+			v::null_t,
+			object_ptr<BoxContent>,
+			std::unique_ptr<LayerWidget>> &&layer,
+		LayerOptions options,
+		anim::type animated) const override;
 	[[nodiscard]] not_null<QWidget*> toastParent() const override;
 	[[nodiscard]] bool valid() const override;
 	operator bool() const override;
@@ -28,45 +31,48 @@ private:
 
 };
 
-ManagerShow::ManagerShow(not_null<LayerManager*> manager)
+LayerManager::ManagerShow::ManagerShow(not_null<LayerManager*> manager)
 : _manager(manager.get()) {
 }
 
-ManagerShow::~ManagerShow() = default;
+LayerManager::ManagerShow::~ManagerShow() = default;
 
-void ManagerShow::showBox(
-		object_ptr<Ui::BoxContent> content,
-		Ui::LayerOptions options) const {
-	if (const auto manager = _manager.get()) {
-		manager->showBox(std::move(content), options, anim::type::normal);
+void LayerManager::ManagerShow::showOrHideBoxOrLayer(
+		std::variant<
+			v::null_t,
+			object_ptr<BoxContent>,
+			std::unique_ptr<LayerWidget>> &&layer,
+		LayerOptions options,
+		anim::type animated) const {
+	using UniqueLayer = std::unique_ptr<Ui::LayerWidget>;
+	using ObjectBox = object_ptr<Ui::BoxContent>;
+	if (auto layerWidget = std::get_if<UniqueLayer>(&layer)) {
+		if (const auto manager = _manager.get()) {
+			manager->showLayer(std::move(*layerWidget), options, animated);
+		}
+	} else if (auto box = std::get_if<ObjectBox>(&layer)) {
+		if (const auto manager = _manager.get()) {
+			manager->showBox(std::move(*box), options, animated);
+		}
+	} else if (const auto manager = _manager.get()) {
+		manager->hideAll(animated);
 	}
 }
 
-void ManagerShow::hideLayer() const {
-	if (const auto manager = _manager.get()) {
-		manager->showBox(
-			object_ptr<Ui::BoxContent>{ nullptr },
-			Ui::LayerOption::CloseOther,
-			anim::type::normal);
-	}
-}
-
-not_null<QWidget*> ManagerShow::toastParent() const {
+not_null<QWidget*> LayerManager::ManagerShow::toastParent() const {
 	const auto manager = _manager.get();
 
 	Ensures(manager != nullptr);
 	return manager->toastParent();
 }
 
-bool ManagerShow::valid() const {
+bool LayerManager::ManagerShow::valid() const {
 	return (_manager.get() != nullptr);
 }
 
-ManagerShow::operator bool() const {
+LayerManager::ManagerShow::operator bool() const {
 	return valid();
 }
-
-} // namespace
 
 LayerManager::LayerManager(not_null<RpWidget*> widget)
 : _widget(widget) {
@@ -98,6 +104,15 @@ void LayerManager::showBox(
 	setFocus();
 }
 
+void LayerManager::showLayer(
+		std::unique_ptr<LayerWidget> layer,
+		LayerOptions options,
+		anim::type animated) {
+	ensureLayerCreated();
+	_layer->showLayer(std::move(layer), options, animated);
+	setFocus();
+}
+
 void LayerManager::hideAll(anim::type animated) {
 	if (animated == anim::type::instant) {
 		destroyLayer();
@@ -120,6 +135,13 @@ bool LayerManager::setFocus() {
 	return true;
 }
 
+std::shared_ptr<Show> LayerManager::uiShow() {
+	if (!_cachedShow) {
+		_cachedShow = std::make_shared<ManagerShow>(this);
+	}
+	return _cachedShow;
+}
+
 const LayerWidget *LayerManager::topShownLayer() const {
 	return _layer ? _layer->topShownLayer() : nullptr;
 }
@@ -129,7 +151,7 @@ void LayerManager::ensureLayerCreated() {
 		return;
 	}
 	_layer.emplace(_widget, crl::guard(this, [=] {
-		return std::make_shared<ManagerShow>(this);
+		return uiShow();
 	}));
 	_layer->setHideByBackgroundClick(_hideByBackgroundClick);
 	_layer->setStyleOverrides(_boxSt, _layerSt);
