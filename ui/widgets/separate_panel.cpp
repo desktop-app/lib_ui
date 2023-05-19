@@ -44,7 +44,7 @@ public:
 			object_ptr<BoxContent>,
 			std::unique_ptr<LayerWidget>> &&layer,
 		LayerOptions options,
-		anim::type animated) const;
+		anim::type animated) const override;
 	[[nodiscard]] not_null<QWidget*> toastParent() const override;
 	[[nodiscard]] bool valid() const override;
 	operator bool() const override;
