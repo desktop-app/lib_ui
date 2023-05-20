@@ -6,12 +6,13 @@
 //
 #include "ui/platform/linux/ui_window_title_linux.h"
 
-#include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xsettings.h"
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+
+#include <glibmm.h>
 
 namespace Ui {
 namespace Platform {
@@ -120,8 +121,7 @@ TitleControls::Layout TitleControlsLayout() {
 
 			return GtkKeywordsToTitleControlsLayout(
 				QString::fromStdString(
-					base::Platform::GlibVariantCast<Glib::ustring>(
-						*decorationLayout)));
+					decorationLayout->get_dynamic<Glib::ustring>()));
 		} catch (...) {
 		}
 
