@@ -1783,7 +1783,7 @@ void InputField::focusInEvent(QFocusEvent *e) {
 	_borderAnimationStart = (e->reason() == Qt::MouseFocusReason)
 		? mapFromGlobal(QCursor::pos()).x()
 		: (width() / 2);
-	InvokeQueued(this, [=] { onFocusInner(); });
+	InvokeQueued(this, [=] { if (hasFocus()) onFocusInner(); });
 }
 
 void InputField::mousePressEvent(QMouseEvent *e) {
