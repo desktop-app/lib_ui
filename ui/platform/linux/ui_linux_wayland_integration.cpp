@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 
+#include "base/platform/linux/base_linux_wayland_utilities.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
 #include "qwayland-xdg-shell.h"
@@ -19,29 +20,21 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 using namespace QNativeInterface;
 using namespace QNativeInterface::Private;
+using namespace base::Platform::Wayland;
 
 namespace Ui {
 namespace Platform {
-namespace {
-
-struct WlRegistryDeleter {
-	void operator()(wl_registry *value) {
-		wl_registry_destroy(value);
-	}
-};
-
-} // namespace
 
 struct WaylandIntegration::Private {
-	std::unique_ptr<wl_registry, WlRegistryDeleter> registry;
+	std::unique_ptr<wl_registry, RegistryDeleter> registry;
 	bool xdgDecorationSupported = false;
 	uint32_t xdgDecorationName = 0;
 	rpl::lifetime lifetime;
 
-	static const struct wl_registry_listener RegistryListener;
+	static const wl_registry_listener RegistryListener;
 };
 
-const struct wl_registry_listener WaylandIntegration::Private::RegistryListener = {
+const wl_registry_listener WaylandIntegration::Private::RegistryListener = {
 	decltype(wl_registry_listener::global)(+[](
 			Private *data,
 			wl_registry *registry,
