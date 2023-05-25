@@ -14,6 +14,9 @@ namespace Platform {
 
 class WaylandIntegration {
 public:
+	WaylandIntegration();
+	~WaylandIntegration();
+
 	[[nodiscard]] static WaylandIntegration *Instance();
 
 	[[nodiscard]] bool xdgDecorationSupported();
@@ -23,9 +26,6 @@ public:
 	void showWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 private:
-	WaylandIntegration();
-	~WaylandIntegration();
-
 	struct Private;
 	const std::unique_ptr<Private> _private;
 };
