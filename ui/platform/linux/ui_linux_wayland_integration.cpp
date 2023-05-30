@@ -27,8 +27,7 @@ namespace Ui {
 namespace Platform {
 
 struct WaylandIntegration::Private : public AutoDestroyer<QtWayland::wl_registry> {
-	bool xdgDecorationSupported = false;
-	uint32_t xdgDecorationName = 0;
+	std::optional<uint32_t> xdgDecoration;
 	rpl::lifetime lifetime;
 
 protected:
@@ -37,15 +36,13 @@ protected:
 			const QString &interface,
 			uint32_t version) override {
 		if (interface == qstr("zxdg_decoration_manager_v1")) {
-			xdgDecorationSupported = true;
-			xdgDecorationName = name;
+			xdgDecoration = name;
 		}
 	}
 
 	void registry_global_remove(uint32_t name) override {
-		if (name == xdgDecorationName) {
-			xdgDecorationSupported = false;
-			xdgDecorationName = 0;
+		if (xdgDecoration && name == *xdgDecoration) {
+			xdgDecoration = std::nullopt;
 		}
 	}
 };
@@ -82,7 +79,7 @@ WaylandIntegration *WaylandIntegration::Instance() {
 }
 
 bool WaylandIntegration::xdgDecorationSupported() {
-	return _private->xdgDecorationSupported;
+	return _private->xdgDecoration.has_value();
 }
 
 bool WaylandIntegration::windowExtentsSupported() {
