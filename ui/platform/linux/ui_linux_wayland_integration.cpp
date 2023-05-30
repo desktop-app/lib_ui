@@ -10,13 +10,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/linux/base_linux_wayland_utilities.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
+
+#include "qwayland-wayland.h"
 #include "qwayland-xdg-shell.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
 #include <qpa/qplatformnativeinterface.h>
 #include <qpa/qplatformwindow_p.h>
-#include <wayland-client.h>
 
 using namespace QNativeInterface;
 using namespace QNativeInterface::Private;
@@ -25,36 +26,28 @@ using namespace base::Platform::Wayland;
 namespace Ui {
 namespace Platform {
 
-struct WaylandIntegration::Private {
-	std::unique_ptr<wl_registry, RegistryDeleter> registry;
+struct WaylandIntegration::Private : public AutoDestroyer<QtWayland::wl_registry> {
 	bool xdgDecorationSupported = false;
 	uint32_t xdgDecorationName = 0;
 	rpl::lifetime lifetime;
 
-	static const wl_registry_listener RegistryListener;
-};
-
-const wl_registry_listener WaylandIntegration::Private::RegistryListener = {
-	decltype(wl_registry_listener::global)(+[](
-			Private *data,
-			wl_registry *registry,
+protected:
+	void registry_global(
 			uint32_t name,
-			const char *interface,
-			uint32_t version) {
+			const QString &interface,
+			uint32_t version) override {
 		if (interface == qstr("zxdg_decoration_manager_v1")) {
-			data->xdgDecorationSupported = true;
-			data->xdgDecorationName = name;
+			xdgDecorationSupported = true;
+			xdgDecorationName = name;
 		}
-	}),
-	decltype(wl_registry_listener::global_remove)(+[](
-			Private *data,
-			wl_registry *registry,
-			uint32_t name) {
-		if (name == data->xdgDecorationName) {
-			data->xdgDecorationSupported = false;
-			data->xdgDecorationName = 0;
+	}
+
+	void registry_global_remove(uint32_t name) override {
+		if (name == xdgDecorationName) {
+			xdgDecorationSupported = false;
+			xdgDecorationName = 0;
 		}
-	}),
+	}
 };
 
 WaylandIntegration::WaylandIntegration()
@@ -69,12 +62,7 @@ WaylandIntegration::WaylandIntegration()
 		return;
 	}
 
-	_private->registry.reset(wl_display_get_registry(display));
-	wl_registry_add_listener(
-		_private->registry.get(),
-		&Private::RegistryListener,
-		_private.get());
-
+	_private->init(wl_display_get_registry(display));
 	wl_display_roundtrip(display);
 }
 
