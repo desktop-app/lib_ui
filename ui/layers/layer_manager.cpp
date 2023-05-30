@@ -168,6 +168,8 @@ void LayerManager::ensureLayerCreated() {
 	) | rpl::start_with_next([=](QSize size) {
 		_layer->resize(size);
 	}, _layer->lifetime());
+
+	_layerShown = true;
 }
 
 void LayerManager::destroyLayer() {
@@ -176,6 +178,8 @@ void LayerManager::destroyLayer() {
 	}
 
 	auto layer = base::take(_layer);
+	_layerShown = false;
+
 	const auto resetFocus = Ui::InFocusChain(layer);
 	if (resetFocus) {
 		_widget->setFocus();

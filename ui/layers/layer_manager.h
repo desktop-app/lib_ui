@@ -42,6 +42,10 @@ public:
 	void raise();
 	bool setFocus();
 
+	[[nodiscard]] rpl::producer<bool> layerShownValue() const {
+		return _layerShown.value();
+	}
+
 	[[nodiscard]] not_null<Ui::RpWidget*> toastParent() const {
 		return _widget;
 	}
@@ -58,6 +62,7 @@ private:
 	const not_null<RpWidget*> _widget;
 	base::unique_qptr<LayerStackWidget> _layer;
 	std::shared_ptr<ManagerShow> _cachedShow;
+	rpl::variable<bool> _layerShown;
 
 	const style::Box *_boxSt = nullptr;
 	const style::Box *_layerSt = nullptr;
