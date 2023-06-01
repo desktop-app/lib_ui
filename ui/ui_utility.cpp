@@ -166,7 +166,9 @@ void SendSynteticMouseEvent(QWidget *widget, QEvent::Type type, Qt::MouseButton 
 			, localPoint
 			, globalPoint
 			, button
-			, QGuiApplication::mouseButtons() | button
+			, type == QEvent::MouseButtonRelease
+				? QGuiApplication::mouseButtons() ^ button
+				: QGuiApplication::mouseButtons() | button
 			, QGuiApplication::keyboardModifiers()
 			, Qt::MouseEventSynthesizedByApplication
 		);
