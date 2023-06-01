@@ -768,6 +768,10 @@ void SeparatePanel::mousePressEvent(QMouseEvent *e) {
 		if (dragArea.contains(e->pos())) {
 			const auto dragViaSystem = [&] {
 				if (windowHandle()->startSystemMove()) {
+					SendSynteticMouseEvent(
+						this,
+						QEvent::MouseButtonRelease,
+						Qt::LeftButton);
 					return true;
 				}
 				return false;

@@ -266,6 +266,10 @@ void BasicWindowHelper::setupBodyTitleAreaEvents() {
 #endif // Q_OS_WIN
 				_mousePressed = false;
 				_window->windowHandle()->startSystemMove();
+				SendSynteticMouseEvent(
+					body().get(),
+					QEvent::MouseButtonRelease,
+					Qt::LeftButton);
 			}
 		}
 	}, body()->lifetime());
@@ -363,6 +367,10 @@ void DefaultWindowHelper::init() {
 
 			if (mouseEvent->button() == Qt::LeftButton && edges) {
 				window()->windowHandle()->startSystemResize(edges);
+				SendSynteticMouseEvent(
+					window().get(),
+					QEvent::MouseButtonRelease,
+					Qt::LeftButton);
 			}
 		} else if (e->type() == QEvent::WindowStateChange) {
 			_windowState = window()->windowState();
