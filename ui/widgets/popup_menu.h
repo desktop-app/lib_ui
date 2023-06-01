@@ -93,6 +93,9 @@ public:
 	[[nodiscard]] QMargins preparedExtents() const;
 	[[nodiscard]] bool useTransparency() const;
 
+	[[nodiscard]] int scrollTop() const;
+	[[nodiscard]] rpl::producer<int> scrollTopValue() const;
+
 	void setDestroyedCallback(Fn<void()> callback) {
 		_destroyedCallback = std::move(callback);
 	}

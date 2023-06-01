@@ -942,6 +942,14 @@ bool PopupMenu::useTransparency() const {
 	return _useTransparency;
 }
 
+int PopupMenu::scrollTop() const {
+	return _scroll->scrollTop();
+}
+
+rpl::producer<int> PopupMenu::scrollTopValue() const {
+	return _scroll->scrollTopValue();
+}
+
 rpl::producer<PopupMenu::ShowState> PopupMenu::showStateValue() const {
 	return _showStateChanges.events();
 }
