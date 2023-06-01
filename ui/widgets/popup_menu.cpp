@@ -34,8 +34,8 @@ constexpr auto kShadowCornerMultiplier = 3;
 		style::margins padding,
 		not_null<const style::Shadow*> shadow,
 		not_null<const RoundRect*> body,
+		int radius,
 		rpl::lifetime &lifetime) {
-	const auto radius = st::roundRadiusSmall;
 	const auto side = radius * kShadowCornerMultiplier;
 	const auto middle = radius;
 	const auto size = side * 2 + middle;
@@ -62,6 +62,7 @@ constexpr auto kShadowCornerMultiplier = 3;
 void PaintCachedShadow(
 		QPainter &p,
 		QSize outer,
+		int radius,
 		style::margins padding,
 		const QImage &cached) {
 	const auto fill = [&](
@@ -81,7 +82,6 @@ void PaintCachedShadow(
 		fill(dstx, dsty, width, height, srcx, srcy, width, height);
 	};
 
-	const auto radius = st::roundRadiusSmall;
 	const auto side = radius * kShadowCornerMultiplier;
 	const auto middle = radius;
 	const auto size = side * 2 + middle;
@@ -164,7 +164,7 @@ void PaintCachedShadow(
 PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 : RpWidget(parent)
 , _st(st)
-, _roundRect(ImageRoundRadius::Small, _st.menu.itemBg)
+, _roundRect(_st.radius, _st.menu.itemBg)
 , _scroll(this, st::defaultMultiSelect.scroll)
 , _menu(_scroll->setOwnedWidget(
 	object_ptr<PaddingWrap<Menu::Menu>>(
@@ -177,7 +177,7 @@ PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 : RpWidget(parent)
 , _st(st)
-, _roundRect(ImageRoundRadius::Small, _st.menu.itemBg)
+, _roundRect(_st.radius, _st.menu.itemBg)
 , _scroll(this, st::defaultMultiSelect.scroll)
 , _menu(_scroll->setOwnedWidget(
 	object_ptr<PaddingWrap<Menu::Menu>>(
@@ -351,6 +351,7 @@ void PopupMenu::updateRoundingOverlay() {
 		_padding,
 		&_st.shadow,
 		&_roundRect,
+		_st.radius,
 		_roundingOverlay->lifetime());
 
 	_roundingOverlay->paintRequest(
@@ -361,7 +362,7 @@ void PopupMenu::updateRoundingOverlay() {
 		_roundRect.paint(p, _inner, RectPart::AllCorners);
 		if (!_grabbingForPanelAnimation) {
 			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-			PaintCachedShadow(p, size(), _padding, *shadow);
+			PaintCachedShadow(p, size(), _st.radius, _padding, *shadow);
 		}
 	}, _roundingOverlay->lifetime());
 
@@ -834,8 +835,7 @@ void PopupMenu::startShowAnimation() {
 		_showAnimation = std::make_unique<PanelAnimation>(_st.animation, _origin);
 		_showAnimation->setFinalImage(std::move(cache), QRect(_inner.topLeft() * pixelRatio, _inner.size() * pixelRatio));
 		if (_useTransparency) {
-			_showAnimation->setCornerMasks(
-				Images::CornersMask(ImageRoundRadius::Small));
+			_showAnimation->setCornerMasks(Images::CornersMask(_st.radius));
 		} else {
 			_showAnimation->setSkipShadow(true);
 		}

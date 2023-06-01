@@ -255,6 +255,7 @@ PopupMenu {
 
 	menu: Menu;
 
+	radius: pixels;
 	duration: int;
 	showDuration: int;
 }
@@ -849,6 +850,7 @@ defaultPopupMenu: PopupMenu {
 
 	menu: defaultMenu;
 
+	radius: 3px;
 	duration: 150;
 	showDuration: 200;
 }
