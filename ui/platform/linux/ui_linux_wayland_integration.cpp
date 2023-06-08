@@ -92,9 +92,7 @@ void WaylandIntegration::setWindowExtents(
 		not_null<QWidget*> widget,
 		const QMargins &extents) {
 	const auto window = widget->windowHandle();
-	if (!window) {
-		return;
-	}
+	Expects(window != nullptr);
 
 	const auto native = window->nativeInterface<QWaylandWindow>();
 	if (!native) {
@@ -106,9 +104,7 @@ void WaylandIntegration::setWindowExtents(
 
 void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
 	const auto window = widget->windowHandle();
-	if (!window) {
-		return;
-	}
+	Expects(window != nullptr);
 
 	const auto native = window->nativeInterface<QWaylandWindow>();
 	if (!native) {
@@ -122,9 +118,7 @@ void WaylandIntegration::showWindowMenu(
 		not_null<QWidget*> widget,
 		const QPoint &point) {
 	const auto window = widget->windowHandle();
-	if (!window) {
-		return;
-	}
+	Expects(window != nullptr);
 
 	const auto native = qApp->nativeInterface<QWaylandApplication>();
 	const auto nativeWindow = window->nativeInterface<QWaylandWindow>();
