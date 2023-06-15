@@ -41,6 +41,7 @@ public:
 	[[nodiscard]] bool valid() const;
 	[[nodiscard]] QSize size() const;
 	[[nodiscard]] int framesCount() const;
+	[[nodiscard]] double frameRate() const;
 	[[nodiscard]] Frame &frame();
 	[[nodiscard]] const Frame &frame() const;
 
@@ -67,6 +68,7 @@ private:
 
 	base::weak_ptr<AnimatedIcon> _weak;
 	int _framesCount = 0;
+	double _frameRate = 0.;
 	mutable crl::semaphore _semaphore;
 	mutable bool _ready = false;
 
@@ -88,6 +90,7 @@ void AnimatedIcon::Impl::prepareFromAsync(
 		return;
 	}
 	_framesCount = generator->count();
+	_frameRate = generator->rate();
 	_current.generated = generator->renderNext(QImage(), sizeOverride);
 	if (_current.generated.image.isNull()) {
 		return;
@@ -118,6 +121,11 @@ QSize AnimatedIcon::Impl::size() const {
 int AnimatedIcon::Impl::framesCount() const {
 	waitTillPrepared();
 	return _framesCount;
+}
+
+double AnimatedIcon::Impl::frameRate() const {
+	waitTillPrepared();
+	return _frameRate;
 }
 
 AnimatedIcon::Frame &AnimatedIcon::Impl::frame() {
@@ -220,6 +228,10 @@ int AnimatedIcon::frameIndex() const {
 
 int AnimatedIcon::framesCount() const {
 	return _impl->framesCount();
+}
+
+double AnimatedIcon::frameRate() const {
+	return _impl->frameRate();
 }
 
 QImage AnimatedIcon::frame(const QColor &textColor) const {
@@ -356,6 +368,7 @@ int AnimatedIcon::wantedFrameIndex(
 		const auto next = _animationCurrentStart + duration;
 		if (frame->generated.last) {
 			_animation.stop();
+			if (_repaint) _repaint();
 			return _animationCurrentIndex;
 		} else if (now < next) {
 			return _animationCurrentIndex;

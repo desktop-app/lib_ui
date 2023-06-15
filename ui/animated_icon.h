@@ -36,6 +36,7 @@ public:
 	[[nodiscard]] bool valid() const;
 	[[nodiscard]] int frameIndex() const;
 	[[nodiscard]] int framesCount() const;
+	[[nodiscard]] double frameRate() const;
 	[[nodiscard]] QImage frame(const QColor &textColor) const;
 	[[nodiscard]] QImage notColorizedFrame() const;
 	[[nodiscard]] int width() const;
