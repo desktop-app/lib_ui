@@ -68,12 +68,15 @@ WaylandIntegration::~WaylandIntegration() = default;
 WaylandIntegration *WaylandIntegration::Instance() {
 	if (!::Platform::IsWayland()) return nullptr;
 	static std::optional<WaylandIntegration> instance(std::in_place);
-	base::qt_signal_producer(
-		QGuiApplication::platformNativeInterface(),
-		&QObject::destroyed
-	) | rpl::start_with_next([&] {
-		instance = std::nullopt;
-	}, instance->_private->lifetime);
+	[[maybe_unused]] static const auto Inited = [] {
+		base::qt_signal_producer(
+			QGuiApplication::platformNativeInterface(),
+			&QObject::destroyed
+		) | rpl::start_with_next([] {
+			instance = std::nullopt;
+		}, instance->_private->lifetime);
+		return true;
+	}();
 	if (!instance) return nullptr;
 	return &*instance;
 }
