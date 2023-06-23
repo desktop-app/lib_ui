@@ -8,6 +8,7 @@
 
 #include "base/algorithm.h"
 #include "ui/text/text_entity.h"
+#include "ui/integration.h"
 
 #include <QtCore/QPointer>
 
@@ -170,7 +171,9 @@ void ActivateClickHandler(
 		ClickContext context) {
 	crl::on_main(guard, [=, weak = std::weak_ptr<ClickHandler>(handler)] {
 		if (const auto strong = weak.lock()) {
-			strong->onClick(context);
+			if (Ui::Integration::Instance().allowClickHandlerActivation(strong, context)) {
+				strong->onClick(context);
+			}
 		}
 	});
 }

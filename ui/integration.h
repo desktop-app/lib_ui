@@ -20,6 +20,7 @@ class QVariant;
 
 struct TextParseOptions;
 class ClickHandler;
+struct ClickContext;
 struct EntityLinkData;
 
 namespace Ui {
@@ -64,6 +65,9 @@ public:
 		const std::any &context) -> std::unique_ptr<Text::CustomEmoji>;
 	[[nodiscard]] virtual Fn<void()> createSpoilerRepaint(
 		const std::any &context);
+	[[nodiscard]] virtual bool allowClickHandlerActivation(
+		const std::shared_ptr<ClickHandler> &handler,
+		const ClickContext &context);
 
 	[[nodiscard]] virtual rpl::producer<> forcePopupMenuHideRequests();
 
