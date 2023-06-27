@@ -475,38 +475,51 @@ void ScrollArea::touchResetSpeed() {
 	_touchPrevPosValid = false;
 }
 
-bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
-	bool res = QScrollArea::eventFilter(obj, e);
-	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
-		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (_touchEnabled && ev->device()->type() == base::TouchDevice::TouchScreen) {
-			if (obj == widget()) {
-				touchEvent(ev);
-				return true;
-			}
-		}
+bool ScrollArea::eventHook(QEvent *e) {
+	const auto was = (e->type() == QEvent::LayoutRequest)
+		? verticalScrollBar()->minimum()
+		: 0;
+	const auto result = RpWidgetBase<QScrollArea>::eventHook(e);
+	if (was) {
+		// Because LayoutRequest resets custom-set minimum allowed value.
+		verticalScrollBar()->setMinimum(was);
 	}
-	return res;
+	return result;
+}
+
+bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
+	const auto result = QScrollArea::eventFilter(obj, e);
+	return (obj == widget() && filterOutTouchEvent(e)) || result;
 }
 
 bool ScrollArea::viewportEvent(QEvent *e) {
-	const auto type = e->type();
-	if (type == QEvent::TouchBegin
-		|| type == QEvent::TouchUpdate
-		|| type == QEvent::TouchEnd
-		|| type == QEvent::TouchCancel) {
-		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (_touchEnabled && ev->device()->type() == base::TouchDevice::TouchScreen) {
-			touchEvent(ev);
-			return true;
-		}
-	} else if (type == QEvent::Wheel) {
+	if (filterOutTouchEvent(e)) {
+		return true;
+	} else if (e->type() == QEvent::Wheel) {
 		if (_customWheelProcess
 			&& _customWheelProcess(static_cast<QWheelEvent*>(e))) {
 			return true;
 		}
 	}
 	return QScrollArea::viewportEvent(e);
+}
+
+bool ScrollArea::filterOutTouchEvent(QEvent *e) {
+	const auto type = e->type();
+	if (type == QEvent::TouchBegin
+		|| type == QEvent::TouchUpdate
+		|| type == QEvent::TouchEnd
+		|| type == QEvent::TouchCancel) {
+		const auto ev = static_cast<QTouchEvent*>(e);
+		if (_customTouchProcess && _customTouchProcess(ev)) {
+			return true;
+		} else if (_touchEnabled
+			&& ev->device()->type() == base::TouchDevice::TouchScreen) {
+			touchEvent(ev);
+			return true;
+		}
+	}
+	return false;
 }
 
 void ScrollArea::touchEvent(QTouchEvent *e) {
@@ -624,9 +637,12 @@ void ScrollArea::scrollContentsBy(int dx, int dy) {
 }
 
 bool ScrollArea::touchScroll(const QPoint &delta) {
-	int32 scTop = scrollTop(), scMax = scrollTopMax(), scNew = std::clamp(scTop - delta.y(), 0, scMax);
-	if (scNew == scTop) return false;
-
+	const auto scTop = scrollTop();
+	const auto scMax = scrollTopMax();
+	const auto scNew = std::clamp(scTop - delta.y(), 0, scMax);
+	if (scNew == scTop) {
+		return false;
+	}
 	scrollToY(scNew);
 	return true;
 }

@@ -175,12 +175,16 @@ public:
 	void setCustomWheelProcess(Fn<bool(not_null<QWheelEvent*>)> process) {
 		_customWheelProcess = std::move(process);
 	}
+	void setCustomTouchProcess(Fn<bool(not_null<QTouchEvent*>)> process) {
+		_customTouchProcess = std::move(process);
+	}
 
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
 
 protected:
+	bool eventHook(QEvent *e) override;
 	bool eventFilter(QObject *obj, QEvent *e) override;
 
 	void resizeEvent(QResizeEvent *e) override;
@@ -197,8 +201,7 @@ private:
 	void doSetOwnedWidget(object_ptr<QWidget> widget);
 	object_ptr<QWidget> doTakeWidget();
 
-	void setWidget(QWidget *widget);
-
+	bool filterOutTouchEvent(QEvent *e);
 	void touchScrollTimer();
 	bool touchScroll(const QPoint &delta);
 	void touchScrollUpdated(const QPoint &screenPos);
@@ -232,6 +235,7 @@ private:
 	base::Timer _touchScrollTimer;
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
+	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 	bool _widgetAcceptsTouch = false;
 
 	object_ptr<QWidget> _widget = { nullptr };
