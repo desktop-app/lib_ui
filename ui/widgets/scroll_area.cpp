@@ -490,10 +490,19 @@ bool ScrollArea::eventFilter(QObject *obj, QEvent *e) {
 }
 
 bool ScrollArea::viewportEvent(QEvent *e) {
-	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
+	const auto type = e->type();
+	if (type == QEvent::TouchBegin
+		|| type == QEvent::TouchUpdate
+		|| type == QEvent::TouchEnd
+		|| type == QEvent::TouchCancel) {
 		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
 		if (_touchEnabled && ev->device()->type() == base::TouchDevice::TouchScreen) {
 			touchEvent(ev);
+			return true;
+		}
+	} else if (type == QEvent::Wheel) {
+		if (_customWheelProcess
+			&& _customWheelProcess(static_cast<QWheelEvent*>(e))) {
 			return true;
 		}
 	}

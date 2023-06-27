@@ -172,6 +172,10 @@ public:
 	void scrolled();
 	void innerResized();
 
+	void setCustomWheelProcess(Fn<bool(not_null<QWheelEvent*>)> process) {
+		_customWheelProcess = std::move(process);
+	}
+
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
@@ -227,6 +231,7 @@ private:
 	crl::time _touchTime = 0;
 	base::Timer _touchScrollTimer;
 
+	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	bool _widgetAcceptsTouch = false;
 
 	object_ptr<QWidget> _widget = { nullptr };
