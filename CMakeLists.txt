@@ -126,6 +126,8 @@ PRIVATE
     ui/platform/win/ui_window_title_win.h
     ui/platform/win/ui_window_win.cpp
     ui/platform/win/ui_window_win.h
+    ui/platform/win/ui_windows_direct_manipulation.cpp
+    ui/platform/win/ui_windows_direct_manipulation.h
     ui/platform/win/ui_utility_win.cpp
     ui/platform/win/ui_utility_win.h
     ui/platform/ui_platform_window_title.cpp
@@ -292,6 +294,10 @@ PRIVATE
 
 if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
     nice_target_sources(lib_ui ${src_loc} PRIVATE fonts/fonts.qrc)
+endif()
+
+if (WIN32)
+    nuget_add_winrt(lib_ui)
 endif()
 
 if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)

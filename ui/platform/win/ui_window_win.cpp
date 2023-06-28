@@ -8,6 +8,7 @@
 
 #include "ui/inactive_press.h"
 #include "ui/platform/win/ui_window_title_win.h"
+#include "ui/platform/win/ui_windows_direct_manipulation.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
 #include "base/platform/win/base_windows_safe_library.h"
@@ -19,6 +20,7 @@
 #include "styles/style_widgets.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
+#include <QtCore/QPoint>
 #include <QtGui/QWindow>
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QApplication>
@@ -29,6 +31,8 @@
 #include <windowsx.h>
 
 Q_DECLARE_METATYPE(QMargins);
+
+bool qt_sendSpontaneousEvent(QObject *receiver, QEvent *event);
 
 namespace Ui::Platform {
 namespace {
@@ -402,6 +406,46 @@ void WindowHelper::init() {
 		handleStateChanged);
 
 	initialShadowUpdate();
+
+	auto dm = std::make_unique<DirectManipulation>(window());
+	if (dm->valid()) {
+		_directManipulation = std::move(dm);
+		_directManipulation->events(
+		) | rpl::start_with_next([=](const DirectManipulationEvent &event) {
+			handleDirectManipulationEvent(event);
+		}, window()->lifetime());
+	}
+}
+
+void WindowHelper::handleDirectManipulationEvent(
+		const DirectManipulationEvent &event) {
+	using Type = DirectManipulationEventType;
+	const auto send = [&](Qt::ScrollPhase phase) {
+		if (const auto windowHandle = window()->windowHandle()) {
+			const auto global = QCursor::pos();
+			const auto local = windowHandle->mapFromGlobal(global);
+			auto e = QWheelEvent(
+				QPointF(local),
+				QPointF(global),
+				event.delta,
+				event.delta,
+				QGuiApplication::mouseButtons(),
+				QGuiApplication::keyboardModifiers(),
+				phase,
+				false,
+				Qt::MouseEventSynthesizedByApplication);
+			e.setTimestamp(crl::now());
+			qt_sendSpontaneousEvent(windowHandle, &e);
+		}
+	};
+	switch (event.type) {
+	case Type::ScrollStart: send(Qt::ScrollBegin); break;
+	case Type::Scroll: send(Qt::ScrollUpdate); break;
+	case Type::FlingStart:
+	case Type::Fling: send(Qt::ScrollMomentum); break;
+	case Type::ScrollStop: send(Qt::ScrollEnd); break;
+	case Type::FlingStop: send(Qt::ScrollEnd); break;
+	}
 }
 
 bool WindowHelper::handleNativeEvent(
@@ -620,6 +664,13 @@ bool WindowHelper::handleNativeEvent(
 		InvokeQueued(_title, [=] {
 			_title->refreshAdditionalPaddings(_handle);
 		});
+	} return false;
+
+	case DM_POINTERHITTEST: {
+		if (_directManipulation) {
+			_directManipulation->handlePointerHitTest(wParam);
+			return true;
+		}
 	} return false;
 
 	}

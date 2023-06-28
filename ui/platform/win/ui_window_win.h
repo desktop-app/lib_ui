@@ -17,6 +17,8 @@ namespace Platform {
 class TitleWidget;
 struct HitTestRequest;
 enum class HitTestResult;
+class DirectManipulation;
+struct DirectManipulationEvent;
 
 class WindowHelper final : public BasicWindowHelper {
 public:
@@ -55,6 +57,8 @@ private:
 	void initialShadowUpdate();
 	void updateCornersRounding();
 	void fixMaximizedWindow();
+	void handleDirectManipulationEvent(
+		const DirectManipulationEvent &event);
 	[[nodiscard]] bool handleNativeEvent(
 		UINT msg,
 		WPARAM wParam,
@@ -75,6 +79,7 @@ private:
 	const HWND _handle = nullptr;
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;
+	std::unique_ptr<DirectManipulation> _directManipulation;
 	rpl::event_stream<not_null<HitTestRequest*>> _hitTestRequests;
 	rpl::event_stream<HitTestResult> _systemButtonOver;
 	rpl::event_stream<HitTestResult> _systemButtonDown;
