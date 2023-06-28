@@ -9,6 +9,7 @@
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
+#include "base/debug_log.h"
 
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QApplication>
@@ -511,12 +512,13 @@ bool ScrollArea::filterOutTouchEvent(QEvent *e) {
 		|| type == QEvent::TouchEnd
 		|| type == QEvent::TouchCancel) {
 		const auto ev = static_cast<QTouchEvent*>(e);
-		if (_customTouchProcess && _customTouchProcess(ev)) {
-			return true;
-		} else if (_touchEnabled
-			&& ev->device()->type() == base::TouchDevice::TouchScreen) {
-			touchEvent(ev);
-			return true;
+		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
+			if (_customTouchProcess && _customTouchProcess(ev)) {
+				return true;
+			} else if (_touchEnabled) {
+				touchEvent(ev);
+				return true;
+			}
 		}
 	}
 	return false;
