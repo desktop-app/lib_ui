@@ -25,14 +25,13 @@
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QApplication>
 #include <qpa/qplatformnativeinterface.h>
+#include <qpa/qwindowsysteminterface.h>
 
 #include <dwmapi.h>
 #include <uxtheme.h>
 #include <windowsx.h>
 
 Q_DECLARE_METATYPE(QMargins);
-
-bool qt_sendSpontaneousEvent(QObject *receiver, QEvent *event);
 
 namespace Ui::Platform {
 namespace {
@@ -422,20 +421,19 @@ void WindowHelper::handleDirectManipulationEvent(
 	using Type = DirectManipulationEventType;
 	const auto send = [&](Qt::ScrollPhase phase) {
 		if (const auto windowHandle = window()->windowHandle()) {
-			const auto global = QCursor::pos();
-			const auto local = windowHandle->mapFromGlobal(global);
-			auto e = QWheelEvent(
-				QPointF(local),
-				QPointF(global),
+			auto global = POINT();
+			::GetCursorPos(&global);
+			auto local = global;
+			::ScreenToClient(_handle, &local);
+			QWindowSystemInterface::handleWheelEvent(
+				windowHandle,
+				QPointF(local.x, local.y),
+				QPointF(global.x, global.y),
 				event.delta,
 				event.delta,
-				QGuiApplication::mouseButtons(),
 				QGuiApplication::keyboardModifiers(),
 				phase,
-				false,
-				Qt::MouseEventSynthesizedByApplication);
-			e.setTimestamp(crl::now());
-			qt_sendSpontaneousEvent(windowHandle, &e);
+				Qt::MouseEventSynthesizedBySystem);
 		}
 	};
 	switch (event.type) {
