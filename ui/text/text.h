@@ -157,6 +157,12 @@ public:
 		const QString &text,
 		const TextParseOptions &options = kDefaultTextOptions,
 		int32 minResizeWidth = QFIXED_MAX);
+	String(
+		const style::TextStyle &st,
+		const TextWithEntities &textWithEntities,
+		const TextParseOptions &options = kMarkupTextOptions,
+		int32 minResizeWidth = QFIXED_MAX,
+		const std::any &context = {});
 	String(String &&other);
 	String &operator=(String &&other);
 	~String();

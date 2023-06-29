@@ -162,6 +162,17 @@ String::String(
 	setText(st, text, options);
 }
 
+String::String(
+	const style::TextStyle &st,
+	const TextWithEntities &textWithEntities,
+	const TextParseOptions &options,
+	int32 minResizeWidth,
+	const std::any &context)
+: _minResizeWidth(minResizeWidth) {
+	setMarkedText(st, textWithEntities, options, context);
+}
+
+
 String::String(String &&other) = default;
 
 String &String::operator=(String &&other) = default;
