@@ -962,6 +962,9 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 		: _st.maxHeight
 		? qMax(_st.maxHeight / lineHeight, 1)
 		: ((height() / lineHeight) + 2);
+	const auto paused = _animationsPausedCallback
+		? _animationsPausedCallback()
+		: WhichAnimationsPaused::None;
 	_text.draw(p, {
 		.position = { textLeft, _st.margin.top() },
 		.availableWidth = textWidth,
@@ -970,6 +973,10 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 		.palette = &_st.palette,
 		.spoiler = Text::DefaultSpoilerCache(),
 		.now = crl::now(),
+		.pausedEmoji = (paused == WhichAnimationsPaused::CustomEmoji
+			|| paused == WhichAnimationsPaused::All),
+		.pausedSpoiler = (paused == WhichAnimationsPaused::Spoiler
+			|| paused == WhichAnimationsPaused::All),
 		.selection = selection,
 		.elisionLines = lines,
 		.elisionBreakEverywhere = renderElided && _breakEverywhere,

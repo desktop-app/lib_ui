@@ -94,7 +94,6 @@ private:
 };
 
 class FlatLabel : public RpWidget, public ClickHandlerHost {
-
 public:
 	FlatLabel(
 		QWidget *parent,
@@ -130,6 +129,15 @@ public:
 	void setContextCopyText(const QString &copyText);
 	void setBreakEverywhere(bool breakEverywhere);
 	void setTryMakeSimilarLines(bool tryMakeSimilarLines);
+	enum class WhichAnimationsPaused {
+		None,
+		CustomEmoji,
+		Spoiler,
+		All,
+	};
+	void setAnimationsPausedCallback(Fn<WhichAnimationsPaused()> callback) {
+		_animationsPausedCallback = std::move(callback);
+	}
 
 	int naturalWidth() const override;
 	QMargins getMargins() const override;
@@ -251,6 +259,7 @@ private:
 	QString _contextCopyText;
 
 	ClickHandlerFilter _clickHandlerFilter;
+	Fn<WhichAnimationsPaused()> _animationsPausedCallback;
 
 	// text selection and context menu by touch support (at least Windows Surface tablets)
 	bool _touchSelect = false;
