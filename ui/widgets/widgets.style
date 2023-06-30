@@ -1272,23 +1272,6 @@ SearchFieldRow {
 	fieldCancelSkip: pixels;
 }
 
-InfoTopBar {
-	height: pixels;
-	back: IconButton;
-	title: FlatLabel;
-	titlePosition: point;
-	bg: color;
-	mediaCancel: IconButton;
-	mediaActionsSkip: pixels;
-	mediaForward: IconButton;
-	mediaDelete: IconButton;
-	search: IconButton;
-	searchRow: SearchFieldRow;
-	highlightBg: color;
-	highlightDuration: int;
-	radius: pixels;
-}
-
 LevelMeter {
 	height: pixels;
 	lineWidth: pixels;
