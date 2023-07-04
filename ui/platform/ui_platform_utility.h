@@ -17,6 +17,13 @@ class PopupMenu;
 } // namespace Ui
 
 namespace Ui::Platform {
+namespace internal {
+
+// Actual requestor, cached by the public interface
+[[nodiscard]] TitleControls::Layout TitleControlsLayout();
+void NotifyTitleControlsLayoutChanged();
+
+} // namespace internal
 
 [[nodiscard]] bool IsApplicationActive();
 
@@ -48,7 +55,6 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
-void NotifyTitleControlsLayoutChanged();
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);
 

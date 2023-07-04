@@ -147,6 +147,8 @@ std::optional<bool> IsOverlapped(
 	return false;
 }
 
+namespace internal {
+
 TitleControls::Layout TitleControlsLayout() {
 	return TitleControls::Layout{
 		.left = {
@@ -157,5 +159,6 @@ TitleControls::Layout TitleControlsLayout() {
 	};
 }
 
+} // namespace internal
 } // namespace Platform
 } // namespace Ui
