@@ -134,6 +134,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 		MAKELPARAM(p.x, p.y));
 }
 
+namespace internal {
+
 TitleControls::Layout TitleControlsLayout() {
 	return TitleControls::Layout{
 		.right = {
@@ -143,6 +145,8 @@ TitleControls::Layout TitleControlsLayout() {
 		}
 	};
 }
+
+} // namespace internal
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
 	// Windows native emoji selector, that can be called by Win+. shortcut,

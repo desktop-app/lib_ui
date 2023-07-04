@@ -8,26 +8,33 @@
 
 namespace Ui {
 namespace Platform {
+namespace internal {
 namespace {
 
-rpl::event_stream<TitleControls::Layout> TitleControlsLayoutChanges;
+auto &CachedTitleControlsLayout() {
+	using Layout = TitleControls::Layout;
+	static rpl::variable<Layout> Result = TitleControlsLayout();
+	return Result;
+};
 
 } // namespace
 
+void NotifyTitleControlsLayoutChanged() {
+	CachedTitleControlsLayout() = TitleControlsLayout();
+}
+
+} // namespace internal
+
+TitleControls::Layout TitleControlsLayout() {
+	return internal::CachedTitleControlsLayout().current();
+}
+
 rpl::producer<TitleControls::Layout> TitleControlsLayoutValue() {
-	return rpl::single(
-		TitleControlsLayout()
-	) | rpl::then(
-		TitleControlsLayoutChanged()
-	);
+	return internal::CachedTitleControlsLayout().value();
 }
 
 rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged() {
-	return TitleControlsLayoutChanges.events();
-}
-
-void NotifyTitleControlsLayoutChanged() {
-	TitleControlsLayoutChanges.fire_copy(TitleControlsLayout());
+	return internal::CachedTitleControlsLayout().changes();
 }
 
 } // namespace Platform

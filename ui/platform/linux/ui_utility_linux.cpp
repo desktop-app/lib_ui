@@ -548,6 +548,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	}
 }
 
+namespace internal {
+
 TitleControls::Layout TitleControlsLayout() {
 	[[maybe_unused]] static const auto Inited = [] {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
@@ -634,5 +636,6 @@ TitleControls::Layout TitleControlsLayout() {
 	};
 }
 
+} // namespace internal
 } // namespace Platform
 } // namespace Ui
