@@ -370,6 +370,7 @@ RoundCheckbox {
 }
 
 RoundImageCheckbox {
+	selectExtendTwice: pixels;
 	imageRadius: pixels;
 	imageSmallRadius: pixels;
 	selectWidth: pixels;
@@ -1062,6 +1063,7 @@ defaultPeerListCheck: RoundCheckbox(defaultRoundCheckbox) {
 	check: defaultPeerListCheckIcon;
 }
 defaultPeerListCheckbox: RoundImageCheckbox {
+	selectExtendTwice: 0px;
 	imageRadius: 21px;
 	imageSmallRadius: 18px;
 	selectWidth: 2px;
