@@ -221,6 +221,8 @@ PRIVATE
     ui/widgets/menu/menu_separator.h
     ui/widgets/menu/menu_toggle.cpp
     ui/widgets/menu/menu_toggle.h
+    ui/widgets/elastic_scroll.cpp
+    ui/widgets/elastic_scroll.h
     ui/widgets/popup_menu.cpp
     ui/widgets/popup_menu.h
     ui/widgets/rp_window.cpp

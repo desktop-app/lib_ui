@@ -703,6 +703,7 @@ defaultScrollArea: ScrollArea {
 	duration: 150;
 	hiding: 1000;
 }
+scrollBarMin: 40px;
 
 defaultSolidScroll: ScrollArea(defaultScrollArea) {
 	deltax: 5px;
