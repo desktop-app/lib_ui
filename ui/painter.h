@@ -135,3 +135,30 @@ private:
 	QPainter::RenderHints _hints;
 
 };
+
+class ScopedPainterOpacity {
+public:
+	ScopedPainterOpacity(QPainter &p, float64 nowOpacity)
+	: _painter(p)
+	, _wasOpacity(p.opacity()) {
+		if (_wasOpacity != nowOpacity) {
+			_painter.setOpacity(nowOpacity);
+		}
+	}
+
+	ScopedPainterOpacity(
+		const ScopedPainterOpacity &other) = delete;
+	ScopedPainterOpacity &operator=(
+		const ScopedPainterOpacity &other) = delete;
+
+	~ScopedPainterOpacity() {
+		if (_painter.isActive()) {
+			_painter.setOpacity(_wasOpacity);
+		}
+	}
+
+private:
+	QPainter &_painter;
+	const float64 _wasOpacity;
+
+};
