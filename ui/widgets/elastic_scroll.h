@@ -56,6 +56,7 @@ private:
 	void leaveEventHook(QEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 
+	[[nodiscard]] int scaleToBar(int change) const;
 	[[nodiscard]] bool barHighlighted() const;
 	void toggleOver(bool over, anim::type animated = anim::type::normal);
 	void toggleOverBar(bool over, anim::type animated = anim::type::normal);

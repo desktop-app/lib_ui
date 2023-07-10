@@ -53,21 +53,24 @@ void ElasticScrollBar::refreshGeometry() {
 		return;
 	}
 	const auto available = extSize - fullSkip;
-	const auto scale = [&](int value) {
-		return (available * value) / _state.fullSize;
-	};
-
 	_area = _vertical
 		? QRect(skip, _st.deltat, thickness, available)
 		: QRect(_st.deltat, skip, available, thickness);
 	const auto barMin = std::min(st::scrollBarMin, available / 2);
-	const auto barWanted = scale(_state.visibleTill - _state.visibleFrom);
+	const auto visibleHeight = _state.visibleTill - _state.visibleFrom;
+	const auto scrollableHeight = _state.fullSize - visibleHeight;
+	const auto barWanted = (available * visibleHeight) / _state.fullSize;
 	if (barWanted >= available) {
 		_bar = _area = QRect();
 		hide();
 		return;
 	}
 	const auto bar = std::max(barMin, barWanted);
+	const auto outsideBar = available - bar;
+
+	const auto scale = [&](int value) {
+		return (outsideBar * value) / scrollableHeight;
+	};
 	const auto barFrom = scale(_state.visibleFrom);
 	const auto barTill = barFrom + bar;
 	const auto cutFrom = std::clamp(barFrom, 0, available - thickness);
@@ -224,6 +227,16 @@ void ElasticScrollBar::leaveEventHook(QEvent *e) {
 	}
 }
 
+int ElasticScrollBar::scaleToBar(int change) const {
+	const auto scrollable = _state.fullSize
+		- (_state.visibleTill - _state.visibleFrom);
+	const auto outsideBar = (_vertical ? _area.height() : _area.width())
+		- (_vertical ? _bar.height() : _bar.width());
+	return (outsideBar <= 0 || scrollable <= outsideBar)
+		? change
+		: (change * scrollable / outsideBar);
+}
+
 void ElasticScrollBar::mouseMoveEvent(QMouseEvent *e) {
 	toggleOverBar(_bar.contains(e->pos()));
 	if (_dragging && !_bar.isEmpty()) {
@@ -231,6 +244,7 @@ void ElasticScrollBar::mouseMoveEvent(QMouseEvent *e) {
 		const auto delta = position - _dragPosition;
 		_dragPosition = position;
 		if (auto change = _vertical ? delta.y() : delta.x()) {
+			change = scaleToBar(change);
 			if (_dragOverscrollAccumulated * change < 0) {
 				const auto overscroll = (change < 0)
 					? std::max(_dragOverscrollAccumulated + change, 0)
