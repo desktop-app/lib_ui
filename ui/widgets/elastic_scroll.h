@@ -55,6 +55,7 @@ private:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
+	bool eventHook(QEvent *e) override;
 
 	[[nodiscard]] int scaleToBar(int change) const;
 	[[nodiscard]] bool barHighlighted() const;
@@ -187,7 +188,7 @@ private:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	void keyPressEvent(QKeyEvent *e) override;
-	bool handleWheelEvent(not_null<QWheelEvent*> e);
+	bool handleWheelEvent(not_null<QWheelEvent*> e, bool touch = false);
 	void handleTouchEvent(QTouchEvent *e);
 
 	void updateState();
@@ -202,8 +203,8 @@ private:
 
 	bool filterOutTouchEvent(QEvent *e);
 	void touchScrollTimer();
-	bool touchScroll(const QPoint &delta);
-	void touchScrollUpdated(const QPoint &screenPos);
+	void touchScrollUpdated();
+	void sendWheelEvent(Qt::ScrollPhase phase, QPoint delta = {});
 
 	void touchResetSpeed();
 	void touchUpdateSpeed();

@@ -22,6 +22,7 @@ constexpr auto kOverscrollReturnDuration = crl::time(250);
 constexpr auto kOverscrollPower = 0.6;
 constexpr auto kOverscrollFromThreshold = -(1 << 30);
 constexpr auto kOverscrollTillThreshold = (1 << 30);
+constexpr auto kTouchOverscrollMultiplier = 2;
 
 [[nodiscard]] int OverscrollFromAccumulated(int accumulated) {
 	if (!accumulated) {
@@ -56,6 +57,7 @@ ElasticScrollBar::ElasticScrollBar(
 , _hideTimer([=] { toggle(false); })
 , _shown(!_st.hiding)
 , _vertical(orientation == Qt::Vertical) {
+	setAttribute(Qt::WA_NoMousePropagation);
 }
 
 void ElasticScrollBar::refreshGeometry() {
@@ -329,6 +331,11 @@ void ElasticScrollBar::resizeEvent(QResizeEvent *e) {
 	refreshGeometry();
 }
 
+bool ElasticScrollBar::eventHook(QEvent *e) {
+	setAttribute(Qt::WA_NoMousePropagation, e->type() != QEvent::Wheel);
+	return RpWidget::eventHook(e);
+}
+
 ElasticScroll::ElasticScroll(
 	QWidget *parent,
 	const style::ScrollArea &st,
@@ -371,8 +378,17 @@ void ElasticScroll::setHandleTouch(bool handle) {
 }
 
 bool ElasticScroll::viewportEvent(QEvent *e) {
-	return (e->type() == QEvent::Wheel)
-		&& handleWheelEvent(static_cast<QWheelEvent*>(e));
+	const auto type = e->type();
+	if (type == QEvent::Wheel) {
+		return handleWheelEvent(static_cast<QWheelEvent*>(e));
+	} else if (type == QEvent::TouchBegin
+		|| type == QEvent::TouchUpdate
+		|| type == QEvent::TouchEnd
+		|| type == QEvent::TouchCancel) {
+		handleTouchEvent(static_cast<QTouchEvent*>(e));
+		return true;
+	}
+	return false;
 }
 
 void ElasticScroll::touchDeaccelerate(int32 elapsed) {
@@ -496,14 +512,18 @@ void ElasticScroll::touchScrollTimer() {
 	auto nowTime = crl::now();
 	if (_touchScrollState == TouchScrollState::Acceleration && _touchWaitingAcceleration && (nowTime - _touchAccelerationTime) > 40) {
 		_touchScrollState = TouchScrollState::Manual;
+		sendWheelEvent(Qt::ScrollEnd);
 		touchResetSpeed();
 	} else if (_touchScrollState == TouchScrollState::Auto || _touchScrollState == TouchScrollState::Acceleration) {
 		int32 elapsed = int32(nowTime - _touchTime);
 		QPoint delta = _touchSpeed * elapsed / 1000;
-		bool hasScrolled = touchScroll(delta);
+		sendWheelEvent(
+			_touchPress ? Qt::ScrollUpdate : Qt::ScrollMomentum,
+			delta);
 
-		if (_touchSpeed.isNull() || !hasScrolled) {
+		if (_touchSpeed.isNull()) {
 			_touchScrollState = TouchScrollState::Manual;
+			sendWheelEvent(Qt::ScrollEnd);
 			_touchScroll = false;
 			_touchScrollTimer.cancel();
 		} else {
@@ -602,7 +622,7 @@ void ElasticScroll::paintEvent(QPaintEvent *e) {
 	}
 }
 
-bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e) {
+bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	if (_customWheelProcess
 		&& _customWheelProcess(static_cast<QWheelEvent*>(e.get()))) {
 		return true;
@@ -651,6 +671,9 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e) {
 	}
 	if (!delta) {
 		return true;
+	}
+	if (touch) {
+		delta *= kTouchOverscrollMultiplier;
 	}
 	const auto accumulated = _overscrollAccumulated + delta;
 	const auto type = (accumulated < 0)
@@ -726,7 +749,9 @@ void ElasticScroll::handleTouchEvent(QTouchEvent *e) {
 
 	switch (e->type()) {
 	case QEvent::TouchBegin: {
-		if (_touchPress || e->touchPoints().isEmpty()) return;
+		if (_touchPress || e->touchPoints().isEmpty()) {
+			return;
+		}
 		_touchPress = true;
 		if (_touchScrollState == TouchScrollState::Auto) {
 			_touchScrollState = TouchScrollState::Acceleration;
@@ -740,18 +765,23 @@ void ElasticScroll::handleTouchEvent(QTouchEvent *e) {
 		}
 		_touchStart = _touchPreviousPosition = _touchPosition;
 		_touchRightButton = false;
+		sendWheelEvent(Qt::ScrollBegin);
 	} break;
 
 	case QEvent::TouchUpdate: {
-		if (!_touchPress) return;
-		if (!_touchScroll && (_touchPosition - _touchStart).manhattanLength() >= QApplication::startDragDistance()) {
+		if (!_touchPress) {
+			return;
+		}
+		if (!_touchScroll
+			&& ((_touchPosition - _touchStart).manhattanLength()
+				>= QApplication::startDragDistance())) {
 			_touchTimer.cancel();
 			_touchScroll = true;
 			touchUpdateSpeed();
 		}
 		if (_touchScroll) {
 			if (_touchScrollState == TouchScrollState::Manual) {
-				touchScrollUpdated(_touchPosition);
+				touchScrollUpdated();
 			} else if (_touchScrollState == TouchScrollState::Acceleration) {
 				touchUpdateSpeed();
 				_touchAccelerationTime = crl::now();
@@ -763,7 +793,9 @@ void ElasticScroll::handleTouchEvent(QTouchEvent *e) {
 	} break;
 
 	case QEvent::TouchEnd: {
-		if (!_touchPress) return;
+		if (!_touchPress) {
+			return;
+		}
 		_touchPress = false;
 		auto weak = MakeWeak(this);
 		if (_touchScroll) {
@@ -811,9 +843,12 @@ void ElasticScroll::handleTouchEvent(QTouchEvent *e) {
 	}
 }
 
-void ElasticScroll::touchScrollUpdated(const QPoint &screenPos) {
-	_touchPosition = screenPos;
-	touchScroll(_touchPosition - _touchPreviousPosition);
+void ElasticScroll::touchScrollUpdated() {
+	//touchScroll(_touchPosition - _touchPreviousPosition);
+	const auto phase = !_touchPress
+		? Qt::ScrollMomentum
+		: Qt::ScrollUpdate;
+	sendWheelEvent(phase, _touchPosition - _touchPreviousPosition);
 	touchUpdateSpeed();
 }
 
@@ -958,15 +993,18 @@ void ElasticScroll::tryScrollTo(int position, bool synthMouseMove) {
 	applyScrollTo(willScrollTo(position), synthMouseMove);
 }
 
-bool ElasticScroll::touchScroll(const QPoint &delta) {
-	const auto scTop = scrollTop();
-	const auto scMax = scrollTopMax();
-	const auto scNew = std::clamp(scTop - delta.y(), 0, scMax);
-	if (scNew == scTop) {
-		return false;
-	}
-	scrollToY(scNew);
-	return true;
+void ElasticScroll::sendWheelEvent(Qt::ScrollPhase phase, QPoint delta) {
+	auto e = QWheelEvent(
+		mapFromGlobal(_touchPosition),
+		_touchPosition,
+		delta,
+		delta,
+		Qt::NoButton,
+		QGuiApplication::keyboardModifiers(),
+		phase,
+		false,
+		Qt::MouseEventSynthesizedByApplication);
+	handleWheelEvent(&e, true);
 }
 
 void ElasticScroll::resizeEvent(QResizeEvent *e) {
