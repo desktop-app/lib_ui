@@ -895,10 +895,25 @@ void ElasticScroll::applyScrollTo(int position, bool synthMouseMove) {
 	}
 	const auto weak = Ui::MakeWeak(this);
 	_dirtyState = true;
+	const auto was = _widget->geometry();
 	_widget->move(
 		_vertical ? _widget->x() : -position,
 		_vertical ? -position : _widget->y());
 	if (weak) {
+		const auto now = _widget->geometry();
+		const auto wasFrom = _vertical ? was.y() : was.x();
+		const auto wasTill = wasFrom
+			+ (_vertical ? was.height() : was.width());
+		const auto nowFrom = _vertical ? now.y() : now.x();
+		const auto nowTill = nowFrom
+			+ (_vertical ? now.height() : now.width());
+		const auto mySize = _vertical ? height() : width();
+		if ((wasFrom > 0 && wasFrom < mySize)
+			|| (wasTill > 0 && wasTill < mySize)
+			|| (nowFrom > 0 && nowFrom < mySize)
+			|| (nowTill > 0 && nowTill < mySize)) {
+			update();
+		}
 		if (_dirtyState) {
 			updateState();
 		}
