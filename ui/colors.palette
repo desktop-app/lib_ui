@@ -655,3 +655,17 @@ premiumButtonFg: #ffffff; // upgrade to premium button text
 premiumIconBg1: #f38926; // icon in premium settings gradient 1
 premiumIconBg2: #e44456; // icon in premium settings gradient 2
 premiumIconBg3: #4acd43; // icon in premium settings gradient 3
+
+statisticsChartInactive: #e2eef999; // inactive area in footer of statistic charts
+statisticsChartActive: #baccd9d8; // sides in footer of statistic charts
+
+statisticsChartLineBlue: #327fe5; // represents blue color on statistical charts
+statisticsChartLineGreen: #61c752; // represents green color on statistical charts
+statisticsChartLineRed: #e05356; // represents red color on statistical charts
+statisticsChartLineGolden: #eba52d; // represents golden color on statistical charts
+statisticsChartLineLightblue: #58a8ed; // represents lightblue color on statistical charts
+statisticsChartLineLightgreen: #8fcf39; // represents lightgreen color on statistical charts
+statisticsChartLineOrange: #f28c39; // represents orange color on statistical charts
+statisticsChartLineIndigo: #7f79f3; // represents indigo color on statistical charts
+statisticsChartLinePurple: #9f79e8; // represents purple color on statistical charts
+statisticsChartLineCyan: #40d0ca; // represents cyan color on statistical charts
