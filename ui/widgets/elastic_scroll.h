@@ -162,7 +162,7 @@ public:
 		Real,
 	};
 	void setOverscrollTypes(OverscrollType from, OverscrollType till);
-	void setOverscrollDefaults(int from, int till);
+	void setOverscrollDefaults(int from, int till, bool shift = false);
 	void setOverscrollBg(QColor bg);
 
 	[[nodiscard]] rpl::producer<> scrolls() const;

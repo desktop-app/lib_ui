@@ -1118,9 +1118,19 @@ void ElasticScroll::setOverscrollTypes(
 	}
 }
 
-void ElasticScroll::setOverscrollDefaults(int from, int till) {
+void ElasticScroll::setOverscrollDefaults(int from, int till, bool shift) {
 	Expects(from <= 0 && till >= 0);
 
+	if (_state.visibleFrom > 0
+		|| (!_state.visibleFrom
+			&& _overscrollTypeFrom != OverscrollType::Virtual)) {
+		from = 0;
+	}
+	if (_state.visibleTill < _state.fullSize
+		|| (_state.visibleTill == _state.fullSize
+			&& _overscrollTypeTill != OverscrollType::Virtual)) {
+		till = 0;
+	}
 	const auto fromChanged = (_overscrollDefaultFrom != from);
 	const auto tillChanged = (_overscrollDefaultTill != till);
 	const auto changed = (fromChanged && _overscroll < 0)
@@ -1133,8 +1143,8 @@ void ElasticScroll::setOverscrollDefaults(int from, int till) {
 	_overscrollDefaultTill = till;
 	if (changed) {
 		const auto delta = (_overscroll < 0)
-			? (_overscroll - _overscrollDefaultFrom)
-			: (_overscroll - _overscrollDefaultTill);
+			? (_overscroll - (shift ? 0 : _overscrollDefaultFrom))
+			: (_overscroll - (shift ? 0 : _overscrollDefaultTill));
 		_overscrollAccumulated = currentOverscrollDefaultAccumulated()
 			+ OverscrollToAccumulated(delta);
 	}
