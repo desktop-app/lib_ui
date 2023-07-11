@@ -85,6 +85,25 @@ private:
 
 };
 
+struct ElasticScrollPosition {
+	int value = 0;
+	int overscroll = 0;
+
+	friend inline auto operator<=>(
+		ElasticScrollPosition,
+		ElasticScrollPosition) = default;
+	friend inline bool operator==(
+		ElasticScrollPosition,
+		ElasticScrollPosition) = default;
+};
+
+enum class ElasticScrollMovement {
+	None,
+	Progress,
+	Momentum,
+	Returning,
+};
+
 class ElasticScroll final : public RpWidget {
 public:
 	ElasticScroll(
@@ -136,14 +155,27 @@ public:
 	void setCustomTouchProcess(Fn<bool(not_null<QTouchEvent*>)> process) {
 		_customTouchProcess = std::move(process);
 	}
-	void setOverscrollBg(QColor bg) {
-		_overscrollBg = bg;
-		update();
-	}
+
+	enum class OverscrollType : uchar {
+		None,
+		Virtual,
+		Real,
+	};
+	void setOverscrollTypes(OverscrollType from, OverscrollType till);
+	void setOverscrollDefaults(int from, int till);
+	void setOverscrollBg(QColor bg);
 
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
+
+	using Position = ElasticScrollPosition;
+	[[nodiscard]] Position position() const;
+	[[nodiscard]] rpl::producer<Position> positionValue() const;
+
+	using Movement = ElasticScrollMovement;
+	[[nodiscard]] Movement movement() const;
+	[[nodiscard]] rpl::producer<Movement> movementValue() const;
 
 private:
 	bool eventHook(QEvent *e) override;
@@ -163,6 +195,7 @@ private:
 	[[nodiscard]] int willScrollTo(int position) const;
 	void tryScrollTo(int position, bool synthMouseMove = true);
 	void applyScrollTo(int position, bool synthMouseMove = true);
+	void applyOverscroll(int overscroll);
 
 	void doSetOwnedWidget(object_ptr<QWidget> widget);
 	object_ptr<QWidget> doTakeWidget();
@@ -176,9 +209,16 @@ private:
 	void touchUpdateSpeed();
 	void touchDeaccelerate(int32 elapsed);
 
-	[[nodiscard]] int overscrollAmount() const;
+	struct AccumulatedParts {
+		int base = 0;
+		int relative = 0;
+	};
+	[[nodiscard]] AccumulatedParts computeAccumulatedParts() const;
+	[[nodiscard]] int currentOverscrollDefault() const;
+	[[nodiscard]] int currentOverscrollDefaultAccumulated() const;
 	void overscrollReturn();
 	void overscrollReturnCancel();
+	void overscrollCheckReturnFinish();
 	bool overscrollFinish();
 	void applyAccumulatedScroll();
 
@@ -213,8 +253,15 @@ private:
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
+	int _overscroll = 0;
+	int _overscrollDefaultFrom = 0;
+	int _overscrollDefaultTill = 0;
+	OverscrollType _overscrollTypeFrom = OverscrollType::None;
+	OverscrollType _overscrollTypeTill = OverscrollType::None;
 	std::optional<QColor> _overscrollBg;
 	Ui::Animations::Simple _overscrollReturnAnimation;
+	rpl::variable<Position> _position;
+	rpl::variable<Movement> _movement;
 
 	object_ptr<QWidget> _widget = { nullptr };
 
