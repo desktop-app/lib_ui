@@ -9,8 +9,9 @@
 #include "base/platform/base_platform_info.h"
 #include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
-#include "ui/platform/linux/ui_linux_wayland_integration.h"
+#include "base/call_delayed.h"
 #include "base/const_string.h"
+#include "ui/platform/linux/ui_linux_wayland_integration.h"
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xcb_utilities.h"
@@ -26,6 +27,10 @@ namespace Platform {
 namespace {
 
 constexpr auto kXCBFrameExtentsAtomName = "_GTK_FRAME_EXTENTS"_cs;
+constexpr auto kDelayDeactivateEventTimeout = crl::time(400);
+
+bool PendingDeactivateEvent/* = false*/;
+int ChildPopupsHiddenOnWayland/* = 0*/;
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 std::optional<bool> XCBWindowMapped(xcb_window_t window) {
@@ -546,6 +551,34 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 		ShowXCBWindowMenu(widget, point);
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 	}
+}
+
+void RegisterChildPopupHiding() {
+	if (!::Platform::IsWayland()) {
+		return;
+	}
+	++ChildPopupsHiddenOnWayland;
+	base::call_delayed(kDelayDeactivateEventTimeout, [] {
+		if (!--ChildPopupsHiddenOnWayland) {
+			if (base::take(PendingDeactivateEvent)) {
+				// We didn't receive ApplicationActivate event in time.
+				QEvent appDeactivate(QEvent::ApplicationDeactivate);
+				QCoreApplication::sendEvent(qApp, &appDeactivate);
+			}
+		}
+	});
+}
+
+bool SkipApplicationDeactivateEvent() {
+	if (!ChildPopupsHiddenOnWayland) {
+		return false;
+	}
+	PendingDeactivateEvent = true;
+	return true;
+}
+
+void GotApplicationActivateEvent() {
+	PendingDeactivateEvent = false;
 }
 
 namespace internal {

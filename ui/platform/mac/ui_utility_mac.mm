@@ -147,6 +147,16 @@ std::optional<bool> IsOverlapped(
 	return false;
 }
 
+void RegisterChildPopupHiding() {
+}
+
+bool SkipApplicationDeactivateEvent() {
+	return false;
+}
+
+void GotApplicationActivateEvent() {
+}
+
 namespace internal {
 
 TitleControls::Layout TitleControlsLayout() {
