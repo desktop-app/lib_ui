@@ -13,24 +13,38 @@
 #include "styles/style_widgets.h"
 
 #include <QtGui/QWindow>
+#include <QtCore/QtMath>
 #include <QtWidgets/QApplication>
 
 namespace Ui {
 namespace {
 
 constexpr auto kOverscrollReturnDuration = crl::time(250);
-constexpr auto kOverscrollPower = 0.6;
+//constexpr auto kOverscrollPower = 0.6;
 constexpr auto kOverscrollFromThreshold = -(1 << 30);
 constexpr auto kOverscrollTillThreshold = (1 << 30);
 constexpr auto kTouchOverscrollMultiplier = 2;
+
+constexpr auto kLogA = 16.;
+constexpr auto kLogB = 10.;
+
+[[nodiscard]] float64 RawFrom(float64 value) {
+	return kLogA * log(1. + value / kLogB);
+	//return pow(value, kOverscrollPower);
+}
+
+[[nodiscard]] float64 RawTo(float64 value) {
+	return (exp(value / kLogA) - 1.) * kLogB;
+	//return pow(value, 1. / kOverscrollPower);
+}
 
 [[nodiscard]] int OverscrollFromAccumulated(int accumulated) {
 	if (!accumulated) {
 		return 0;
 	}
+
 	return (accumulated > 0 ? 1. : -1.)
-		* int(base::SafeRound(
-			pow(std::abs(accumulated), kOverscrollPower)));
+		* int(base::SafeRound(RawFrom(std::abs(accumulated))));
 }
 
 [[nodiscard]] int OverscrollToAccumulated(int overscroll) {
@@ -38,8 +52,7 @@ constexpr auto kTouchOverscrollMultiplier = 2;
 		return 0;
 	}
 	return (overscroll > 0 ? 1. : -1.)
-		* int(base::SafeRound(
-			pow(std::abs(overscroll), 1. / kOverscrollPower)));
+		* int(base::SafeRound(RawTo(std::abs(overscroll))));
 }
 
 } // namespace
