@@ -658,6 +658,9 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	}
 	const auto pixels = ScrollDelta(e);
 	auto delta = _vertical ? -pixels.y() : pixels.x();
+	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
+		delta = 0;
+	}
 	if (phase == Qt::NoScrollPhase) {
 		if (_overscroll == currentOverscrollDefault()) {
 			tryScrollTo(_state.visibleFrom + delta);
