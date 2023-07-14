@@ -412,7 +412,8 @@ void ElasticScroll::touchDeaccelerate(int32 elapsed) {
 }
 
 void ElasticScroll::overscrollReturn() {
-	_ignoreMomentum = _overscrollReturning = true;
+	_overscrollReturning = true;
+	_ignoreMomentumFromOverscroll = _overscroll;
 	if (overscrollFinish()) {
 		_overscrollReturnAnimation.stop();
 		return;
@@ -647,19 +648,18 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	const auto guard = gsl::finally([&] {
 		_lastScroll = now;
 	});
-	if (_ignoreMomentum) {
-		if (momentum) {
-			if (!_overscrollReturnAnimation.animating()) {
-				return true;
-			}
-		} else {
-			_ignoreMomentum = false;
-		}
-	}
 	const auto pixels = ScrollDelta(e);
 	auto delta = _vertical ? -pixels.y() : pixels.x();
 	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
 		delta = 0;
+	}
+	if (_ignoreMomentumFromOverscroll) {
+		if (!momentum) {
+			_ignoreMomentumFromOverscroll = 0;
+		} else if (!_overscrollReturnAnimation.animating()
+			&& !base::OppositeSigns(_ignoreMomentumFromOverscroll, delta)) {
+			return true;
+		}
 	}
 	if (phase == Qt::NoScrollPhase) {
 		if (_overscroll == currentOverscrollDefault()) {

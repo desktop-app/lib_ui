@@ -239,6 +239,7 @@ private:
 	crl::time _lastScroll = 0;
 	TouchScrollState _touchScrollState = TouchScrollState::Manual;
 	int _overscrollAccumulated = 0;
+	int _ignoreMomentumFromOverscroll = 0;
 	bool _touchDisabled : 1 = false;
 	bool _touchScroll : 1 = false;
 	bool _touchPress : 1 = false;
@@ -249,7 +250,6 @@ private:
 	bool _widgetAcceptsTouch : 1 = false;
 	bool _disabled : 1 = false;
 	bool _dirtyState : 1 = false;
-	bool _ignoreMomentum : 1 = false;
 	bool _overscrollReturning : 1 = false;
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
