@@ -29,13 +29,23 @@ constexpr auto kLogA = 16.;
 constexpr auto kLogB = 10.;
 
 [[nodiscard]] float64 RawFrom(float64 value) {
-	return kLogA * log(1. + value / kLogB);
-	//return pow(value, kOverscrollPower);
+	const auto scale = style::Scale() / 100.;
+	value /= scale;
+
+	const auto result = kLogA * log(1. + value / kLogB);
+	//const auto result = pow(value, kOverscrollPower);
+
+	return result * scale;
 }
 
 [[nodiscard]] float64 RawTo(float64 value) {
-	return (exp(value / kLogA) - 1.) * kLogB;
-	//return pow(value, 1. / kOverscrollPower);
+	const auto scale = style::Scale() / 100.;
+	value /= scale;
+
+	const auto result = (exp(value / kLogA) - 1.) * kLogB;
+	//const auto result = pow(value, 1. / kOverscrollPower);
+
+	return result * scale;
 }
 
 [[nodiscard]] int OverscrollFromAccumulated(int accumulated) {
