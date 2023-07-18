@@ -1043,6 +1043,7 @@ void ElasticScroll::resizeEvent(QResizeEvent *e) {
 			height())
 		: QRect(0, height() - _st.width, width(), _st.width));
 	_geometryChanged.fire({});
+	updateState();
 }
 
 void ElasticScroll::moveEvent(QMoveEvent *e) {
