@@ -285,6 +285,7 @@ InputField {
 	border: pixels;
 	borderActive: pixels;
 	borderRadius: pixels;
+	borderDenominator: int;
 
 	font: font;
 	menu: PopupMenu;
@@ -881,6 +882,7 @@ defaultInputField: InputField {
 	border: 1px;
 	borderActive: 2px;
 	borderRadius: 0px;
+	borderDenominator: 1;
 
 	font: boxTextFont;
 	menu: defaultPopupMenu;
