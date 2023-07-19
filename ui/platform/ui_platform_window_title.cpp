@@ -340,9 +340,9 @@ AbstractButton *TitleControls::controlWidget(Control control) const {
 }
 
 void TitleControls::updateControlsPosition() {
-	const auto controlsLayout = TitleControlsLayout();
-	auto controlsLeft = controlsLayout.left;
-	auto controlsRight = controlsLayout.right;
+	auto controlsLayout = TitleControlsLayout();
+	auto &controlsLeft = controlsLayout.left;
+	auto &controlsRight = controlsLayout.right;
 	const auto moveFromTo = [&](auto &from, auto &to) {
 		for (const auto control : from) {
 			if (!ranges::contains(to, control)) {
@@ -351,11 +351,7 @@ void TitleControls::updateControlsPosition() {
 		}
 		from.clear();
 	};
-	if (ranges::contains(controlsLeft, Control::Close)) {
-		moveFromTo(controlsRight, controlsLeft);
-	} else if (ranges::contains(controlsRight, Control::Close)) {
-		moveFromTo(controlsLeft, controlsRight);
-	} else if (controlsLeft.size() > controlsRight.size()) {
+	if (TitleControlsOnLeft(controlsLayout)) {
 		moveFromTo(controlsRight, controlsLeft);
 	} else {
 		moveFromTo(controlsLeft, controlsRight);
