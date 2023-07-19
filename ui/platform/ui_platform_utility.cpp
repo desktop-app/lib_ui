@@ -19,8 +19,9 @@ auto &CachedTitleControlsLayout() {
 
 } // namespace
 
-void NotifyTitleControlsLayoutChanged() {
-	CachedTitleControlsLayout() = TitleControlsLayout();
+void NotifyTitleControlsLayoutChanged(
+		const std::optional<TitleControls::Layout> &layout) {
+	CachedTitleControlsLayout() = layout ? *layout : TitleControlsLayout();
 }
 
 } // namespace internal
