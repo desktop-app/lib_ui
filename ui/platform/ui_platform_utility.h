@@ -56,6 +56,17 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
+[[nodiscard]] bool TitleControlsOnLeft(
+		const TitleControls::Layout &layout = TitleControlsLayout()) {
+	if (ranges::contains(layout.left, TitleControl::Close)) {
+		return true;
+	} else if (ranges::contains(layout.right, TitleControl::Close)) {
+		return false;
+	} else if (layout.left.size() > layout.right.size()) {
+		return true;
+	}
+	return false;
+}
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);
 
