@@ -166,7 +166,7 @@ void NotifyTitleControlsLayoutChanged(
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
-[[nodiscard]] bool TitleControlsOnLeft(
+[[nodiscard]] inline bool TitleControlsOnLeft(
 		const TitleControls::Layout &layout = TitleControlsLayout()) {
 	if (ranges::contains(layout.left, TitleControl::Close)) {
 		return true;
