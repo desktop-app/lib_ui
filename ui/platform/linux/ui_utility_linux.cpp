@@ -8,7 +8,6 @@
 
 #include "base/platform/base_platform_info.h"
 #include "base/call_delayed.h"
-#include "base/const_string.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
@@ -23,7 +22,7 @@ namespace Ui {
 namespace Platform {
 namespace {
 
-constexpr auto kXCBFrameExtentsAtomName = "_GTK_FRAME_EXTENTS"_cs;
+static const auto kXCBFrameExtentsAtomName = u"_GTK_FRAME_EXTENTS"_q;
 constexpr auto kDelayDeactivateEventTimeout = crl::time(400);
 
 bool PendingDeactivateEvent/* = false*/;
@@ -298,7 +297,7 @@ void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
 
 	const auto frameExtentsAtom = base::Platform::XCB::GetAtom(
 		connection,
-		kXCBFrameExtentsAtomName.utf16());
+		kXCBFrameExtentsAtomName);
 
 	if (!frameExtentsAtom.has_value()) {
 		return;
@@ -333,7 +332,7 @@ void UnsetXCBFrameExtents(not_null<QWidget*> widget) {
 
 	const auto frameExtentsAtom = base::Platform::XCB::GetAtom(
 		connection,
-		kXCBFrameExtentsAtomName.utf16());
+		kXCBFrameExtentsAtomName);
 
 	if (!frameExtentsAtom.has_value()) {
 		return;
@@ -477,7 +476,7 @@ bool WindowExtentsSupported() {
 	if (::Platform::IsX11()
 		&& XCB::IsSupportedByWM(
 			XCB::GetConnectionFromQt(),
-			kXCBFrameExtentsAtomName.utf16())) {
+			kXCBFrameExtentsAtomName)) {
 		return true;
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
