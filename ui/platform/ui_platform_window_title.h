@@ -154,6 +154,30 @@ private:
 
 };
 
+namespace internal {
+
+// Actual requestor, cached by the public interface
+[[nodiscard]] TitleControls::Layout TitleControlsLayout();
+void NotifyTitleControlsLayoutChanged(
+    const std::optional<TitleControls::Layout> &layout = std::nullopt);
+
+} // namespace internal
+
+[[nodiscard]] TitleControls::Layout TitleControlsLayout();
+[[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
+[[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
+[[nodiscard]] bool TitleControlsOnLeft(
+		const TitleControls::Layout &layout = TitleControlsLayout()) {
+	if (ranges::contains(layout.left, TitleControl::Close)) {
+		return true;
+	} else if (ranges::contains(layout.right, TitleControl::Close)) {
+		return false;
+	} else if (layout.left.size() > layout.right.size()) {
+		return true;
+	}
+	return false;
+}
+
 class DefaultTitleWidget : public RpWidget {
 public:
 	explicit DefaultTitleWidget(not_null<RpWidget*> parent);
