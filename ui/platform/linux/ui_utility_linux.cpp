@@ -7,15 +7,12 @@
 #include "ui/platform/linux/ui_utility_linux.h"
 
 #include "base/platform/base_platform_info.h"
-#include "base/platform/linux/base_linux_glibmm_helper.h"
-#include "base/platform/linux/base_linux_xdp_utilities.h"
 #include "base/call_delayed.h"
 #include "base/const_string.h"
 #include "ui/platform/linux/ui_linux_wayland_integration.h"
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xcb_utilities.h"
-#include "base/platform/linux/base_linux_xsettings.h"
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #include <QtCore/QPoint>
@@ -399,41 +396,6 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 }
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-TitleControls::Control GtkKeywordToTitleControl(const QString &keyword) {
-	if (keyword == qstr("minimize")) {
-		return TitleControls::Control::Minimize;
-	} else if (keyword == qstr("maximize")) {
-		return TitleControls::Control::Maximize;
-	} else if (keyword == qstr("close")) {
-		return TitleControls::Control::Close;
-	}
-
-	return TitleControls::Control::Unknown;
-}
-
-TitleControls::Layout GtkKeywordsToTitleControlsLayout(const QString &keywords) {
-	const auto splitted = keywords.split(':');
-
-	std::vector<TitleControls::Control> controlsLeft;
-	ranges::transform(
-		splitted[0].split(','),
-		ranges::back_inserter(controlsLeft),
-		GtkKeywordToTitleControl);
-
-	std::vector<TitleControls::Control> controlsRight;
-	if (splitted.size() > 1) {
-		ranges::transform(
-			splitted[1].split(','),
-			ranges::back_inserter(controlsRight),
-			GtkKeywordToTitleControl);
-	}
-
-	return TitleControls::Layout{
-		.left = controlsLeft,
-		.right = controlsRight
-	};
-}
-
 } // namespace
 
 bool IsApplicationActive() {
@@ -581,94 +543,5 @@ void GotApplicationActivateEvent() {
 	PendingDeactivateEvent = false;
 }
 
-namespace internal {
-
-TitleControls::Layout TitleControlsLayout() {
-	[[maybe_unused]] static const auto Inited = [] {
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		using base::Platform::XCB::XSettings;
-		if (const auto xSettings = XSettings::Instance()) {
-			xSettings->registerCallbackForProperty("Gtk/DecorationLayout", [](
-					xcb_connection_t *,
-					const QByteArray &,
-					const QVariant &,
-					void *) {
-				NotifyTitleControlsLayoutChanged();
-			}, nullptr);
-		}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-
-		using XDPSettingWatcher = base::Platform::XDP::SettingWatcher;
-		static const XDPSettingWatcher settingWatcher(
-			[=](
-				const Glib::ustring &group,
-				const Glib::ustring &key,
-				const Glib::VariantBase &value) {
-				if (group == "org.gnome.desktop.wm.preferences"
-					&& key == "button-layout") {
-					NotifyTitleControlsLayoutChanged();
-				}
-			});
-
-		return true;
-	}();
-
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-	const auto xSettingsResult = []() -> std::optional<TitleControls::Layout> {
-		using base::Platform::XCB::XSettings;
-		const auto xSettings = XSettings::Instance();
-		if (!xSettings) {
-			return std::nullopt;
-		}
-
-		const auto decorationLayout = xSettings->setting("Gtk/DecorationLayout");
-		if (!decorationLayout.isValid()) {
-			return std::nullopt;
-		}
-
-		return GtkKeywordsToTitleControlsLayout(decorationLayout.toString());
-	}();
-
-	if (xSettingsResult.has_value()) {
-		return *xSettingsResult;
-	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-
-	const auto portalResult = []() -> std::optional<TitleControls::Layout> {
-		try {
-			using namespace base::Platform::XDP;
-
-			const auto decorationLayout = ReadSetting(
-				"org.gnome.desktop.wm.preferences",
-				"button-layout");
-
-			if (!decorationLayout.has_value()) {
-				return std::nullopt;
-			}
-
-			return GtkKeywordsToTitleControlsLayout(
-				QString::fromStdString(
-					base::Platform::GlibVariantCast<Glib::ustring>(
-						*decorationLayout)));
-		} catch (...) {
-		}
-
-		return std::nullopt;
-	}();
-
-	if (portalResult.has_value()) {
-		return *portalResult;
-	}
-
-	return TitleControls::Layout{
-		.right = {
-			TitleControls::Control::Minimize,
-			TitleControls::Control::Maximize,
-			TitleControls::Control::Close,
-		}
-	};
-}
-
-} // namespace internal
 } // namespace Platform
 } // namespace Ui

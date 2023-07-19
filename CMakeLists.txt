@@ -112,6 +112,8 @@ PRIVATE
     ui/platform/linux/ui_linux_wayland_integration.h
     ui/platform/linux/ui_window_linux.cpp
     ui/platform/linux/ui_window_linux.h
+    ui/platform/linux/ui_window_title_linux.cpp
+    ui/platform/linux/ui_window_title_linux.h
     ui/platform/linux/ui_utility_linux.cpp
     ui/platform/linux/ui_utility_linux.h
     ui/platform/mac/ui_window_mac.h
@@ -134,7 +136,6 @@ PRIVATE
     ui/platform/ui_platform_window_title.h
     ui/platform/ui_platform_window.cpp
     ui/platform/ui_platform_window.h
-    ui/platform/ui_platform_utility.cpp
     ui/platform/ui_platform_utility.h
     ui/style/style_core.cpp
     ui/style/style_core.h

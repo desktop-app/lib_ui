@@ -20,6 +20,19 @@
 
 namespace Ui {
 namespace Platform {
+namespace internal {
+
+TitleControls::Layout TitleControlsLayout() {
+	return TitleControls::Layout{
+		.left = {
+			TitleControls::Control::Close,
+			TitleControls::Control::Minimize,
+			TitleControls::Control::Maximize,
+		}
+	};
+}
+
+} // namespace internal
 
 TitleWidget::TitleWidget(not_null<RpWidget*> parent, int height)
 : RpWidget(parent)

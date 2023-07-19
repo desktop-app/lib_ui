@@ -441,6 +441,36 @@ void TitleControls::updateButtonsState() {
 	_buttons->updateState(_activeState, _maximizedState, *_st);
 }
 
+namespace internal {
+namespace {
+
+auto &CachedTitleControlsLayout() {
+	using Layout = TitleControls::Layout;
+	static rpl::variable<Layout> Result = TitleControlsLayout();
+	return Result;
+};
+
+} // namespace
+
+void NotifyTitleControlsLayoutChanged(
+		const std::optional<TitleControls::Layout> &layout) {
+	CachedTitleControlsLayout() = layout ? *layout : TitleControlsLayout();
+}
+
+} // namespace internal
+
+TitleControls::Layout TitleControlsLayout() {
+	return internal::CachedTitleControlsLayout().current();
+}
+
+rpl::producer<TitleControls::Layout> TitleControlsLayoutValue() {
+	return internal::CachedTitleControlsLayout().value();
+}
+
+rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged() {
+	return internal::CachedTitleControlsLayout().changes();
+}
+
 DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)
 : RpWidget(parent)
 , _controls(this, st::defaultWindowTitle)
