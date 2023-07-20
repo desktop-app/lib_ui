@@ -6,6 +6,7 @@
 //
 #include "ui/platform/mac/ui_window_title_mac.h"
 
+#include "ui/platform/ui_platform_window_title.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/painter.h"
