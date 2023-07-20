@@ -105,7 +105,10 @@ public:
 				_dragStarted = _checkStartDrag();
 			} else if (([e type] == NSEventTypeLeftMouseDragged)
 					&& _dragStarted) {
-				return _checkPerformDrag([e window]);
+				if (_checkPerformDrag([e window])) {
+					return true;
+				}
+				_dragStarted = false;
 			}
 		}
 		return false;
