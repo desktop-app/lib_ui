@@ -1170,7 +1170,7 @@ void ElasticScroll::setOverscrollTypes(
 	if (fromChanged) {
 		switch (_overscrollTypeFrom) {
 		case OverscrollType::None:
-			_overscroll = 0;
+			_overscroll = _overscrollAccumulated = 0;
 			applyScrollTo(0);
 			break;
 		case OverscrollType::Virtual:
@@ -1185,7 +1185,7 @@ void ElasticScroll::setOverscrollTypes(
 			- (_state.visibleTill - _state.visibleFrom);
 		switch (_overscrollTypeTill) {
 		case OverscrollType::None:
-			_overscroll = 0;
+			_overscroll = _overscrollAccumulated = 0;
 			applyScrollTo(max);
 			break;
 		case OverscrollType::Virtual:
