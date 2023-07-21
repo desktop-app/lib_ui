@@ -20,7 +20,6 @@ class QPainter;
 namespace Ui::CustomEmoji {
 namespace {
 
-constexpr auto kMaxSize = 128;
 constexpr auto kMaxFrames = 180;
 constexpr auto kCacheVersion = 1;
 constexpr auto kPreloadFrames = 3;
@@ -169,8 +168,6 @@ Cache::Cache(int size) : _size(size) {
 std::optional<Cache> Cache::FromSerialized(
 		const QByteArray &serialized,
 		int requestedSize) {
-	Expects(requestedSize > 0 && requestedSize <= kMaxSize);
-
 	if (serialized.size() <= sizeof(CacheHeader)) {
 		return {};
 	}
