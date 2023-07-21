@@ -312,6 +312,9 @@ public:
 		return _markdownTagApplies.events();
 	}
 
+	[[nodiscard]] bool menuShown() const;
+	[[nodiscard]] rpl::producer<bool> menuShownValue() const;
+
 	~InputField();
 
 private Q_SLOTS:
@@ -543,6 +546,7 @@ private:
 
 	bool _correcting = false;
 	MimeDataHook _mimeDataHook;
+	rpl::event_stream<bool> _menuShownChanges;
 	base::unique_qptr<PopupMenu> _contextMenu;
 
 	QTextCharFormat _defaultCharFormat;

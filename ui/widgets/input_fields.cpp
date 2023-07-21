@@ -1278,6 +1278,15 @@ void InputField::scrollTo(int top) {
 	_inner->verticalScrollBar()->setValue(top);
 }
 
+
+bool InputField::menuShown() const {
+	return _contextMenu != nullptr;
+}
+
+rpl::producer<bool> InputField::menuShownValue() const {
+	return _menuShownChanges.events_starting_with(menuShown());
+}
+
 bool InputField::viewportEventInner(QEvent *e) {
 	if (e->type() == QEvent::TouchBegin
 		|| e->type() == QEvent::TouchUpdate
@@ -3634,6 +3643,10 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e, QMenu *m) {
 	if (const auto menu = m ? m : _inner->createStandardContextMenu()) {
 		addMarkdownActions(menu, e);
 		_contextMenu = base::make_unique_q<PopupMenu>(this, menu, _st.menu);
+		QObject::connect(_contextMenu.get(), &QObject::destroyed, [=] {
+			_menuShownChanges.fire(false);
+		});
+		_menuShownChanges.fire(true);
 		_contextMenu->popup(e->globalPos());
 	}
 }
