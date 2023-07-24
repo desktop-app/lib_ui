@@ -435,8 +435,8 @@ youtubePlayIconBg: #e83131c8; // youtube play icon background (when a link to a 
 youtubePlayIconFg: windowFgActive; // youtube play icon arrow (when a link to a youtube video with a webpage preview is sent)
 videoPlayIconBg: #0000007f; // other video play icon background (like when a link to a vimeo video with a webpage preview is sent)
 videoPlayIconFg: #ffffff; // other video play icon arrow (like when a link to a vimeo video with a webpage preview is sent)
-toastBg: #000000b2; // toast notification background (like when you click on your t.me link when editing your username)
-toastFg: windowFgActive; // toast notification text (like when you click on your t.me link when editing your username)
+toastBg: #2c3033e5; // toast notification background (like when you click on your t.me link when editing your username)
+toastFg: #ffffff; // toast notification text (like when you click on your t.me link when editing your username)
 
 historyToDownBg: windowBg; // arrow button background (to scroll to the end of the viewed chat)
 historyToDownBgOver: windowBgOver; // arrow button background with mouse over
@@ -518,7 +518,7 @@ mediaviewControlBg: #0000003c; // controls background (like next photo / previou
 mediaviewControlFg: #ffffff; // controls icon (like next photo / previous photo)
 mediaviewCaptionBg: #11111180; // caption text background (when viewing photo with caption)
 mediaviewCaptionFg: mediaviewControlFg; // caption text
-mediaviewTextLinkFg: #91d9ff; // caption text link
+mediaviewTextLinkFg: #4db8ff; // caption text link
 mediaviewSaveMsgBg: toastBg; // save to file toast message background in Media Viewer
 mediaviewSaveMsgFg: toastFg; // save to file toast message text
 

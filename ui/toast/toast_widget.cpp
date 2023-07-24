@@ -138,7 +138,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 	}
 	_roundRect.paint(p, rect());
 	if (_dark) {
-		_roundRect.paint(p, rect());
+		//_roundRect.paint(p, rect());
 	}
 
 	if (!_st->icon.empty()) {

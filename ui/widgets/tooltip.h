@@ -16,9 +16,18 @@
 namespace style {
 struct Tooltip;
 struct ImportantTooltip;
+struct FlatLabel;
+struct PopupMenu;
 } // namespace style
 
+namespace st {
+extern const style::FlatLabel &defaultFlatLabel;
+extern const style::PopupMenu &defaultPopupMenu;
+} // namespace st
+
 namespace Ui {
+
+class FlatLabel;
 
 class AbstractTooltipShower {
 public:
@@ -112,5 +121,12 @@ private:
 	QPixmap _cache;
 
 };
+
+[[nodiscard]] object_ptr<FlatLabel> MakeNiceTooltipLabel(
+	QWidget *parent,
+	rpl::producer<TextWithEntities> &&text,
+	int maxWidth,
+	const style::FlatLabel &st = st::defaultFlatLabel,
+	const style::PopupMenu &stMenu = st::defaultPopupMenu);
 
 } // namespace Ui

@@ -9,6 +9,7 @@
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
 #include "ui/platform/ui_platform_utility.h"
+#include "ui/widgets/labels.h"
 #include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/style_widgets.h"
@@ -408,6 +409,43 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
 			p.drawPixmapLeft(arrowLeft, inner.y() - _st.arrow, width(), _arrow);
 		}
 	}
+}
+
+object_ptr<FlatLabel> MakeNiceTooltipLabel(
+		QWidget *parent,
+		rpl::producer<TextWithEntities> &&text,
+		int maxWidth,
+		const style::FlatLabel &st,
+		const style::PopupMenu &stMenu) {
+	Expects(st.minWidth > 0);
+	Expects(st.minWidth < maxWidth);
+
+	auto result = object_ptr<FlatLabel>(
+		parent,
+		rpl::duplicate(text),
+		st,
+		stMenu);
+	const auto raw = result.data();
+	std::move(text) | rpl::start_with_next([=, &st] {
+		raw->resizeToNaturalWidth(maxWidth);
+		if (raw->naturalWidth() <= maxWidth) {
+			return;
+		}
+		const auto desired = raw->heightNoMargins();
+		auto from = st.minWidth;
+		auto till = maxWidth;
+		while (till - from > 1) {
+			const auto middle = (from + till) / 2;
+			raw->resizeToWidth(middle);
+			if (raw->heightNoMargins() > desired) {
+				from = middle;
+			} else {
+				till = middle;
+			}
+		}
+		raw->resizeToWidth(till);
+	}, raw->lifetime());
+	return result;
 }
 
 } // namespace Ui
