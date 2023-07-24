@@ -734,13 +734,13 @@ bool ElasticScroll::eventFilter(QObject *obj, QEvent *e) {
 	if (obj == _widget.data()) {
 		if (filterOutTouchEvent(e)) {
 			return true;
-		} else if (e->type()  == QEvent::Resize) {
+		} else if (e->type() == QEvent::Resize) {
 			const auto weak = Ui::MakeWeak(this);
 			updateState();
 			if (weak) {
 				_innerResizes.fire({});
 			}
-		} else if (e->type()  == QEvent::Move) {
+		} else if (e->type() == QEvent::Move) {
 			updateState();
 		}
 		return result;
@@ -903,8 +903,10 @@ void ElasticScroll::updateState() {
 		const auto delta = std::max(
 			std::min(nowOverscroll - wasOverscroll, from),
 			0);
-		from -= delta;
-		till -= delta;
+		if (delta) {
+			applyScrollTo(from - delta);
+			return;
+		}
 	}
 	setState({
 		.visibleFrom = from,
