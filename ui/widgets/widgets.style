@@ -1110,9 +1110,9 @@ defaultTooltip: Tooltip {
 defaultImportantTooltip: ImportantTooltip {
 	bg: importantTooltipBg;
 	margin: margins(4px, 4px, 4px, 4px);
-	padding: margins(13px, 9px, 13px, 10px);
-	radius: 6px;
-	arrow: 9px;
+	padding: margins(10px, 3px, 10px, 5px);
+	radius: 4px;
+	arrow: 4px;
 	arrowSkipMin: 24px;
 	arrowSkip: 66px;
 	shift: 12px;
@@ -1121,15 +1121,16 @@ defaultImportantTooltip: ImportantTooltip {
 
 defaultImportantTooltipLabel: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {
-		font: font(14px);
-		linkFont: font(14px);
-		linkFontOver: font(14px underline);
+		font: font(11px);
+		linkFont: font(11px);
+		linkFontOver: font(11px underline);
 	}
 	textFg: importantTooltipFg;
 	palette: TextPalette(defaultTextPalette) {
 		linkFg: importantTooltipFgLink;
 		selectLinkFg: importantTooltipFgLink;
 	}
+	minWidth: 36px;
 }
 
 BotKeyboardButton {
