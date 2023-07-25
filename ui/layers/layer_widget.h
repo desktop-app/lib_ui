@@ -82,6 +82,8 @@ public:
 protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
+	bool focusNextPrevChild(bool next) override;
+
 	virtual void doSetInnerFocus() {
 		setFocus();
 	}
