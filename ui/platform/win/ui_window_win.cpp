@@ -144,6 +144,28 @@ void FixAeroSnap(HWND handle) {
 	return result;
 }
 
+[[nodiscard]] Qt::KeyboardModifiers LookupModifiers() {
+	const auto check = [](int key) {
+		return (GetKeyState(key) & 0x8000) != 0;
+	};
+
+	auto result = Qt::KeyboardModifiers();
+	if (check(VK_SHIFT)) {
+		result |= Qt::ShiftModifier;
+	}
+	// NB AltGr key (i.e., VK_RMENU on some keyboard layout) is not handled.
+	if (check(VK_RMENU) || check(VK_MENU)) {
+		result |= Qt::AltModifier;
+	}
+	if (check(VK_CONTROL)) {
+		result |= Qt::ControlModifier;
+	}
+	if (check(VK_LWIN) || check(VK_RWIN)) {
+		result |= Qt::MetaModifier;
+	}
+	return result;
+}
+
 } // namespace
 
 class WindowHelper::NativeFilter final : public QAbstractNativeEventFilter {
@@ -431,7 +453,7 @@ void WindowHelper::handleDirectManipulationEvent(
 				QPointF(global.x, global.y),
 				event.delta,
 				event.delta,
-				QGuiApplication::keyboardModifiers(),
+				LookupModifiers(),
 				phase,
 				Qt::MouseEventSynthesizedBySystem);
 		}
