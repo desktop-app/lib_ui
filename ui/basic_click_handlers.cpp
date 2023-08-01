@@ -18,9 +18,9 @@
 #include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
 
-#if __has_include(<giomm.h>)
-#include <giomm.h>
-#endif // __has_include(<giomm.h>)
+#if __has_include(<gio/gio.hpp>)
+#include <gio/gio.hpp>
+#endif // __has_include(<gio/gio.hpp>)
 
 QString TextClickHandler::readable() const {
 	const auto result = url();
@@ -85,7 +85,7 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 		if (IsEmail(url)) {
 			url = "mailto: " + url;
 		}
-#if __has_include(<giomm.h>)
+#if __has_include(<gio/gio.hpp>)
 		// Desktop entry spec implementation,
 		// prefer it over QDesktopServices::openUrl since it just calls
 		// the xdg-open shell script that is known to be bugged:
@@ -95,15 +95,16 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 		// that allows various ill people to develop extensions
 		// to the standard and differ the behavior across apps.
 		// https://specifications.freedesktop.org/desktop-entry-spec/latest/
-		try {
+		{
+			using namespace gi::repository;
 			if (Gio::AppInfo::launch_default_for_uri(
 				url.toStdString(),
-				base::Platform::AppLaunchContext())) {
+				base::Platform::AppLaunchContext(),
+				nullptr)) {
 				return;
 			}
-		} catch (...) {
 		}
-#endif // __has_include(<giomm.h>)
+#endif // __has_include(<gio/gio.hpp>)
 		QDesktopServices::openUrl(url);
 	}
 }
