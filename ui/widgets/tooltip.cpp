@@ -411,6 +411,25 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
 	}
 }
 
+[[nodiscard]] int FindNiceTooltipWidth(
+		int minWidth,
+		int maxWidth,
+		Fn<int(int width)> heightForWidth) {
+	Expects(minWidth >= 0);
+	Expects(maxWidth > minWidth);
+
+	const auto desired = heightForWidth(maxWidth);
+	while (maxWidth - minWidth > 1) {
+		const auto middle = (minWidth + maxWidth) / 2;
+		if (heightForWidth(middle) > desired) {
+			minWidth = middle;
+		} else {
+			maxWidth = middle;
+		}
+	}
+	return maxWidth;
+}
+
 object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		QWidget *parent,
 		rpl::producer<TextWithEntities> &&text,
@@ -431,19 +450,14 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		if (raw->naturalWidth() <= maxWidth) {
 			return;
 		}
-		const auto desired = raw->heightNoMargins();
-		auto from = st.minWidth;
-		auto till = maxWidth;
-		while (till - from > 1) {
-			const auto middle = (from + till) / 2;
-			raw->resizeToWidth(middle);
-			if (raw->heightNoMargins() > desired) {
-				from = middle;
-			} else {
-				till = middle;
-			}
-		}
-		raw->resizeToWidth(till);
+		const auto niceWidth = FindNiceTooltipWidth(
+			st.minWidth,
+			maxWidth,
+			[&](int width) {
+				raw->resizeToWidth(width);
+				return raw->heightNoMargins();
+			});
+		raw->resizeToWidth(niceWidth);
 	}, raw->lifetime());
 	return result;
 }

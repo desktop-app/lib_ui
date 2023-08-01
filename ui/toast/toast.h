@@ -33,10 +33,12 @@ using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 
 inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
+	QString title;
 	TextWithEntities text;
 	not_null<const style::Toast*> st = &st::defaultMultilineToast;
 	crl::time duration = kDefaultDuration;
 	int maxLines = 16;
+	bool adaptive = false;
 	bool multiline = true;
 	bool dark = false;
 	RectPart slideSide = RectPart::None;

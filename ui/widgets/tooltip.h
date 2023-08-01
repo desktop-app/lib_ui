@@ -122,6 +122,11 @@ private:
 
 };
 
+[[nodiscard]] int FindNiceTooltipWidth(
+	int minWidth,
+	int maxWidth,
+	Fn<int(int width)> heightForWidth);
+
 [[nodiscard]] object_ptr<FlatLabel> MakeNiceTooltipLabel(
 	QWidget *parent,
 	rpl::producer<TextWithEntities> &&text,

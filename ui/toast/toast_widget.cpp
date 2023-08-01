@@ -7,6 +7,8 @@
 #include "ui/toast/toast_widget.h"
 
 #include "ui/image/image_prepare.h"
+#include "ui/text/text_utilities.h"
+#include "ui/widgets/tooltip.h"
 #include "ui/painter.h"
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
@@ -16,6 +18,21 @@
 namespace Ui {
 namespace Toast {
 namespace internal {
+namespace {
+
+[[nodiscard]] TextWithEntities ComputeText(const Config &config) {
+	auto result = config.text;
+	if (!config.title.isEmpty()) {
+		result = Text::Bold(
+			config.title
+		).append('\n').append(std::move(result));
+	}
+	return config.multiline
+		? result
+		: TextUtilities::SingleLine(std::move(result));
+}
+
+} // namespace
 
 Widget::Widget(QWidget *parent, const Config &config)
 : RpWidget(parent)
@@ -24,6 +41,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 , _slideSide(config.slideSide)
 , _multiline(config.multiline)
 , _dark(config.dark)
+, _adaptive(config.adaptive)
 , _maxTextWidth(widthWithoutPadding(_st->maxWidth))
 , _maxTextHeight(
 	config.st->style.font->height * (_multiline ? config.maxLines : 1))
@@ -37,7 +55,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 	};
 	_text.setMarkedText(
 		_st->style,
-		_multiline ? config.text : TextUtilities::SingleLine(config.text),
+		ComputeText(config),
 		toastOptions,
 		config.textContext ? config.textContext(this) : std::any());
 	if (_text.hasSpoilers()) {
@@ -74,6 +92,12 @@ void Widget::updateGeometry() {
 	accumulate_min(
 		width,
 		parentWidget()->width() - _st->margin.left() - _st->margin.right());
+	if (_adaptive) {
+		const auto added = _st->padding.left() + _st->padding.right();
+		width = FindNiceTooltipWidth(0, width - added, [&](int width) {
+			return _text.countHeight(width);
+		}) + added;
+	}
 	_textWidth = widthWithoutPadding(width);
 	_textHeight = _multiline
 		? qMin(_text.countHeight(_textWidth), _maxTextHeight)
