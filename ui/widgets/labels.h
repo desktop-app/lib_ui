@@ -139,6 +139,7 @@ public:
 		_animationsPausedCallback = std::move(callback);
 	}
 
+	[[nodiscard]] int textMaxWidth() const;
 	int naturalWidth() const override;
 	QMargins getMargins() const override;
 

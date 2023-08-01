@@ -318,8 +318,12 @@ int FlatLabel::resizeGetHeight(int newWidth) {
 	return countTextHeight(_textWidth);
 }
 
-int FlatLabel::naturalWidth() const {
+int FlatLabel::textMaxWidth() const {
 	return _text.maxWidth();
+}
+
+int FlatLabel::naturalWidth() const {
+	return (_st.align == style::al_top) ? -1 : textMaxWidth();
 }
 
 QMargins FlatLabel::getMargins() const {
