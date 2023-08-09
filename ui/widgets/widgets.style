@@ -991,6 +991,7 @@ SettingsSlider {
 	barRadius: pixels;
 	barFg: color;
 	barFgActive: color;
+	barSnapToLabel: bool;
 	labelTop: pixels;
 	labelStyle: TextStyle;
 	labelFg: color;
@@ -1018,11 +1019,14 @@ defaultSettingsSlider: SettingsSlider {
 }
 
 defaultTabsSlider: SettingsSlider(defaultSettingsSlider) {
-	height: 53px;
-	barTop: 50px;
+	height: 43px;
+	barTop: 40px;
 	barSkip: 0px;
+	barStroke: 6px;
+	barRadius: 2px;
 	barFg: transparent;
-	labelTop: 19px;
+	barSnapToLabel: true;
+	labelTop: 12px;
 	labelStyle: semiboldTextStyle;
 	labelFg: windowSubTextFg;
 	labelFgActive: lightButtonFg;
