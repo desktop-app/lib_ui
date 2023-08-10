@@ -48,13 +48,6 @@ int(__stdcall *GetSystemMetricsForDpi)(
 	_In_ int nIndex,
 	_In_ UINT dpi);
 
-BOOL(__stdcall *AdjustWindowRectExForDpi)(
-	_Inout_ LPRECT lpRect,
-	_In_ DWORD dwStyle,
-	_In_ BOOL bMenu,
-	_In_ DWORD dwExStyle,
-	_In_ UINT dpi);
-
 [[nodiscard]] bool GetDpiForWindowSupported() {
 	static const auto Result = [&] {
 #define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
@@ -70,16 +63,6 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
 #define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
 		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
 		return LOAD_SYMBOL(user32, GetSystemMetricsForDpi);
-#undef LOAD_SYMBOL
-	}();
-	return Result;
-}
-
-[[nodiscard]] bool AdjustWindowRectExForDpiSupported() {
-	static const auto Result = [&] {
-#define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
-		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
-		return LOAD_SYMBOL(user32, AdjustWindowRectExForDpi);
 #undef LOAD_SYMBOL
 	}();
 	return Result;
@@ -421,20 +404,11 @@ void WindowHelper::init() {
 		return ::Platform::IsWindows11OrGreater();
 	}) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
 		request->result = [=] {
-			RECT r{};
-			const auto style = GetWindowLongPtr(_handle, GWL_STYLE)
-				& ~WS_CAPTION;
-			const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
-			const auto dpi = style::ConvertScale(
-				96 * style::DevicePixelRatio());
-			if (AdjustWindowRectExForDpiSupported() && dpi) {
-				AdjustWindowRectExForDpi(&r, style, false, styleEx, dpi);
-			} else {
-				AdjustWindowRectEx(&r, style, false, styleEx);
-			}
 			const auto maximized = window()->isMaximized()
 				|| window()->isFullScreen();
-			return (!maximized && (request->point.y() < -r.top))
+			const auto px = int(std::ceil(
+				st::windowTitleHeight * style::DevicePixelRatio() / 10.));
+			return (!maximized && (request->point.y() < px))
 				? HitTestResult::Top
 				: HitTestResult::Client;
 		}();
