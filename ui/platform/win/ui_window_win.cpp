@@ -407,7 +407,9 @@ void WindowHelper::init() {
 			const auto maximized = window()->isMaximized()
 				|| window()->isFullScreen();
 			const auto px = int(std::ceil(
-				st::windowTitleHeight * style::DevicePixelRatio() / 10.));
+				st::windowTitleHeight
+					* window()->windowHandle()->devicePixelRatio()
+					/ 10.));
 			return (!maximized && (request->point.y() < px))
 				? HitTestResult::Top
 				: HitTestResult::Client;
