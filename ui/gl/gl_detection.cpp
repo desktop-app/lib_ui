@@ -33,7 +33,7 @@ namespace {
 bool ForceDisabled/* = false*/;
 
 #ifdef Q_OS_WIN
-ANGLE ResolvedANGLE = ANGLE::Auto;
+ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
 #endif // Q_OS_WIN
 
 base::options::toggle AllowLinuxNvidiaOpenGL({
@@ -247,7 +247,7 @@ void ConfigureANGLE() {
 			qputenv("DESKTOP_APP_QT_ANGLE_PLATFORM", backend);
 		}
 	};
-	check("gl", ANGLE::OpenGL);
+	//check("gl", ANGLE::OpenGL);
 	check("d3d9", ANGLE::D3D9);
 	check("d3d11", ANGLE::D3D11);
 	check("d3d11on12", ANGLE::D3D11on12);
@@ -272,7 +272,7 @@ void ChangeANGLE(ANGLE backend) {
 	case ANGLE::D3D9: write("d3d9"); break;
 	case ANGLE::D3D11: write("d3d11"); break;
 	case ANGLE::D3D11on12: write("d3d11on12"); break;
-	case ANGLE::OpenGL: write("gl"); break;
+	//case ANGLE::OpenGL: write("gl"); break;
 	default: Unexpected("ANGLE backend value.");
 	}
 }

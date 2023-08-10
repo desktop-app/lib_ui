@@ -38,7 +38,7 @@ enum class ANGLE {
 	D3D9,
 	D3D11,
 	D3D11on12,
-	OpenGL,
+	//OpenGL,
 };
 
 void ConfigureANGLE(); // Requires Ui::Integration being set.
