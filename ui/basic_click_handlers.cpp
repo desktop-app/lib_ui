@@ -73,7 +73,7 @@ QString UrlClickHandler::EncodeForOpening(const QString &originalUrl) {
 		&& !QRegularExpression(
 			QStringLiteral("^[a-zA-Z]+:")).match(result).hasMatch()) {
 		// No protocol.
-		return QStringLiteral("http://") + result;
+		return QStringLiteral("https://") + result;
 	}
 	return result;
 }
