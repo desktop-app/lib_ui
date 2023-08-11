@@ -921,11 +921,7 @@ void WindowHelper::updateMargins() {
 
 void WindowHelper::fixMaximizedWindow() {
 	if (::Platform::IsWindows11OrGreater()) return;
-	auto r = RECT();
-	GetClientRect(_handle, &r);
 	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
-	const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
-	AdjustWindowRectEx(&r, style, false, styleEx);
 	if (style & WS_MAXIMIZE) {
 		auto w = RECT();
 		GetWindowRect(_handle, &w);
