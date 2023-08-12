@@ -851,19 +851,11 @@ void WindowHelper::updateMargins() {
 	_updatingMargins = true;
 	const auto guard = gsl::finally([&] { _updatingMargins = false; });
 
-	RECT r, a;
-
-	GetClientRect(_handle, &r);
-	a = r;
-
+	RECT r{};
 	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 	const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
 	AdjustWindowRectEx(&a, style, false, styleEx);
-	auto margins = QMargins(
-		a.left - r.left,
-		a.top - r.top,
-		r.right - a.right,
-		r.bottom - a.bottom);
+	auto margins = QMargins(r.left, r.top, -r.right, -r.bottom);
 	if (style & WS_MAXIMIZE) {
 		RECT w, m;
 		GetWindowRect(_handle , &w);
