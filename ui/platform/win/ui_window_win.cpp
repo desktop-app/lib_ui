@@ -48,6 +48,13 @@ int(__stdcall *GetSystemMetricsForDpi)(
 	_In_ int nIndex,
 	_In_ UINT dpi);
 
+BOOL(__stdcall *AdjustWindowRectExForDpi)(
+	_Inout_ LPRECT lpRect,
+	_In_ DWORD dwStyle,
+	_In_ BOOL bMenu,
+	_In_ DWORD dwExStyle,
+	_In_ UINT dpi);
+
 [[nodiscard]] bool GetDpiForWindowSupported() {
 	static const auto Result = [&] {
 #define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
@@ -63,6 +70,16 @@ int(__stdcall *GetSystemMetricsForDpi)(
 #define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
 		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
 		return LOAD_SYMBOL(user32, GetSystemMetricsForDpi);
+#undef LOAD_SYMBOL
+	}();
+	return Result;
+}
+
+[[nodiscard]] bool AdjustWindowRectExForDpiSupported() {
+	static const auto Result = [&] {
+#define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
+		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
+		return LOAD_SYMBOL(user32, AdjustWindowRectExForDpi);
 #undef LOAD_SYMBOL
 	}();
 	return Result;
@@ -416,7 +433,9 @@ void WindowHelper::init() {
 		}();
 	}, window()->lifetime());
 
-	updateMargins();
+	_dpi.value() | rpl::start_with_next([=](uint dpi) {
+		updateMargins();
+	}, window()->lifetime());
 
 	if (!::Platform::IsWindows11OrGreater()) {
 		_shadow.emplace(window(), st::windowShadowFg->c);
@@ -854,7 +873,12 @@ void WindowHelper::updateMargins() {
 	RECT r{};
 	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 	const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
-	AdjustWindowRectEx(&a, style, false, styleEx);
+	const auto dpi = _dpi.current();
+	if (AdjustWindowRectExForDpiSupported() && dpi) {
+		AdjustWindowRectExForDpi(&r, style, false, styleEx, dpi);
+	} else {
+		AdjustWindowRectEx(&r, style, false, styleEx);
+	}
 	auto margins = QMargins(r.left, r.top, -r.right, -r.bottom);
 	if (style & WS_MAXIMIZE) {
 		RECT w, m;
