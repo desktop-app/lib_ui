@@ -30,14 +30,11 @@ public:
 private:
 	void initializeGL() override;
 	void resizeGL(int w, int h) override;
-	void paintEvent(QPaintEvent *e) override;
 	void paintGL() override;
 	void callDeInit();
 
 	const std::unique_ptr<Renderer> _renderer;
 	QMetaObject::Connection _connection;
-	QSize _deviceSize;
-	bool _inPaintEvent = false;
 
 };
 
@@ -79,33 +76,22 @@ void SurfaceOpenGL::initializeGL() {
 }
 
 void SurfaceOpenGL::resizeGL(int w, int h) {
-	_deviceSize = QSize(w, h) * devicePixelRatio();
 	_renderer->resize(this, *context()->functions(), w, h);
-}
-
-void SurfaceOpenGL::paintEvent(QPaintEvent *e) {
-	if (_inPaintEvent) {
-		return;
-	}
-	_inPaintEvent = true;
-	if (_deviceSize != size() * devicePixelRatio()) {
-		QResizeEvent event = { size(), size() };
-		resizeEvent(&event);
-	}
-	QOpenGLWidget::paintEvent(e);
-	_inPaintEvent = false;
 }
 
 void SurfaceOpenGL::paintGL() {
 	if (!updatesEnabled() || size().isEmpty() || !isValid()) {
 		return;
 	}
+	const auto rpd = redirected(nullptr);
+	const auto device = rpd ? rpd : static_cast<QPaintDevice*>(this);
 	const auto f = context()->functions();
 	if (const auto bg = _renderer->clearColor()) {
 		f->glClearColor(bg->redF(), bg->greenF(), bg->blueF(), bg->alphaF());
 		f->glClear(GL_COLOR_BUFFER_BIT);
 	}
 	f->glDisable(GL_BLEND);
+	f->glViewport(0, 0, device->width(), device->height());
 	_renderer->paint(this, *f);
 }
 
