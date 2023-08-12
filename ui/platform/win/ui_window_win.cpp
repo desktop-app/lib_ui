@@ -865,7 +865,7 @@ void WindowHelper::updateWindowFrameColors(bool active) {
 }
 
 void WindowHelper::updateMargins() {
-	if (::Platform::IsWindows11OrGreater() || _updatingMargins) return;
+	if (_updatingMargins) return;
 
 	_updatingMargins = true;
 	const auto guard = gsl::finally([&] { _updatingMargins = false; });
@@ -879,7 +879,9 @@ void WindowHelper::updateMargins() {
 	} else {
 		AdjustWindowRectEx(&r, style, false, styleEx);
 	}
-	auto margins = QMargins(r.left, r.top, -r.right, -r.bottom);
+	auto margins = ::Platform::IsWindows11OrGreater()
+		? QMargins(0, r.top, 0, 0)
+		: QMargins(r.left, r.top, -r.right, -r.bottom);
 	if (style & WS_MAXIMIZE) {
 		RECT w, m;
 		GetWindowRect(_handle , &w);
@@ -936,7 +938,6 @@ void WindowHelper::updateMargins() {
 }
 
 void WindowHelper::fixMaximizedWindow() {
-	if (::Platform::IsWindows11OrGreater()) return;
 	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 	if (style & WS_MAXIMIZE) {
 		auto w = RECT();
