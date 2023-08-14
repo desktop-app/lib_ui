@@ -10,7 +10,58 @@
 #include "ui/image/image_prepare.h"
 #include "ui/ui_utility.h"
 
+#include <QPainterPath>
+
 namespace Ui {
+
+QPainterPath ComplexRoundedRectPath(
+		const QRect &rect,
+		int topLeftRadius,
+		int topRightRadius,
+		int bottomLeftRadius,
+		int bottomRightRadius) {
+	auto path = QPainterPath();
+	path.setFillRule(Qt::WindingFill);
+
+	const auto cornerPartSize = rect.size() / 4 * 3;
+	const auto cornerPartOffset = QPoint(
+		rect.width() - cornerPartSize.width(),
+		rect.height() - cornerPartSize.height());
+
+	path.addRoundedRect(
+		rect.x(),
+		rect.y(),
+		cornerPartSize.width(),
+		cornerPartSize.height(),
+		topLeftRadius,
+		topLeftRadius);
+
+	path.addRoundedRect(
+		rect.x() + cornerPartOffset.x(),
+		rect.y(),
+		cornerPartSize.width(),
+		cornerPartSize.height(),
+		topRightRadius,
+		topRightRadius);
+
+	path.addRoundedRect(
+		rect.x(),
+		rect.y() + cornerPartOffset.y(),
+		cornerPartSize.width(),
+		cornerPartSize.height(),
+		bottomLeftRadius,
+		bottomLeftRadius);
+
+	path.addRoundedRect(
+		rect.x() + cornerPartOffset.x(),
+		rect.y() + cornerPartOffset.y(),
+		cornerPartSize.width(),
+		cornerPartSize.height(),
+		bottomRightRadius,
+		bottomRightRadius);
+
+	return path.simplified();
+}
 
 void DrawRoundedRect(
 		QPainter &p,

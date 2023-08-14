@@ -14,6 +14,13 @@ class QPainter;
 
 namespace Ui {
 
+[[nodiscard]] QPainterPath ComplexRoundedRectPath(
+	const QRect &rect,
+	int topLeftRadius,
+	int topRightRadius,
+	int bottomLeftRadius,
+	int bottomRightRadius);
+
 void DrawRoundedRect(
 	QPainter &p,
 	const QRect &rect,
