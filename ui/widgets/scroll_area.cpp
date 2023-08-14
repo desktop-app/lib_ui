@@ -664,7 +664,9 @@ void ScrollArea::moveEvent(QMoveEvent *e) {
 }
 
 void ScrollArea::keyPressEvent(QKeyEvent *e) {
-	if ((e->key() == Qt::Key_Up || e->key() == Qt::Key_Down) && e->modifiers().testFlag(Qt::AltModifier)) {
+	if ((e->key() == Qt::Key_Up || e->key() == Qt::Key_Down)
+		&& (e->modifiers().testFlag(Qt::AltModifier)
+			|| e->modifiers().testFlag(Qt::ControlModifier))) {
 		e->ignore();
 	} else if(e->key() == Qt::Key_Escape || e->key() == Qt::Key_Back) {
 		((QObject*)widget())->event(e);
