@@ -18,8 +18,10 @@
 namespace Ui {
 namespace {
 
-constexpr auto kProcessorEvent = QEvent::Type(QEvent::User + 1);
-static_assert(kProcessorEvent < QEvent::MaxUser);
+auto ProcessorEventType() {
+	static const auto Result = QEvent::Type(QEvent::registerEventType());
+	return Result;
+}
 
 QMutex ProcessorMutex;
 MainQueueProcessor *ProcessorInstance/* = nullptr*/;
@@ -47,7 +49,7 @@ void PushToMainQueueGeneric(void (*callable)(void*), void *argument) {
 		MainQueueProcessState.store(ProcessState::Waiting);
 	}
 
-	auto event = std::make_unique<QEvent>(kProcessorEvent);
+	auto event = std::make_unique<QEvent>(ProcessorEventType());
 
 	QMutexLocker lock(&ProcessorMutex);
 	if (ProcessorInstance) {
@@ -94,7 +96,7 @@ MainQueueProcessor::MainQueueProcessor() {
 
 bool MainQueueProcessor::event(QEvent *event) {
 	if constexpr (Platform::UseMainQueueGeneric()) {
-		if (event->type() == kProcessorEvent) {
+		if (event->type() == ProcessorEventType()) {
 			DrainMainQueueGeneric();
 			return true;
 		}
