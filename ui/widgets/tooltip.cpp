@@ -446,10 +446,13 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		stMenu);
 	const auto raw = result.data();
 	std::move(text) | rpl::start_with_next([=, &st] {
-		raw->resizeToNaturalWidth(maxWidth);
-		if (raw->naturalWidth() <= maxWidth) {
+		raw->resizeToWidth(qMin(maxWidth, raw->textMaxWidth()));
+		const auto desired = raw->textMaxWidth();
+		if (desired <= maxWidth) {
+			raw->resizeToWidth(desired);
 			return;
 		}
+		raw->resizeToWidth(maxWidth);
 		const auto niceWidth = FindNiceTooltipWidth(
 			st.minWidth,
 			maxWidth,

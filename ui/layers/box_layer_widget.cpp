@@ -250,11 +250,11 @@ void BoxLayerWidget::updateTitlePosition() {
 	_titleLeft = st::boxTitlePosition.x();
 	_titleTop = st::boxTitlePosition.y();
 	if (_title) {
-		const auto topButtonSkip = _topButton ? (_topButton->width() / 2) : 0;
-		_title->resizeToWidth(
-			std::min(
-				_title->naturalWidth(),
-				width() - _titleLeft * 2 - topButtonSkip));
+		const auto topButtonSkip = _topButton
+			? (_topButton->width() / 2)
+			: 0;
+		_title->resizeToNaturalWidth(
+			width() - _titleLeft * 2 - topButtonSkip);
 		_title->moveToLeft(_titleLeft, _titleTop);
 	}
 }

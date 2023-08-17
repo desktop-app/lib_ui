@@ -199,8 +199,8 @@ public:
 
 	// Resize to minimum of natural width and available width.
 	void resizeToNaturalWidth(int newWidth) {
-		auto maxWidth = naturalWidth();
-		resizeToWidth((maxWidth >= 0) ? qMin(newWidth, maxWidth) : newWidth);
+		const auto natural = naturalWidth();
+		resizeToWidth((natural >= 0) ? qMin(newWidth, natural) : newWidth);
 	}
 
 	QRect rectNoMargins() const {
