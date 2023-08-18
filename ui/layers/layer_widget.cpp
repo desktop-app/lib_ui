@@ -72,6 +72,7 @@ private:
 
 	bool _wasAnimating = false;
 	bool _inPaintEvent = false;
+	bool _repaintIssued = false;
 	Ui::Animations::Simple _a_shown;
 	Ui::Animations::Simple _a_mainMenuShown;
 	Ui::Animations::Simple _a_specialLayerShown;
@@ -98,6 +99,7 @@ void LayerStackWidget::BackgroundWidget::setCacheImages(
 	_layerCache = std::move(layerCache);
 	_specialLayerCacheBox = _specialLayerBox;
 	_layerCacheBox = _layerBox;
+	_repaintIssued = false;
 	setAttribute(Qt::WA_OpaquePaintEvent, !_bodyCache.isNull());
 }
 
@@ -143,6 +145,7 @@ void LayerStackWidget::BackgroundWidget::startAnimation(Action action) {
 }
 
 void LayerStackWidget::BackgroundWidget::skipAnimation(Action action) {
+	_repaintIssued = false;
 	startAnimation(action);
 	finishAnimating();
 }
@@ -309,6 +312,10 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 		auto sourceWidth = shownWidth * style::DevicePixelRatio();
 		auto sourceRect = style::rtlrect(_mainMenuCache.width() - sourceWidth, 0, sourceWidth, _mainMenuCache.height(), _mainMenuCache.width());
 		p.drawPixmapLeft(0, 0, shownWidth, height(), width(), _mainMenuCache, sourceRect);
+	}
+	if (!_repaintIssued && !_a_shown.animating()) {
+		_repaintIssued = true;
+		update();
 	}
 }
 
