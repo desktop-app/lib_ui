@@ -159,10 +159,10 @@ protected:
 
 private:
 	TWidget *tparent() {
-		return qobject_cast<TWidget*>(Base::parentWidget());
+		return dynamic_cast<TWidget*>(Base::parentWidget());
 	}
 	const TWidget *tparent() const {
-		return qobject_cast<const TWidget*>(Base::parentWidget());
+		return dynamic_cast<const TWidget*>(Base::parentWidget());
 	}
 
 	template <typename OtherBase>
@@ -173,9 +173,6 @@ private:
 };
 
 class TWidget : public TWidgetHelper<QWidget> {
-	// The Q_OBJECT meta info is used for qobject_cast!
-	Q_OBJECT
-
 public:
 	TWidget(QWidget *parent = nullptr);
 
