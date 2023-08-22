@@ -156,7 +156,7 @@ boxLoadingSize: 20px;
 
 boxDividerTop: icon {{ "box_divider_top", boxDividerFg }};
 boxDividerBottom: icon {{ "box_divider_bottom", boxDividerFg }};
-boxDividerHeight: 10px;
+boxDividerHeight: 8px;
 
 separatePanelBorderCacheSize: 60px;
 separatePanelTitleHeight: 62px;
