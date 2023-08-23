@@ -80,7 +80,8 @@ void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible) {
 
 void ResizeFitChild(
 		not_null<RpWidget*> parent,
-		not_null<RpWidget*> child) {
+		not_null<RpWidget*> child,
+		int heightMin) {
 	parent->widthValue(
 	) | rpl::start_with_next([=](int width) {
 		child->resizeToWidth(width);
@@ -88,7 +89,7 @@ void ResizeFitChild(
 
 	child->heightValue(
 	) | rpl::start_with_next([=](int height) {
-		parent->resize(parent->width(), height);
+		parent->resize(parent->width(), std::max(height, heightMin));
 	}, child->lifetime());
 }
 

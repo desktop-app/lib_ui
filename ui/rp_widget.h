@@ -261,7 +261,10 @@ namespace Ui {
 
 class RpWidget;
 
-void ResizeFitChild(not_null<RpWidget*> parent, not_null<RpWidget*> child);
+void ResizeFitChild(
+	not_null<RpWidget*> parent,
+	not_null<RpWidget*> child,
+	int heightMin = 0);
 
 template <typename Widget>
 using RpWidgetParent = std::conditional_t<
