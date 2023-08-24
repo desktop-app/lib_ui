@@ -17,6 +17,7 @@
 #include <QtCore/QPoint>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
 namespace Platform {
@@ -467,9 +468,14 @@ std::optional<bool> IsOverlapped(
 }
 
 bool WindowExtentsSupported() {
-	if (const auto integration = WaylandIntegration::Instance()) {
-		return integration->windowExtentsSupported();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+	using namespace QNativeInterface::Private;
+	QWindow window;
+	window.create();
+	if (window.nativeInterface<QWaylandWindow>()) {
+		return true;
 	}
+#endif // Qt >= 6.5.0
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
@@ -485,23 +491,39 @@ bool WindowExtentsSupported() {
 }
 
 void SetWindowExtents(not_null<QWidget*> widget, const QMargins &extents) {
-	if (const auto integration = WaylandIntegration::Instance()) {
-		integration->setWindowExtents(widget, extents);
-	} else if (::Platform::IsX11()) {
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		SetXCBFrameExtents(widget, extents);
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+	using namespace QNativeInterface::Private;
+	if (const auto native = not_null(widget->windowHandle())
+			->nativeInterface<QWaylandWindow>()) {
+		native->setCustomMargins(extents);
+		return;
 	}
+#endif // Qt >= 6.5.0
+
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	if (::Platform::IsX11()) {
+		SetXCBFrameExtents(widget, extents);
+		return;
+	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
 void UnsetWindowExtents(not_null<QWidget*> widget) {
-	if (const auto integration = WaylandIntegration::Instance()) {
-		integration->unsetWindowExtents(widget);
-	} else if (::Platform::IsX11()) {
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		UnsetXCBFrameExtents(widget);
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+	using namespace QNativeInterface::Private;
+	if (const auto native = not_null(widget->windowHandle())
+			->nativeInterface<QWaylandWindow>()) {
+		native->setCustomMargins(QMargins());
+		return;
 	}
+#endif // Qt >= 6.5.0
+
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	if (::Platform::IsX11()) {
+		UnsetXCBFrameExtents(widget);
+		return;
+	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
 void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {

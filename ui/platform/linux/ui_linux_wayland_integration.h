@@ -20,9 +20,6 @@ public:
 	[[nodiscard]] static WaylandIntegration *Instance();
 
 	[[nodiscard]] bool xdgDecorationSupported();
-	[[nodiscard]] bool windowExtentsSupported();
-	void setWindowExtents(not_null<QWidget*> widget, const QMargins &extents);
-	void unsetWindowExtents(not_null<QWidget*> widget);
 	void showWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 private:

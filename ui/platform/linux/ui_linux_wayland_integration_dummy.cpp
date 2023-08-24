@@ -30,18 +30,6 @@ bool WaylandIntegration::xdgDecorationSupported() {
 	return false;
 }
 
-bool WaylandIntegration::windowExtentsSupported() {
-	return false;
-}
-
-void WaylandIntegration::setWindowExtents(
-		not_null<QWidget*> widget,
-		const QMargins &extents) {
-}
-
-void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
-}
-
 void WaylandIntegration::showWindowMenu(
 		not_null<QWidget*> widget,
 		const QPoint &point) {
