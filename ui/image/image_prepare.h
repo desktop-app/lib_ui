@@ -206,4 +206,8 @@ struct PrepareArgs {
 [[nodiscard]] bool IsProgressiveJpeg(const QByteArray &bytes);
 [[nodiscard]] QByteArray MakeProgressiveJpeg(const QByteArray &bytes);
 
+[[nodiscard]] QByteArray ExpandInlineBytes(const QByteArray &bytes);
+[[nodiscard]] QImage FromInlineBytes(const QByteArray &bytes);
+[[nodiscard]] QPainterPath PathFromInlineBytes(const QByteArray &bytes);
+
 } // namespace Images
