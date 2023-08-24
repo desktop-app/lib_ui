@@ -85,38 +85,6 @@ bool WaylandIntegration::xdgDecorationSupported() {
 	return _private->xdgDecoration.has_value();
 }
 
-bool WaylandIntegration::windowExtentsSupported() {
-	QWindow window;
-	window.create();
-	return window.nativeInterface<QWaylandWindow>();
-}
-
-void WaylandIntegration::setWindowExtents(
-		not_null<QWidget*> widget,
-		const QMargins &extents) {
-	const auto window = widget->windowHandle();
-	Expects(window != nullptr);
-
-	const auto native = window->nativeInterface<QWaylandWindow>();
-	if (!native) {
-		return;
-	}
-
-	native->setCustomMargins(extents);
-}
-
-void WaylandIntegration::unsetWindowExtents(not_null<QWidget*> widget) {
-	const auto window = widget->windowHandle();
-	Expects(window != nullptr);
-
-	const auto native = window->nativeInterface<QWaylandWindow>();
-	if (!native) {
-		return;
-	}
-
-	native->setCustomMargins(QMargins());
-}
-
 void WaylandIntegration::showWindowMenu(
 		not_null<QWidget*> widget,
 		const QPoint &point) {
