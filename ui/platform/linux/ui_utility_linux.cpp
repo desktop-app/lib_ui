@@ -467,7 +467,7 @@ std::optional<bool> IsOverlapped(
 	return std::nullopt;
 }
 
-bool WindowExtentsSupported() {
+bool WindowMarginsSupported() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 	using namespace QNativeInterface::Private;
 	QWindow window;
@@ -490,25 +490,25 @@ bool WindowExtentsSupported() {
 	return false;
 }
 
-void SetWindowExtents(not_null<QWidget*> widget, const QMargins &extents) {
+void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 	using namespace QNativeInterface::Private;
 	if (const auto native = not_null(widget->windowHandle())
 			->nativeInterface<QWaylandWindow>()) {
-		native->setCustomMargins(extents);
+		native->setCustomMargins(margins);
 		return;
 	}
 #endif // Qt >= 6.5.0
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
-		SetXCBFrameExtents(widget, extents);
+		SetXCBFrameExtents(widget, margins);
 		return;
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
-void UnsetWindowExtents(not_null<QWidget*> widget) {
+void UnsetWindowMargins(not_null<QWidget*> widget) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 	using namespace QNativeInterface::Private;
 	if (const auto native = not_null(widget->windowHandle())

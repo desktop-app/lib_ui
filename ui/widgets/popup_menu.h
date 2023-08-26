@@ -86,11 +86,11 @@ public:
 	void setForceWidth(int forceWidth);
 	void setForcedOrigin(PanelAnimation::Origin origin);
 	void setForcedVerticalOrigin(VerticalOrigin origin);
-	void setAdditionalMenuPadding(QMargins padding, QMargins extents);
+	void setAdditionalMenuPadding(QMargins padding, QMargins margins);
 
 	[[nodiscard]] PanelAnimation::Origin preparedOrigin() const;
 	[[nodiscard]] QMargins preparedPadding() const;
-	[[nodiscard]] QMargins preparedExtents() const;
+	[[nodiscard]] QMargins preparedMargins() const;
 	[[nodiscard]] bool useTransparency() const;
 
 	[[nodiscard]] int scrollTop() const;
@@ -197,9 +197,9 @@ private:
 
 	QRect _inner;
 	QMargins _padding;
-	QMargins _extents;
+	QMargins _margins;
 	QMargins _additionalMenuPadding;
-	QMargins _additionalMenuExtents;
+	QMargins _additionalMenuMargins;
 
 	QPointer<PopupMenu> _activeSubmenu;
 

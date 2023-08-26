@@ -27,14 +27,14 @@ inline constexpr bool UseMainQueueGeneric() {
 	return ::Platform::IsMacStoreBuild();
 }
 
-inline bool WindowExtentsSupported() {
+inline bool WindowMarginsSupported() {
 	return false;
 }
 
-inline void SetWindowExtents(not_null<QWidget*> widget, const QMargins &extents) {
+inline void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 }
 
-inline void UnsetWindowExtents(not_null<QWidget*> widget) {
+inline void UnsetWindowMargins(not_null<QWidget*> widget) {
 }
 
 inline void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {

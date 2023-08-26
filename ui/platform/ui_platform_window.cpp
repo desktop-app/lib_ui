@@ -286,7 +286,7 @@ DefaultWindowHelper::DefaultWindowHelper(not_null<RpWidget*> window)
 }
 
 void DefaultWindowHelper::init() {
-	if (WindowExtentsSupported()) {
+	if (WindowMarginsSupported()) {
 		window()->setAttribute(Qt::WA_TranslucentBackground);
 	}
 
@@ -356,7 +356,7 @@ void DefaultWindowHelper::init() {
 			bool titleShown,
 			Qt::WindowStates windowState) {
 		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
-		updateWindowExtents();
+		updateWindowMargins();
 	}, window()->lifetime());
 
 	window()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
@@ -437,7 +437,7 @@ QMargins DefaultWindowHelper::frameMargins() {
 }
 
 bool DefaultWindowHelper::hasShadow() const {
-	return WindowExtentsSupported() && TranslucentWindowsSupported();
+	return WindowMarginsSupported() && TranslucentWindowsSupported();
 }
 
 QMargins DefaultWindowHelper::resizeArea() const {
@@ -588,13 +588,13 @@ void DefaultWindowHelper::paintBorders(QPainter &p) {
 		borderColor);
 }
 
-void DefaultWindowHelper::updateWindowExtents() {
+void DefaultWindowHelper::updateWindowMargins() {
 	if (hasShadow() && !_title->isHidden()) {
-		SetWindowExtents(window(), resizeArea());
-		_extentsSet = true;
-	} else if (_extentsSet) {
-		UnsetWindowExtents(window());
-		_extentsSet = false;
+		SetWindowMargins(window(), resizeArea());
+		_marginsSet = true;
+	} else if (_marginsSet) {
+		UnsetWindowMargins(window());
+		_marginsSet = false;
 	}
 }
 
