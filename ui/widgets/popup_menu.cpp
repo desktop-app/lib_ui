@@ -314,19 +314,19 @@ void PopupMenu::validateCompositingSupport() {
 			std::max(line, additional.top()),
 			std::max(line, additional.right()),
 			std::max(line, additional.bottom()));
-		_extents = QMargins();
+		_margins = QMargins();
 	} else {
 		_padding = QMargins(
 			std::max(_st.shadow.extend.left(), additional.left()),
 			std::max(_st.shadow.extend.top(), additional.top()),
 			std::max(_st.shadow.extend.right(), additional.right()),
 			std::max(_st.shadow.extend.bottom(), additional.bottom()));
-		_extents = _padding - (additional - _additionalMenuExtents);
+		_margins = _padding - (additional - _additionalMenuMargins);
 	}
-	if (_extents.isNull()) {
-		Platform::UnsetWindowExtents(this);
+	if (_margins.isNull()) {
+		Platform::UnsetWindowMargins(this);
 	} else {
-		Platform::SetWindowExtents(this, _extents);
+		Platform::SetWindowMargins(this, _margins);
 	}
 	_scroll->moveToLeft(_padding.left(), _padding.top());
 	handleMenuResize();
@@ -722,16 +722,16 @@ void PopupMenu::setForcedVerticalOrigin(VerticalOrigin origin) {
 
 void PopupMenu::setAdditionalMenuPadding(
 		QMargins padding,
-		QMargins extents) {
-	Expects(padding.left() >= extents.left()
-		&& padding.right() >= extents.right()
-		&& padding.top() >= extents.top()
-		&& padding.bottom() >= extents.bottom());
+		QMargins margins) {
+	Expects(padding.left() >= margins.left()
+		&& padding.right() >= margins.right()
+		&& padding.top() >= margins.top()
+		&& padding.bottom() >= margins.bottom());
 
 	if (_additionalMenuPadding != padding
-		|| _additionalMenuExtents != extents) {
+		|| _additionalMenuMargins != margins) {
 		_additionalMenuPadding = padding;
-		_additionalMenuExtents = extents;
+		_additionalMenuMargins = margins;
 		_roundingOverlay = nullptr;
 	}
 }
@@ -937,8 +937,8 @@ QMargins PopupMenu::preparedPadding() const {
 	return _padding;
 }
 
-QMargins PopupMenu::preparedExtents() const {
-	return _extents;
+QMargins PopupMenu::preparedMargins() const {
+	return _margins;
 }
 
 bool PopupMenu::useTransparency() const {
@@ -1010,21 +1010,21 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 	auto r = screen ? screen->availableGeometry() : QRect();
 	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {
-		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _extents.left();
+		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _margins.left();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && (r.isNull() || w.x() + parentWidth - _extents.left() - _extents.right() + width() - _extents.right() <= r.x() + r.width())) {
-				w.setX(w.x() + parentWidth - _extents.left() - _extents.right());
+			if (_parent && (r.isNull() || w.x() + parentWidth - _margins.left() - _margins.right() + width() - _margins.right() <= r.x() + r.width())) {
+				w.setX(w.x() + parentWidth - _margins.left() - _margins.right());
 			} else {
-				w.setX(r.x() - _extents.left());
+				w.setX(r.x() - _margins.left());
 			}
 		} else {
 			w.setX(w.x() - width());
 		}
 	} else {
-		const auto badLeft = !r.isNull() && w.x() + width() - _extents.right() > r.x() + r.width();
+		const auto badLeft = !r.isNull() && w.x() + width() - _margins.right() > r.x() + r.width();
 		if (forceRight || (badLeft && !forceLeft)) {
-			if (_parent && (r.isNull() || w.x() - parentWidth + _extents.left() + _extents.right() - width() + _extents.right() >= r.x() - _extents.left())) {
-				w.setX(w.x() + _extents.left() + _extents.right() - parentWidth - width() + _extents.left() + _extents.right());
+			if (_parent && (r.isNull() || w.x() - parentWidth + _margins.left() + _margins.right() - width() + _margins.right() >= r.x() - _margins.left())) {
+				w.setX(w.x() + _margins.left() + _margins.right() - parentWidth - width() + _margins.left() + _margins.right());
 			} else {
 				w.setX(p.x() - width() + std::max(
 					_additionalMenuPadding.right() - _st.shadow.extend.right(),
@@ -1033,29 +1033,29 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 			origin = PanelAnimation::Origin::TopRight;
 		}
 	}
-	const auto badTop = !r.isNull() && w.y() + height() - _extents.bottom() > r.y() + r.height();
+	const auto badTop = !r.isNull() && w.y() + height() - _margins.bottom() > r.y() + r.height();
 	if (forceBottom || (badTop && !forceTop)) {
 		if (_parent) {
-			w.setY(r.y() + r.height() - height() + _extents.bottom());
+			w.setY(r.y() + r.height() - height() + _margins.bottom());
 		} else {
-			w.setY(p.y() - height() + _extents.bottom());
+			w.setY(p.y() - height() + _margins.bottom());
 			origin = (origin == PanelAnimation::Origin::TopRight)
 				? PanelAnimation::Origin::BottomRight
 				: PanelAnimation::Origin::BottomLeft;
 		}
 	}
 	if (!r.isNull()) {
-		if (w.x() + width() - _extents.right() > r.x() + r.width()) {
-			w.setX(r.x() + r.width() + _extents.right() - width());
+		if (w.x() + width() - _margins.right() > r.x() + r.width()) {
+			w.setX(r.x() + r.width() + _margins.right() - width());
 		}
-		if (w.x() + _extents.left() < r.x()) {
-			w.setX(r.x() - _extents.left());
+		if (w.x() + _margins.left() < r.x()) {
+			w.setX(r.x() - _margins.left());
 		}
-		if (w.y() + height() - _extents.bottom() > r.y() + r.height()) {
-			w.setY(r.y() + r.height() + _extents.bottom() - height());
+		if (w.y() + height() - _margins.bottom() > r.y() + r.height()) {
+			w.setY(r.y() + r.height() + _margins.bottom() - height());
 		}
-		if (w.y() + _extents.top() < r.y()) {
-			w.setY(r.y() - _extents.top());
+		if (w.y() + _margins.top() < r.y()) {
+			w.setY(r.y() - _margins.top());
 		}
 	}
 	move(w);

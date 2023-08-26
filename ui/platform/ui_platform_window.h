@@ -107,7 +107,7 @@ private:
 	[[nodiscard]] QMargins resizeArea() const;
 	[[nodiscard]] Qt::Edges edgesFromPos(const QPoint &pos) const;
 	void paintBorders(QPainter &p);
-	void updateWindowExtents();
+	void updateWindowMargins();
 	void updateCursor(Qt::Edges edges);
 	[[nodiscard]] int titleHeight() const;
 	[[nodiscard]] QMargins bodyPadding() const;
@@ -118,7 +118,7 @@ private:
 	std::array<QImage, 4> _sides;
 	std::array<QImage, 4> _corners;
 	object_ptr<RpWidget> _roundingOverlay = { nullptr };
-	bool _extentsSet = false;
+	bool _marginsSet = false;
 	rpl::variable<Qt::WindowStates> _windowState = Qt::WindowNoState;
 
 };
