@@ -180,7 +180,6 @@ QString Integration::phrasePanelCloseAnyway() {
 	return "Close anyway";
 }
 
-#if 0 // disabled for now
 QString Integration::phraseBotSharePhone() {
 	return "Do you want to share your phone number with this bot?";
 }
@@ -192,6 +191,17 @@ QString Integration::phraseBotSharePhoneTitle() {
 QString Integration::phraseBotSharePhoneConfirm() {
 	return "Share";
 }
-#endif
+
+QString Integration::phraseBotAllowWrite() {
+	return "Do you want to allow this bot to write you?";
+}
+
+QString Integration::phraseBotAllowWriteTitle() {
+	return "Allow write";
+}
+
+QString Integration::phraseBotAllowWriteConfirm() {
+	return "Allow";
+}
 
 } // namespace Ui
