@@ -198,10 +198,8 @@ PRIVATE
     ui/widgets/icon_button_with_text.h
     ui/widgets/inner_dropdown.cpp
     ui/widgets/inner_dropdown.h
-    ui/widgets/input_fields.cpp
-    ui/widgets/input_fields.h
-    ui/widgets/labels.cpp
-    ui/widgets/labels.h
+    ui/widgets/fields/input_field.cpp
+    ui/widgets/fields/input_field.h
     ui/widgets/fields/masked_input_field.cpp
     ui/widgets/fields/masked_input_field.h
     ui/widgets/fields/number_input.cpp
@@ -210,6 +208,8 @@ PRIVATE
     ui/widgets/fields/password_input.h
     ui/widgets/fields/time_part_input.cpp
     ui/widgets/fields/time_part_input.h
+    ui/widgets/labels.cpp
+    ui/widgets/labels.h
     ui/widgets/menu/menu.cpp
     ui/widgets/menu/menu.h
     ui/widgets/menu/menu_action.cpp

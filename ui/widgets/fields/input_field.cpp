@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/widgets/input_fields.h"
+#include "ui/widgets/fields/input_field.h"
 
 #include "ui/widgets/popup_menu.h"
 #include "ui/text/text.h"
