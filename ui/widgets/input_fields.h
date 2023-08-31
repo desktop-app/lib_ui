@@ -431,11 +431,13 @@ private:
 		const QString &customEmojiData,
 		std::optional<QString> checkOriginal,
 		bool checkIfInMonospace);
+#if 0
 	bool commitMarkdownReplacement(
 		int from,
 		int till,
 		const QString &tag,
 		const QString &edge = QString());
+#endif
 	void addMarkdownTag(int from, int till, const QString &tag);
 	void removeMarkdownTag(int from, int till, const QString &tag);
 	void finishMarkdownTagChange(

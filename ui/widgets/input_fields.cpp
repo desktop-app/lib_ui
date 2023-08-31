@@ -3257,6 +3257,7 @@ void InputField::commitInstantReplacement(
 	cursor.insertText(replacement, format);
 }
 
+#if 0
 bool InputField::commitMarkdownReplacement(
 		int from,
 		int till,
@@ -3368,6 +3369,7 @@ bool InputField::commitMarkdownReplacement(
 
 	return true;
 }
+#endif
 
 void InputField::addMarkdownTag(
 		int from,
