@@ -18,16 +18,18 @@
 #include "emoji_suggestions_helper.h"
 #include "base/qthelp_regex.h"
 #include "base/qt/qt_common_adapters.h"
+#include "styles/style_widgets.h"
 #include "styles/palette.h"
 
-#include <QtWidgets/QCommonStyle>
-#include <QtWidgets/QScrollBar>
-#include <QtWidgets/QApplication>
+#include <QtCore/QMimeData>
+#include <QtCore/QRegularExpression>
 #include <QtGui/QClipboard>
 #include <QtGui/QTextBlock>
 #include <QtGui/QTextDocumentFragment>
-#include <QtCore/QMimeData>
-#include <QtCore/QRegularExpression>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QCommonStyle>
+#include <QtWidgets/QScrollBar>
+#include <QtWidgets/QTextEdit>
 
 namespace Ui {
 namespace {

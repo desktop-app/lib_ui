@@ -12,21 +12,23 @@
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
 #include "ui/text/text_custom_emoji.h"
-#include "styles/style_widgets.h"
 
-#include <QContextMenuEvent>
-#include <QtWidgets/QLineEdit>
-#include <QtWidgets/QTextEdit>
 #include <QtGui/QTextObjectInterface>
 
 #include <rpl/variable.h>
 
+class QTextEdit;
 class QTouchEvent;
+class QContextMenuEvent;
 class Painter;
 
 namespace Ui::Text {
 class CustomEmoji;
 } // namespace Ui::Text
+
+namespace style {
+struct InputField;
+} // namespace style
 
 namespace Ui {
 
