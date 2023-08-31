@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/timer.h"
 #include "ui/emoji_config.h"
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
@@ -17,7 +18,6 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QTextEdit>
 #include <QtGui/QTextObjectInterface>
-#include <QtCore/QTimer>
 
 #include <rpl/variable.h>
 
@@ -325,7 +325,6 @@ public:
 	~InputField();
 
 private Q_SLOTS:
-	void onTouchTimer();
 
 	void onDocumentContentsChange(int position, int charsRemoved, int charsAdded);
 	void onCursorPositionChanged();
@@ -537,7 +536,7 @@ private:
 	bool _focused = false;
 	bool _error = false;
 
-	QTimer _touchTimer;
+	base::Timer _touchTimer;
 	bool _touchPress = false;
 	bool _touchRightButton = false;
 	bool _touchMove = false;

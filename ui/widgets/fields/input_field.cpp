@@ -1207,8 +1207,8 @@ InputField::InputField(
 
 	setAttribute(Qt::WA_AcceptTouchEvents);
 	_inner->viewport()->setAttribute(Qt::WA_AcceptTouchEvents);
-	_touchTimer.setSingleShot(true);
-	connect(&_touchTimer, SIGNAL(timeout()), this, SLOT(onTouchTimer()));
+
+	_touchTimer.setCallback([=] { _touchRightButton = true; });
 
 	connect(_inner->document(), SIGNAL(contentsChange(int,int,int)), this, SLOT(onDocumentContentsChange(int,int,int)));
 	connect(_inner.get(), SIGNAL(undoAvailable(bool)), this, SLOT(onUndoAvailable(bool)));
@@ -1320,10 +1320,6 @@ void InputField::updatePalette() {
 		cursor.setCharFormat(format);
 		setTextCursor(cursor);
 	}
-}
-
-void InputField::onTouchTimer() {
-	_touchRightButton = true;
 }
 
 void InputField::setExtendedContextMenu(
@@ -1548,7 +1544,7 @@ void InputField::handleTouchEvent(QTouchEvent *e) {
 		if (_touchPress || e->touchPoints().isEmpty()) {
 			return;
 		}
-		_touchTimer.start(QApplication::startDragTime());
+		_touchTimer.callOnce(QApplication::startDragTime());
 		_touchPress = true;
 		_touchMove = _touchRightButton = false;
 		_touchStart = e->touchPoints().cbegin()->screenPos().toPoint();
@@ -1566,7 +1562,7 @@ void InputField::handleTouchEvent(QTouchEvent *e) {
 
 	case QEvent::TouchCancel: {
 		_touchPress = false;
-		_touchTimer.stop();
+		_touchTimer.cancel();
 	} break;
 	}
 }
@@ -1599,7 +1595,7 @@ void InputField::touchFinish() {
 		}
 	}
 	if (weak) {
-		_touchTimer.stop();
+		_touchTimer.cancel();
 		_touchPress
 			= _touchMove
 			= _touchRightButton
