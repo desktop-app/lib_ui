@@ -202,6 +202,8 @@ PRIVATE
     ui/widgets/input_fields.h
     ui/widgets/labels.cpp
     ui/widgets/labels.h
+    ui/widgets/fields/masked_input_field.cpp
+    ui/widgets/fields/masked_input_field.h
     ui/widgets/fields/number_input.cpp
     ui/widgets/fields/number_input.h
     ui/widgets/fields/password_input.cpp

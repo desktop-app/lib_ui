@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/fields/time_part_input.h"
 
+#include "base/qt/qt_string_view.h"
 #include "ui/ui_utility.h" // WheelDirection
 
 #include <QtCore/QRegularExpression>
