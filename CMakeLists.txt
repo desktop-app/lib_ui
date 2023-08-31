@@ -202,6 +202,8 @@ PRIVATE
     ui/widgets/input_fields.h
     ui/widgets/labels.cpp
     ui/widgets/labels.h
+    ui/widgets/fields/password_input.cpp
+    ui/widgets/fields/password_input.h
     ui/widgets/fields/time_part_input.cpp
     ui/widgets/fields/time_part_input.h
     ui/widgets/menu/menu.cpp

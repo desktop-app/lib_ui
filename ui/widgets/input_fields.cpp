@@ -4349,15 +4349,6 @@ void MaskedInputField::onCursorPositionChanged(int oldPosition, int position) {
 	_oldcursor = position;
 }
 
-PasswordInput::PasswordInput(
-	QWidget *parent,
-	const style::InputField &st,
-	rpl::producer<QString> placeholder,
-	const QString &val)
-: MaskedInputField(parent, st, std::move(placeholder), val) {
-	setEchoMode(QLineEdit::Password);
-}
-
 NumberInput::NumberInput(
 	QWidget *parent,
 	const style::InputField &st,

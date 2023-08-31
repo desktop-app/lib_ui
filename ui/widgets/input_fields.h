@@ -718,12 +718,6 @@ private:
 
 };
 
-class PasswordInput : public MaskedInputField {
-public:
-	PasswordInput(QWidget *parent, const style::InputField &st, rpl::producer<QString> placeholder = nullptr, const QString &val = QString());
-
-};
-
 class NumberInput : public MaskedInputField {
 public:
 	NumberInput(
