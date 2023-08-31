@@ -4349,36 +4349,4 @@ void MaskedInputField::onCursorPositionChanged(int oldPosition, int position) {
 	_oldcursor = position;
 }
 
-HexInput::HexInput(
-	QWidget *parent,
-	const style::InputField &st,
-	rpl::producer<QString> placeholder,
-	const QString &val)
-: MaskedInputField(parent, st, std::move(placeholder), val) {
-	if (!QRegularExpression("^[a-fA-F0-9]+$").match(val).hasMatch()) {
-		setText(QString());
-	}
-}
-
-void HexInput::correctValue(
-		const QString &was,
-		int wasCursor,
-		QString &now,
-		int &nowCursor) {
-	QString newText;
-	newText.reserve(now.size());
-	auto newPos = nowCursor;
-	for (auto i = 0, l = int(now.size()); i < l; ++i) {
-		const auto ch = now[i];
-		if ((ch >= '0' && ch <= '9')
-			|| (ch >= 'a' && ch <= 'f')
-			|| (ch >= 'A' && ch <= 'F')) {
-			newText.append(ch);
-		} else if (i < nowCursor) {
-			--newPos;
-		}
-	}
-	setCorrectedText(now, nowCursor, newText, newPos);
-}
-
 } // namespace Ui

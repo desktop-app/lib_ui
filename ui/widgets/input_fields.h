@@ -718,17 +718,4 @@ private:
 
 };
 
-class HexInput : public MaskedInputField {
-public:
-	HexInput(QWidget *parent, const style::InputField &st, rpl::producer<QString> placeholder, const QString &val);
-
-protected:
-	void correctValue(
-		const QString &was,
-		int wasCursor,
-		QString &now,
-		int &nowCursor) override;
-
-};
-
 } // namespace Ui
