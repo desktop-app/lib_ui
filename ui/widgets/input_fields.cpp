@@ -4349,44 +4349,6 @@ void MaskedInputField::onCursorPositionChanged(int oldPosition, int position) {
 	_oldcursor = position;
 }
 
-NumberInput::NumberInput(
-	QWidget *parent,
-	const style::InputField &st,
-	rpl::producer<QString> placeholder,
-	const QString &value,
-	int limit)
-: MaskedInputField(parent, st, std::move(placeholder), value)
-, _limit(limit) {
-	if (!value.toInt() || (limit > 0 && value.toInt() > limit)) {
-		setText(QString());
-	}
-}
-
-void NumberInput::correctValue(
-		const QString &was,
-		int wasCursor,
-		QString &now,
-		int &nowCursor) {
-	QString newText;
-	newText.reserve(now.size());
-	auto newPos = nowCursor;
-	for (auto i = 0, l = int(now.size()); i < l; ++i) {
-		if (now.at(i).isDigit()) {
-			newText.append(now.at(i));
-		} else if (i < nowCursor) {
-			--newPos;
-		}
-	}
-	if (!newText.toInt()) {
-		newText = QString();
-		newPos = 0;
-	} else if (_limit > 0 && newText.toInt() > _limit) {
-		newText = was;
-		newPos = wasCursor;
-	}
-	setCorrectedText(now, nowCursor, newText, newPos);
-}
-
 HexInput::HexInput(
 	QWidget *parent,
 	const style::InputField &st,
