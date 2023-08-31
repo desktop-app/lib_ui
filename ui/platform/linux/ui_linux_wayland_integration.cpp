@@ -88,9 +88,7 @@ bool WaylandIntegration::xdgDecorationSupported() {
 void WaylandIntegration::showWindowMenu(
 		not_null<QWidget*> widget,
 		const QPoint &point) {
-	const auto window = widget->windowHandle();
-	Expects(window != nullptr);
-
+	const auto window = not_null(widget->windowHandle());
 	const auto native = qApp->nativeInterface<QWaylandApplication>();
 	const auto nativeWindow = window->nativeInterface<QWaylandWindow>();
 	if (!native || !nativeWindow) {
