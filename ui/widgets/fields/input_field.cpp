@@ -1538,7 +1538,7 @@ bool InputField::heightAutoupdated() {
 
 void InputField::checkContentHeight() {
 	if (heightAutoupdated()) {
-		resized();
+		_heightChanges.fire({});
 	}
 }
 
@@ -1812,13 +1812,13 @@ void InputField::focusInEventInner(QFocusEvent *e) {
 		: (width() / 2);
 	setFocused(true);
 	_inner->QTextEdit::focusInEvent(e);
-	focused();
+	_focusedChanges.fire(true);
 }
 
 void InputField::focusOutEventInner(QFocusEvent *e) {
 	setFocused(false);
 	_inner->QTextEdit::focusOutEvent(e);
-	blurred();
+	_focusedChanges.fire(false);
 }
 
 void InputField::setFocused(bool focused) {
@@ -2401,7 +2401,7 @@ void InputField::handleContentsChanged() {
 	if (tagsChanged || (_lastTextWithTags.text != currentText)) {
 		_lastTextWithTags.text = currentText;
 		const auto weak = MakeWeak(this);
-		changed();
+		_changes.fire({});
 		if (!weak) {
 			return;
 		}
@@ -2765,15 +2765,15 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		&& revertFormatReplace()) {
 		e->accept();
 	} else if (enter && enterSubmit) {
-		submitted(e->modifiers());
+		_submits.fire(e->modifiers());
 	} else if (e->key() == Qt::Key_Escape) {
 		e->ignore();
-		cancelled();
+		_cancelled.fire({});
 	} else if (e->key() == Qt::Key_Tab || e->key() == Qt::Key_Backtab) {
 		if (alt || ctrl) {
 			e->ignore();
 		} else if (_customTab) {
-			tabbed();
+			_tabbed.fire({});
 		} else if (!focusNextPrevChild(e->key() == Qt::Key_Tab && !shift)) {
 			e->ignore();
 		}
@@ -3841,6 +3841,30 @@ void InputField::setErrorShown(bool error) {
 		_a_error.start([this] { update(); }, _error ? 0. : 1., _error ? 1. : 0., _st.duration);
 		startBorderAnimation();
 	}
+}
+
+rpl::producer<> InputField::heightChanges() const {
+	return _heightChanges.events();
+}
+
+rpl::producer<bool> InputField::focusedChanges() const {
+	return _focusedChanges.events();
+}
+
+rpl::producer<> InputField::tabbed() const {
+	return _tabbed.events();
+}
+
+rpl::producer<> InputField::cancelled() const {
+	return _cancelled.events();
+}
+
+rpl::producer<> InputField::changes() const {
+	return _changes.events();
+}
+
+rpl::producer<Qt::KeyboardModifiers> InputField::submits() const {
+	return _submits.events();
 }
 
 InputField::~InputField() = default;

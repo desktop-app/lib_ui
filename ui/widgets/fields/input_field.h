@@ -315,6 +315,13 @@ public:
 	[[nodiscard]] bool menuShown() const;
 	[[nodiscard]] rpl::producer<bool> menuShownValue() const;
 
+	[[nodiscard]] rpl::producer<> heightChanges() const;
+	[[nodiscard]] rpl::producer<bool> focusedChanges() const;
+	[[nodiscard]] rpl::producer<> tabbed() const;
+	[[nodiscard]] rpl::producer<> cancelled() const;
+	[[nodiscard]] rpl::producer<> changes() const;
+	[[nodiscard]] rpl::producer<Qt::KeyboardModifiers> submits() const;
+
 	~InputField();
 
 private Q_SLOTS:
@@ -327,15 +334,6 @@ private Q_SLOTS:
 	void onRedoAvailable(bool avail);
 
 	void onFocusInner();
-
-Q_SIGNALS:
-	void changed();
-	void submitted(Qt::KeyboardModifiers);
-	void cancelled();
-	void tabbed();
-	void focused();
-	void blurred();
-	void resized();
 
 protected:
 	void startPlaceholderAnimation();
@@ -560,6 +558,13 @@ private:
 
 	rpl::event_stream<DocumentChangeInfo> _documentContentsChanges;
 	rpl::event_stream<MarkdownTag> _markdownTagApplies;
+
+	rpl::event_stream<bool> _focusedChanges;
+	rpl::event_stream<> _heightChanges;
+	rpl::event_stream<> _tabbed;
+	rpl::event_stream<> _cancelled;
+	rpl::event_stream<> _changes;
+	rpl::event_stream<Qt::KeyboardModifiers> _submits;
 
 };
 
