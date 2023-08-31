@@ -103,8 +103,6 @@ private:
 };
 
 class InputField : public RpWidget {
-	Q_OBJECT
-
 public:
 	enum class Mode {
 		SingleLine,
@@ -324,16 +322,6 @@ public:
 
 	~InputField();
 
-private Q_SLOTS:
-
-	void onDocumentContentsChange(int position, int charsRemoved, int charsAdded);
-	void onCursorPositionChanged();
-
-	void onUndoAvailable(bool avail);
-	void onRedoAvailable(bool avail);
-
-	void onFocusInner();
-
 protected:
 	void startPlaceholderAnimation();
 	void startBorderAnimation();
@@ -377,6 +365,12 @@ private:
 	bool canInsertFromMimeDataInner(const QMimeData *source) const;
 	void insertFromMimeDataInner(const QMimeData *source);
 	TextWithTags getTextWithTagsSelected() const;
+
+	void documentContentsChanged(
+		int position,
+		int charsRemoved,
+		int charsAdded);
+	void focusInner();
 
 	// "start" and "end" are in coordinates of text where emoji are replaced
 	// by ObjectReplacementCharacter. If "end" = -1 means get text till the end.

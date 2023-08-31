@@ -14,6 +14,7 @@
 #include "base/invoke_queued.h"
 #include "base/random.h"
 #include "base/platform/base_platform_info.h"
+#include "base/qt_signal_producer.h"
 #include "emoji_suggestions_helper.h"
 #include "base/qthelp_regex.h"
 #include "base/qt/qt_common_adapters.h"
@@ -1210,13 +1211,42 @@ InputField::InputField(
 
 	_touchTimer.setCallback([=] { _touchRightButton = true; });
 
-	connect(_inner->document(), SIGNAL(contentsChange(int,int,int)), this, SLOT(onDocumentContentsChange(int,int,int)));
-	connect(_inner.get(), SIGNAL(undoAvailable(bool)), this, SLOT(onUndoAvailable(bool)));
-	connect(_inner.get(), SIGNAL(redoAvailable(bool)), this, SLOT(onRedoAvailable(bool)));
-	connect(_inner.get(), SIGNAL(cursorPositionChanged()), this, SLOT(onCursorPositionChanged()));
-	connect(_inner.get(), &Inner::selectionChanged, [] {
+	base::qt_signal_producer(
+		_inner->document(),
+		&QTextDocument::contentsChange
+	) | rpl::start_with_next([=](int position, int removed, int added) {
+		documentContentsChanged(position, removed, added);
+	}, lifetime());
+	base::qt_signal_producer(
+		_inner.get(),
+		&QTextEdit::undoAvailable
+	) | rpl::start_with_next([=](bool undoAvailable) {
+		_undoAvailable = undoAvailable;
 		Integration::Instance().textActionsUpdated();
-	});
+	}, lifetime());
+	base::qt_signal_producer(
+		_inner.get(),
+		&QTextEdit::redoAvailable
+	) | rpl::start_with_next([=](bool redoAvailable) {
+		_redoAvailable = redoAvailable;
+		Integration::Instance().textActionsUpdated();
+	}, lifetime());
+	base::qt_signal_producer(
+		_inner.get(),
+		&QTextEdit::cursorPositionChanged
+	) | rpl::start_with_next([=] {
+		auto cursor = textCursor();
+		if (!cursor.hasSelection() && !cursor.position()) {
+			cursor.setCharFormat(_defaultCharFormat);
+			setTextCursor(cursor);
+		}
+	}, lifetime());
+	base::qt_signal_producer(
+		_inner.get(),
+		&Inner::selectionChanged
+	) | rpl::start_with_next([] {
+		Integration::Instance().textActionsUpdated();
+	}, lifetime());
 
 	const auto bar = _inner->verticalScrollBar();
 	_scrollTop = bar->value();
@@ -1757,12 +1787,16 @@ void InputField::focusInEvent(QFocusEvent *e) {
 	_borderAnimationStart = (e->reason() == Qt::MouseFocusReason)
 		? mapFromGlobal(QCursor::pos()).x()
 		: (width() / 2);
-	InvokeQueued(this, [=] { if (hasFocus()) onFocusInner(); });
+	InvokeQueued(this, [=] {
+		if (hasFocus()) {
+			focusInner();
+		}
+	});
 }
 
 void InputField::mousePressEvent(QMouseEvent *e) {
 	_borderAnimationStart = e->pos().x();
-	InvokeQueued(this, [=] { onFocusInner(); });
+	InvokeQueued(this, [=] { focusInner(); });
 }
 
 void InputField::mousePressEventInner(QMouseEvent *e) {
@@ -1788,7 +1822,7 @@ void InputField::mouseMoveEventInner(QMouseEvent *e) {
 	_inner->QTextEdit::mouseMoveEvent(e);
 }
 
-void InputField::onFocusInner() {
+void InputField::focusInner() {
 	auto borderStart = _borderAnimationStart;
 	_inner->setFocus();
 	_borderAnimationStart = borderStart;
@@ -2271,7 +2305,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 	}
 }
 
-void InputField::onDocumentContentsChange(
+void InputField::documentContentsChanged(
 		int position,
 		int charsRemoved,
 		int charsAdded) {
@@ -2336,14 +2370,6 @@ void InputField::onDocumentContentsChange(
 		if (document->pageSize() != pageSize) {
 			document->setPageSize(pageSize);
 		}
-	}
-}
-
-void InputField::onCursorPositionChanged() {
-	auto cursor = textCursor();
-	if (!cursor.hasSelection() && !cursor.position()) {
-		cursor.setCharFormat(_defaultCharFormat);
-		setTextCursor(cursor);
 	}
 }
 
@@ -2443,16 +2469,6 @@ void InputField::highlightMarkdown() {
 	if (const auto till = cursor.position(); till > from) {
 		applyColor(from, till, QColor(0, 0, 0));
 	}
-}
-
-void InputField::onUndoAvailable(bool avail) {
-	_undoAvailable = avail;
-	Integration::Instance().textActionsUpdated();
-}
-
-void InputField::onRedoAvailable(bool avail) {
-	_redoAvailable = avail;
-	Integration::Instance().textActionsUpdated();
 }
 
 void InputField::setDisplayFocused(bool focused) {
