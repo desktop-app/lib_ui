@@ -17,6 +17,7 @@
 
 #include <rpl/variable.h>
 
+class QMenu;
 class QTextEdit;
 class QTouchEvent;
 class QContextMenuEvent;
