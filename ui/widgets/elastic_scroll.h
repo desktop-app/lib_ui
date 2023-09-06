@@ -257,8 +257,8 @@ private:
 	int _overscroll = 0;
 	int _overscrollDefaultFrom = 0;
 	int _overscrollDefaultTill = 0;
-	OverscrollType _overscrollTypeFrom = OverscrollType::None;
-	OverscrollType _overscrollTypeTill = OverscrollType::None;
+	OverscrollType _overscrollTypeFrom = OverscrollType::Real;
+	OverscrollType _overscrollTypeTill = OverscrollType::Real;
 	std::optional<QColor> _overscrollBg;
 	Ui::Animations::Simple _overscrollReturnAnimation;
 	rpl::variable<Position> _position;
