@@ -10,6 +10,7 @@
 #include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
+#include "styles/palette.h"
 
 #include <QtGui/QtEvents>
 #include <QtCore/QtMath>
@@ -288,6 +289,47 @@ void CheckView::setUntoggledOverride(
 		std::optional<QColor> untoggledOverride) {
 	_untoggledOverride = untoggledOverride;
 	update();
+}
+
+Fn<void()> CheckView::PrepareNonToggledError(
+		not_null<CheckView*> view,
+		rpl::lifetime &lifetime) {
+	struct State {
+		bool error = false;
+		Ui::Animations::Simple errorAnimation;
+	};
+	const auto state = lifetime.make_state<State>();
+
+	view->checkedChanges(
+	) | rpl::filter([=](bool checked) {
+		return checked;
+	}) | rpl::start_with_next([=] {
+		state->error = false;
+		view->setUntoggledOverride(std::nullopt);
+	}, lifetime);
+
+	return [=] {
+		const auto callback = [=] {
+			const auto error = state->errorAnimation.value(
+				state->error ? 1. : 0.);
+			if (error == 0.) {
+				view->setUntoggledOverride(std::nullopt);
+			} else {
+				const auto color = anim::color(
+					st::defaultCheck.untoggledFg,
+					st::boxTextFgError,
+					error);
+				view->setUntoggledOverride(color);
+			}
+		};
+		state->error = true;
+		state->errorAnimation.stop();
+		state->errorAnimation.start(
+			callback,
+			0.,
+			1.,
+			st::defaultCheck.duration);
+	};
 }
 
 RadioView::RadioView(

@@ -75,6 +75,10 @@ public:
 	void setUntoggledOverride(
 		std::optional<QColor> untoggledOverride);
 
+	[[nodiscard]] static Fn<void()> PrepareNonToggledError(
+		not_null<CheckView*> view,
+		rpl::lifetime &lifetime);
+
 private:
 	QSize rippleSize() const;
 
