@@ -73,14 +73,13 @@ enum class InputSubmitSettings {
 };
 
 class CustomEmojiObject : public QObject, public QTextObjectInterface {
-	Q_OBJECT
-	Q_INTERFACES(QTextObjectInterface)
-
 public:
 	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
 
 	CustomEmojiObject(Factory factory, Fn<bool()> paused);
 	~CustomEmojiObject();
+
+	void *qt_metacast(const char *iid) override;
 
 	QSizeF intrinsicSize(
 		QTextDocument *doc,
