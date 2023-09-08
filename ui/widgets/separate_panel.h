@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "base/flat_map.h"
 #include "base/weak_ptr.h"
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
@@ -14,6 +15,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_entity.h"
 
 class Painter;
+
+namespace style {
+struct IconButton;
+} // namespace style
 
 namespace Ui::Menu {
 struct MenuCallback;
@@ -45,6 +50,7 @@ struct SeparatePanelArgs {
 class SeparatePanel final : public RpWidget {
 public:
 	explicit SeparatePanel(SeparatePanelArgs &&args = {});
+	~SeparatePanel();
 
 	void setTitle(rpl::producer<QString> title);
 	void setTitleHeight(int height);
@@ -72,6 +78,8 @@ public:
 	void setBackAllowed(bool allowed);
 
 	void setMenuAllowed(Fn<void(const Menu::MenuCallback&)> fill);
+
+	void overrideTitleColor(std::optional<QColor> color);
 
 	base::weak_ptr<Toast::Instance> showToast(Toast::Config &&config);
 	base::weak_ptr<Toast::Instance> showToast(
@@ -103,7 +111,8 @@ private:
 	void updateGeometry(QSize size);
 	void showControls();
 	void updateControlsGeometry();
-	void createBorderImage();
+	void validateBorderImage();
+	[[nodiscard]] QPixmap createBorderImage(QColor color) const;
 	void opacityCallback();
 	void ensureLayerCreated();
 	void destroyLayer();
@@ -119,6 +128,9 @@ private:
 
 	void showMenu(Fn<void(const Menu::MenuCallback&)> fill);
 	[[nodiscard]] bool createMenu(not_null<IconButton*> button);
+
+	void updateTitleButtonColors(not_null<IconButton*> button);
+	void updateTitleColors();
 
 	object_ptr<IconButton> _close;
 	object_ptr<IconButton> _menuToggle = { nullptr };
@@ -147,6 +159,13 @@ private:
 	Animations::Simple _opacityAnimation;
 	QPixmap _animationCache;
 	QPixmap _borderParts;
+
+	std::optional<QColor> _titleOverrideColor;
+	QPixmap _titleOverrideBorderParts;
+	std::unique_ptr<style::palette> _titleOverridePalette;
+	base::flat_map<
+		not_null<IconButton*>,
+		std::unique_ptr<style::IconButton>> _titleOverrideStyles;
 
 	Fn<bool(int zorder)> _animationsPaused;
 

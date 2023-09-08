@@ -469,6 +469,10 @@ IconButton::IconButton(QWidget *parent, const style::IconButton &st) : RippleBut
 	resize(_st.width, _st.height);
 }
 
+const style::IconButton &IconButton::st() const {
+	return _st;
+}
+
 void IconButton::setIconOverride(const style::icon *iconOverride, const style::icon *iconOverOverride) {
 	_iconOverride = iconOverride;
 	_iconOverrideOver = iconOverOverride;

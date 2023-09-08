@@ -184,6 +184,8 @@ class IconButton : public RippleButton {
 public:
 	IconButton(QWidget *parent, const style::IconButton &st);
 
+	[[nodiscard]] const style::IconButton &st() const;
+
 	// Pass nullptr to restore the default icon.
 	void setIconOverride(const style::icon *iconOverride, const style::icon *iconOverOverride = nullptr);
 	void setRippleColorOverride(const style::color *colorOverride);
