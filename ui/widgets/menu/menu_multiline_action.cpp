@@ -50,7 +50,9 @@ bool MultilineAction::isEnabled() const {
 
 int MultilineAction::contentHeight() const {
 	const auto skip = _labelPosition.y();
-	return skip + _text->height() + skip;
+	return skip
+		+ std::max(_text->height(), _icon ? _icon->height() : 0)
+		+ skip;
 }
 
 void MultilineAction::paintEvent(QPaintEvent *e) {
