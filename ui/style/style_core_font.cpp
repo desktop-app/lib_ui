@@ -18,6 +18,10 @@
 #include <QtGui/QFontDatabase>
 #include <QtWidgets/QApplication>
 
+#if __has_include(<glib.h>)
+#include <glib.h>
+#endif
+
 void style_InitFontsResource() {
 #ifdef Q_OS_MAC // Use resources from the .app bundle on macOS.
 
@@ -223,7 +227,11 @@ void StartFonts() {
 		QFont::insertSubstitutions(name, list);
 	}
 #endif // Q_OS_MAC
-#endif // !DESKTOP_APP_USE_PACKAGED_FONTS
+#elif __has_include(<glib.h>) // !DESKTOP_APP_USE_PACKAGED_FONTS
+	g_warning(
+		"Unable to load patched fonts with Qt workarounds, "
+		"expect font issues.");
+#endif // DESKTOP_APP_USE_PACKAGED_FONTS
 
 	auto appFont = QApplication::font();
 	appFont.setStyleStrategy(QFont::PreferQuality);
