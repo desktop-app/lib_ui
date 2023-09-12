@@ -192,4 +192,6 @@ inline GenericBox::GenericBox(
 , _content(_owned.data()) {
 }
 
+[[nodiscard]] rpl::producer<> BoxShowFinishes(not_null<GenericBox*> box);
+
 } // namespace Ui

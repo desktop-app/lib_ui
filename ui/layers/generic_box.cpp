@@ -70,4 +70,17 @@ not_null<Ui::VerticalLayout*> GenericBox::verticalLayout() {
 	return _content;
 }
 
+rpl::producer<> BoxShowFinishes(not_null<GenericBox*> box) {
+	const auto singleShot = box->lifetime().make_state<rpl::lifetime>();
+	const auto showFinishes = singleShot->make_state<rpl::event_stream<>>();
+
+	box->setShowFinishedCallback([=] {
+		showFinishes->fire({});
+		singleShot->destroy();
+		box->setShowFinishedCallback(nullptr);
+	});
+
+	return showFinishes->events();
+}
+
 } // namespace Ui

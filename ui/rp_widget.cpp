@@ -48,9 +48,9 @@ TWidget::TWidget(QWidget *parent)
 	[[maybe_unused]] static const auto Once = [] {
 		auto format = QSurfaceFormat::defaultFormat();
 		format.setSwapInterval(0);
-		if (Platform::IsMac()) {
-			format.setColorSpace(QColorSpace::SRgb);
-		}
+#ifdef Q_OS_MAC
+		format.setColorSpace(QColorSpace::SRgb);
+#endif // Q_OS_MAC
 		QSurfaceFormat::setDefaultFormat(format);
 		return true;
 	}();
