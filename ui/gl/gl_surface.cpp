@@ -32,6 +32,7 @@ private:
 	void resizeGL(int w, int h) override;
 	void paintEvent(QPaintEvent *e) override;
 	void paintGL() override;
+	bool eventHook(QEvent *e) override;
 	void callDeInit();
 
 	const std::unique_ptr<Renderer> _renderer;
@@ -107,6 +108,14 @@ void SurfaceOpenGL::paintGL() {
 	}
 	f->glDisable(GL_BLEND);
 	_renderer->paint(this, *f);
+}
+
+bool SurfaceOpenGL::eventHook(QEvent *e) {
+	const auto result = RpWidgetBase::eventHook(e);
+	if (e->type() == QEvent::ScreenChangeInternal) {
+		_deviceSize = size() * devicePixelRatio();
+	}
+	return result;
 }
 
 void SurfaceOpenGL::callDeInit() {
