@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/show.h"
 #include "ui/style/style_core_palette.h"
 #include "ui/painter.h"
+#include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
@@ -817,13 +818,16 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 	};
 	const auto bg = st::windowBg->c;
 	if (_titleOverrideColor) {
-		const auto half = height() / 2;
-		fillLeft(part1, half, _titleOverrideBorderParts);
-		fillLeft(half, height() - part1, _borderParts);
-		fillRight(part1, half, _titleOverrideBorderParts);
-		fillRight(half, height() - part1, _borderParts);
-		fillBody(_padding.top() + radius, half, *_titleOverrideColor);
-		fillBody(half, height() - _padding.bottom() - radius, bg);
+		const auto niceOverscroll = ::Platform::IsMac();
+		const auto top = niceOverscroll
+			? (height() / 2)
+			: (_padding.top() + _titleHeight);
+		fillLeft(part1, top, _titleOverrideBorderParts);
+		fillLeft(top, height() - part1, _borderParts);
+		fillRight(part1, top, _titleOverrideBorderParts);
+		fillRight(top, height() - part1, _borderParts);
+		fillBody(_padding.top() + radius, top, *_titleOverrideColor);
+		fillBody(top, height() - _padding.bottom() - radius, bg);
 	} else {
 		fillLeft(part1, height() - part1, _borderParts);
 		fillRight(part1, height() - part1, _borderParts);
