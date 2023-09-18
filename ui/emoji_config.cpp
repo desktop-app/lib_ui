@@ -31,7 +31,7 @@ constexpr auto kUniversalSize = 72;
 constexpr auto kImagesPerRow = 32;
 constexpr auto kImageRowsPerSprite = 16;
 
-constexpr auto kSetVersion = uint32(4);
+constexpr auto kSetVersion = uint32(5);
 constexpr auto kCacheVersion = uint32(7);
 constexpr auto kMaxId = uint32(1 << 8);
 
