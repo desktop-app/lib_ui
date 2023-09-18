@@ -42,9 +42,10 @@ BoxLayerWidget::BoxLayerWidget(
 	_content->setParent(this);
 	_content->setDelegate(this);
 
+	const auto &object = *_content;
 	base::Integration::Instance().setCrashAnnotation(
 		"BoxName",
-		QString::fromUtf8(typeid(*_content).name()));
+		QString::fromUtf8(typeid(object).name()));
 
 	_additionalTitle.changes(
 	) | rpl::start_with_next([=] {
