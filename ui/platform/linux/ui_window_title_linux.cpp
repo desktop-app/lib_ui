@@ -102,24 +102,18 @@ TitleControls::Layout TitleControlsLayout() {
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 	const auto portalResult = []() -> std::optional<TitleControls::Layout> {
-		try {
-			using namespace base::Platform::XDP;
+		namespace XDP = base::Platform::XDP;
 
-			const auto decorationLayout = ReadSetting(
-				"org.gnome.desktop.wm.preferences",
-				"button-layout");
+		const auto decorationLayout = XDP::ReadSetting<Glib::ustring>(
+			"org.gnome.desktop.wm.preferences",
+			"button-layout");
 
-			if (!decorationLayout.has_value()) {
-				return std::nullopt;
-			}
-
-			return GtkKeywordsToTitleControlsLayout(
-				QString::fromStdString(
-					decorationLayout->get_dynamic<Glib::ustring>()));
-		} catch (...) {
+		if (!decorationLayout.has_value()) {
+			return std::nullopt;
 		}
 
-		return std::nullopt;
+		return GtkKeywordsToTitleControlsLayout(
+			QString::fromStdString(*decorationLayout));
 	}();
 
 	if (portalResult.has_value()) {
