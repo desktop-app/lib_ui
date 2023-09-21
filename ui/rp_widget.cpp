@@ -15,6 +15,9 @@
 #include <QtGui/QColorSpace>
 #include <private/qwidget_p.h>
 
+// Patching out this code without patching out all other private API usage
+// and the Qt::{Core,Gui,Widgets}Private cmake dependency is asking
+// for memory corruption
 class TWidgetPrivate : public QWidgetPrivate {
 public:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
