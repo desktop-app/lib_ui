@@ -6,8 +6,6 @@
 //
 #include "ui/platform/linux/ui_window_linux.h"
 
-#include "ui/platform/linux/ui_linux_wayland_integration.h"
-
 namespace Ui {
 namespace Platform {
 
@@ -17,9 +15,6 @@ std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 }
 
 bool NativeWindowFrameSupported() {
-	if (const auto integration = WaylandIntegration::Instance()) {
-		return integration->xdgDecorationSupported();
-	}
 	return true;
 }
 
