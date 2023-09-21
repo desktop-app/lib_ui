@@ -147,15 +147,5 @@ std::optional<bool> IsOverlapped(
 	return false;
 }
 
-void RegisterChildPopupHiding() {
-}
-
-bool SkipApplicationDeactivateEvent() {
-	return false;
-}
-
-void GotApplicationActivateEvent() {
-}
-
 } // namespace Platform
 } // namespace Ui

@@ -45,12 +45,6 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);
 
-// Workaround for a Qt/Wayland bug that hides the parent popup when
-// the child popup gets hidden, by sending Deactivate / Activate events.
-void RegisterChildPopupHiding();
-[[nodiscard]] bool SkipApplicationDeactivateEvent();
-void GotApplicationActivateEvent();
-
 } // namespace Ui::Platform
 
 // Platform dependent implementations.

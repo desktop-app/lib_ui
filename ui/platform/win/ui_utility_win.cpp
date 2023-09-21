@@ -189,14 +189,4 @@ void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
 		menu->lifetime().make_state<Filter>(menu));
 }
 
-void RegisterChildPopupHiding() {
-}
-
-bool SkipApplicationDeactivateEvent() {
-	return false;
-}
-
-void GotApplicationActivateEvent() {
-}
-
 } // namespace Ui::Platform
