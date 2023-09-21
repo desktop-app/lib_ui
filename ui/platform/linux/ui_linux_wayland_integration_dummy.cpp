@@ -30,10 +30,5 @@ bool WaylandIntegration::xdgDecorationSupported() {
 	return false;
 }
 
-void WaylandIntegration::showWindowMenu(
-		not_null<QWidget*> widget,
-		const QPoint &point) {
-}
-
 } // namespace Platform
 } // namespace Ui

@@ -20,7 +20,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 using namespace QNativeInterface;
 using namespace QNativeInterface::Private;
 using namespace base::Platform::Wayland;
-struct xdg_toplevel;
 
 namespace Ui {
 namespace Platform {
@@ -81,31 +80,6 @@ WaylandIntegration *WaylandIntegration::Instance() {
 
 bool WaylandIntegration::xdgDecorationSupported() {
 	return _private->xdgDecoration.has_value();
-}
-
-void WaylandIntegration::showWindowMenu(
-		not_null<QWidget*> widget,
-		const QPoint &point) {
-	const auto window = not_null(widget->windowHandle());
-	const auto native = qApp->nativeInterface<QWaylandApplication>();
-	const auto nativeWindow = window->nativeInterface<QWaylandWindow>();
-	if (!native || !nativeWindow) {
-		return;
-	}
-
-	const auto toplevel = nativeWindow->surfaceRole<xdg_toplevel>();
-	const auto seat = native->lastInputSeat();
-	if (!toplevel || !seat) {
-		return;
-	}
-
-	wl_proxy_marshal(
-		reinterpret_cast<wl_proxy*>(toplevel),
-		4, // XDG_TOPLEVEL_SHOW_WINDOW_MENU
-		seat,
-		native->lastInputSerial(),
-		point.x(),
-		point.y());
 }
 
 } // namespace Platform

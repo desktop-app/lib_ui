@@ -7,8 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-class QWindow;
-
 namespace Ui {
 namespace Platform {
 
@@ -20,7 +18,6 @@ public:
 	[[nodiscard]] static WaylandIntegration *Instance();
 
 	[[nodiscard]] bool xdgDecorationSupported();
-	void showWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 private:
 	struct Private;
