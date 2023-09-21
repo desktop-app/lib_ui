@@ -655,14 +655,14 @@ bool PopupMenu::eventFilter(QObject *o, QEvent *e) {
 					event->device(),
 					event->touchPoints(),
 					event->timestamp()));
-#elif QT_VERSION < QT_VERSION_CHECK(6, 3, 0) // Qt < 6.0.0
+#elif QT_VERSION < QT_VERSION_CHECK(6, 2, 0) // Qt < 6.0.0
 			e->setAccepted(
 				QApplicationPrivate::translateRawTouchEvent(
 					this,
 					event->pointingDevice(),
 					const_cast<QList<QEventPoint> &>(event->points()),
 					event->timestamp()));
-#else // Qt < 6.3.0
+#else // Qt < 6.2.0
 			e->setAccepted(
 				QApplicationPrivate::translateRawTouchEvent(this, event));
 #endif
