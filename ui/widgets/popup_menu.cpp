@@ -673,9 +673,6 @@ bool PopupMenu::eventFilter(QObject *o, QEvent *e) {
 }
 
 void PopupMenu::hideMenu(bool fast) {
-	if (fast && _parent) {
-		Platform::RegisterChildPopupHiding();
-	}
 	if (isHidden() || (_hiding && !fast)) {
 		return;
 	}
