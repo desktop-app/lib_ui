@@ -71,6 +71,7 @@ bool ValidateFont(const QString &familyName, int flags = 0) {
 	return true;
 }
 
+#ifndef LIB_UI_USE_PACKAGED_FONTS
 bool LoadCustomFont(const QString &filePath, const QString &familyName, int flags = 0) {
 	auto regularId = QFontDatabase::addApplicationFont(filePath);
 	if (regularId < 0) {
@@ -94,6 +95,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 
 	return ValidateFont(familyName, flags);
 }
+#endif // !LIB_UI_USE_PACKAGED_FONTS
 
 [[nodiscard]] QString SystemMonospaceFont() {
 	const auto type = QFontDatabase::FixedFont;
@@ -160,7 +162,6 @@ QString FontTypePersianFallback[FontTypesCount] = {
 	"DAVazirMedium",
 	"DAVazirMedium",
 };
-#endif // !LIB_UI_USE_PACKAGED_FONTS
 int32 FontTypeFlags[FontTypesCount] = {
 	0,
 	FontItalic,
@@ -169,6 +170,7 @@ int32 FontTypeFlags[FontTypesCount] = {
 	FontSemibold,
 	FontSemibold | FontItalic,
 };
+#endif // !LIB_UI_USE_PACKAGED_FONTS
 
 bool Started = false;
 QString Overrides[FontTypesCount];
