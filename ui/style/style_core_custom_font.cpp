@@ -52,11 +52,11 @@ QFont ResolveFont(const QString &familyOverride, uint32 flags, int size) {
 	} else {
 		result.setFamily(GetFontOverride(flags));
 		if (bold) {
-#ifdef DESKTOP_APP_USE_PACKAGED_FONTS
+#ifdef LIB_UI_USE_PACKAGED_FONTS
 			result.setWeight(QFont::DemiBold);
-#else // DESKTOP_APP_USE_PACKAGED_FONTS
+#else // LIB_UI_USE_PACKAGED_FONTS
 			result.setBold(true);
-#endif // !DESKTOP_APP_USE_PACKAGED_FONTS
+#endif // !LIB_UI_USE_PACKAGED_FONTS
 
 			if (flags & FontItalic) {
 				result.setStyleName("Semibold Italic");

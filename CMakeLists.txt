@@ -33,6 +33,7 @@ PRIVATE
     ui/colors.palette
     emoji_suggestions/emoji_autocomplete.json
 
+    fonts/fonts.qrc
     qt_conf/win.qrc
 
     ui/dpr/dpr_icon.cpp
@@ -298,8 +299,9 @@ PRIVATE
     emoji_suggestions/emoji_suggestions_helper.h
 )
 
-if (NOT DESKTOP_APP_USE_PACKAGED_FONTS)
-    nice_target_sources(lib_ui ${src_loc} PRIVATE fonts/fonts.qrc)
+if (DESKTOP_APP_USE_PACKAGED_FONTS)
+    target_compile_definitions(lib_ui PRIVATE LIB_UI_USE_PACKAGED_FONTS)
+    remove_target_sources(lib_ui ${src_loc} fonts/fonts.qrc)
 endif()
 
 if (WIN32)
