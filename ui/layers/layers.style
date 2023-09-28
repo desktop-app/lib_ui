@@ -119,7 +119,7 @@ boxOptionListSkip: 20px;
 
 boxWidth: 320px;
 boxWideWidth: 364px;
-boxPadding: margins(24px, 30px, 24px, 8px);
+boxPadding: margins(24px, 14px, 24px, 8px);
 boxMaxListHeight: 492px;
 boxLittleSkip: 10px;
 boxMediumSkip: 20px;
