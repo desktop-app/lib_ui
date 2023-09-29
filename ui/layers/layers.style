@@ -29,6 +29,7 @@ Box {
 	title: FlatLabel;
 	bg: color;
 	titleAdditionalFg: color;
+	shadowIgnoreTopSkip: bool;
 }
 
 boxDuration: 200;

@@ -321,18 +321,20 @@ void BoxContent::updateInnerVisibleTopBottom() {
 	}
 }
 
-void BoxContent::updateShadowsVisibility() {
+void BoxContent::updateShadowsVisibility(anim::type animated) {
 	if (!_scroll) {
 		return;
 	}
 
 	const auto top = _scroll->scrollTop();
 	_topShadow->toggle(
-		(top > 0 || _innerTopSkip > 0),
-		anim::type::normal);
+		((top > 0)
+			|| (_innerTopSkip > 0
+				&& !getDelegate()->style().shadowIgnoreTopSkip)),
+		animated);
 	_bottomShadow->toggle(
 		(top < _scroll->scrollTopMax() || _innerBottomSkip > 0),
-		anim::type::normal);
+		animated);
 }
 
 void BoxContent::setDimensionsToContent(
@@ -419,14 +421,7 @@ void BoxContent::updateScrollAreaGeometry() {
 		height() - _innerBottomSkip - st::lineWidth);
 	if (changed) {
 		updateInnerVisibleTopBottom();
-
-		const auto top = _scroll->scrollTop();
-		_topShadow->toggle(
-			(top > 0 || _innerTopSkip > 0),
-			anim::type::instant);
-		_bottomShadow->toggle(
-			(top < _scroll->scrollTopMax() || _innerBottomSkip > 0),
-			anim::type::instant);
+		updateShadowsVisibility(anim::type::instant);
 	}
 }
 

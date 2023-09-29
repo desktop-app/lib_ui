@@ -294,7 +294,7 @@ private:
 	void setInner(object_ptr<TWidget> inner, const style::ScrollArea &st);
 	void updateScrollAreaGeometry();
 	void updateInnerVisibleTopBottom();
-	void updateShadowsVisibility();
+	void updateShadowsVisibility(anim::type animated = anim::type::normal);
 	object_ptr<TWidget> doTakeInnerWidget();
 
 	BoxContentDelegate *_delegate = nullptr;
