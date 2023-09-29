@@ -252,6 +252,8 @@ PRIVATE
     ui/wrap/padding_wrap.h
     ui/wrap/slide_wrap.cpp
     ui/wrap/slide_wrap.h
+    ui/wrap/table_layout.cpp
+    ui/wrap/table_layout.h
     ui/wrap/vertical_layout.cpp
     ui/wrap/vertical_layout.h
     ui/wrap/vertical_layout_reorder.cpp

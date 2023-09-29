@@ -612,6 +612,16 @@ Toast {
 	durationSlide: int;
 }
 
+Table {
+	bg: color;
+	headerBg: color;
+	borderFg: color;
+	border: pixels;
+	radius: pixels;
+	labelMinWidth: pixels;
+	labelMaxWidth: double;
+}
+
 defaultLabelSimple: LabelSimple {
 	font: normalFont;
 	maxWidth: 0px;
@@ -638,6 +648,15 @@ defaultRippleAnimation: RippleAnimation {
 	color: windowBgRipple;
 	showDuration: 650;
 	hideDuration: 200;
+}
+
+defaultTable: Table {
+	bg: windowBg;
+	headerBg: windowBgOver;
+	borderFg: inputBorderFg;
+	border: 1px;
+	radius: 6px;
+	labelMaxWidth: 0.5;
 }
 
 emptyRippleAnimation: RippleAnimation {
