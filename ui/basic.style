@@ -16,7 +16,7 @@ TextPalette {
 	selectMonoFg: color;
 	selectSpoilerFg: color;
 	selectOverlay: color;
-	linkAlwaysActive: int;
+	linkAlwaysActive: bool;
 }
 
 TextStyle {

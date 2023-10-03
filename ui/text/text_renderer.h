@@ -37,12 +37,8 @@ public:
 	void draw(QPainter &p, const PaintContext &context);
 	[[nodiscard]] StateResult getState(
 		QPoint point,
-		int w,
+		GeometryDescriptor geometry,
 		StateRequest request);
-	[[nodiscard]] StateResult getStateElided(
-		QPoint point,
-		int w,
-		StateRequestElided request);
 
 private:
 	static constexpr int kSpoilersRectsSize = 512;
@@ -52,7 +48,10 @@ private:
 	void enumerate();
 
 	[[nodiscard]] crl::time now() const;
-	void initNextParagraph(String::TextBlocks::const_iterator i);
+	void initNextParagraph(
+		String::TextBlocks::const_iterator i,
+		Qt::LayoutDirection direction);
+	void initNextLine();
 	void initParagraphBidi();
 	bool drawLine(
 		uint16 _lineEnd,
@@ -94,7 +93,6 @@ private:
 		const BidiControl &control,
 		QChar::Direction dir);
 	void eShapeLine(const QScriptLine &line);
-	[[nodiscard]] style::font applyFlags(int32 flags, const style::font &f);
 	void eSetFont(const AbstractBlock *block);
 	void eItemize();
 	QChar::Direction eSkipBoundryNeutrals(
@@ -111,13 +109,12 @@ private:
 		const AbstractBlock *block) const;
 
 	const String *_t = nullptr;
+	GeometryDescriptor _geometry;
 	SpoilerData *_spoiler = nullptr;
 	SpoilerMessCache *_spoilerCache = nullptr;
 	QPainter *_p = nullptr;
 	const style::TextPalette *_palette = nullptr;
-	bool _elideLast = false;
-	bool _breakEverywhere = false;
-	int _elideRemoveFromEnd = 0;
+	std::span<SpecialColor> _colors;
 	bool _pausedEmoji = false;
 	bool _pausedSpoiler = false;
 	style::align _align = style::al_topleft;
@@ -131,7 +128,6 @@ private:
 	} _background;
 	int _yFrom = 0;
 	int _yTo = 0;
-	int _yToElide = 0;
 	TextSelection _selection = { 0, 0 };
 	bool _fullWidthSelection = true;
 	const QChar *_str = nullptr;
@@ -158,11 +154,15 @@ private:
 	// current line data
 	QTextEngine *_e = nullptr;
 	style::font _f;
-	QFixed _x, _w, _wLeft, _last_rPadding;
+	int _startLeft = 0;
+	int _startTop = 0;
+	QFixed _x, _wLeft, _last_rPadding;
 	int _y = 0;
 	int _yDelta = 0;
 	int _lineHeight = 0;
 	int _fontHeight = 0;
+	bool _breakEverywhere = false;
+	bool _elidedLine = false;
 
 	// elided hack support
 	int _blocksSize = 0;
@@ -172,6 +172,8 @@ private:
 	int _lineStart = 0;
 	int _localFrom = 0;
 	int _lineStartBlock = 0;
+	QFixed _lineWidth = 0;
+	QFixed _paragraphWidthRemaining = 0;
 
 	// link and symbol resolve
 	QFixed _lookupX = 0;

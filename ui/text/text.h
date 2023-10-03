@@ -26,10 +26,8 @@ struct TextPalette;
 } // namespace style
 
 namespace Ui {
-static const auto kQEllipsis = QStringLiteral("...");
+extern const QString kQEllipsis;
 } // namespace Ui
-
-static const QChar TextCommand(0x0010);
 
 struct TextParseOptions {
 	int32 flags;
@@ -125,16 +123,42 @@ private:
 
 };
 
+struct SpecialColor {
+	const QPen *pen = nullptr;
+	const QPen *penSelected = nullptr;
+};
+
+struct LineGeometry {
+	int left = 0;
+	int top = 0;
+	int width = 0;
+	bool elided = false;
+};
+struct GeometryDescriptor {
+	Fn<LineGeometry(LineGeometry line, uint16 position)> layout;
+	bool breakEverywhere = false;
+};
+
 [[nodiscard]] not_null<SpoilerMessCache*> DefaultSpoilerCache();
+
+[[nodiscard]] GeometryDescriptor SimpleGeometry(
+	int availableWidth,
+	int fontHeight,
+	int elisionHeight,
+	int elisionRemoveFromEnd,
+	bool elisionOneLine,
+	bool elisionBreakEverywhere);
 
 struct PaintContext {
 	QPoint position;
 	int outerWidth = 0; // For automatic RTL Ui inversion.
 	int availableWidth = 0;
+	GeometryDescriptor geometry; // By default is SimpleGeometry.
 	style::align align = style::al_left;
 	QRect clip;
 
 	const style::TextPalette *palette = nullptr;
+	std::span<SpecialColor> colors;
 	SpoilerMessCache *spoiler = nullptr;
 	crl::time now = 0;
 	bool paused = false;
@@ -144,8 +168,9 @@ struct PaintContext {
 	TextSelection selection;
 	bool fullWidthSelection = true;
 
-	int elisionLines = 0;
+	int elisionHeight = 0;
 	int elisionRemoveFromEnd = 0;
+	bool elisionOneLine = false;
 	bool elisionBreakEverywhere = false;
 };
 
@@ -167,14 +192,42 @@ public:
 	String &operator=(String &&other);
 	~String();
 
-	[[nodiscard]] int countWidth(int width, bool breakEverywhere = false) const;
-	[[nodiscard]] int countHeight(int width, bool breakEverywhere = false) const;
-	void countLineWidths(int width, QVector<int> *lineWidths, bool breakEverywhere = false) const;
+	[[nodiscard]] int countWidth(
+		int width,
+		bool breakEverywhere = false) const;
+	[[nodiscard]] int countHeight(
+		int width,
+		bool breakEverywhere = false) const;
+
+	struct LineWidthsOptions {
+		bool breakEverywhere = false;
+		int reserve = 0;
+	};
+	[[nodiscard]] std::vector<int> countLineWidths(int width) const;
+	[[nodiscard]] std::vector<int> countLineWidths(
+		int width,
+		LineWidthsOptions options) const;
+
+	struct DimensionsResult {
+		int width = 0;
+		int height = 0;
+		std::vector<int> lineWidths;
+	};
+	struct DimensionsRequest {
+		bool lineWidths = false;
+		int reserve = 0;
+	};
+	[[nodiscard]] DimensionsResult countDimensions(
+		GeometryDescriptor geometry) const;
+	[[nodiscard]] DimensionsResult countDimensions(
+		GeometryDescriptor geometry,
+		DimensionsRequest request) const;
+
 	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = kDefaultTextOptions);
 	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = kMarkupTextOptions, const std::any &context = {});
 
 	[[nodiscard]] bool hasLinks() const;
-	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
+	void setLink(uint16 index, const ClickHandlerPtr &lnk);
 
 	[[nodiscard]] bool hasSpoilers() const;
 	void setSpoilerRevealed(bool revealed, anim::type animated);
@@ -193,6 +246,10 @@ public:
 	[[nodiscard]] int countMaxMonospaceWidth() const;
 
 	void draw(QPainter &p, const PaintContext &context) const;
+	[[nodiscard]] StateResult getState(
+		QPoint point,
+		GeometryDescriptor geometry,
+		StateRequest request = StateRequest()) const;
 
 	void draw(Painter &p, int32 left, int32 top, int32 width, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, TextSelection selection = { 0, 0 }, bool fullWidthSelection = true) const;
 	void drawElided(Painter &p, int32 left, int32 top, int32 width, int32 lines = 1, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, int32 removeFromEnd = 0, bool breakEverywhere = false, TextSelection selection = { 0, 0 }) const;
@@ -298,7 +355,7 @@ private:
 	TextBlocks _blocks;
 	TextLinks _links;
 
-	Qt::LayoutDirection _startDir = Qt::LayoutDirectionAuto;
+	Qt::LayoutDirection _startDirection = Qt::LayoutDirectionAuto;
 
 	SpoilerDataWrap _spoiler;
 
@@ -313,7 +370,7 @@ private:
 [[nodiscard]] bool IsLinkEnd(QChar ch);
 [[nodiscard]] bool IsNewline(QChar ch);
 [[nodiscard]] bool IsSpace(QChar ch);
-[[nodiscard]] bool IsDiac(QChar ch);
+[[nodiscard]] bool IsDiacritic(QChar ch);
 [[nodiscard]] bool IsReplacedBySpace(QChar ch);
 [[nodiscard]] bool IsTrimmed(QChar ch);
 

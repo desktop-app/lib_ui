@@ -28,8 +28,8 @@ private:
 			Flags,
 			Link,
 			IndexedLink,
-			Spoiler,
 			CustomEmoji,
+			Colorized,
 		};
 
 		explicit StartedEntity(TextBlockFlags flags);
@@ -37,8 +37,8 @@ private:
 
 		[[nodiscard]] Type type() const;
 		[[nodiscard]] std::optional<TextBlockFlags> flags() const;
-		[[nodiscard]] std::optional<uint16> lnkIndex() const;
-		[[nodiscard]] std::optional<uint16> spoilerIndex() const;
+		[[nodiscard]] std::optional<uint16> linkIndex() const;
+		[[nodiscard]] std::optional<uint16> colorIndex() const;
 
 	private:
 		const int _value = 0;
@@ -96,23 +96,22 @@ private:
 	std::vector<uint16> _linksIndexes;
 
 	std::vector<EntityLinkData> _links;
-	std::vector<EntityLinkData> _spoilers;
 	std::vector<EntityLinkData> _monos;
 	base::flat_map<
 		const QChar*,
 		std::vector<StartedEntity>> _startedEntities;
 
-	uint16 _maxLnkIndex = 0;
-	uint16 _maxShiftedLnkIndex = 0;
+	uint16 _maxLinkIndex = 0;
+	uint16 _maxShiftedLinkIndex = 0;
 
 	// current state
-	int32 _flags = 0;
-	uint16 _lnkIndex = 0;
-	uint16 _spoilerIndex = 0;
+	TextBlockFlags _flags;
+	uint16 _linkIndex = 0;
+	uint16 _colorIndex = 0;
 	uint16 _monoIndex = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
 	int32 _blockStart = 0; // offset in result, from which current parsed block is started
-	int32 _diacs = 0; // diac chars skipped without good char
+	int32 _diacritics = 0; // diacritic chars skipped without good char
 	QFixed _sumWidth;
 	bool _sumFinished = false;
 	bool _newlineAwaited = false;

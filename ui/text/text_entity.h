@@ -26,7 +26,7 @@ enum class EntityType : uchar {
 	CustomEmoji,
 	BotCommand,
 	MediaTimestamp,
-	PlainLink, // Senders in chat list, attachements in chat list, etc.
+	Colorized, // Senders in chat list, attachments in chat list, etc.
 
 	Bold,
 	Semibold,
@@ -61,16 +61,16 @@ public:
 		int length,
 		const QString &data = QString());
 
-	EntityType type() const {
+	[[nodiscard]] EntityType type() const {
 		return _type;
 	}
-	int offset() const {
+	[[nodiscard]] int offset() const {
 		return _offset;
 	}
-	int length() const {
+	[[nodiscard]] int length() const {
 		return _length;
 	}
-	QString data() const {
+	[[nodiscard]] QString data() const {
 		return _data;
 	}
 
@@ -103,7 +103,7 @@ public:
 		}
 	}
 
-	static int FirstMonospaceOffset(
+	[[nodiscard]] static int FirstMonospaceOffset(
 		const EntitiesInText &entities,
 		int textLength);
 
@@ -253,7 +253,7 @@ enum {
 	TextParseHashtags = 0x008,
 	TextParseBotCommands = 0x010,
 	TextParseMarkdown = 0x020,
-	TextParsePlainLinks = 0x040,
+	TextParseColorized = 0x040,
 };
 
 struct TextWithTags {

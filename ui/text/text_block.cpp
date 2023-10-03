@@ -47,7 +47,8 @@ struct LineBreakHelper {
 	void calculateRightBearingForPreviousGlyph();
 
 	// We always calculate the right bearing right before it is needed.
-	// So we don't need caching / optimizations referred to delayed right bearing calculations.
+	// So we don't need caching / optimizations referred to
+	// delayed right bearing calculations.
 
 	//static const QFixed RightBearingNotCalculated;
 
@@ -156,15 +157,6 @@ void addNextCluster(
 	} while (glyphPosition < current.num_glyphs
 		&& !glyphs.attributes[glyphPosition].clusterStart);
 
-	if (!((pos == end && glyphPosition == current.num_glyphs) || logClusters[pos] == glyphPosition)) {
-		auto str = QStringList();
-		for (auto i = 0; i < pos; ++i) {
-			str.append(QString::number(logClusters[i]));
-		}
-		LOG(("text: %1 (from: %2, length: %3) part: %4").arg(DebugCurrentParsingString).arg(DebugCurrentParsingFrom).arg(DebugCurrentParsingLength).arg(DebugCurrentParsingPart));
-		LOG(("pos: %1, end: %2, glyphPosition: %3, glyphCount: %4, lineLength: %5, num_glyphs: %6, logClusters[0..pos]: %7").arg(pos).arg(end).arg(glyphPosition).arg(glyphCount).arg(line.length).arg(current.num_glyphs).arg(str.join(",")));
-		Unexpected("Values in addNextCluster()");
-	}
 	Q_ASSERT((pos == end && glyphPosition == current.num_glyphs)
 		|| logClusters[pos] == glyphPosition);
 
@@ -176,32 +168,36 @@ void addNextCluster(
 class BlockParser {
 public:
 	BlockParser(
-		QTextEngine *e,
-		TextBlock *b,
+		TextBlock &block,
+		QTextEngine &engine,
 		QFixed minResizeWidth,
-		int blockFrom,
-		const QString &str);
+		int blockPosition,
+		const QString &text);
 
 private:
 	void parseWords(QFixed minResizeWidth, int blockFrom);
-	bool isLineBreak(const QCharAttributes *attributes, int index);
-	bool isSpaceBreak(const QCharAttributes *attributes, int index);
+	[[nodiscard]] bool isLineBreak(
+		const QCharAttributes *attributes,
+		int index) const;
+	[[nodiscard]] bool isSpaceBreak(
+		const QCharAttributes *attributes,
+		int index) const;
 
-	TextBlock *block;
-	QTextEngine *eng;
-	const QString &str;
+	TextBlock &block;
+	QTextEngine &engine;
+	const QString &text;
 
 };
 
 BlockParser::BlockParser(
-	QTextEngine *e,
-	TextBlock *b,
+	TextBlock &block,
+	QTextEngine &engine,
 	QFixed minResizeWidth,
 	int blockFrom,
-	const QString &str)
-: block(b)
-, eng(e)
-, str(str) {
+	const QString &text)
+: block(block)
+, engine(engine)
+, text(text) {
 	parseWords(minResizeWidth, blockFrom);
 }
 
@@ -221,15 +217,15 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 	//		LOG(("Text: %1, chars: %2").arg(str).arg(debugChars));
 
 	int item = -1;
-	int newItem = eng->findItem(0);
+	int newItem = engine.findItem(0);
 
-	const QCharAttributes *attributes = eng->attributes();
+	const QCharAttributes *attributes = engine.attributes();
 	if (!attributes)
 		return;
 	int end = 0;
-	lbh.logClusters = eng->layoutData->logClustersPtr;
+	lbh.logClusters = engine.layoutData->logClustersPtr;
 
-	block->_words.clear();
+	block._words.clear();
 
 	int wordStart = lbh.currentPosition;
 
@@ -237,26 +233,26 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 	int lastGraphemeBoundaryPosition = -1;
 	ScriptLine lastGraphemeBoundaryLine;
 
-	while (newItem < eng->layoutData->items.size()) {
+	while (newItem < engine.layoutData->items.size()) {
 		if (newItem != item) {
 			item = newItem;
-			const QScriptItem &current = eng->layoutData->items[item];
+			const QScriptItem &current = engine.layoutData->items[item];
 			if (!current.num_glyphs) {
-				eng->shape(item);
-				attributes = eng->attributes();
+				engine.shape(item);
+				attributes = engine.attributes();
 				if (!attributes)
 					return;
-				lbh.logClusters = eng->layoutData->logClustersPtr;
+				lbh.logClusters = engine.layoutData->logClustersPtr;
 			}
 			lbh.currentPosition = current.position;
-			end = current.position + eng->length(item);
-			lbh.glyphs = eng->shapedGlyphs(&current);
-			QFontEngine *fontEngine = eng->fontEngine(current);
+			end = current.position + engine.length(item);
+			lbh.glyphs = engine.shapedGlyphs(&current);
+			QFontEngine *fontEngine = engine.fontEngine(current);
 			if (lbh.fontEngine != fontEngine) {
 				lbh.fontEngine = fontEngine;
 			}
 		}
-		const QScriptItem &current = eng->layoutData->items[item];
+		const QScriptItem &current = engine.layoutData->items[item];
 
 		const auto atSpaceBreak = [&] {
 			for (auto index = lbh.currentPosition; index < end; ++index) {
@@ -269,15 +265,25 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 			return false;
 		}();
 		if (atSpaceBreak) {
-			while (lbh.currentPosition < end && attributes[lbh.currentPosition].whiteSpace)
-				addNextCluster(lbh.currentPosition, end, lbh.spaceData, lbh.glyphCount,
-					current, lbh.logClusters, lbh.glyphs);
+			while (lbh.currentPosition < end
+				&& attributes[lbh.currentPosition].whiteSpace)
+				addNextCluster(
+					lbh.currentPosition,
+					end,
+					lbh.spaceData,
+					lbh.glyphCount,
+					current,
+					lbh.logClusters,
+					lbh.glyphs);
 
-			if (block->_words.isEmpty()) {
-				block->_words.push_back(TextWord(wordStart + blockFrom, lbh.tmpData.textWidth, -lbh.negativeRightBearing()));
+			if (block._words.isEmpty()) {
+				block._words.push_back(TextWord(
+					wordStart + blockFrom,
+					lbh.tmpData.textWidth,
+					-lbh.negativeRightBearing()));
 			}
-			block->_words.back().add_rpadding(lbh.spaceData.textWidth);
-			block->_width += lbh.spaceData.textWidth;
+			block._words.back().add_rpadding(lbh.spaceData.textWidth);
+			block._width += lbh.spaceData.textWidth;
 			lbh.spaceData.length = 0;
 			lbh.spaceData.textWidth = 0;
 
@@ -288,15 +294,24 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 			lastGraphemeBoundaryLine = ScriptLine();
 		} else {
 			do {
-				addNextCluster(lbh.currentPosition, end, lbh.tmpData, lbh.glyphCount,
-					current, lbh.logClusters, lbh.glyphs);
+				addNextCluster(
+					lbh.currentPosition,
+					end,
+					lbh.tmpData,
+					lbh.glyphCount,
+					current,
+					lbh.logClusters,
+					lbh.glyphs);
 
-				if (lbh.currentPosition >= eng->layoutData->string.length()
+				if (lbh.currentPosition >= engine.layoutData->string.length()
 					|| isSpaceBreak(attributes, lbh.currentPosition)
 					|| isLineBreak(attributes, lbh.currentPosition)) {
 					lbh.calculateRightBearing();
-					block->_words.push_back(TextWord(wordStart + blockFrom, lbh.tmpData.textWidth, -lbh.negativeRightBearing()));
-					block->_width += lbh.tmpData.textWidth;
+					block._words.push_back(TextWord(
+						wordStart + blockFrom,
+						lbh.tmpData.textWidth,
+						-lbh.negativeRightBearing()));
+					block._width += lbh.tmpData.textWidth;
 					lbh.tmpData.textWidth = 0;
 					lbh.tmpData.length = 0;
 					wordStart = lbh.currentPosition;
@@ -305,8 +320,11 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 					if (!addingEachGrapheme && lbh.tmpData.textWidth > minResizeWidth) {
 						if (lastGraphemeBoundaryPosition >= 0) {
 							lbh.calculateRightBearingForPreviousGlyph();
-							block->_words.push_back(TextWord(wordStart + blockFrom, -lastGraphemeBoundaryLine.textWidth, -lbh.negativeRightBearing()));
-							block->_width += lastGraphemeBoundaryLine.textWidth;
+							block._words.push_back(TextWord(
+								wordStart + blockFrom,
+								-lastGraphemeBoundaryLine.textWidth,
+								-lbh.negativeRightBearing()));
+							block._width += lastGraphemeBoundaryLine.textWidth;
 							lbh.tmpData.textWidth -= lastGraphemeBoundaryLine.textWidth;
 							lbh.tmpData.length -= lastGraphemeBoundaryLine.length;
 							wordStart = lastGraphemeBoundaryPosition;
@@ -315,8 +333,11 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 					}
 					if (addingEachGrapheme) {
 						lbh.calculateRightBearing();
-						block->_words.push_back(TextWord(wordStart + blockFrom, -lbh.tmpData.textWidth, -lbh.negativeRightBearing()));
-						block->_width += lbh.tmpData.textWidth;
+						block._words.push_back(TextWord(
+							wordStart + blockFrom,
+							-lbh.tmpData.textWidth,
+							-lbh.negativeRightBearing()));
+						block._width += lbh.tmpData.textWidth;
 						lbh.tmpData.textWidth = 0;
 						lbh.tmpData.length = 0;
 						wordStart = lbh.currentPosition;
@@ -331,54 +352,87 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 		if (lbh.currentPosition == end)
 			newItem = item + 1;
 	}
-	if (!block->_words.isEmpty()) {
-		block->_rpadding = block->_words.back().f_rpadding();
-		block->_width -= block->_rpadding;
-		block->_words.squeeze();
+	if (!block._words.isEmpty()) {
+		block._rpadding = block._words.back().f_rpadding();
+		block._width -= block._rpadding;
+		block._words.squeeze();
 	}
 }
 
 bool BlockParser::isLineBreak(
 		const QCharAttributes *attributes,
-		int index) {
+		int index) const {
 	// Don't break after / in links.
 	return attributes[index].lineBreak
-		&& (block->lnkIndex() <= 0
-			|| index <= 0
-			|| str[index - 1] != '/');
+		&& (block.linkIndex() <= 0 || index <= 0 || text[index - 1] != '/');
 }
 
 bool BlockParser::isSpaceBreak(
 		const QCharAttributes *attributes,
-		int index) {
+		int index) const {
 	// Don't break on &nbsp;
-	return attributes[index].whiteSpace
-		&& (str[index] != QChar::Nbsp);
+	return attributes[index].whiteSpace && (text[index] != QChar::Nbsp);
+}
+
+style::font WithFlags(
+		const style::font &font,
+		TextBlockFlags flags,
+		uint32 fontFlags) {
+	using namespace style::internal;
+
+	if (!flags && !fontFlags) {
+		return font;
+	} else if (IsMono(flags) || (fontFlags & FontMonospace)) {
+		return font->monospace();
+	}
+	auto result = font;
+	if ((flags & TextBlockFlag::Bold) || (fontFlags & FontBold)) {
+		result = result->bold();
+	} else if ((flags & TextBlockFlag::Semibold)
+		|| (fontFlags & FontSemibold)) {
+		result = result->semibold();
+	}
+	if ((flags & TextBlockFlag::Italic) || (fontFlags & FontItalic)) {
+		result = result->italic();
+	}
+	if ((flags & TextBlockFlag::Underline) || (fontFlags & FontUnderline)) {
+		result = result->underline();
+	}
+	if ((flags & TextBlockFlag::StrikeOut) || (fontFlags & FontStrikeOut)) {
+		result = result->strikeout();
+	}
+	if (flags & TextBlockFlag::Tilde) { // Tilde fix in OpenSans.
+		result = result->semibold();
+	}
+	return result;
 }
 
 AbstractBlock::AbstractBlock(
 	const style::font &font,
-	const QString &str,
-	uint16 from,
+	const QString &text,
+	uint16 position,
 	uint16 length,
+	TextBlockType type,
 	uint16 flags,
-	uint16 lnkIndex,
-	uint16 spoilerIndex)
-: _flags((flags & 0b1111111111) | ((lnkIndex & 0xFFFF) << 14))
-, _from(from)
-, _spoilerIndex(spoilerIndex) {
+	uint16 linkIndex,
+	uint16 colorIndex)
+: _position(position)
+, _type(static_cast<uint16>(type))
+, _flags(flags)
+, _linkIndex(linkIndex)
+, _colorIndex(colorIndex) {
 }
 
-uint16 AbstractBlock::from() const {
-	return _from;
+uint16 AbstractBlock::position() const {
+	return _position;
 }
 
-int AbstractBlock::width() const {
-	return _width.toInt();
+TextBlockType AbstractBlock::type() const {
+	return static_cast<TextBlockType>(_type);
 }
 
-int AbstractBlock::rpadding() const {
-	return _rpadding.toInt();
+TextBlockFlags AbstractBlock::flags() const {
+	return TextBlockFlags::from_raw(_flags);
 }
 
 QFixed AbstractBlock::f_width() const {
@@ -389,77 +443,54 @@ QFixed AbstractBlock::f_rpadding() const {
 	return _rpadding;
 }
 
-uint16 AbstractBlock::lnkIndex() const {
-	return (_flags >> 14) & 0xFFFF;
+uint16 AbstractBlock::linkIndex() const {
+	return _linkIndex;
 }
 
-void AbstractBlock::setLnkIndex(uint16 lnkIndex) {
-	_flags = (_flags & ~(0xFFFF << 14)) | (lnkIndex << 14);
+uint16 AbstractBlock::colorIndex() const {
+	return _colorIndex;
 }
 
-uint16 AbstractBlock::spoilerIndex() const {
-	return _spoilerIndex;
-}
-
-void AbstractBlock::setSpoilerIndex(uint16 spoilerIndex) {
-	_spoilerIndex = spoilerIndex;
-}
-
-TextBlockType AbstractBlock::type() const {
-	return TextBlockType((_flags >> 10) & 0x0F);
-}
-
-int32 AbstractBlock::flags() const {
-	return (_flags & 0b1111111111);
+void AbstractBlock::setLinkIndex(uint16 index) {
+	_linkIndex = index;
 }
 
 QFixed AbstractBlock::f_rbearing() const {
-	return (type() == TextBlockTText)
+	return (type() == TextBlockType::Text)
 		? static_cast<const TextBlock*>(this)->real_f_rbearing()
 		: 0;
 }
 
 TextBlock::TextBlock(
 	const style::font &font,
-	const QString &str,
-	QFixed minResizeWidth,
-	uint16 from,
+	const QString &text,
+	uint16 position,
 	uint16 length,
-	uint16 flags,
-	uint16 lnkIndex,
-	uint16 spoilerIndex)
-: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
-	_flags |= ((TextBlockTText & 0x0F) << 10);
-	if (length) {
-		style::font blockFont = font;
-		if (!flags && lnkIndex) {
-			// should use TextStyle lnkFlags somehow... not supported
-		}
-
-		if ((flags & TextBlockFPre) || (flags & TextBlockFCode)) {
-			blockFont = blockFont->monospace();
-		} else {
-			if (flags & TextBlockFBold) {
-				blockFont = blockFont->bold();
-			} else if (flags & TextBlockFSemibold) {
-				blockFont = blockFont->semibold();
-			}
-			if (flags & TextBlockFItalic) blockFont = blockFont->italic();
-			if (flags & TextBlockFUnderline) blockFont = blockFont->underline();
-			if (flags & TextBlockFStrikeOut) blockFont = blockFont->strikeout();
-			if (flags & TextBlockFTilde) { // tilde fix in OpenSans
-				blockFont = blockFont->semibold();
-			}
-		}
-
-		DebugCurrentParsingString = str;
-		DebugCurrentParsingFrom = _from;
-		DebugCurrentParsingLength = length;
-		const auto part = DebugCurrentParsingPart = str.mid(_from, length);
-
-		QStackTextEngine engine(part, blockFont->f);
-		BlockParser parser(&engine, this, minResizeWidth, _from, part);
+	TextBlockFlags flags,
+	uint16 linkIndex,
+	uint16 colorIndex,
+	QFixed minResizeWidth)
+: AbstractBlock(
+		font,
+		text,
+		position,
+		length,
+		TextBlockType::Text,
+		flags,
+		linkIndex,
+		colorIndex) {
+	if (!length) {
+		return;
 	}
+	const auto blockFont = WithFlags(font, flags);
+	if (!flags && linkIndex) {
+		// should use TextStyle lnkFlags somehow... not supported
+	}
+
+	const auto part = text.mid(_position, length);
+
+	QStackTextEngine engine(part, blockFont->f);
+	BlockParser parser(*this, engine, minResizeWidth, _position, part);
 }
 
 QFixed TextBlock::real_f_rbearing() const {
@@ -468,20 +499,27 @@ QFixed TextBlock::real_f_rbearing() const {
 
 EmojiBlock::EmojiBlock(
 	const style::font &font,
-	const QString &str,
-	uint16 from,
+	const QString &text,
+	uint16 position,
 	uint16 length,
-	uint16 flags,
-	uint16 lnkIndex,
-	uint16 spoilerIndex,
+	TextBlockFlags flags,
+	uint16 linkIndex,
+	uint16 colorIndex,
 	EmojiPtr emoji)
-: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex)
+: AbstractBlock(
+	font,
+	text,
+	position,
+	length,
+	TextBlockType::Emoji,
+	flags,
+	linkIndex,
+	colorIndex)
 , _emoji(emoji) {
-	_flags |= ((TextBlockTEmoji & 0x0F) << 10);
 	_width = int(st::emojiSize + 2 * st::emojiPadding);
 	_rpadding = 0;
 	for (auto i = length; i != 0;) {
-		auto ch = str[_from + (--i)];
+		auto ch = text[_position + (--i)];
 		if (ch.unicode() == QChar::Space) {
 			_rpadding += font->spacew;
 		} else {
@@ -492,20 +530,27 @@ EmojiBlock::EmojiBlock(
 
 CustomEmojiBlock::CustomEmojiBlock(
 	const style::font &font,
-	const QString &str,
-	uint16 from,
+	const QString &text,
+	uint16 position,
 	uint16 length,
-	uint16 flags,
-	uint16 lnkIndex,
-	uint16 spoilerIndex,
+	TextBlockFlags flags,
+	uint16 linkIndex,
+	uint16 colorIndex,
 	std::unique_ptr<CustomEmoji> custom)
-: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex)
+: AbstractBlock(
+	font,
+	text,
+	position,
+	length,
+	TextBlockType::CustomEmoji,
+	flags,
+	linkIndex,
+	colorIndex)
 , _custom(std::move(custom)) {
-	_flags |= ((TextBlockTCustomEmoji & 0x0F) << 10);
 	_width = int(st::emojiSize + 2 * st::emojiPadding);
 	_rpadding = 0;
 	for (auto i = length; i != 0;) {
-		auto ch = str[_from + (--i)];
+		auto ch = text[_position + (--i)];
 		if (ch.unicode() == QChar::Space) {
 			_rpadding += font->spacew;
 		} else {
@@ -516,32 +561,46 @@ CustomEmojiBlock::CustomEmojiBlock(
 
 NewlineBlock::NewlineBlock(
 	const style::font &font,
-	const QString &str,
-	uint16 from,
+	const QString &text,
+	uint16 position,
 	uint16 length,
-	uint16 flags,
-	uint16 lnkIndex,
-	uint16 spoilerIndex)
-: AbstractBlock(font, str, from, length, flags, lnkIndex, spoilerIndex) {
-	_flags |= ((TextBlockTNewline & 0x0F) << 10);
+	TextBlockFlags flags,
+	uint16 linkIndex,
+	uint16 colorIndex)
+: AbstractBlock(
+	font,
+	text,
+	position,
+	length,
+	TextBlockType::Newline,
+	flags,
+	linkIndex,
+	colorIndex) {
 }
 
 Qt::LayoutDirection NewlineBlock::nextDirection() const {
-	return _nextDir;
+	return _nextDirection;
 }
 
 SkipBlock::SkipBlock(
 	const style::font &font,
-	const QString &str,
-	uint16 from,
-	int32 w,
-	int32 h,
-	uint16 lnkIndex,
-	uint16 spoilerIndex)
-: AbstractBlock(font, str, from, 1, 0, lnkIndex, spoilerIndex)
-, _height(h) {
-	_flags |= ((TextBlockTSkip & 0x0F) << 10);
-	_width = w;
+	const QString &text,
+	uint16 position,
+	int32 width,
+	int32 height,
+	uint16 linkIndex,
+	uint16 colorIndex)
+: AbstractBlock(
+	font,
+	text,
+	position,
+	1,
+	TextBlockType::Skip,
+	0,
+	linkIndex,
+	colorIndex)
+, _height(height) {
+	_width = width;
 }
 
 int SkipBlock::height() const {
@@ -550,11 +609,11 @@ int SkipBlock::height() const {
 
 
 TextWord::TextWord(
-	uint16 from,
+	uint16 position,
 	QFixed width,
 	QFixed rbearing,
 	QFixed rpadding)
-: _from(from)
+: _position(position)
 , _rbearing((rbearing.value() > 0x7FFF)
 	? 0x7FFF
 	: (rbearing.value() < -0x7FFF ? -0x7FFF : rbearing.value()))
@@ -562,8 +621,8 @@ TextWord::TextWord(
 , _rpadding(rpadding) {
 }
 
-uint16 TextWord::from() const {
-	return _from;
+uint16 TextWord::position() const {
+	return _position;
 }
 
 QFixed TextWord::f_rbearing() const {
@@ -588,19 +647,20 @@ Block::Block() {
 
 Block::Block(Block &&other) {
 	switch (other->type()) {
-	case TextBlockTNewline:
+	case TextBlockType::Newline:
 		emplace<NewlineBlock>(std::move(other.unsafe<NewlineBlock>()));
 		break;
-	case TextBlockTText:
+	case TextBlockType::Text:
 		emplace<TextBlock>(std::move(other.unsafe<TextBlock>()));
 		break;
-	case TextBlockTEmoji:
+	case TextBlockType::Emoji:
 		emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
 		break;
-	case TextBlockTCustomEmoji:
-		emplace<CustomEmojiBlock>(std::move(other.unsafe<CustomEmojiBlock>()));
+	case TextBlockType::CustomEmoji:
+		emplace<CustomEmojiBlock>(
+			std::move(other.unsafe<CustomEmojiBlock>()));
 		break;
-	case TextBlockTSkip:
+	case TextBlockType::Skip:
 		emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
 		break;
 	default:
@@ -614,19 +674,20 @@ Block &Block::operator=(Block &&other) {
 	}
 	destroy();
 	switch (other->type()) {
-	case TextBlockTNewline:
+	case TextBlockType::Newline:
 		emplace<NewlineBlock>(std::move(other.unsafe<NewlineBlock>()));
 		break;
-	case TextBlockTText:
+	case TextBlockType::Text:
 		emplace<TextBlock>(std::move(other.unsafe<TextBlock>()));
 		break;
-	case TextBlockTEmoji:
+	case TextBlockType::Emoji:
 		emplace<EmojiBlock>(std::move(other.unsafe<EmojiBlock>()));
 		break;
-	case TextBlockTCustomEmoji:
-		emplace<CustomEmojiBlock>(std::move(other.unsafe<CustomEmojiBlock>()));
+	case TextBlockType::CustomEmoji:
+		emplace<CustomEmojiBlock>(
+			std::move(other.unsafe<CustomEmojiBlock>()));
 		break;
-	case TextBlockTSkip:
+	case TextBlockType::Skip:
 		emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
 		break;
 	default:
@@ -641,91 +702,98 @@ Block::~Block() {
 
 Block Block::Newline(
 		const style::font &font,
-		const QString &str,
-		uint16 from,
+		const QString &text,
+		uint16 position,
 		uint16 length,
-		uint16 flags,
-		uint16 lnkIndex,
-		uint16 spoilerIndex) {
+		TextBlockFlags flags,
+		uint16 linkIndex,
+		uint16 colorIndex) {
 	return New<NewlineBlock>(
 		font,
-		str,
-		from,
+		text,
+		position,
 		length,
 		flags,
-		lnkIndex,
-		spoilerIndex);
+		linkIndex,
+		colorIndex);
 }
 
 Block Block::Text(
 		const style::font &font,
-		const QString &str,
-		QFixed minResizeWidth,
-		uint16 from,
+		const QString &text,
+		uint16 position,
 		uint16 length,
-		uint16 flags,
-		uint16 lnkIndex,
-		uint16 spoilerIndex) {
+		TextBlockFlags flags,
+		uint16 linkIndex,
+		uint16 colorIndex,
+		QFixed minResizeWidth) {
 	return New<TextBlock>(
 		font,
-		str,
-		minResizeWidth,
-		from,
+		text,
+		position,
 		length,
 		flags,
-		lnkIndex,
-		spoilerIndex);
+		linkIndex,
+		colorIndex,
+		minResizeWidth);
 }
 
 Block Block::Emoji(
 		const style::font &font,
-		const QString &str,
-		uint16 from,
+		const QString &text,
+		uint16 position,
 		uint16 length,
-		uint16 flags,
-		uint16 lnkIndex,
-		uint16 spoilerIndex,
+		TextBlockFlags flags,
+		uint16 linkIndex,
+		uint16 colorIndex,
 		EmojiPtr emoji) {
 	return New<EmojiBlock>(
 		font,
-		str,
-		from,
+		text,
+		position,
 		length,
 		flags,
-		lnkIndex,
-		spoilerIndex,
+		linkIndex,
+		colorIndex,
 		emoji);
 }
 
 Block Block::CustomEmoji(
 		const style::font &font,
-		const QString &str,
-		uint16 from,
+		const QString &text,
+		uint16 position,
 		uint16 length,
-		uint16 flags,
-		uint16 lnkIndex,
-		uint16 spoilerIndex,
+		TextBlockFlags flags,
+		uint16 linkIndex,
+		uint16 colorIndex,
 		std::unique_ptr<Text::CustomEmoji> custom) {
 	return New<CustomEmojiBlock>(
 		font,
-		str,
-		from,
+		text,
+		position,
 		length,
 		flags,
-		lnkIndex,
-		spoilerIndex,
+		linkIndex,
+		colorIndex,
 		std::move(custom));
 }
 
 Block Block::Skip(
 		const style::font &font,
-		const QString &str,
-		uint16 from,
-		int32 w,
-		int32 h,
-		uint16 lnkIndex,
-		uint16 spoilerIndex) {
-	return New<SkipBlock>(font, str, from, w, h, lnkIndex, spoilerIndex);
+		const QString &text,
+		uint16 position,
+		int32 width,
+		int32 height,
+		uint16 linkIndex,
+		uint16 colorIndex) {
+	return New<SkipBlock>(
+		font,
+		text,
+		position,
+		width,
+		height,
+		linkIndex,
+		colorIndex);
 }
 
 AbstractBlock *Block::get() {
@@ -754,19 +822,19 @@ const AbstractBlock &Block::operator*() const {
 
 void Block::destroy() {
 	switch (get()->type()) {
-	case TextBlockTNewline:
+	case TextBlockType::Newline:
 		unsafe<NewlineBlock>().~NewlineBlock();
 		break;
-	case TextBlockTText:
+	case TextBlockType::Text:
 		unsafe<TextBlock>().~TextBlock();
 		break;
-	case TextBlockTEmoji:
+	case TextBlockType::Emoji:
 		unsafe<EmojiBlock>().~EmojiBlock();
 		break;
-	case TextBlockTCustomEmoji:
+	case TextBlockType::CustomEmoji:
 		unsafe<CustomEmojiBlock>().~CustomEmojiBlock();
 		break;
-	case TextBlockTSkip:
+	case TextBlockType::Skip:
 		unsafe<SkipBlock>().~SkipBlock();
 		break;
 	default:
@@ -777,7 +845,7 @@ void Block::destroy() {
 int CountBlockHeight(
 		const AbstractBlock *block,
 		const style::TextStyle *st) {
-	return (block->type() == TextBlockTSkip)
+	return (block->type() == TextBlockType::Skip)
 		? static_cast<const SkipBlock*>(block)->height()
 		: (st->lineHeight > st->font->height)
 		? st->lineHeight

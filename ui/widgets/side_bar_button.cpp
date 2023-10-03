@@ -166,10 +166,10 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 	}
 
 	if (_lock.locked) {
-		auto lineWidths = QVector<int>();
-		lineWidths.reserve(kMaxLabelLines);
-		_text.countLineWidths(width() - 2 * _st.textSkip, &lineWidths);
-		if (lineWidths.isEmpty()) {
+		const auto lineWidths = _text.countLineWidths(
+			width() - 2 * _st.textSkip,
+			{ .reserve = kMaxLabelLines });
+		if (lineWidths.empty()) {
 			return;
 		}
 		validateLockIconCache();

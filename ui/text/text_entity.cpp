@@ -1358,7 +1358,7 @@ QString RemoveAccents(const QString &text) {
 			if (copying) result[i] = *ch;
 			continue;
 		}
-		if (IsDiac(*ch)) {
+		if (IsDiacritic(*ch)) {
 			copying = true;
 			--i;
 			continue;
@@ -2047,9 +2047,9 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 
 	auto offset = 0;
 	auto state = State();
-	auto notClosedEntities = QVector<int>(); // Stack of indices.
+	auto notClosedEntities = std::vector<int>(); // Stack of indices.
 	const auto closeOne = [&] {
-		Expects(!notClosedEntities.isEmpty());
+		Expects(!notClosedEntities.empty());
 
 		auto &entity = result[notClosedEntities.back()];
 		entity = {

@@ -185,7 +185,7 @@ public:
 	void setAllowTextLines(int lines = 0);
 	void setTextBreakEverywhere(bool allow = true);
 
-	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
+	void setLink(uint16 index, const ClickHandlerPtr &lnk);
 	void setLinksTrusted();
 
 	using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;

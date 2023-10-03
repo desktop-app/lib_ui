@@ -173,14 +173,13 @@ void Widget::paintEvent(QPaintEvent *e) {
 			width());
 	}
 
-	const auto lines = _maxTextHeight / _st->style.font->height;
 	p.setPen(st::toastFg);
 	_text.draw(p, {
 		.position = { _st->padding.left(), _textTop },
 		.availableWidth = _textWidth + 1,
 		.palette = &_st->palette,
 		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.elisionLines = lines,
+		.elisionHeight = _maxTextHeight,
 	});
 }
 

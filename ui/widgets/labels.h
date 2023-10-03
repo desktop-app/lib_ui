@@ -26,7 +26,7 @@ class CrossFadeAnimation {
 public:
 	struct Data {
 		QImage full;
-		QVector<int> lineWidths;
+		std::vector<int> lineWidths;
 		QPoint position;
 		style::align align;
 		style::font font;
@@ -143,7 +143,7 @@ public:
 	int naturalWidth() const override;
 	QMargins getMargins() const override;
 
-	void setLink(uint16 lnkIndex, const ClickHandlerPtr &lnk);
+	void setLink(uint16 index, const ClickHandlerPtr &lnk);
 	void setLinksTrusted();
 
 	using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;

@@ -54,12 +54,14 @@ TextWithEntities Link(TextWithEntities text, int index) {
 	return Link(std::move(text), u"internal:index"_q + QChar(index));
 }
 
-TextWithEntities PlainLink(const QString &text) {
-	return WithSingleEntity(text, EntityType::PlainLink);
+TextWithEntities Colorized(const QString &text, int index) {
+	const auto data = index ? QString(QChar(index)) : QString();
+	return WithSingleEntity(text, EntityType::Colorized, data);
 }
 
-TextWithEntities PlainLink(TextWithEntities text) {
-	return Wrapped(std::move(text), EntityType::PlainLink, QString());
+TextWithEntities Colorized(TextWithEntities text, int index) {
+	const auto data = index ? QString(QChar(index)) : QString();
+	return Wrapped(std::move(text), EntityType::Colorized, data);
 }
 
 TextWithEntities Wrapped(
