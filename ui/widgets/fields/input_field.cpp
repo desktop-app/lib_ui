@@ -65,6 +65,10 @@ const auto kNewlineChars = QString("\r\n")
 // QTextCharFormat with the same properties, including kCustomEmojiText.
 auto GlobalCustomEmojiCounter = 0;
 
+[[nodiscard]] bool IsTagPre(QStringView tag) {
+	return tag.startsWith(kTagPre);
+}
+
 class InputDocument : public QTextDocument {
 public:
 	InputDocument(QObject *parent, const style::InputField &st);
@@ -169,7 +173,7 @@ bool IsNewline(QChar ch) {
 		}
 		auto found = false;
 		for (const auto &single : TextUtilities::SplitTags(existing.id)) {
-			const auto normalized = (single == QStringView(kTagPre))
+			const auto normalized = IsTagPre(single)
 				? QStringView(kTagCode)
 				: single;
 			if (checkingLink && IsValidMarkdownLink(single)) {
@@ -205,6 +209,17 @@ bool IsNewline(QChar ch) {
 		const TextWithTags &textWithTags,
 		const QString &tag) {
 	return !CheckFullTextTag(textWithTags, tag).isEmpty();
+}
+
+[[nodiscard]] QString ReadPreLanguageName(
+		const QString &text,
+		int preStart,
+		int preLength) {
+	auto view = QStringView(text).mid(preStart, preLength);
+	static const auto expression = QRegularExpression(
+		"^([a-zA-Z0-9\\-]+)[\\r\\n]");
+	const auto m = expression.match(view);
+	return m.hasMatch() ? m.captured(1).toLower() : QString();
 }
 
 class TagAccumulator {
@@ -739,7 +754,7 @@ QTextCharFormat PrepareTagFormat(
 			font = font->underline();
 		} else if (tag == kTagStrikeOut) {
 			font = font->strikeout();
-		} else if (tag == kTagCode || tag == kTagPre) {
+		} else if (tag == kTagCode || IsTagPre(tag)) {
 			color = st::defaultTextPalette.monoFg;
 			font = font->monospace();
 		} else if (tag == kTagSpoiler) {
@@ -2668,11 +2683,21 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 		}
 		addOriginalTextUpTill(tag.adjustedStart);
 
+		auto tagId = tag.tag;
 		auto entityStart = tag.adjustedStart + tagLength;
-		if (tag.tag == kTagPre) {
+		if (tagId == kTagPre) {
 			// Remove redundant newlines for pre.
 			// If ``` is on a separate line add only one newline.
-			if (IsNewline(originalText[entityStart])
+			const auto languageName = ReadPreLanguageName(
+				originalText,
+				entityStart,
+				entityLength);
+			if (!languageName.isEmpty()) {
+				// ```language-name{\n}code
+				entityStart += languageName.size() + 1;
+				entityLength -= languageName.size() + 1;
+				tagId += languageName;
+			} else if (IsNewline(originalText[entityStart])
 				&& (result.text.isEmpty()
 					|| IsNewline(result.text[result.text.size() - 1]))) {
 				++entityStart;
@@ -2691,7 +2716,7 @@ TextWithTags InputField::getTextWithAppliedMarkdown() const {
 			result.tags.push_back(TextWithTags::Tag{
 				int(result.text.size()),
 				entityLength,
-				tag.tag });
+				tagId });
 			result.text.append(base::StringViewMid(
 				originalText,
 				entityStart,
@@ -3121,7 +3146,7 @@ void InputField::processInstantReplaces(const QString &appended) {
 	for (const auto &tag : _lastMarkdownTags) {
 		if (tag.internalStart < position
 			&& tag.internalStart + tag.internalLength >= position
-			&& (tag.tag == kTagCode || tag.tag == kTagPre)) {
+			&& (tag.tag == kTagCode || IsTagPre(tag.tag))) {
 			return;
 		}
 	}
@@ -3197,10 +3222,10 @@ void InputField::commitInstantReplacement(
 		const auto currentTag = cursor.charFormat().property(
 			kTagProperty
 		).toString();
-		const auto currentTags = TextUtilities::SplitTags(currentTag);
-		if (currentTags.contains(QStringView(kTagPre))
-			|| currentTags.contains(QStringView(kTagCode))) {
-			return;
+		for (const auto &tag : TextUtilities::SplitTags(currentTag)) {
+			if (tag == kTagCode || IsTagPre(tag)) {
+				return;
+			}
 		}
 	}
 	cursor.setPosition(from);

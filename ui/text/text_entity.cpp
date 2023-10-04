@@ -2032,6 +2032,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 	};
 	struct State {
 		QString link;
+		QString language;
 		uint32 mask = 0;
 
 		void set(EntityType type) {
@@ -2118,28 +2119,34 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		}
 		for (const auto type : kInMaskTypes) {
 			if (nextState.has(type) && !state.has(type)) {
-				openType(type);
+				openType(type, nextState.language);
 			}
 		}
 		state = nextState;
 	};
 	const auto stateForTag = [&](const QString &tag) {
+		using Tags = Ui::InputField;
 		auto result = State();
 		const auto list = SplitTags(tag);
+		const auto languageStart = Tags::kTagPre.size();
 		for (const auto &single : list) {
-			if (single == Ui::InputField::kTagBold) {
+			if (single == Tags::kTagBold) {
 				result.set(EntityType::Bold);
-			} else if (single == Ui::InputField::kTagItalic) {
+			} else if (single == Tags::kTagItalic) {
 				result.set(EntityType::Italic);
-			} else if (single == Ui::InputField::kTagUnderline) {
+			} else if (single == Tags::kTagUnderline) {
 				result.set(EntityType::Underline);
-			} else if (single == Ui::InputField::kTagStrikeOut) {
+			} else if (single == Tags::kTagStrikeOut) {
 				result.set(EntityType::StrikeOut);
-			} else if (single == Ui::InputField::kTagCode) {
+			} else if (single == Tags::kTagCode) {
 				result.set(EntityType::Code);
-			} else if (single == Ui::InputField::kTagPre) {
+			} else if (single == Tags::kTagPre) {
 				result.set(EntityType::Pre);
-			} else if (single == Ui::InputField::kTagSpoiler) {
+			} else if (single.size() > languageStart
+				&& single.startsWith(Tags::kTagPre)) {
+				result.set(EntityType::Pre);
+				result.language = single.mid(languageStart).toString();
+			} else if (single == Tags::kTagSpoiler) {
 				result.set(EntityType::Spoiler);
 			} else {
 				result.link = single.toString();
@@ -2235,8 +2242,17 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 		case EntityType::StrikeOut:
 			push(Ui::InputField::kTagStrikeOut);
 			break;
-		case EntityType::Code: push(Ui::InputField::kTagCode); break; // #TODO entities
-		case EntityType::Pre: push(Ui::InputField::kTagPre); break;
+		case EntityType::Code: push(Ui::InputField::kTagCode); break;
+		case EntityType::Pre: {
+			if (!entity.data().isEmpty()) {
+				const auto language = QRegularExpression("^[a-z0-9\\-]+$");
+				if (language.match(entity.data()).hasMatch()) {
+					push(Ui::InputField::kTagPre + entity.data());
+					break;
+				}
+			}
+			push(Ui::InputField::kTagPre);
+		} break;
 		case EntityType::Spoiler: push(Ui::InputField::kTagSpoiler); break;
 		}
 	}
