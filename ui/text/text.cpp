@@ -682,7 +682,9 @@ void String::drawElided(Painter &p, int32 left, int32 top, int32 w, int32 lines,
 		.palette = &p.textPalette(),
 		.paused = p.inactive(),
 		.selection = selection,
-		.elisionHeight = (lines > 1) ? (lines * _st->font->height) : 0,
+		.elisionHeight = ((!isEmpty() && lines > 1)
+			? (lines * _st->font->height)
+			: 0),
 		.elisionRemoveFromEnd = removeFromEnd,
 		.elisionOneLine = (lines == 1),
 	});
@@ -716,6 +718,9 @@ void String::drawRightElided(Painter &p, int32 right, int32 top, int32 width, in
 }
 
 StateResult String::getState(QPoint point, int width, StateRequest request) const {
+	if (isEmpty()) {
+		return {};
+	}
 	return Renderer(*this).getState(
 		point,
 		SimpleGeometry(width, _st->font->height, 0, 0, false, false),
@@ -727,6 +732,9 @@ StateResult String::getStateLeft(QPoint point, int width, int outerw, StateReque
 }
 
 StateResult String::getStateElided(QPoint point, int width, StateRequestElided request) const {
+	if (isEmpty()) {
+		return {};
+	}
 	return Renderer(*this).getState(point, SimpleGeometry(
 		width,
 		_st->font->height,
