@@ -101,6 +101,8 @@ public:
 	}
 	void handleMouseRelease(QPoint globalPosition);
 
+	void setSelected(int selected, bool isMouseSelection);
+
 	[[nodiscard]] rpl::producer<> resizesFromInner() const;
 	[[nodiscard]] rpl::producer<ScrollToRequest> scrollToRequests() const;
 
@@ -119,7 +121,6 @@ private:
 		const style::icon *icon = nullptr,
 		const style::icon *iconOver = nullptr);
 
-	void setSelected(int selected, bool isMouseSelection);
 	void clearMouseSelection();
 
 	void itemPressed(TriggeredSource source);
