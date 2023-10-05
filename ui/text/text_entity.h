@@ -35,6 +35,7 @@ enum class EntityType : uchar {
 	StrikeOut,
 	Code, // inline
 	Pre,  // block
+	Blockquote,
 	Spoiler,
 };
 

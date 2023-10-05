@@ -148,6 +148,10 @@ QString Integration::phraseFormattingStrikeOut() {
 	return "Strike-through";
 }
 
+QString Integration::phraseFormattingBlockquote() {
+	return "Quote";
+}
+
 QString Integration::phraseFormattingMonospace() {
 	return "Monospace";
 }

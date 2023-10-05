@@ -30,15 +30,16 @@ enum class TextBlockType : uint16 {
 };
 
 enum class TextBlockFlag : uint16 {
-	Bold      = 0x001,
-	Italic    = 0x002,
-	Underline = 0x004,
-	StrikeOut = 0x008,
-	Tilde     = 0x010, // Tilde fix in OpenSans.
-	Semibold  = 0x020,
-	Code      = 0x040,
-	Pre       = 0x080,
-	Spoiler   = 0x100,
+	Bold       = 0x001,
+	Italic     = 0x002,
+	Underline  = 0x004,
+	StrikeOut  = 0x008,
+	Tilde      = 0x010, // Tilde fix in OpenSans.
+	Semibold   = 0x020,
+	Code       = 0x040,
+	Pre        = 0x080,
+	Spoiler    = 0x100,
+	Blockquote = 0x200,
 };
 inline constexpr bool is_flag_type(TextBlockFlag) { return true; }
 using TextBlockFlags = base::flags<TextBlockFlag>;

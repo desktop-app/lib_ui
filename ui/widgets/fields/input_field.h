@@ -35,6 +35,7 @@ namespace Ui {
 
 const auto kClearFormatSequence = QKeySequence("ctrl+shift+n");
 const auto kStrikeOutSequence = QKeySequence("ctrl+shift+x");
+const auto kBlockquoteSequence = QKeySequence("ctrl+shift+.");
 const auto kMonospaceSequence = QKeySequence("ctrl+shift+m");
 const auto kEditLinkSequence = QKeySequence("ctrl+k");
 const auto kSpoilerSequence = QKeySequence("ctrl+shift+p");
@@ -133,6 +134,7 @@ public:
 	static const QString kTagCode;
 	static const QString kTagPre;
 	static const QString kTagSpoiler;
+	static const QString kTagBlockquote;
 	static const QString kCustomEmojiTagStart;
 	static const int kCustomEmojiFormat;
 

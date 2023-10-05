@@ -1006,6 +1006,7 @@ TextForMimeData String::toText(
 			{ TextBlockFlag::StrikeOut, EntityType::StrikeOut },
 			{ TextBlockFlag::Code, EntityType::Code }, // #TODO entities
 			{ TextBlockFlag::Pre, EntityType::Pre },
+			{ TextBlockFlag::Blockquote, EntityType::Blockquote },
 		} : std::vector<MarkdownTagTracker>();
 	const auto flagsChangeCallback = [&](int32 oldFlags, int32 newFlags) {
 		if (!composeEntities) {

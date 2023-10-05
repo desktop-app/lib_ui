@@ -392,7 +392,9 @@ style::font WithFlags(
 		|| (fontFlags & FontSemibold)) {
 		result = result->semibold();
 	}
-	if ((flags & TextBlockFlag::Italic) || (fontFlags & FontItalic)) {
+	if ((flags & TextBlockFlag::Italic)
+		|| (fontFlags & FontItalic)
+		|| (flags & TextBlockFlag::Blockquote)) {
 		result = result->italic();
 	}
 	if ((flags & TextBlockFlag::Underline) || (fontFlags & FontUnderline)) {

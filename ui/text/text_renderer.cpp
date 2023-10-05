@@ -2028,7 +2028,7 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 				_currentPen = &_originalPen;
 				_currentPenSelected = &_originalPenSelected;
 			}
-		} else if (isMono) {
+		} else if (isMono || (flags & TextBlockFlag::Blockquote)) {
 			_currentPen = &_palette->monoFg->p;
 			_currentPenSelected = &_palette->selectMonoFg->p;
 		} else if (block->linkIndex()) {

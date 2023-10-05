@@ -53,7 +53,8 @@ constexpr auto kMaxDiacAfterSymbol = 2;
 						|| type == EntityType::Colorized
 						|| type == EntityType::Spoiler
 						|| type == EntityType::Code
-						|| type == EntityType::Pre))) {
+						|| type == EntityType::Pre
+						|| type == EntityType::Blockquote))) {
 					continue;
 				}
 				result.entities.push_back(preparsed.at(i));
@@ -226,6 +227,17 @@ void Parser::createNewlineBlock() {
 	createBlock();
 }
 
+void Parser::ensureAtNewline() {
+	const auto lastType = _t->_blocks.empty()
+		? TextBlockType::Newline
+		: _t->_blocks.back()->type();
+	if (lastType != TextBlockType::Newline) {
+		auto saved = base::take(_customEmojiData);
+		createNewlineBlock();
+		_customEmojiData = base::take(saved);
+	}
+}
+
 void Parser::finishEntities() {
 	while (!_startedEntities.empty()
 		&& (_ptr >= _startedEntities.begin()->first || _ptr >= _end)) {
@@ -239,9 +251,13 @@ void Parser::finishEntities() {
 				if (_flags & (*flags)) {
 					createBlock();
 					_flags &= ~(*flags);
-					if (((*flags) & TextBlockFlag::Pre)
-						&& !_t->_blocks.empty()
-						&& _t->_blocks.back()->type() != TextBlockType::Newline) {
+					const auto lastType = _t->_blocks.empty()
+						? TextBlockType::Newline
+						: _t->_blocks.back()->type();
+					if ((lastType != TextBlockType::Newline)
+						&& ((*flags)
+							& (TextBlockFlag::Pre
+								| TextBlockFlag::Blockquote))) {
 						_newlineAwaited = true;
 					}
 					if (IsMono(*flags)) {
@@ -320,11 +336,7 @@ bool Parser::checkEntities() {
 		} else {
 			flags = TextBlockFlag::Pre;
 			createBlock();
-			if (!_t->_blocks.empty()
-				&& _t->_blocks.back()->type() != TextBlockType::Newline
-				&& _customEmojiData.isEmpty()) {
-				createNewlineBlock();
-			}
+			ensureAtNewline();
 		}
 		const auto text = QString(entityBegin, entityLength);
 
@@ -338,6 +350,10 @@ bool Parser::checkEntities() {
 			_monos.push_back({ .text = text, .type = entityType });
 			monoIndex = _monos.size();
 		}
+	} else if (entityType == EntityType::Blockquote) {
+		flags = TextBlockFlag::Blockquote;
+		createBlock();
+		ensureAtNewline();
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
 		|| entityType == EntityType::Mention
