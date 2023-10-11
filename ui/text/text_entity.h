@@ -50,10 +50,17 @@ struct EntityLinkData {
 	QString data;
 	EntityType type = EntityType::Invalid;
 	EntityLinkShown shown = EntityLinkShown::Full;
+
+	friend inline auto operator<=>(
+		const EntityLinkData &,
+		const EntityLinkData &) = default;
+	friend inline bool operator==(
+		const EntityLinkData &,
+		const EntityLinkData &) = default;
 };
 
 class EntityInText;
-using EntitiesInText = QList<EntityInText>;
+using EntitiesInText = QVector<EntityInText>;
 
 class EntityInText {
 public:
@@ -113,6 +120,13 @@ public:
 		return type() != EntityType::Invalid;
 	}
 
+	friend inline auto operator<=>(
+		const EntityInText &,
+		const EntityInText &) = default;
+	friend inline bool operator==(
+		const EntityInText &,
+		const EntityInText &) = default;
+
 private:
 	EntityType _type = EntityType::Invalid;
 	int _offset = 0;
@@ -120,17 +134,6 @@ private:
 	QString _data;
 
 };
-
-inline bool operator==(const EntityInText &a, const EntityInText &b) {
-	return (a.type() == b.type())
-		&& (a.offset() == b.offset())
-		&& (a.length() == b.length())
-		&& (a.data() == b.data());
-}
-
-inline bool operator!=(const EntityInText &a, const EntityInText &b) {
-	return !(a == b);
-}
 
 struct TextWithEntities {
 	QString text;
@@ -182,19 +185,14 @@ struct TextWithEntities {
 		result.text = simple;
 		return result;
 	}
+
+	friend inline auto operator<=>(
+		const TextWithEntities &,
+		const TextWithEntities &) = default;
+	friend inline bool operator==(
+		const TextWithEntities &,
+		const TextWithEntities &) = default;
 };
-
-inline bool operator==(
-		const TextWithEntities &a,
-		const TextWithEntities &b) {
-	return (a.text == b.text) && (a.entities == b.entities);
-}
-
-inline bool operator!=(
-		const TextWithEntities &a,
-		const TextWithEntities &b) {
-	return !(a == b);
-}
 
 struct TextForMimeData {
 	QString expanded;

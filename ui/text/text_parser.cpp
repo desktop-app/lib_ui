@@ -182,6 +182,7 @@ void Parser::createBlock(int32 skipBack) {
 	if (_newlineAwaited) {
 		_newlineAwaited = false;
 		if (!newline) {
+			++_t->_modifications[_blockStart];
 			_t->_text.insert(_blockStart, QChar::LineFeed);
 			createBlock(skipBack - length);
 		}
@@ -220,20 +221,23 @@ void Parser::createBlock(int32 skipBack) {
 	blockCreated();
 }
 
-void Parser::createNewlineBlock() {
-	createBlock();
+void Parser::createNewlineBlock(bool fromOriginalText) {
+	if (!fromOriginalText) {
+		++_t->_modifications[_t->_text.size()];
+	}
 	_t->_text.push_back(QChar::LineFeed);
 	_allowDiacritic = false;
 	createBlock();
 }
 
 void Parser::ensureAtNewline() {
+	createBlock();
 	const auto lastType = _t->_blocks.empty()
 		? TextBlockType::Newline
 		: _t->_blocks.back()->type();
 	if (lastType != TextBlockType::Newline) {
 		auto saved = base::take(_customEmojiData);
-		createNewlineBlock();
+		createNewlineBlock(false);
 		_customEmojiData = base::take(saved);
 	}
 }
@@ -335,7 +339,6 @@ bool Parser::checkEntities() {
 			flags = TextBlockFlag::Code;
 		} else {
 			flags = TextBlockFlag::Pre;
-			createBlock();
 			ensureAtNewline();
 		}
 		const auto text = QString(entityBegin, entityLength);
@@ -352,7 +355,6 @@ bool Parser::checkEntities() {
 		}
 	} else if (entityType == EntityType::Blockquote) {
 		flags = TextBlockFlag::Blockquote;
-		createBlock();
 		ensureAtNewline();
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
@@ -498,6 +500,7 @@ void Parser::parseCurrentChar() {
 	}
 
 	if (skip) {
+		--_t->_modifications[_t->_text.size()];
 		_ch = 0;
 		_allowDiacritic = false;
 	} else {
@@ -513,7 +516,8 @@ void Parser::parseCurrentChar() {
 			}
 		}
 		if (isNewLine) {
-			createNewlineBlock();
+			createBlock();
+			createNewlineBlock(true);
 		} else if (replaceWithSpace) {
 			_t->_text.push_back(QChar::Space);
 			_allowDiacritic = false;
@@ -545,6 +549,7 @@ void Parser::parseEmojiFromCurrent() {
 		Assert(!_t->_text.isEmpty());
 		const auto last = _t->_text[_t->_text.size() - 1];
 		if (last.unicode() != Emoji::kPostfix) {
+			++_t->_modifications[_t->_text.size()];
 			_t->_text.push_back(QChar(Emoji::kPostfix));
 			++len;
 		}
@@ -579,7 +584,12 @@ void Parser::parse(const TextParseOptions &options) {
 	trimSourceRange();
 
 	_t->_text.resize(0);
+	_t->_modifications = {};
 	_t->_text.reserve(_end - _ptr);
+
+	if (_ptr > _start) {
+		_t->_modifications[0] = -(_ptr - _start);
+	}
 
 	for (; _ptr <= _end; ++_ptr) {
 		while (checkEntities()) {
@@ -758,6 +768,7 @@ void Parser::finalize(const TextParseOptions &options) {
 	_t->_links.squeeze();
 	_t->_blocks.shrink_to_fit();
 	_t->_text.squeeze();
+	_t->_modifications.shrink_to_fit();
 }
 
 void Parser::computeLinkText(

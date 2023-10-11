@@ -293,6 +293,9 @@ public:
 	[[nodiscard]] OnlyCustomEmoji toOnlyCustomEmoji() const;
 
 	[[nodiscard]] bool hasNotEmojiAndSpaces() const;
+	[[nodiscard]] const base::flat_map<int, int> &modifications() const {
+		return _modifications;
+	}
 
 	[[nodiscard]] const style::TextStyle *style() const {
 		return _st;
@@ -350,6 +353,7 @@ private:
 	bool _hasNotEmojiAndSpaces : 1 = false;
 
 	QString _text;
+	base::flat_map<int, int> _modifications;
 	const style::TextStyle *_st = nullptr;
 
 	TextBlocks _blocks;

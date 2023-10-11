@@ -1890,7 +1890,7 @@ void Trim(TextWithEntities &result) {
 }
 
 int SerializeTagsSize(const TextWithTags::Tags &tags) {
-	auto result = qint32(0);
+	auto result = int(sizeof(qint32)); // QByteArray size
 	if (tags.isEmpty()) {
 		return result;
 	}

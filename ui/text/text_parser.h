@@ -56,7 +56,7 @@ private:
 	void trimSourceRange();
 	void blockCreated();
 	void createBlock(int32 skipBack = 0);
-	void createNewlineBlock();
+	void createNewlineBlock(bool fromOriginalText);
 	void ensureAtNewline();
 
 	// Returns true if at least one entity was parsed in the current position.
