@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/qt/qt_compare.h"
 #include "base/basic_types.h"
 #include "base/algorithm.h"
 
@@ -262,6 +263,9 @@ struct TextWithTags {
 		int offset = 0;
 		int length = 0;
 		QString id;
+
+		friend inline auto operator<=>(const Tag &, const Tag &) = default;
+		friend inline bool operator==(const Tag &, const Tag &) = default;
 	};
 	using Tags = QVector<Tag>;
 
@@ -271,21 +275,13 @@ struct TextWithTags {
 	[[nodiscard]] bool empty() const {
 		return text.isEmpty();
 	}
+	friend inline auto operator<=>(
+		const TextWithTags &,
+		const TextWithTags &) = default;
+	friend inline bool operator==(
+		const TextWithTags &,
+		const TextWithTags &) = default;
 };
-
-inline bool operator==(const TextWithTags::Tag &a, const TextWithTags::Tag &b) {
-	return (a.offset == b.offset) && (a.length == b.length) && (a.id == b.id);
-}
-inline bool operator!=(const TextWithTags::Tag &a, const TextWithTags::Tag &b) {
-	return !(a == b);
-}
-
-inline bool operator==(const TextWithTags &a, const TextWithTags &b) {
-	return (a.text == b.text) && (a.tags == b.tags);
-}
-inline bool operator!=(const TextWithTags &a, const TextWithTags &b) {
-	return !(a == b);
-}
 
 // Parsing helpers.
 
