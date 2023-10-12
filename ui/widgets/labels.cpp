@@ -199,7 +199,7 @@ FlatLabel::FlatLabel(
 	const style::FlatLabel &st,
 	const style::PopupMenu &stMenu)
 : RpWidget(parent)
-, _text(st.minWidth ? st.minWidth : QFIXED_MAX)
+, _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
 , _stMenu(stMenu) {
 	init();
@@ -211,7 +211,7 @@ FlatLabel::FlatLabel(
 	const style::FlatLabel &st,
 	const style::PopupMenu &stMenu)
 : RpWidget(parent)
-, _text(st.minWidth ? st.minWidth : QFIXED_MAX)
+, _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
 , _stMenu(stMenu) {
 	setText(text);
@@ -224,7 +224,7 @@ FlatLabel::FlatLabel(
 	const style::FlatLabel &st,
 	const style::PopupMenu &stMenu)
 : RpWidget(parent)
-, _text(st.minWidth ? st.minWidth : QFIXED_MAX)
+, _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
 , _stMenu(stMenu) {
 	textUpdated();
@@ -242,7 +242,7 @@ FlatLabel::FlatLabel(
 	const style::FlatLabel &st,
 	const style::PopupMenu &stMenu)
 : RpWidget(parent)
-, _text(st.minWidth ? st.minWidth : QFIXED_MAX)
+, _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
 , _stMenu(stMenu)
 , _touchSelectTimer([=] { touchSelect(); }) {

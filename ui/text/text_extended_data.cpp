@@ -4,7 +4,7 @@
 // For license and copyright information please follow this link:
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
-#include "ui/text/text_spoiler_data.h"
+#include "ui/text/text_extended_data.h"
 
 #include "ui/text/text.h"
 

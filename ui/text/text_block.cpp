@@ -409,6 +409,14 @@ style::font WithFlags(
 	return result;
 }
 
+Qt::LayoutDirection UnpackParagraphDirection(bool ltr, bool rtl) {
+	return ltr
+		? Qt::LeftToRight
+		: rtl
+		? Qt::RightToLeft
+		: Qt::LayoutDirectionAuto;
+}
+
 AbstractBlock::AbstractBlock(
 	const style::font &font,
 	const QString &text,
@@ -578,10 +586,6 @@ NewlineBlock::NewlineBlock(
 	flags,
 	linkIndex,
 	colorIndex) {
-}
-
-Qt::LayoutDirection NewlineBlock::nextDirection() const {
-	return _nextDirection;
 }
 
 SkipBlock::SkipBlock(

@@ -544,7 +544,7 @@ int Checkbox::countTextMinWidth() const {
 		+ _st.textPosition.x();
 	return (_st.width > 0)
 		? std::max(_st.width - leftSkip, 1)
-		: QFIXED_MAX;
+		: kQFixedMax;
 }
 
 QRect Checkbox::checkRect() const {

@@ -7,6 +7,8 @@
 #pragma once
 
 #include "ui/text/text.h"
+#include "ui/text/text_block.h"
+#include "ui/text/text_custom_emoji.h"
 
 #include <private/qtextengine_p.h>
 
@@ -14,6 +16,8 @@ struct QScriptAnalysis;
 struct QScriptLine;
 
 namespace Ui::Text {
+
+struct AbstractBlock;
 
 struct FixedRange {
 	QFixed from;

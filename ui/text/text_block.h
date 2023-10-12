@@ -11,9 +11,9 @@
 #include "ui/style/style_core.h"
 #include "ui/emoji_config.h"
 
-#include <private/qfixed_p.h>
-
 #include <crl/crl_time.h>
+
+#include <private/qfixed_p.h>
 
 namespace style {
 struct TextStyle;
@@ -48,6 +48,10 @@ using TextBlockFlags = base::flags<TextBlockFlag>;
 	const style::font &font,
 	TextBlockFlags flags,
 	uint32 fontFlags = 0);
+
+[[nodiscard]] Qt::LayoutDirection UnpackParagraphDirection(
+	bool ltr,
+	bool rtl);
 
 class AbstractBlock {
 public:
@@ -103,10 +107,17 @@ public:
 		uint16 linkIndex,
 		uint16 colorIndex);
 
-	[[nodiscard]] Qt::LayoutDirection nextDirection() const;
+	[[nodiscard]] int16 paragraphIndex() const {
+		return _paragraphIndex;
+	}
+	[[nodiscard]] Qt::LayoutDirection paragraphDirection() const {
+		return UnpackParagraphDirection(_paragraphLTR, _paragraphRTL);
+	}
 
 private:
-	Qt::LayoutDirection _nextDirection = Qt::LayoutDirectionAuto;
+	int16 _paragraphIndex = 0;
+	bool _paragraphLTR : 1 = false;
+	bool _paragraphRTL : 1 = false;
 
 	friend class String;
 	friend class Parser;

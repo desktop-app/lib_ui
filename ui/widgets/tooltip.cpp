@@ -159,7 +159,8 @@ void Tooltip::paintEvent(QPaintEvent *e) {
 		p.fillRect(QRect(0, st::lineWidth, st::lineWidth, height() - 2 * st::lineWidth), _st->textBorder);
 		p.fillRect(QRect(width() - st::lineWidth, st::lineWidth, st::lineWidth, height() - 2 * st::lineWidth), _st->textBorder);
 	}
-	int32 lines = qFloor((height() - 2 * st::lineWidth - _st->textPadding.top() - _st->textPadding.bottom()) / _st->textStyle.font->height);
+	const auto lines = (height() - 2 * st::lineWidth - _st->textPadding.top() - _st->textPadding.bottom())
+		/ _st->textStyle.font->height;
 
 	p.setPen(_st->textFg);
 	_text.drawElided(p, st::lineWidth + _st->textPadding.left(), st::lineWidth + _st->textPadding.top(), width() - 2 * st::lineWidth - _st->textPadding.left() - _st->textPadding.right(), lines);

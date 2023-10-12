@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/variant.h"
+#include "ui/emoji_config.h"
 
 namespace Ui::Text {
 

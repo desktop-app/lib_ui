@@ -45,7 +45,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 , _maxTextWidth(widthWithoutPadding(_st->maxWidth))
 , _maxTextHeight(
 	config.st->style.font->height * (_multiline ? config.maxLines : 1))
-, _text(_multiline ? widthWithoutPadding(config.st->minWidth) : QFIXED_MAX)
+, _text(_multiline ? widthWithoutPadding(config.st->minWidth) : kQFixedMax)
 , _clickHandlerFilter(config.filter) {
 	const auto toastOptions = TextParseOptions{
 		TextParseMultiline,

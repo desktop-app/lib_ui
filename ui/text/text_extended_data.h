@@ -42,4 +42,22 @@ struct SpoilerData {
 	bool revealed = false;
 };
 
+struct ParagraphDetails {
+	QString language;
+	ClickHandlerPtr copy;
+	int copyWidth = 0;
+	int maxWidth = 0;
+	int minHeight = 0;
+	int scrollLeft = 0;
+	bool blockquote = false;
+	bool pre = false;
+};
+
+struct ExtendedData {
+	std::vector<ClickHandlerPtr> links;
+	std::vector<ParagraphDetails> paragraphs;
+	std::unique_ptr<SpoilerData> spoiler;
+	base::flat_map<int, int> modifications;
+};
+
 } // namespace Ui::Text

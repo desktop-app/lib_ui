@@ -6,7 +6,7 @@
 //
 #include "ui/text/text_renderer.h"
 
-#include "ui/text/text_spoiler_data.h"
+#include "ui/text/text_extended_data.h"
 #include "styles/style_basic.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -155,7 +155,7 @@ bool Distinct(FixedRange a, FixedRange b) {
 
 Renderer::Renderer(const Ui::Text::String &t)
 : _t(&t)
-, _spoiler(_t->_spoiler.data.get()) {
+, _spoiler(_t->_extended ? _t->_extended->spoiler.get() : nullptr) {
 }
 
 Renderer::~Renderer() {
@@ -229,7 +229,11 @@ void Renderer::enumerate() {
 	_startTop = _y;
 
 	if ((*_t->_blocks.cbegin())->type() != TextBlockType::Newline) {
-		initNextParagraph(_t->_blocks.cbegin(), _t->_startDirection);
+		initNextParagraph(
+			_t->_blocks.cbegin(),
+			UnpackParagraphDirection(
+				_t->_startParagraphLTR,
+				_t->_startParagraphRTL));
 	}
 
 	_lineHeight = 0;
@@ -267,7 +271,7 @@ void Renderer::enumerate() {
 
 			initNextParagraph(
 				i + 1,
-				static_cast<const NewlineBlock*>(b)->nextDirection());
+				static_cast<const NewlineBlock*>(b)->paragraphDirection());
 
 			longWordLine = true;
 			continue;
@@ -465,7 +469,7 @@ void Renderer::initNextLine() {
 		.left = 0,
 		.top = (_y - _startTop),
 		.width = _paragraphWidthRemaining.ceil().toInt(),
-	}, _lineStart);
+	});
 	_x = _startLeft + line.left;
 	_y = _startTop + line.top;
 	_lineWidth = _wLeft = line.width;
@@ -1415,7 +1419,9 @@ void Renderer::eSetFont(const AbstractBlock *block) {
 				? false
 				: (underline == st::kLinkUnderlineActive)
 				? ((_palette && _palette->linkAlwaysActive)
-					|| ClickHandler::showAsActive(_t->_links.at(index - 1)))
+					|| ClickHandler::showAsActive(_t->_extended
+						? _t->_extended->links[index - 1]
+						: nullptr))
 				: true;
 			return underlined ? _t->_st->font->underline() : _t->_st->font;
 		}
@@ -2016,8 +2022,10 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 		if (isMono
 			&& block->linkIndex()
 			&& (!_background.spoiler || _spoiler->revealed)) {
-			_background.selectActiveBlock = ClickHandler::showAsPressed(
-				_t->_links.at(block->linkIndex() - 1));
+			const auto pressed = ClickHandler::showAsPressed(_t->_extended
+				? _t->_extended->links[block->linkIndex() - 1]
+				: nullptr);
+			_background.selectActiveBlock = pressed;
 		}
 
 		if (const auto color = block->colorIndex()) {
@@ -2050,9 +2058,9 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
 		&& (block->flags() & TextBlockFlag::Spoiler))
 		? _spoiler->link
 		: ClickHandlerPtr();
-	return (spoilerLink || !block->linkIndex())
+	return (spoilerLink || !block->linkIndex() || !_t->_extended)
 		? spoilerLink
-		: _t->_links.at(block->linkIndex() - 1);
+		: _t->_extended->links[block->linkIndex() - 1];
 }
 
 } // namespace Ui::Text

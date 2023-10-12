@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/text/text.h"
+#include "ui/text/text_block.h"
 
 namespace Ui::Text {
 
@@ -79,6 +80,8 @@ private:
 		const QString &linkData,
 		QString *outLinkText,
 		EntityLinkShown *outShown);
+
+	void updateModifications(int index, int delta);
 
 	const not_null<String*> _t;
 	const TextWithEntities _source;
