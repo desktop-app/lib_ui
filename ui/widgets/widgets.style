@@ -641,7 +641,7 @@ defaultLinkButton: LinkButton {
 	color: windowActiveTextFg;
 	overColor: windowActiveTextFg;
 	font: linkFont;
-	overFont: linkOverFont;
+	overFont: linkFontOver;
 }
 
 defaultRippleAnimation: RippleAnimation {
@@ -1145,8 +1145,6 @@ defaultImportantTooltip: ImportantTooltip {
 defaultImportantTooltipLabel: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(defaultTextStyle) {
 		font: font(11px);
-		linkFont: font(11px);
-		linkFontOver: font(11px underline);
 	}
 	textFg: importantTooltipFg;
 	palette: TextPalette(defaultTextPalette) {
@@ -1252,11 +1250,7 @@ defaultPeerListItem: PeerListItem {
 	height: 58px;
 	photoPosition: point(12px, 6px);
 	namePosition: point(68px, 11px);
-	nameStyle: TextStyle(defaultTextStyle) {
-		font: semiboldFont;
-		linkFont: semiboldFont;
-		linkFontOver: semiboldFont;
-	}
+	nameStyle: semiboldTextStyle;
 	nameFg: contactsNameFg;
 	nameFgChecked: windowActiveTextFg;
 	statusPosition: point(68px, 31px);
@@ -1271,8 +1265,6 @@ defaultPeerListItem: PeerListItem {
 
 boxTextStyle: TextStyle(defaultTextStyle) {
 	font: font(boxFontSize);
-	linkFont: font(boxFontSize);
-	linkFontOver: font(boxFontSize underline);
 }
 
 defaultPeerListAbout: FlatLabel(defaultFlatLabel) {
@@ -1437,8 +1429,6 @@ defaultWindowTitle: WindowTitle {
 	fgActive: titleFgActive;
 	style: TextStyle(defaultTextStyle) {
 		font: font(semibold 12px);
-		linkFont: font(semibold 12px);
-		linkFontOver: font(semibold 12px underline);
 	}
 	minimize: IconButton(windowTitleButton) {
 		icon: icon {

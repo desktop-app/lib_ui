@@ -88,8 +88,6 @@ void TitleWidget::init(int height) {
 	const auto setFromFont = [&](const style::font &font) {
 		_textStyle = std::make_unique<style::TextStyle>(style::TextStyle{
 			.font = font,
-			.linkFont = font,
-			.linkFontOver = font,
 		});
 	};
 

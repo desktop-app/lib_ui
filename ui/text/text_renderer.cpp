@@ -1410,11 +1410,14 @@ void Renderer::eSetFont(const AbstractBlock *block) {
 	const auto flags = block->flags();
 	const auto usedFont = [&] {
 		if (const auto index = block->linkIndex()) {
-			const auto active = (_palette && _palette->linkAlwaysActive)
-				|| ClickHandler::showAsActive(_t->_links.at(index - 1));
-			return active
-				? _t->_st->linkFontOver
-				: _t->_st->linkFont;
+			const auto underline = _t->_st->linkUnderline;
+			const auto underlined = (underline == st::kLinkUnderlineNever)
+				? false
+				: (underline == st::kLinkUnderlineActive)
+				? ((_palette && _palette->linkAlwaysActive)
+					|| ClickHandler::showAsActive(_t->_links.at(index - 1)))
+				: true;
+			return underlined ? _t->_st->font->underline() : _t->_st->font;
 		}
 		return _t->_st->font;
 	}();

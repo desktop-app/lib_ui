@@ -21,10 +21,16 @@ TextPalette {
 
 TextStyle {
 	font: font;
-	linkFont: font;
-	linkFontOver: font;
+	linkUnderline: int;
+	blockPadding: margins;
+	blockOutline: pixels;
+	preScrollable: bool;
 	lineHeight: pixels;
 }
+
+kLinkUnderlineNever: 0;
+kLinkUnderlineActive: 1;
+kLinkUnderlineAlways: 2;
 
 fsize: 13px;
 normalFont: font(fsize);
@@ -50,14 +56,14 @@ defaultTextPalette: TextPalette {
 }
 defaultTextStyle: TextStyle {
 	font: normalFont;
-	linkFont: normalFont;
-	linkFontOver: font(fsize underline);
+	linkUnderline: kLinkUnderlineActive;
+	blockPadding: margins(10px, 4px, 6px, 4px);
+	blockOutline: 3px;
+	preScrollable: true;
 	lineHeight: 0px;
 }
 semiboldTextStyle: TextStyle(defaultTextStyle) {
 	font: semiboldFont;
-	linkFont: semiboldFont;
-	linkFontOver: font(fsize semibold underline);
 }
 
 slideDuration: 240;
@@ -69,7 +75,7 @@ fadeWrapDuration: 200;
 
 linkCropLimit: 360px;
 linkFont: normalFont;
-linkOverFont: font(fsize underline);
+linkFontOver: font(fsize underline);
 
 roundRadiusLarge: 6px;
 roundRadiusSmall: 3px;

@@ -82,8 +82,6 @@ boxTitle: FlatLabel(defaultFlatLabel) {
 	maxHeight: 24px;
 	style: TextStyle(defaultTextStyle) {
 		font: boxTitleFont;
-		linkFont: boxTitleFont;
-		linkFontOver: font(16px semibold underline);
 	}
 }
 boxTitlePosition: point(24px, 18px);
@@ -187,8 +185,6 @@ separatePanelTitle: FlatLabel(defaultFlatLabel) {
 	maxHeight: 26px;
 	style: TextStyle(defaultTextStyle) {
 		font: separatePanelTitleFont;
-		linkFont: separatePanelTitleFont;
-		linkFontOver: font(18px semibold underline);
 	}
 }
 separatePanelTitleTop: 18px;
