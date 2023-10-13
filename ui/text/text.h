@@ -24,7 +24,7 @@ enum class type : uchar;
 namespace style {
 struct TextStyle;
 struct TextPalette;
-struct ParagraphStyle;
+struct QuoteStyle;
 } // namespace style
 
 namespace Ui {
@@ -81,7 +81,7 @@ class AbstractBlock;
 struct IsolatedEmoji;
 struct OnlyCustomEmoji;
 struct SpoilerData;
-struct ParagraphDetails;
+struct QuoteDetails;
 struct ExtendedData;
 
 struct Modification {
@@ -165,7 +165,7 @@ struct GeometryDescriptor {
 	bool elisionOneLine,
 	bool elisionBreakEverywhere);
 
-struct BlockPaintCache {
+struct QuotePaintCache {
 	QImage corners;
 	QColor headerCached;
 	QColor bgCached;
@@ -178,19 +178,19 @@ struct BlockPaintCache {
 	QColor icon;
 };
 
-void ValidateBlockPaintCache(
-	BlockPaintCache &cache,
-	const style::ParagraphStyle &st);
+void ValidateQuotePaintCache(
+	QuotePaintCache &cache,
+	const style::QuoteStyle &st);
 
 struct SkipBlockPaintParts {
 	bool skipTop : 1 = false;
 	bool skipBottom : 1 = false;
 };
-void FillBlockPaint(
+void FillQuotePaint(
 	QPainter &p,
 	QRect rect,
-	const BlockPaintCache &cache,
-	const style::ParagraphStyle &st,
+	const QuotePaintCache &cache,
+	const style::QuoteStyle &st,
 	SkipBlockPaintParts parts = {});
 
 struct PaintContext {
@@ -202,8 +202,8 @@ struct PaintContext {
 	QRect clip;
 
 	const style::TextPalette *palette = nullptr;
-	BlockPaintCache *pre = nullptr;
-	BlockPaintCache *blockquote = nullptr;
+	QuotePaintCache *pre = nullptr;
+	QuotePaintCache *blockquote = nullptr;
 	std::span<SpecialColor> colors;
 	SpoilerMessCache *spoiler = nullptr;
 	crl::time now = 0;
@@ -375,16 +375,15 @@ private:
 	[[nodiscard]] uint16 countBlockLength(
 		const TextBlocks::const_iterator &i,
 		const TextBlocks::const_iterator &e) const;
-	[[nodiscard]] ParagraphDetails *paragraphByIndex(int index) const;
-	[[nodiscard]] const style::ParagraphStyle &paragraphStyle(
-		not_null<ParagraphDetails*> info) const;
-	[[nodiscard]] QMargins paragraphPadding(ParagraphDetails *info) const;
-	[[nodiscard]] int paragraphMinWidth(ParagraphDetails *info) const;
-	[[nodiscard]] const QString &paragraphHeaderText(
-		ParagraphDetails *info) const;
+	[[nodiscard]] QuoteDetails *quoteByIndex(int index) const;
+	[[nodiscard]] const style::QuoteStyle &quoteStyle(
+		not_null<QuoteDetails*> quote) const;
+	[[nodiscard]] QMargins quotePadding(QuoteDetails *quote) const;
+	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
+	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
 
 	// block must be either nullptr or a pointer to a NewlineBlock.
-	[[nodiscard]] int paragraphIndex(const AbstractBlock *block) const;
+	[[nodiscard]] int quoteIndex(const AbstractBlock *block) const;
 
 	// Template method for originalText(), originalTextWithEntities().
 	template <
@@ -425,7 +424,7 @@ private:
 	int _minResizeWidth = 0;
 	int _maxWidth = 0;
 	int _minHeight = 0;
-	uint16 _startParagraphIndex = 0;
+	uint16 _startQuoteIndex = 0;
 	bool _startParagraphLTR : 1 = false;
 	bool _startParagraphRTL : 1 = false;
 	bool _hasCustomEmoji : 1 = false;
@@ -433,7 +432,7 @@ private:
 	bool _isOnlyCustomEmoji : 1 = false;
 	bool _hasNotEmojiAndSpaces : 1 = false;
 	bool _skipBlockAddedNewline : 1 = false;
-	bool _endsWithParagraphDetails : 1 = false;
+	bool _endsWithQuote : 1 = false;
 
 	friend class Parser;
 	friend class Renderer;

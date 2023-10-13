@@ -212,7 +212,7 @@ void Parser::createBlock(int32 skipBack) {
 	} else if (newline) {
 		push(&Block::Newline);
 		auto &newline = _t->_blocks.back().unsafe<NewlineBlock>();
-		newline._paragraphIndex = _paragraphIndex;
+		newline._quoteIndex = _quoteIndex;
 	} else {
 		push(&Block::Text, _t->_minResizeWidth);
 	}
@@ -233,7 +233,7 @@ void Parser::createNewlineBlock(bool fromOriginalText) {
 	createBlock();
 }
 
-void Parser::ensureAtNewline(ParagraphDetails details) {
+void Parser::ensureAtNewline(QuoteDetails quote) {
 	createBlock();
 	const auto lastType = _t->_blocks.empty()
 		? TextBlockType::Newline
@@ -243,15 +243,15 @@ void Parser::ensureAtNewline(ParagraphDetails details) {
 		createNewlineBlock(false);
 		_customEmojiData = base::take(saved);
 	}
-	auto &paragraphs = _t->ensureExtended()->paragraphs;
-	paragraphs.push_back(std::move(details));
-	const auto index = _paragraphIndex = int(paragraphs.size());
+	auto &quotes = _t->ensureExtended()->quotes;
+	quotes.push_back(std::move(quote));
+	const auto index = _quoteIndex = int(quotes.size());
 	if (_t->_blocks.empty()) {
-		_t->_startParagraphIndex = index;
+		_t->_startQuoteIndex = index;
 	} else {
 		auto &last = _t->_blocks.back();
 		Assert(last->type() == TextBlockType::Newline);
-		last.unsafe<NewlineBlock>()._paragraphIndex = index;
+		last.unsafe<NewlineBlock>()._quoteIndex = index;
 	}
 }
 
@@ -274,14 +274,14 @@ void Parser::finishEntities() {
 					if ((*flags)
 						& (TextBlockFlag::Pre
 							| TextBlockFlag::Blockquote)) {
-						_paragraphIndex = 0;
+						_quoteIndex = 0;
 						if (lastType != TextBlockType::Newline) {
 							_newlineAwaited = true;
 						} else if (_t->_blocks.empty()) {
-							_t->_startParagraphIndex = 0;
+							_t->_startQuoteIndex = 0;
 						} else {
 							auto &last = _t->_blocks.back();
-							last.unsafe<NewlineBlock>()._paragraphIndex = 0;
+							last.unsafe<NewlineBlock>()._quoteIndex = 0;
 						}
 					}
 					if (IsMono(*flags)) {

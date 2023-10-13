@@ -151,20 +151,25 @@ private:
 	int _indexOfElidedBlock = -1; // For spoilers.
 
 	// current paragraph data
-	String::TextBlocks::const_iterator _parStartBlock;
-	Qt::LayoutDirection _parDirection = Qt::LayoutDirectionAuto;
-	int _parStart = 0;
-	int _parLength = 0;
-	bool _parHasBidi = false;
-	QVarLengthArray<QScriptAnalysis, 4096> _parAnalysis;
-	ParagraphDetails *_paragraph = nullptr;
-	int _pindex = 0;
-	QMargins _ppadding;
-	int _blockLineTop = 0;
-	BlockPaintCache *_preBlockCache = nullptr;
-	BlockPaintCache *_blockquoteBlockCache = nullptr;
-	bool _preBlockCacheValid = false;
-	bool _blockquoteBlockCacheValid = false;
+	String::TextBlocks::const_iterator _paragraphStartBlock;
+	Qt::LayoutDirection _paragraphDirection = Qt::LayoutDirectionAuto;
+	int _paragraphStart = 0;
+	int _paragraphLength = 0;
+	bool _paragraphHasBidi = false;
+	QVarLengthArray<QScriptAnalysis, 4096> _paragraphAnalysis;
+	QFixed _paragraphWidthRemaining = 0;
+
+	// current quote data
+	QuoteDetails *_quote = nullptr;
+	Qt::LayoutDirection _quoteDirection = Qt::LayoutDirectionAuto;
+	int _quoteShift = 0;
+	int _quoteIndex = 0;
+	QMargins _quotePadding;
+	int _quoteLineTop = 0;
+	QuotePaintCache *_quotePreCache = nullptr;
+	QuotePaintCache *_quoteBlockquoteCache = nullptr;
+	bool _quotePreValid = false;
+	bool _quoteBlockquoteValid = false;
 
 	// current line data
 	QTextEngine *_e = nullptr;
@@ -189,7 +194,6 @@ private:
 	int _localFrom = 0;
 	int _lineStartBlock = 0;
 	QFixed _lineWidth = 0;
-	QFixed _paragraphWidthRemaining = 0;
 
 	// link and symbol resolve
 	QFixed _lookupX = 0;

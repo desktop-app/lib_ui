@@ -43,7 +43,7 @@ struct SpoilerData {
 	bool revealed = false;
 };
 
-struct ParagraphDetails {
+struct QuoteDetails {
 	QString language;
 	ClickHandlerPtr copy;
 	int copyWidth = 0;
@@ -56,7 +56,7 @@ struct ParagraphDetails {
 
 struct ExtendedData {
 	std::vector<ClickHandlerPtr> links;
-	std::vector<ParagraphDetails> paragraphs;
+	std::vector<QuoteDetails> quotes;
 	std::unique_ptr<SpoilerData> spoiler;
 	std::vector<Modification> modifications;
 };

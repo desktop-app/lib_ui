@@ -185,9 +185,9 @@ GeometryDescriptor SimpleGeometry(
 	}
 };
 
-void ValidateBlockPaintCache(
-		BlockPaintCache &cache,
-		const style::ParagraphStyle &st) {
+void ValidateQuotePaintCache(
+		QuotePaintCache &cache,
+		const style::QuoteStyle &st) {
 	const auto icon = st.icon.empty() ? nullptr : &st.icon;
 	if (!cache.corners.isNull()
 		&& cache.bgCached == cache.bg
@@ -248,11 +248,11 @@ void ValidateBlockPaintCache(
 	cache.corners = std::move(image);
 }
 
-void FillBlockPaint(
+void FillQuotePaint(
 		QPainter &p,
 		QRect rect,
-		const BlockPaintCache &cache,
-		const style::ParagraphStyle &st,
+		const QuotePaintCache &cache,
+		const style::QuoteStyle &st,
 		SkipBlockPaintParts parts) {
 	const auto &image = cache.corners;
 	const auto ratio = int(image.devicePixelRatio());
@@ -431,18 +431,18 @@ void String::recountNaturalSize(
 		}
 	};
 
-	auto pindex = paragraphIndex(nullptr);
-	auto paragraph = paragraphByIndex(pindex);
-	auto ppadding = paragraphPadding(paragraph);
-	auto pminwidth = paragraphMinWidth(paragraph);
-	auto pmaxwidth = QFixed(pminwidth);
-	auto poldheight = 0;
+	auto qindex = quoteIndex(nullptr);
+	auto quote = quoteByIndex(qindex);
+	auto qpadding = quotePadding(quote);
+	auto qminwidth = quoteMinWidth(quote);
+	auto qmaxwidth = QFixed(qminwidth);
+	auto qoldheight = 0;
 
 	_maxWidth = 0;
-	_minHeight = ppadding.top();
+	_minHeight = qpadding.top();
 	auto lineHeight = 0;
 	auto maxWidth = QFixed();
-	auto width = QFixed(pminwidth);
+	auto width = QFixed(qminwidth);
 	auto last_rBearing = QFixed();
 	auto last_rPadding = QFixed();
 	for (auto &block : _blocks) {
@@ -453,21 +453,24 @@ void String::recountNaturalSize(
 			if (!lineHeight) {
 				lineHeight = blockHeight;
 			}
-			const auto index = paragraphIndex(b);
-			if (pindex != index) {
-				_minHeight += ppadding.bottom();
-				if (paragraph) {
-					paragraph->maxWidth = pmaxwidth.ceil().toInt();
-					paragraph->minHeight = _minHeight - poldheight;
+			accumulate_max(maxWidth, width);
+			accumulate_max(qmaxwidth, width);
+
+			const auto index = quoteIndex(b);
+			if (qindex != index) {
+				_minHeight += qpadding.bottom();
+				if (quote) {
+					quote->maxWidth = qmaxwidth.ceil().toInt();
+					quote->minHeight = _minHeight - qoldheight;
 				}
-				poldheight = _minHeight;
-				pindex = index;
-				paragraph = paragraphByIndex(pindex);
-				ppadding = paragraphPadding(paragraph);
-				pminwidth = paragraphMinWidth(paragraph);
-				pmaxwidth = pminwidth;
-				_minHeight += ppadding.top();
-				ppadding.setTop(0);
+				qoldheight = _minHeight;
+				qindex = index;
+				quote = quoteByIndex(qindex);
+				qpadding = quotePadding(quote);
+				qminwidth = quoteMinWidth(quote);
+				qmaxwidth = qminwidth;
+				_minHeight += qpadding.top();
+				qpadding.setTop(0);
 			}
 			if (initial) {
 				computeParagraphDirection(b->position());
@@ -480,9 +483,7 @@ void String::recountNaturalSize(
 			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
 			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
 
-			accumulate_max(maxWidth, width);
-			accumulate_max(pmaxwidth, width);
-			width = pminwidth;
+			width = qminwidth;
 			// + (b->f_width() - last_rBearing); (0 for newline)
 			continue;
 		}
@@ -497,7 +498,7 @@ void String::recountNaturalSize(
 		// for all the blocks to fit on their line we check each block, even the
 		// intermediate one with a large negative right bearing.
 		accumulate_max(maxWidth, width);
-		accumulate_max(pmaxwidth, width);
+		accumulate_max(qmaxwidth, width);
 
 		width += last_rBearing + (last_rPadding + b->f_width() - b__f_rbearing);
 		lineHeight = qMax(lineHeight, blockHeight);
@@ -513,17 +514,17 @@ void String::recountNaturalSize(
 		if (!lineHeight) {
 			lineHeight = CountBlockHeight(_blocks.back().get(), _st);
 		}
-		_minHeight += ppadding.top() + lineHeight + ppadding.bottom();
+		_minHeight += qpadding.top() + lineHeight + qpadding.bottom();
 		accumulate_max(maxWidth, width);
-		accumulate_max(pmaxwidth, width);
+		accumulate_max(qmaxwidth, width);
 	}
 	_maxWidth = maxWidth.ceil().toInt();
-	if (paragraph) {
-		paragraph->maxWidth = pmaxwidth.ceil().toInt();
-		paragraph->minHeight = _minHeight - poldheight;
-		_endsWithParagraphDetails = true;
+	if (quote) {
+		quote->maxWidth = qmaxwidth.ceil().toInt();
+		quote->minHeight = _minHeight - qoldheight;
+		_endsWithQuote = true;
 	} else {
-		_endsWithParagraphDetails = false;
+		_endsWithQuote = false;
 	}
 }
 
@@ -674,7 +675,7 @@ bool String::updateSkipBlock(int width, int height) {
 		}
 		_text.resize(block->position());
 		_blocks.pop_back();
-	} else if (_endsWithParagraphDetails) {
+	} else if (_endsWithQuote) {
 		_text.push_back(QChar::LineFeed);
 		_blocks.push_back(Block::Newline(
 			_st->font,
@@ -764,10 +765,10 @@ void String::enumerateLines(
 		Callback callback) const {
 	const auto width = QFixed(std::max(w, _minResizeWidth));
 
-	auto pindex = paragraphIndex(nullptr);
-	auto paragraph = paragraphByIndex(pindex);
-	auto ppadding = paragraphPadding(paragraph);
-	auto widthLeft = width - ppadding.left() - ppadding.right();
+	auto qindex = quoteIndex(nullptr);
+	auto quote = quoteByIndex(qindex);
+	auto qpadding = quotePadding(quote);
+	auto widthLeft = width - qpadding.left() - qpadding.right();
 	auto lineHeight = 0;
 	auto last_rBearing = QFixed();
 	auto last_rPadding = QFixed();
@@ -780,15 +781,15 @@ void String::enumerateLines(
 			if (!lineHeight) {
 				lineHeight = blockHeight;
 			}
-			lineHeight += ppadding.top();
-			const auto index = paragraphIndex(b.get());
-			if (pindex != index) {
-				lineHeight += ppadding.bottom();
-				pindex = index;
-				paragraph = paragraphByIndex(pindex);
-				ppadding = paragraphPadding(paragraph);
+			lineHeight += qpadding.top();
+			const auto index = quoteIndex(b.get());
+			if (qindex != index) {
+				lineHeight += qpadding.bottom();
+				qindex = index;
+				quote = quoteByIndex(qindex);
+				qpadding = quotePadding(quote);
 			} else {
-				ppadding.setTop(0);
+				qpadding.setTop(0);
 			}
 
 			callback(width - widthLeft, lineHeight);
@@ -796,7 +797,7 @@ void String::enumerateLines(
 			lineHeight = 0;
 			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
 			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
-			widthLeft = width - ppadding.left() - ppadding.right();
+			widthLeft = width - qpadding.left() - qpadding.right();
 			// - (b->f_width() - last_rBearing); (0 for newline)
 
 			longWordLine = true;
@@ -858,15 +859,15 @@ void String::enumerateLines(
 					j_width = (j->f_width() >= 0) ? j->f_width() : -j->f_width();
 				}
 
-				callback(width - widthLeft, lineHeight + ppadding.top());
-				ppadding.setTop(0);
+				callback(width - widthLeft, lineHeight + qpadding.top());
+				qpadding.setTop(0);
 
 				lineHeight = qMax(0, blockHeight);
 				last_rBearing = j->f_rbearing();
 				last_rPadding = j->f_rpadding();
 				widthLeft = width
-					- ppadding.left()
-					- ppadding.right()
+					- qpadding.left()
+					- qpadding.right()
 					- (j_width - last_rBearing);
 
 				longWordLine = !wordEndsHere;
@@ -877,15 +878,15 @@ void String::enumerateLines(
 			continue;
 		}
 
-		callback(width - widthLeft, lineHeight + ppadding.top());
-		ppadding.setTop(0);
+		callback(width - widthLeft, lineHeight + qpadding.top());
+		qpadding.setTop(0);
 
 		lineHeight = qMax(0, blockHeight);
 		last_rBearing = b__f_rbearing;
 		last_rPadding = b->f_rpadding();
 		widthLeft = width
-			- ppadding.left()
-			- ppadding.right()
+			- qpadding.left()
+			- qpadding.right()
 			- (b->f_width() - last_rBearing);
 
 		longWordLine = true;
@@ -894,7 +895,7 @@ void String::enumerateLines(
 	if (widthLeft < width) {
 		callback(
 			width - widthLeft,
-			lineHeight + ppadding.top() + ppadding.bottom());
+			lineHeight + qpadding.top() + qpadding.bottom());
 	}
 }
 
@@ -1096,60 +1097,60 @@ uint16 String::countBlockLength(
 	return countBlockEnd(i, e) - (*i)->position();
 }
 
-ParagraphDetails *String::paragraphByIndex(int index) const {
+QuoteDetails *String::quoteByIndex(int index) const {
 	Expects(!index
-		|| (_extended && index <= _extended->paragraphs.size()));
+		|| (_extended && index <= _extended->quotes.size()));
 
-	return index ? &_extended->paragraphs[index - 1] : nullptr;
+	return index ? &_extended->quotes[index - 1] : nullptr;
 }
 
-int String::paragraphIndex(const AbstractBlock *block) const {
+int String::quoteIndex(const AbstractBlock *block) const {
 	Expects(!block || block->type() == TextBlockType::Newline);
 
 	return block
-		? static_cast<const NewlineBlock*>(block)->paragraphIndex()
-		: _startParagraphIndex;
+		? static_cast<const NewlineBlock*>(block)->quoteIndex()
+		: _startQuoteIndex;
 }
 
-const style::ParagraphStyle &String::paragraphStyle(
-		not_null<ParagraphDetails*> info) const {
-	return info->pre ? _st->pre : _st->blockquote;
+const style::QuoteStyle &String::quoteStyle(
+		not_null<QuoteDetails*> quote) const {
+	return quote->pre ? _st->pre : _st->blockquote;
 }
 
-QMargins String::paragraphPadding(ParagraphDetails *info) const {
-	if (!info) {
+QMargins String::quotePadding(QuoteDetails *quote) const {
+	if (!quote) {
 		return {};
 	}
-	const auto &st = paragraphStyle(info);
+	const auto &st = quoteStyle(quote);
 	const auto skip = st.verticalSkip;
 	const auto top = st.header;
 	return st.padding + QMargins(0, top + skip, 0, skip);
 }
 
-int String::paragraphMinWidth(ParagraphDetails *info) const {
-	if (!info) {
+int String::quoteMinWidth(QuoteDetails *quote) const {
+	if (!quote) {
 		return 0;
 	}
-	const auto ppadding = paragraphPadding(info);
-	const auto &pheader = paragraphHeaderText(info);
-	const auto pst = info ? &paragraphStyle(info) : nullptr;
-	return ppadding.left()
-		+ (pheader.isEmpty() ? 0 : _st->font->monospace()->width(pheader))
+	const auto qpadding = quotePadding(quote);
+	const auto &qheader = quoteHeaderText(quote);
+	const auto qst = quote ? &quoteStyle(quote) : nullptr;
+	return qpadding.left()
+		+ (qheader.isEmpty() ? 0 : _st->font->monospace()->width(qheader))
 		+ std::max(
-			ppadding.right(),
-			((pst && !pst->icon.empty())
-				? (pst->iconPosition.x() + pst->icon.width())
+			qpadding.right(),
+			((qst && !qst->icon.empty())
+				? (qst->iconPosition.x() + qst->icon.width())
 				: 0));
 }
 
-const QString &String::paragraphHeaderText(ParagraphDetails *info) const {
+const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 	static const auto kEmptyHeader = QString();
 	static const auto kDefaultHeader = u"code"_q;
-	return (!info || !info->pre)
+	return (!quote || !quote->pre)
 		? kEmptyHeader
-		: info->language.isEmpty()
+		: quote->language.isEmpty()
 		? kDefaultHeader
-		: info->language;
+		: quote->language;
 }
 
 template <
@@ -1478,7 +1479,7 @@ void String::clear() {
 	_blocks.clear();
 	_extended = nullptr;
 	_maxWidth = _minHeight = 0;
-	_startParagraphIndex = 0;
+	_startQuoteIndex = 0;
 	_startParagraphLTR = false;
 	_startParagraphRTL = false;
 }

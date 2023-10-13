@@ -19,7 +19,7 @@ TextPalette {
 	linkAlwaysActive: bool;
 }
 
-ParagraphStyle {
+QuoteStyle {
 	padding: margins;
 	verticalSkip: pixels;
 	header: pixels;
@@ -35,8 +35,8 @@ TextStyle {
 	font: font;
 	linkUnderline: int;
 	lineHeight: pixels;
-	blockquote: ParagraphStyle;
-	pre: ParagraphStyle;
+	blockquote: QuoteStyle;
+	pre: QuoteStyle;
 }
 
 kLinkUnderlineNever: 0;
@@ -65,14 +65,14 @@ defaultTextPalette: TextPalette {
 	selectSpoilerFg: msgInDateFgSelected;
 	selectOverlay: msgSelectOverlay;
 }
-defaultParagraphStyle: ParagraphStyle {
+defaultQuoteStyle: QuoteStyle {
 }
 defaultTextStyle: TextStyle {
 	font: normalFont;
 	linkUnderline: kLinkUnderlineActive;
 	lineHeight: 0px;
-	blockquote: defaultParagraphStyle;
-	pre: defaultParagraphStyle;
+	blockquote: defaultQuoteStyle;
+	pre: defaultQuoteStyle;
 }
 semiboldTextStyle: TextStyle(defaultTextStyle) {
 	font: semiboldFont;
