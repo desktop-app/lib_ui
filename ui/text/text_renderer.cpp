@@ -206,6 +206,8 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 		? (1. - _spoiler->revealAnimation.value(
 			_spoiler->revealed ? 1. : 0.))
 		: 0.;
+	_preBlockCache = context.pre;
+	_blockquoteBlockCache = context.blockquote;
 	enumerate();
 }
 
@@ -231,6 +233,7 @@ void Renderer::enumerate() {
 	if ((*_t->_blocks.cbegin())->type() != TextBlockType::Newline) {
 		initNextParagraph(
 			_t->_blocks.cbegin(),
+			_t->_startParagraphIndex,
 			UnpackParagraphDirection(
 				_t->_startParagraphLTR,
 				_t->_startParagraphRTL));
@@ -259,6 +262,9 @@ void Renderer::enumerate() {
 			if (!_lineHeight) {
 				_lineHeight = blockHeight;
 			}
+			const auto pindex = static_cast<const NewlineBlock*>(b)->paragraphIndex();
+			const auto changed = (_pindex != pindex);
+			fillParagraphBg(changed ? _ppadding.bottom() : 0);
 			if (!drawLine((*i)->position(), i, e)) {
 				return;
 			}
@@ -271,6 +277,7 @@ void Renderer::enumerate() {
 
 			initNextParagraph(
 				i + 1,
+				pindex,
 				static_cast<const NewlineBlock*>(b)->paragraphDirection());
 
 			longWordLine = true;
@@ -340,6 +347,7 @@ void Renderer::enumerate() {
 					: (j + 1 != en)
 					? (j + 1)->position()
 					: _t->countBlockEnd(i, e);
+				fillParagraphBg(0);
 				if (!drawLine(lineEnd, i, e)) {
 					return;
 				}
@@ -368,6 +376,7 @@ void Renderer::enumerate() {
 		const auto lineEnd = !_elidedLine
 			? b->position()
 			: _t->countBlockEnd(i, e);
+		fillParagraphBg(0);
 		if (!drawLine(lineEnd, i, e)) {
 			return;
 		}
@@ -386,6 +395,7 @@ void Renderer::enumerate() {
 		continue;
 	}
 	if (_lineStart < _t->_text.size()) {
+		fillParagraphBg(_ppadding.bottom());
 		if (!drawLine(_t->_text.size(), e, e)) {
 			return;
 		}
@@ -394,6 +404,37 @@ void Renderer::enumerate() {
 		_lookupResult.symbol = _t->_text.size();
 		_lookupResult.afterSymbol = false;
 	}
+}
+
+void Renderer::fillParagraphBg(int paddingBottom) {
+	const auto cache = (!_p || !_paragraph)
+		? nullptr
+		: _paragraph->pre
+		? _preBlockCache
+		: _paragraph->blockquote
+		? _blockquoteBlockCache
+		: nullptr;
+	if (cache) {
+		auto &valid = _paragraph->pre
+			? _preBlockCacheValid
+			: _blockquoteBlockCacheValid;
+		if (!valid) {
+			valid = true;
+			ValidateBlockPaintCache(*cache, *_t->_st);
+		}
+		const auto skip = _t->_st->blockVerticalSkip;
+		const auto isTop = (_y != _blockLineTop);
+		const auto isBottom = (paddingBottom != 0);
+		const auto top = _blockLineTop + (isTop ? skip : 0);
+		const auto fill = _y + _lineHeight + paddingBottom - top
+			- (isBottom ? skip : 0);
+		const auto rect = QRect(_startLeft, top, _startLineWidth, fill);
+		FillBlockPaint(*_p, rect, *cache, *_t->_st, {
+			.skipTop = !isTop,
+			.skipBottom = !isBottom,
+		});
+	}
+	_blockLineTop = _y + _lineHeight + paddingBottom;
 }
 
 StateResult Renderer::getState(
@@ -430,12 +471,22 @@ crl::time Renderer::now() const {
 
 void Renderer::initNextParagraph(
 		String::TextBlocks::const_iterator i,
+		int16 paragraphIndex,
 		Qt::LayoutDirection direction) {
 	_parDirection = (direction == Qt::LayoutDirectionAuto)
 		? style::LayoutDirection()
 		: direction;
 	_parStartBlock = i;
 	_paragraphWidthRemaining = 0;
+	if (_pindex != paragraphIndex) {
+		_y += _ppadding.bottom();
+		_pindex = paragraphIndex;
+		_paragraph = _t->paragraphByIndex(paragraphIndex);
+		_ppadding = _t->paragraphPadding(_paragraph);
+		_blockLineTop = _y;
+		_y += _ppadding.top();
+		_ppadding.setTop(0);
+	}
 	const auto e = _t->_blocks.cend();
 	if (i == e) {
 		_lineStart = _parStart = _t->_text.size();
@@ -461,6 +512,7 @@ void Renderer::initNextParagraph(
 		_parLength = ((i == e) ? _t->_text.size() : (*i)->position()) - _parStart;
 	}
 	_parAnalysis.resize(0);
+	_paragraphWidthRemaining += _ppadding.left() + _ppadding.right();
 	initNextLine();
 }
 
@@ -470,9 +522,12 @@ void Renderer::initNextLine() {
 		.top = (_y - _startTop),
 		.width = _paragraphWidthRemaining.ceil().toInt(),
 	});
-	_x = _startLeft + line.left;
+	_blockLineTop += _startTop + line.top - _y;
+	_x = _startLeft + line.left + _ppadding.left();
 	_y = _startTop + line.top;
-	_lineWidth = _wLeft = line.width;
+	_startLineWidth = line.width;
+	_lineWidth = _startLineWidth - _ppadding.left() - _ppadding.right();
+	_wLeft = _lineWidth;
 	_elidedLine = line.elided;
 }
 
@@ -1252,7 +1307,7 @@ void Renderer::prepareElidedLine(QString &lineText, int32 lineStart, int32 &line
 	eShapeLine(line);
 
 	auto elideWidth = _f->elidew;
-	_wLeft = _lineWidth - elideWidth;
+	_wLeft = _lineWidth - _ppadding.left() - _ppadding.right() - elideWidth;
 
 	int firstItem = engine.findItem(line.from), lastItem = engine.findItem(line.from + line.length - 1);
 	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0, i;

@@ -11,6 +11,8 @@
 
 namespace Ui::Text {
 
+struct ParagraphDetails;
+
 class Parser {
 public:
 	Parser(
@@ -58,7 +60,7 @@ private:
 	void blockCreated();
 	void createBlock(int32 skipBack = 0);
 	void createNewlineBlock(bool fromOriginalText);
-	void ensureAtNewline();
+	void ensureAtNewline(ParagraphDetails details);
 
 	// Returns true if at least one entity was parsed in the current position.
 	bool checkEntities();
@@ -113,6 +115,7 @@ private:
 	uint16 _linkIndex = 0;
 	uint16 _colorIndex = 0;
 	uint16 _monoIndex = 0;
+	uint16 _paragraphIndex = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
 	int32 _blockStart = 0; // offset in result, from which current parsed block is started
 	int32 _diacritics = 0; // diacritic chars skipped without good char

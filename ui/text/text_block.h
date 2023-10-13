@@ -107,7 +107,7 @@ public:
 		uint16 linkIndex,
 		uint16 colorIndex);
 
-	[[nodiscard]] int16 paragraphIndex() const {
+	[[nodiscard]] uint16 paragraphIndex() const {
 		return _paragraphIndex;
 	}
 	[[nodiscard]] Qt::LayoutDirection paragraphDirection() const {
@@ -115,7 +115,7 @@ public:
 	}
 
 private:
-	int16 _paragraphIndex = 0;
+	uint16 _paragraphIndex = 0;
 	bool _paragraphLTR : 1 = false;
 	bool _paragraphRTL : 1 = false;
 

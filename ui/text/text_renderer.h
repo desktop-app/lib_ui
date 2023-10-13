@@ -54,6 +54,7 @@ private:
 	[[nodiscard]] crl::time now() const;
 	void initNextParagraph(
 		String::TextBlocks::const_iterator i,
+		int16 paragraphIndex,
 		Qt::LayoutDirection direction);
 	void initNextLine();
 	void initParagraphBidi();
@@ -88,6 +89,8 @@ private:
 		const AbstractBlock *&_endBlock,
 		int repeat = 0);
 	void restoreAfterElided();
+
+	void fillParagraphBg(int paddingBottom);
 
 	// COPIED FROM qtextengine.cpp AND MODIFIED
 	static void eAppendItems(
@@ -154,12 +157,21 @@ private:
 	int _parLength = 0;
 	bool _parHasBidi = false;
 	QVarLengthArray<QScriptAnalysis, 4096> _parAnalysis;
+	ParagraphDetails *_paragraph = nullptr;
+	int _pindex = 0;
+	QMargins _ppadding;
+	int _blockLineTop = 0;
+	BlockPaintCache *_preBlockCache = nullptr;
+	BlockPaintCache *_blockquoteBlockCache = nullptr;
+	bool _preBlockCacheValid = false;
+	bool _blockquoteBlockCacheValid = false;
 
 	// current line data
 	QTextEngine *_e = nullptr;
 	style::font _f;
 	int _startLeft = 0;
 	int _startTop = 0;
+	int _startLineWidth = 0;
 	QFixed _x, _wLeft, _last_rPadding;
 	int _y = 0;
 	int _yDelta = 0;

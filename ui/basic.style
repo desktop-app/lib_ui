@@ -23,7 +23,11 @@ TextStyle {
 	font: font;
 	linkUnderline: int;
 	blockPadding: margins;
+	blockVerticalSkip: pixels;
+	blockHeader: pixels;
+	blockHeaderPosition: point;
 	blockOutline: pixels;
+	blockRadius: pixels;
 	preScrollable: bool;
 	lineHeight: pixels;
 }
@@ -57,9 +61,6 @@ defaultTextPalette: TextPalette {
 defaultTextStyle: TextStyle {
 	font: normalFont;
 	linkUnderline: kLinkUnderlineActive;
-	blockPadding: margins(10px, 4px, 6px, 4px);
-	blockOutline: 3px;
-	preScrollable: true;
 	lineHeight: 0px;
 }
 semiboldTextStyle: TextStyle(defaultTextStyle) {

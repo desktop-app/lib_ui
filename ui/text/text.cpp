@@ -185,6 +185,144 @@ GeometryDescriptor SimpleGeometry(
 	}
 };
 
+
+void ValidateBlockPaintCache(
+		BlockPaintCache &cache,
+		const style::TextStyle &st) {
+	if (!cache.corners.isNull()
+		&& cache.bgCached == cache.bg
+		&& cache.outlineCached == cache.outline
+		&& (!cache.withHeader || cache.headerCached == cache.header)
+		&& (!cache.topright || cache.iconCached == cache.icon)) {
+		return;
+	}
+	cache.bgCached = cache.bg;
+	cache.outlineCached = cache.outline;
+	if (cache.withHeader) {
+		cache.headerCached = cache.header;
+	}
+	if (cache.topright) {
+		cache.iconCached = cache.icon;
+	}
+	const auto radius = st.blockRadius;
+	const auto header = cache.withHeader ? st.blockHeader : 0;
+	const auto outline = st.blockOutline;
+	const auto corner = std::max({ header, radius, outline });
+	const auto middle = st::lineWidth;
+	const auto side = 2 * corner + middle;
+	const auto full = QSize(side, side);
+	const auto ratio = style::DevicePixelRatio();
+	auto image = QImage(full * ratio, QImage::Format_ARGB32_Premultiplied);
+	image.fill(Qt::transparent);
+	image.setDevicePixelRatio(ratio);
+	auto p = QPainter(&image);
+	auto hq = PainterHighQualityEnabler(p);
+	p.setPen(Qt::NoPen);
+
+	auto rect = QRect(QPoint(), full);
+	if (header) {
+		p.setBrush(cache.header);
+		p.setClipRect(outline, 0, side - outline, header);
+		p.drawRoundedRect(0, 0, side, corner + radius, radius, radius);
+	}
+	if (outline) {
+		p.setBrush(cache.outline);
+		p.setClipRect(0, 0, outline, side);
+		p.drawRoundedRect(0, 0, outline + radius * 2, side, radius, radius);
+	}
+	p.setBrush(cache.bg);
+	p.setClipRect(outline, header, side - outline, side - header);
+	p.drawRoundedRect(0, 0, side, side, radius, radius);
+
+	p.end();
+	cache.corners = std::move(image);
+}
+
+void FillBlockPaint(
+		QPainter &p,
+		QRect rect,
+		const BlockPaintCache &cache,
+		const style::TextStyle &st,
+		SkipBlockPaintParts parts) {
+	const auto &image = cache.corners;
+	const auto ratio = int(image.devicePixelRatio());
+	const auto iwidth = image.width() / ratio;
+	const auto iheight = image.height() / ratio;
+	const auto imiddle = st::lineWidth;
+	const auto ihalf = (iheight - imiddle) / 2;
+	const auto x = rect.left();
+	const auto width = rect.width();
+	auto y = rect.top();
+	auto height = rect.height();
+	if (!parts.skipTop) {
+		const auto top = std::min(height, ihalf);
+		p.drawImage(
+			QRect(x, y, ihalf, top),
+			image,
+			QRect(0, 0, ihalf * ratio, top * ratio));
+		p.drawImage(
+			QRect(x + width - ihalf, y, ihalf, top),
+			image,
+			QRect((iwidth - ihalf) * ratio, 0, ihalf * ratio, top * ratio));
+		if (const auto middle = width - 2 * ihalf) {
+			const auto header = cache.withHeader ? st.blockHeader : 0;
+			const auto fillHeader = std::min(header, top);
+			if (fillHeader) {
+				p.fillRect(x + ihalf, y, middle, fillHeader, cache.header);
+			}
+			if (const auto fillBody = top - fillHeader) {
+				p.fillRect(
+					QRect(x + ihalf, y + fillHeader, middle, fillBody),
+					cache.bg);
+			}
+		}
+		height -= top;
+		if (!height) {
+			return;
+		}
+		y += top;
+		rect.setTop(y);
+	}
+	if (!parts.skipBottom) {
+		const auto bottom = std::min(height, ihalf);
+		p.drawImage(
+			QRect(x, y + height - bottom, ihalf, bottom),
+			image,
+			QRect(
+				0,
+				(iheight - bottom) * ratio,
+				ihalf * ratio,
+				bottom * ratio));
+		p.drawImage(
+			QRect(
+				x + width - ihalf,
+				y + height - bottom,
+				ihalf,
+				bottom),
+			image,
+			QRect(
+				(iwidth - ihalf) * ratio,
+				(iheight - bottom) * ratio,
+				ihalf * ratio,
+				bottom * ratio));
+		if (const auto middle = width - 2 * ihalf) {
+			p.fillRect(
+				QRect(x + ihalf, y + height - bottom, middle, bottom),
+				cache.bg);
+		}
+		height -= bottom;
+		if (!height) {
+			return;
+		}
+		rect.setHeight(height);
+	}
+	const auto outline = st.blockOutline;
+	if (outline) {
+		p.fillRect(x, y, outline, height, cache.outline);
+	}
+	p.fillRect(x + outline, y, width - outline, height, cache.bg);
+}
+
 String::ExtendedWrap::ExtendedWrap() noexcept = default;
 
 String::ExtendedWrap::ExtendedWrap(ExtendedWrap &&other) noexcept
@@ -283,17 +421,33 @@ void String::recountNaturalSize(
 		}
 	};
 
-	_maxWidth = _minHeight = 0;
-	int32 lineHeight = 0;
-	QFixed maxWidth = 0;
-	QFixed width = 0, last_rBearing = 0, last_rPadding = 0;
+	auto pindex = paragraphIndex(nullptr);
+	auto paragraph = paragraphByIndex(pindex);
+	auto ppadding = paragraphPadding(paragraph);
+
+	_maxWidth = 0;
+	_minHeight = ppadding.top();
+	auto lineHeight = 0;
+	auto maxWidth = QFixed();
+	auto width = QFixed(ppadding.left() + ppadding.right());
+	auto last_rBearing = QFixed();
+	auto last_rPadding = QFixed();
 	for (auto &block : _blocks) {
-		auto b = block.get();
-		auto _btype = b->type();
-		auto blockHeight = CountBlockHeight(b, _st);
+		const auto b = block.get();
+		const auto _btype = b->type();
+		const auto blockHeight = CountBlockHeight(b, _st);
 		if (_btype == TextBlockType::Newline) {
 			if (!lineHeight) {
 				lineHeight = blockHeight;
+			}
+			const auto index = paragraphIndex(b);
+			if (pindex != index) {
+				_minHeight += ppadding.bottom();
+				pindex = index;
+				paragraph = paragraphByIndex(pindex);
+				ppadding = paragraphPadding(paragraph);
+				_minHeight += ppadding.top();
+				ppadding.setTop(0);
 			}
 			if (initial) {
 				computeParagraphDirection(b->position());
@@ -303,11 +457,12 @@ void String::recountNaturalSize(
 
 			_minHeight += lineHeight;
 			lineHeight = 0;
-			last_rBearing = b->f_rbearing();
-			last_rPadding = b->f_rpadding();
+			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
+			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
 
 			accumulate_max(maxWidth, width);
-			width = (b->f_width() - last_rBearing);
+			width = ppadding.left() + ppadding.right();
+			// + (b->f_width() - last_rBearing); (0 for newline)
 			continue;
 		}
 
@@ -333,11 +488,14 @@ void String::recountNaturalSize(
 		computeParagraphDirection(_text.size());
 	}
 	if (width > 0) {
-		if (!lineHeight) lineHeight = CountBlockHeight(_blocks.back().get(), _st);
-		_minHeight += lineHeight;
+		if (!lineHeight) {
+			lineHeight = CountBlockHeight(_blocks.back().get(), _st);
+		}
+		_minHeight += ppadding.top() + lineHeight + ppadding.bottom();
 		accumulate_max(maxWidth, width);
 	}
 	_maxWidth = maxWidth.ceil().toInt();
+	_endsWithParagraphDetails = (pindex != 0);
 }
 
 int String::countMaxMonospaceWidth() const {
@@ -487,6 +645,17 @@ bool String::updateSkipBlock(int width, int height) {
 		}
 		_text.resize(block->position());
 		_blocks.pop_back();
+	} else if (_endsWithParagraphDetails) {
+		_text.push_back(QChar::LineFeed);
+		_blocks.push_back(Block::Newline(
+			_st->font,
+			_text,
+			_text.size() - 1,
+			1,
+			0,
+			0,
+			0));
+		_skipBlockAddedNewline = true;
 	}
 	_text.push_back('_');
 	_blocks.push_back(Block::Skip(
@@ -504,9 +673,15 @@ bool String::updateSkipBlock(int width, int height) {
 bool String::removeSkipBlock() {
 	if (_blocks.empty() || _blocks.back()->type() != TextBlockType::Skip) {
 		return false;
+	} else if (_skipBlockAddedNewline) {
+		_text.resize(_blocks.back()->position() - 1);
+		_blocks.pop_back();
+		_blocks.pop_back();
+		_skipBlockAddedNewline = false;
+	} else {
+		_text.resize(_blocks.back()->position());
+		_blocks.pop_back();
 	}
-	_text.resize(_blocks.back()->position());
-	_blocks.pop_back();
 	recountNaturalSize(false);
 	return true;
 }
@@ -558,24 +733,42 @@ void String::enumerateLines(
 		int w,
 		bool breakEverywhere,
 		Callback callback) const {
-	QFixed width = w;
-	if (width < _minResizeWidth) width = _minResizeWidth;
+	const auto width = QFixed(std::max(w, _minResizeWidth));
 
-	int lineHeight = 0;
-	QFixed widthLeft = width, last_rBearing = 0, last_rPadding = 0;
+	auto pindex = paragraphIndex(nullptr);
+	auto paragraph = paragraphByIndex(pindex);
+	auto ppadding = paragraphPadding(paragraph);
+	auto widthLeft = width - ppadding.left() - ppadding.right();
+	auto lineHeight = 0;
+	auto last_rBearing = QFixed();
+	auto last_rPadding = QFixed();
 	bool longWordLine = true;
 	for (auto &b : _blocks) {
 		auto _btype = b->type();
-		int blockHeight = CountBlockHeight(b.get(), _st);
+		const auto blockHeight = CountBlockHeight(b.get(), _st);
 
 		if (_btype == TextBlockType::Newline) {
-			if (!lineHeight) lineHeight = blockHeight;
+			if (!lineHeight) {
+				lineHeight = blockHeight;
+			}
+			lineHeight += ppadding.top();
+			const auto index = paragraphIndex(b.get());
+			if (pindex != index) {
+				lineHeight += ppadding.bottom();
+				pindex = index;
+				paragraph = paragraphByIndex(pindex);
+				ppadding = paragraphPadding(paragraph);
+			} else {
+				ppadding.setTop(0);
+			}
+
 			callback(width - widthLeft, lineHeight);
 
 			lineHeight = 0;
-			last_rBearing = b->f_rbearing();
-			last_rPadding = b->f_rpadding();
-			widthLeft = width - (b->f_width() - last_rBearing);
+			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
+			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
+			widthLeft = width - ppadding.left() - ppadding.right();
+			// - (b->f_width() - last_rBearing); (0 for newline)
 
 			longWordLine = true;
 			continue;
@@ -636,12 +829,16 @@ void String::enumerateLines(
 					j_width = (j->f_width() >= 0) ? j->f_width() : -j->f_width();
 				}
 
-				callback(width - widthLeft, lineHeight);
+				callback(width - widthLeft, lineHeight + ppadding.top());
+				ppadding.setTop(0);
 
 				lineHeight = qMax(0, blockHeight);
 				last_rBearing = j->f_rbearing();
 				last_rPadding = j->f_rpadding();
-				widthLeft = width - (j_width - last_rBearing);
+				widthLeft = width
+					- ppadding.left()
+					- ppadding.right()
+					- (j_width - last_rBearing);
 
 				longWordLine = !wordEndsHere;
 				f = j + 1;
@@ -651,18 +848,24 @@ void String::enumerateLines(
 			continue;
 		}
 
-		callback(width - widthLeft, lineHeight);
+		callback(width - widthLeft, lineHeight + ppadding.top());
+		ppadding.setTop(0);
 
 		lineHeight = qMax(0, blockHeight);
 		last_rBearing = b__f_rbearing;
 		last_rPadding = b->f_rpadding();
-		widthLeft = width - (b->f_width() - last_rBearing);
+		widthLeft = width
+			- ppadding.left()
+			- ppadding.right()
+			- (b->f_width() - last_rBearing);
 
 		longWordLine = true;
 		continue;
 	}
 	if (widthLeft < width) {
-		callback(width - widthLeft, lineHeight);
+		callback(
+			width - widthLeft,
+			lineHeight + ppadding.top() + ppadding.bottom());
 	}
 }
 
@@ -852,12 +1055,40 @@ not_null<ExtendedData*> String::ensureExtended() {
 	return _extended.get();
 }
 
-uint16 String::countBlockEnd(const TextBlocks::const_iterator &i, const TextBlocks::const_iterator &e) const {
+uint16 String::countBlockEnd(
+		const TextBlocks::const_iterator &i,
+		const TextBlocks::const_iterator &e) const {
 	return (i + 1 == e) ? _text.size() : (*(i + 1))->position();
 }
 
-uint16 String::countBlockLength(const String::TextBlocks::const_iterator &i, const String::TextBlocks::const_iterator &e) const {
+uint16 String::countBlockLength(
+		const TextBlocks::const_iterator &i,
+		const TextBlocks::const_iterator &e) const {
 	return countBlockEnd(i, e) - (*i)->position();
+}
+
+ParagraphDetails *String::paragraphByIndex(int index) const {
+	Expects(!index
+		|| (_extended && index <= _extended->paragraphs.size()));
+
+	return index ? &_extended->paragraphs[index - 1] : nullptr;
+}
+
+int String::paragraphIndex(const AbstractBlock *block) const {
+	Expects(!block || block->type() == TextBlockType::Newline);
+
+	return block
+		? static_cast<const NewlineBlock*>(block)->paragraphIndex()
+		: _startParagraphIndex;
+}
+
+QMargins String::paragraphPadding(ParagraphDetails *info) const {
+	if (!info) {
+		return {};
+	}
+	const auto skip = _st->blockVerticalSkip;
+	const auto top = info->pre ? _st->blockHeader : 0;
+	return _st->blockPadding + QMargins(0, top + skip, 0, skip);
 }
 
 template <
@@ -994,8 +1225,8 @@ bool String::hasNotEmojiAndSpaces() const {
 	return _hasNotEmojiAndSpaces;
 }
 
-const base::flat_map<int, int> &String::modifications() const {
-	static const auto kEmpty = base::flat_map<int, int>();
+const base::flat_map<int, Deltas> &String::modifications() const {
+	static const auto kEmpty = base::flat_map<int, Deltas>();
 	return _extended ? _extended->modifications : kEmpty;
 }
 

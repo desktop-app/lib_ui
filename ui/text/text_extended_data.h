@@ -12,6 +12,8 @@
 
 namespace Ui::Text {
 
+struct Deltas;
+
 class String;
 
 class SpoilerClickHandler final : public ClickHandler {
@@ -57,7 +59,7 @@ struct ExtendedData {
 	std::vector<ClickHandlerPtr> links;
 	std::vector<ParagraphDetails> paragraphs;
 	std::unique_ptr<SpoilerData> spoiler;
-	base::flat_map<int, int> modifications;
+	base::flat_map<int, Deltas> modifications;
 };
 
 } // namespace Ui::Text

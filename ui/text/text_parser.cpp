@@ -211,6 +211,8 @@ void Parser::createBlock(int32 skipBack) {
 		push(&Block::Emoji, _emoji);
 	} else if (newline) {
 		push(&Block::Newline);
+		auto &newline = _t->_blocks.back().unsafe<NewlineBlock>();
+		newline._paragraphIndex = _paragraphIndex;
 	} else {
 		push(&Block::Text, _t->_minResizeWidth);
 	}
@@ -231,7 +233,7 @@ void Parser::createNewlineBlock(bool fromOriginalText) {
 	createBlock();
 }
 
-void Parser::ensureAtNewline() {
+void Parser::ensureAtNewline(ParagraphDetails details) {
 	createBlock();
 	const auto lastType = _t->_blocks.empty()
 		? TextBlockType::Newline
@@ -240,6 +242,16 @@ void Parser::ensureAtNewline() {
 		auto saved = base::take(_customEmojiData);
 		createNewlineBlock(false);
 		_customEmojiData = base::take(saved);
+	}
+	auto &paragraphs = _t->ensureExtended()->paragraphs;
+	paragraphs.push_back(std::move(details));
+	const auto index = _paragraphIndex = int(paragraphs.size());
+	if (_t->_blocks.empty()) {
+		_t->_startParagraphIndex = index;
+	} else {
+		auto &last = _t->_blocks.back();
+		Assert(last->type() == TextBlockType::Newline);
+		last.unsafe<NewlineBlock>()._paragraphIndex = index;
 	}
 }
 
@@ -259,11 +271,18 @@ void Parser::finishEntities() {
 					const auto lastType = _t->_blocks.empty()
 						? TextBlockType::Newline
 						: _t->_blocks.back()->type();
-					if ((lastType != TextBlockType::Newline)
-						&& ((*flags)
-							& (TextBlockFlag::Pre
-								| TextBlockFlag::Blockquote))) {
-						_newlineAwaited = true;
+					if ((*flags)
+						& (TextBlockFlag::Pre
+							| TextBlockFlag::Blockquote)) {
+						_paragraphIndex = 0;
+						if (lastType != TextBlockType::Newline) {
+							_newlineAwaited = true;
+						} else if (_t->_blocks.empty()) {
+							_t->_startParagraphIndex = 0;
+						} else {
+							auto &last = _t->_blocks.back();
+							last.unsafe<NewlineBlock>()._paragraphIndex = 0;
+						}
 					}
 					if (IsMono(*flags)) {
 						_monoIndex = 0;
@@ -340,7 +359,10 @@ bool Parser::checkEntities() {
 			flags = TextBlockFlag::Code;
 		} else {
 			flags = TextBlockFlag::Pre;
-			ensureAtNewline();
+			ensureAtNewline({
+				.language = _waitingEntity->data(),
+				.pre = true,
+			});
 		}
 		const auto text = QString(entityBegin, entityLength);
 
@@ -356,7 +378,7 @@ bool Parser::checkEntities() {
 		}
 	} else if (entityType == EntityType::Blockquote) {
 		flags = TextBlockFlag::Blockquote;
-		ensureAtNewline();
+		ensureAtNewline({ .blockquote = true });
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
 		|| entityType == EntityType::Mention
@@ -581,7 +603,12 @@ bool Parser::isLinkEntity(const EntityInText &entity) const {
 }
 
 void Parser::updateModifications(int index, int delta) {
-	_t->ensureExtended()->modifications[index] += delta;
+	auto &deltas = _t->ensureExtended()->modifications[index];
+	if (delta > 0) {
+		deltas.added += delta;
+	} else {
+		deltas.removed -= delta;
+	}
 }
 
 void Parser::parse(const TextParseOptions &options) {
