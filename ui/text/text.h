@@ -376,7 +376,12 @@ private:
 		const TextBlocks::const_iterator &i,
 		const TextBlocks::const_iterator &e) const;
 	[[nodiscard]] ParagraphDetails *paragraphByIndex(int index) const;
+	[[nodiscard]] const style::ParagraphStyle &paragraphStyle(
+		not_null<ParagraphDetails*> info) const;
 	[[nodiscard]] QMargins paragraphPadding(ParagraphDetails *info) const;
+	[[nodiscard]] int paragraphMinWidth(ParagraphDetails *info) const;
+	[[nodiscard]] const QString &paragraphHeaderText(
+		ParagraphDetails *info) const;
 
 	// block must be either nullptr or a pointer to a NewlineBlock.
 	[[nodiscard]] int paragraphIndex(const AbstractBlock *block) const;

@@ -434,12 +434,15 @@ void String::recountNaturalSize(
 	auto pindex = paragraphIndex(nullptr);
 	auto paragraph = paragraphByIndex(pindex);
 	auto ppadding = paragraphPadding(paragraph);
+	auto pminwidth = paragraphMinWidth(paragraph);
+	auto pmaxwidth = QFixed(pminwidth);
+	auto poldheight = 0;
 
 	_maxWidth = 0;
 	_minHeight = ppadding.top();
 	auto lineHeight = 0;
 	auto maxWidth = QFixed();
-	auto width = QFixed(ppadding.left() + ppadding.right());
+	auto width = QFixed(pminwidth);
 	auto last_rBearing = QFixed();
 	auto last_rPadding = QFixed();
 	for (auto &block : _blocks) {
@@ -453,9 +456,16 @@ void String::recountNaturalSize(
 			const auto index = paragraphIndex(b);
 			if (pindex != index) {
 				_minHeight += ppadding.bottom();
+				if (paragraph) {
+					paragraph->maxWidth = pmaxwidth.ceil().toInt();
+					paragraph->minHeight = _minHeight - poldheight;
+				}
+				poldheight = _minHeight;
 				pindex = index;
 				paragraph = paragraphByIndex(pindex);
 				ppadding = paragraphPadding(paragraph);
+				pminwidth = paragraphMinWidth(paragraph);
+				pmaxwidth = pminwidth;
 				_minHeight += ppadding.top();
 				ppadding.setTop(0);
 			}
@@ -471,7 +481,8 @@ void String::recountNaturalSize(
 			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
 
 			accumulate_max(maxWidth, width);
-			width = ppadding.left() + ppadding.right();
+			accumulate_max(pmaxwidth, width);
+			width = pminwidth;
 			// + (b->f_width() - last_rBearing); (0 for newline)
 			continue;
 		}
@@ -486,6 +497,7 @@ void String::recountNaturalSize(
 		// for all the blocks to fit on their line we check each block, even the
 		// intermediate one with a large negative right bearing.
 		accumulate_max(maxWidth, width);
+		accumulate_max(pmaxwidth, width);
 
 		width += last_rBearing + (last_rPadding + b->f_width() - b__f_rbearing);
 		lineHeight = qMax(lineHeight, blockHeight);
@@ -503,9 +515,16 @@ void String::recountNaturalSize(
 		}
 		_minHeight += ppadding.top() + lineHeight + ppadding.bottom();
 		accumulate_max(maxWidth, width);
+		accumulate_max(pmaxwidth, width);
 	}
 	_maxWidth = maxWidth.ceil().toInt();
-	_endsWithParagraphDetails = (pindex != 0);
+	if (paragraph) {
+		paragraph->maxWidth = pmaxwidth.ceil().toInt();
+		paragraph->minHeight = _minHeight - poldheight;
+		_endsWithParagraphDetails = true;
+	} else {
+		_endsWithParagraphDetails = false;
+	}
 }
 
 int String::countMaxMonospaceWidth() const {
@@ -1092,14 +1111,45 @@ int String::paragraphIndex(const AbstractBlock *block) const {
 		: _startParagraphIndex;
 }
 
+const style::ParagraphStyle &String::paragraphStyle(
+		not_null<ParagraphDetails*> info) const {
+	return info->pre ? _st->pre : _st->blockquote;
+}
+
 QMargins String::paragraphPadding(ParagraphDetails *info) const {
 	if (!info) {
 		return {};
 	}
-	const auto &st = info->pre ? _st->pre : _st->blockquote;
+	const auto &st = paragraphStyle(info);
 	const auto skip = st.verticalSkip;
 	const auto top = st.header;
 	return st.padding + QMargins(0, top + skip, 0, skip);
+}
+
+int String::paragraphMinWidth(ParagraphDetails *info) const {
+	if (!info) {
+		return 0;
+	}
+	const auto ppadding = paragraphPadding(info);
+	const auto &pheader = paragraphHeaderText(info);
+	const auto pst = info ? &paragraphStyle(info) : nullptr;
+	return ppadding.left()
+		+ (pheader.isEmpty() ? 0 : _st->font->monospace()->width(pheader))
+		+ std::max(
+			ppadding.right(),
+			((pst && !pst->icon.empty())
+				? (pst->iconPosition.x() + pst->icon.width())
+				: 0));
+}
+
+const QString &String::paragraphHeaderText(ParagraphDetails *info) const {
+	static const auto kEmptyHeader = QString();
+	static const auto kDefaultHeader = u"code"_q;
+	return (!info || !info->pre)
+		? kEmptyHeader
+		: info->language.isEmpty()
+		? kDefaultHeader
+		: info->language;
 }
 
 template <

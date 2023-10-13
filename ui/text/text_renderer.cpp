@@ -415,9 +415,7 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 		? _blockquoteBlockCache
 		: nullptr;
 	if (cache) {
-		const auto &st = _paragraph->pre
-			? _t->_st->pre
-			: _t->_st->blockquote;
+		const auto &st = _t->paragraphStyle(_paragraph);
 		auto &valid = _paragraph->pre
 			? _preBlockCacheValid
 			: _blockquoteBlockCacheValid;
@@ -444,9 +442,7 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 			const auto baseline = position + QPoint(0, font->ascent);
 			_p->setFont(font);
 			_p->setPen(_palette->monoFg->p);
-			_p->drawText(baseline, _paragraph->language.isEmpty()
-				? u"code"_q
-				: _paragraph->language);
+			_p->drawText(baseline, _t->paragraphHeaderText(_paragraph));
 		}
 	}
 	_blockLineTop = _y + _lineHeight + paddingBottom;
