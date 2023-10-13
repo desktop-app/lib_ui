@@ -19,17 +19,24 @@ TextPalette {
 	linkAlwaysActive: bool;
 }
 
+ParagraphStyle {
+	padding: margins;
+	verticalSkip: pixels;
+	header: pixels;
+	headerPosition: point;
+	icon: icon;
+	iconPosition: point;
+	outline: pixels;
+	radius: pixels;
+	scrollable: bool;
+}
+
 TextStyle {
 	font: font;
 	linkUnderline: int;
-	blockPadding: margins;
-	blockVerticalSkip: pixels;
-	blockHeader: pixels;
-	blockHeaderPosition: point;
-	blockOutline: pixels;
-	blockRadius: pixels;
-	preScrollable: bool;
 	lineHeight: pixels;
+	blockquote: ParagraphStyle;
+	pre: ParagraphStyle;
 }
 
 kLinkUnderlineNever: 0;
@@ -58,10 +65,14 @@ defaultTextPalette: TextPalette {
 	selectSpoilerFg: msgInDateFgSelected;
 	selectOverlay: msgSelectOverlay;
 }
+defaultParagraphStyle: ParagraphStyle {
+}
 defaultTextStyle: TextStyle {
 	font: normalFont;
 	linkUnderline: kLinkUnderlineActive;
 	lineHeight: 0px;
+	blockquote: defaultParagraphStyle;
+	pre: defaultParagraphStyle;
 }
 semiboldTextStyle: TextStyle(defaultTextStyle) {
 	font: semiboldFont;

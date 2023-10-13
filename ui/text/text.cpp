@@ -185,29 +185,34 @@ GeometryDescriptor SimpleGeometry(
 	}
 };
 
-
 void ValidateBlockPaintCache(
 		BlockPaintCache &cache,
-		const style::TextStyle &st) {
+		const style::ParagraphStyle &st) {
+	const auto icon = st.icon.empty() ? nullptr : &st.icon;
 	if (!cache.corners.isNull()
 		&& cache.bgCached == cache.bg
 		&& cache.outlineCached == cache.outline
-		&& (!cache.withHeader || cache.headerCached == cache.header)
-		&& (!cache.topright || cache.iconCached == cache.icon)) {
+		&& (!st.header || cache.headerCached == cache.header)
+		&& (!icon || cache.iconCached == cache.icon)) {
 		return;
 	}
 	cache.bgCached = cache.bg;
 	cache.outlineCached = cache.outline;
-	if (cache.withHeader) {
+	if (st.header) {
 		cache.headerCached = cache.header;
 	}
-	if (cache.topright) {
+	if (!st.icon.empty()) {
 		cache.iconCached = cache.icon;
 	}
-	const auto radius = st.blockRadius;
-	const auto header = cache.withHeader ? st.blockHeader : 0;
-	const auto outline = st.blockOutline;
-	const auto corner = std::max({ header, radius, outline });
+	const auto radius = st.radius;
+	const auto header = st.header;
+	const auto outline = st.outline;
+	const auto iconsize = icon
+		? std::max(
+			icon->width() + st.iconPosition.x(),
+			icon->height() + st.iconPosition.y())
+		: 0;
+	const auto corner = std::max({ header, radius, outline, iconsize });
 	const auto middle = st::lineWidth;
 	const auto side = 2 * corner + middle;
 	const auto full = QSize(side, side);
@@ -233,6 +238,11 @@ void ValidateBlockPaintCache(
 	p.setBrush(cache.bg);
 	p.setClipRect(outline, header, side - outline, side - header);
 	p.drawRoundedRect(0, 0, side, side, radius, radius);
+	if (icon) {
+		const auto left = side - icon->width() - st.iconPosition.x();
+		const auto top = st.iconPosition.y();
+		icon->paint(p, left, top, side, cache.icon);
+	}
 
 	p.end();
 	cache.corners = std::move(image);
@@ -242,7 +252,7 @@ void FillBlockPaint(
 		QPainter &p,
 		QRect rect,
 		const BlockPaintCache &cache,
-		const style::TextStyle &st,
+		const style::ParagraphStyle &st,
 		SkipBlockPaintParts parts) {
 	const auto &image = cache.corners;
 	const auto ratio = int(image.devicePixelRatio());
@@ -265,7 +275,7 @@ void FillBlockPaint(
 			image,
 			QRect((iwidth - ihalf) * ratio, 0, ihalf * ratio, top * ratio));
 		if (const auto middle = width - 2 * ihalf) {
-			const auto header = cache.withHeader ? st.blockHeader : 0;
+			const auto header = st.header;
 			const auto fillHeader = std::min(header, top);
 			if (fillHeader) {
 				p.fillRect(x + ihalf, y, middle, fillHeader, cache.header);
@@ -316,7 +326,7 @@ void FillBlockPaint(
 		}
 		rect.setHeight(height);
 	}
-	const auto outline = st.blockOutline;
+	const auto outline = st.outline;
 	if (outline) {
 		p.fillRect(x, y, outline, height, cache.outline);
 	}
@@ -1086,9 +1096,10 @@ QMargins String::paragraphPadding(ParagraphDetails *info) const {
 	if (!info) {
 		return {};
 	}
-	const auto skip = _st->blockVerticalSkip;
-	const auto top = info->pre ? _st->blockHeader : 0;
-	return _st->blockPadding + QMargins(0, top + skip, 0, skip);
+	const auto &st = info->pre ? _st->pre : _st->blockquote;
+	const auto skip = st.verticalSkip;
+	const auto top = st.header;
+	return st.padding + QMargins(0, top + skip, 0, skip);
 }
 
 template <

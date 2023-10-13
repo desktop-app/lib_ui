@@ -415,29 +415,32 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 		? _blockquoteBlockCache
 		: nullptr;
 	if (cache) {
+		const auto &st = _paragraph->pre
+			? _t->_st->pre
+			: _t->_st->blockquote;
 		auto &valid = _paragraph->pre
 			? _preBlockCacheValid
 			: _blockquoteBlockCacheValid;
 		if (!valid) {
 			valid = true;
-			ValidateBlockPaintCache(*cache, *_t->_st);
+			ValidateBlockPaintCache(*cache, st);
 		}
-		const auto skip = _t->_st->blockVerticalSkip;
+		const auto skip = st.verticalSkip;
 		const auto isTop = (_y != _blockLineTop);
 		const auto isBottom = (paddingBottom != 0);
 		const auto top = _blockLineTop + (isTop ? skip : 0);
 		const auto fill = _y + _lineHeight + paddingBottom - top
 			- (isBottom ? skip : 0);
 		const auto rect = QRect(_startLeft, top, _startLineWidth, fill);
-		FillBlockPaint(*_p, rect, *cache, *_t->_st, {
+		FillBlockPaint(*_p, rect, *cache, st, {
 			.skipTop = !isTop,
 			.skipBottom = !isBottom,
 		});
 
-		if (isTop && cache->withHeader) {
+		if (isTop && st.header > 0) {
 			const auto font = _t->_st->font->monospace();
 			const auto topleft = rect.topLeft();
-			const auto position = topleft + _t->_st->blockHeaderPosition;
+			const auto position = topleft + st.headerPosition;
 			const auto baseline = position + QPoint(0, font->ascent);
 			_p->setFont(font);
 			_p->setPen(_palette->monoFg->p);

@@ -24,6 +24,7 @@ enum class type : uchar;
 namespace style {
 struct TextStyle;
 struct TextPalette;
+struct ParagraphStyle;
 } // namespace style
 
 namespace Ui {
@@ -175,15 +176,11 @@ struct BlockPaintCache {
 	QColor bg;
 	QColor outline;
 	QColor icon;
-
-	const style::icon *topright = nullptr;
-	QPoint toprightPosition;
-	bool withHeader = false;
 };
 
 void ValidateBlockPaintCache(
 	BlockPaintCache &cache,
-	const style::TextStyle &st);
+	const style::ParagraphStyle &st);
 
 struct SkipBlockPaintParts {
 	bool skipTop : 1 = false;
@@ -193,7 +190,7 @@ void FillBlockPaint(
 	QPainter &p,
 	QRect rect,
 	const BlockPaintCache &cache,
-	const style::TextStyle &st,
+	const style::ParagraphStyle &st,
 	SkipBlockPaintParts parts = {});
 
 struct PaintContext {
