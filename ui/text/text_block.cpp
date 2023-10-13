@@ -133,10 +133,6 @@ QFixed LineBreakHelper::negativeRightBearing() const {
 	return qAbs(rightBearing);
 }
 
-QString DebugCurrentParsingString, DebugCurrentParsingPart;
-int DebugCurrentParsingFrom = 0;
-int DebugCurrentParsingLength = 0;
-
 void addNextCluster(
 		int &pos,
 		int end,

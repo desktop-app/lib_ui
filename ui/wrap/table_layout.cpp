@@ -39,7 +39,6 @@ void TableLayout::paintEvent(QPaintEvent *e) {
 
 	auto path = QPainterPath();
 	path.addRoundedRect(inner, _st.radius, _st.radius);
-	auto top = half;
 	for (auto i = 1, count = int(_rows.size()); i != count; ++i) {
 		const auto y = _rows[i].top - half;
 		path.moveTo(half, y);
