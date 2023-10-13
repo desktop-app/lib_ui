@@ -1225,8 +1225,8 @@ bool String::hasNotEmojiAndSpaces() const {
 	return _hasNotEmojiAndSpaces;
 }
 
-const base::flat_map<int, Deltas> &String::modifications() const {
-	static const auto kEmpty = base::flat_map<int, Deltas>();
+const std::vector<Modification> &String::modifications() const {
+	static const auto kEmpty = std::vector<Modification>();
 	return _extended ? _extended->modifications : kEmpty;
 }
 

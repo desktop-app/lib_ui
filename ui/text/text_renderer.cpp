@@ -433,6 +433,18 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 			.skipTop = !isTop,
 			.skipBottom = !isBottom,
 		});
+
+		if (isTop && cache->withHeader) {
+			const auto font = _t->_st->font->monospace();
+			const auto topleft = rect.topLeft();
+			const auto position = topleft + _t->_st->blockHeaderPosition;
+			const auto baseline = position + QPoint(0, font->ascent);
+			_p->setFont(font);
+			_p->setPen(_palette->monoFg->p);
+			_p->drawText(baseline, _paragraph->language.isEmpty()
+				? u"code"_q
+				: _paragraph->language);
+		}
 	}
 	_blockLineTop = _y + _lineHeight + paddingBottom;
 }
@@ -2094,7 +2106,7 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 				_currentPen = &_originalPen;
 				_currentPenSelected = &_originalPenSelected;
 			}
-		} else if (isMono || (flags & TextBlockFlag::Blockquote)) {
+		} else if (isMono) {
 			_currentPen = &_palette->monoFg->p;
 			_currentPenSelected = &_palette->selectMonoFg->p;
 		} else if (block->linkIndex()) {

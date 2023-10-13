@@ -603,11 +603,25 @@ bool Parser::isLinkEntity(const EntityInText &entity) const {
 }
 
 void Parser::updateModifications(int index, int delta) {
-	auto &deltas = _t->ensureExtended()->modifications[index];
-	if (delta > 0) {
-		deltas.added += delta;
+	auto &modifications = _t->ensureExtended()->modifications;
+	auto i = end(modifications);
+	while (i != begin(modifications) && (--i)->position >= index) {
+		if (i->position < index) {
+			break;
+		} else if (delta > 0) {
+			++i->position;
+		} else if (i->position == index) {
+			break;
+		}
+	}
+	if (i != end(modifications) && i->position == index) {
+		++i->skipped;
 	} else {
-		deltas.removed -= delta;
+		modifications.insert(i, {
+			.position = index,
+			.skipped = uint16(delta < 0 ? 1 : 0),
+			.added = (delta > 0),
+		});
 	}
 }
 

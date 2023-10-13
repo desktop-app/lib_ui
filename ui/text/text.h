@@ -83,9 +83,10 @@ struct SpoilerData;
 struct ParagraphDetails;
 struct ExtendedData;
 
-struct Deltas {
-	uint16 added = 0;
-	uint16 removed = 0;
+struct Modification {
+	int position = 0;
+	uint16 skipped = 0;
+	bool added = false;
 };
 
 struct StateRequest {
@@ -341,7 +342,7 @@ public:
 	[[nodiscard]] OnlyCustomEmoji toOnlyCustomEmoji() const;
 
 	[[nodiscard]] bool hasNotEmojiAndSpaces() const;
-	[[nodiscard]] const base::flat_map<int, Deltas> &modifications() const;
+	[[nodiscard]] const std::vector<Modification> &modifications() const;
 
 	[[nodiscard]] const style::TextStyle *style() const {
 		return _st;
