@@ -407,6 +407,8 @@ private:
 		bool breakEverywhere,
 		Callback callback) const;
 
+	void insertModifications(int position, int delta);
+	void removeModificationsAfter(int size);
 	void recountNaturalSize(
 		bool initial,
 		Qt::LayoutDirection optionsDir = Qt::LayoutDirectionAuto);

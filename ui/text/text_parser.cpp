@@ -183,7 +183,7 @@ void Parser::createBlock(int32 skipBack) {
 	if (_newlineAwaited) {
 		_newlineAwaited = false;
 		if (!newline) {
-			updateModifications(_blockStart, 1);
+			_t->insertModifications(_blockStart, 1);
 			_t->_text.insert(_blockStart, QChar::LineFeed);
 			createBlock(skipBack - length);
 		}
@@ -226,7 +226,7 @@ void Parser::createBlock(int32 skipBack) {
 
 void Parser::createNewlineBlock(bool fromOriginalText) {
 	if (!fromOriginalText) {
-		updateModifications(_t->_text.size(), 1);
+		_t->insertModifications(_t->_text.size(), 1);
 	}
 	_t->_text.push_back(QChar::LineFeed);
 	_allowDiacritic = false;
@@ -523,7 +523,9 @@ void Parser::parseCurrentChar() {
 	}
 
 	if (skip) {
-		updateModifications(_t->_text.size(), -1);
+		if (_ptr < _end) {
+			_t->insertModifications(_t->_text.size(), -1);
+		}
 		_ch = 0;
 		_allowDiacritic = false;
 	} else {
@@ -572,7 +574,7 @@ void Parser::parseEmojiFromCurrent() {
 		Assert(!_t->_text.isEmpty());
 		const auto last = _t->_text[_t->_text.size() - 1];
 		if (last.unicode() != Emoji::kPostfix) {
-			updateModifications(_t->_text.size(), 1);
+			_t->insertModifications(_t->_text.size(), 1);
 			_t->_text.push_back(QChar(Emoji::kPostfix));
 			++len;
 		}
@@ -602,29 +604,6 @@ bool Parser::isLinkEntity(const EntityInText &entity) const {
 	return ranges::find(urls, type) != std::end(urls);
 }
 
-void Parser::updateModifications(int index, int delta) {
-	auto &modifications = _t->ensureExtended()->modifications;
-	auto i = end(modifications);
-	while (i != begin(modifications) && (--i)->position >= index) {
-		if (i->position < index) {
-			break;
-		} else if (delta > 0) {
-			++i->position;
-		} else if (i->position == index) {
-			break;
-		}
-	}
-	if (i != end(modifications) && i->position == index) {
-		++i->skipped;
-	} else {
-		modifications.insert(i, {
-			.position = index,
-			.skipped = uint16(delta < 0 ? 1 : 0),
-			.added = (delta > 0),
-		});
-	}
-}
-
 void Parser::parse(const TextParseOptions &options) {
 	skipBadEntities();
 	trimSourceRange();
@@ -636,7 +615,7 @@ void Parser::parse(const TextParseOptions &options) {
 	_t->_text.reserve(_end - _ptr);
 
 	if (_ptr > _start) {
-		updateModifications(0, -(_ptr - _start));
+		_t->insertModifications(0, -(_ptr - _start));
 	}
 
 	for (; _ptr <= _end; ++_ptr) {

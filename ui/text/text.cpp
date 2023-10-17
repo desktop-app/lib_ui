@@ -673,9 +673,12 @@ bool String::updateSkipBlock(int width, int height) {
 		if (block->f_width().toInt() == width && block->height() == height) {
 			return false;
 		}
-		_text.resize(block->position());
+		const auto size = block->position();
+		_text.resize(size);
 		_blocks.pop_back();
+		removeModificationsAfter(size);
 	} else if (_endsWithQuote) {
+		insertModifications(_text.size(), 1);
 		_text.push_back(QChar::LineFeed);
 		_blocks.push_back(Block::Newline(
 			_st->font,
@@ -687,6 +690,7 @@ bool String::updateSkipBlock(int width, int height) {
 			0));
 		_skipBlockAddedNewline = true;
 	}
+	insertModifications(_text.size(), 1);
 	_text.push_back('_');
 	_blocks.push_back(Block::Skip(
 		_st->font,
@@ -704,16 +708,63 @@ bool String::removeSkipBlock() {
 	if (_blocks.empty() || _blocks.back()->type() != TextBlockType::Skip) {
 		return false;
 	} else if (_skipBlockAddedNewline) {
-		_text.resize(_blocks.back()->position() - 1);
+		const auto size = _blocks.back()->position() - 1;
+		_text.resize(size);
 		_blocks.pop_back();
 		_blocks.pop_back();
 		_skipBlockAddedNewline = false;
+		removeModificationsAfter(size);
 	} else {
-		_text.resize(_blocks.back()->position());
+		const auto size = _blocks.back()->position();
+		_text.resize(size);
 		_blocks.pop_back();
+		removeModificationsAfter(size);
 	}
 	recountNaturalSize(false);
 	return true;
+}
+
+void String::insertModifications(int position, int delta) {
+	auto &modifications = ensureExtended()->modifications;
+	auto i = end(modifications);
+	while (i != begin(modifications) && (--i)->position >= position) {
+		if (i->position < position) {
+			break;
+		} else if (delta > 0) {
+			++i->position;
+		} else if (i->position == position) {
+			break;
+		}
+	}
+	if (i != end(modifications) && i->position == position) {
+		++i->skipped;
+	} else {
+		modifications.insert(i, {
+			.position = position,
+			.skipped = uint16(delta < 0 ? (-delta) : 0),
+			.added = (delta > 0),
+		});
+	}
+}
+
+void String::removeModificationsAfter(int size) {
+	if (!_extended) {
+		return;
+	}
+	auto &modifications = _extended->modifications;
+	for (auto i = end(modifications); i != begin(modifications);) {
+		--i;
+		if (i->position > size) {
+			i = modifications.erase(i);
+		} else if (i->position == size) {
+			i->added = false;
+			if (!i->skipped) {
+				i = modifications.erase(i);
+			}
+		} else {
+			break;
+		}
+	}
 }
 
 int String::countWidth(int width, bool breakEverywhere) const {
