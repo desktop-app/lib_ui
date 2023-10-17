@@ -76,7 +76,7 @@ static constexpr TextSelection AllTextSelection = { 0, 0xFFFF };
 
 namespace Ui::Text {
 
-struct Block;
+class Block;
 class AbstractBlock;
 struct IsolatedEmoji;
 struct OnlyCustomEmoji;

@@ -17,7 +17,7 @@ struct QScriptLine;
 
 namespace Ui::Text {
 
-struct AbstractBlock;
+class AbstractBlock;
 
 struct FixedRange {
 	QFixed from;
