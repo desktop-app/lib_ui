@@ -32,6 +32,22 @@ private:
 
 };
 
+class PreClickHandler final : public ClickHandler {
+public:
+	PreClickHandler(not_null<String*> text, uint16 offset, uint16 length);
+
+	[[nodiscard]] not_null<String*> text() const;
+	void setText(not_null<String*> text);
+
+	void onClick(ClickContext context) const override;
+
+private:
+	not_null<String*> _text;
+	uint16 _offset = 0;
+	uint16 _length = 0;
+
+};
+
 struct SpoilerData {
 	explicit SpoilerData(Fn<void()> repaint)
 	: animation(std::move(repaint)) {
@@ -45,7 +61,7 @@ struct SpoilerData {
 
 struct QuoteDetails {
 	QString language;
-	ClickHandlerPtr copy;
+	std::shared_ptr<PreClickHandler> copy;
 	int copyWidth = 0;
 	int maxWidth = 0;
 	int minHeight = 0;

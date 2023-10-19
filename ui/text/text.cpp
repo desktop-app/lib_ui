@@ -239,6 +239,7 @@ void ValidateQuotePaintCache(
 	p.setClipRect(outline, header, side - outline, side - header);
 	p.drawRoundedRect(0, 0, side, side, radius, radius);
 	if (icon) {
+		p.setClipping(false);
 		const auto left = side - icon->width() - st.iconPosition.x();
 		const auto top = st.iconPosition.y();
 		icon->paint(p, left, top, side, cache.icon);
@@ -364,13 +365,23 @@ String::ExtendedWrap::~ExtendedWrap() = default;
 
 void String::ExtendedWrap::adjustFrom(const ExtendedWrap *other) {
 	const auto data = get();
-	if (data && data->spoiler) {
-		const auto raw = [](auto pointer) {
-			return reinterpret_cast<quintptr>(pointer);
-		};
-		const auto otherText = raw(data->spoiler->link->text().get());
-		data->spoiler->link->setText(
+	const auto raw = [](auto pointer) {
+		return reinterpret_cast<quintptr>(pointer);
+	};
+	const auto adjust = [&](auto &link) {
+		const auto otherText = raw(link->text().get());
+		link->setText(
 			reinterpret_cast<String*>(otherText + raw(this) - raw(other)));
+	};
+	if (data) {
+		if (data->spoiler) {
+			adjust(data->spoiler->link);
+		}
+		for (auto &quote : data->quotes) {
+			if (quote.copy) {
+				adjust(quote.copy);
+			}
+		}
 	}
 }
 
@@ -1184,14 +1195,27 @@ int String::quoteMinWidth(QuoteDetails *quote) const {
 	}
 	const auto qpadding = quotePadding(quote);
 	const auto &qheader = quoteHeaderText(quote);
-	const auto qst = quote ? &quoteStyle(quote) : nullptr;
-	return qpadding.left()
-		+ (qheader.isEmpty() ? 0 : _st->font->monospace()->width(qheader))
+	const auto &qst = quoteStyle(quote);
+	const auto radius = qst.radius;
+	const auto header = qst.header;
+	const auto outline = qst.outline;
+	const auto iconsize = (!qst.icon.empty())
+		? std::max(
+			qst.icon.width() + qst.iconPosition.x(),
+			qst.icon.height() + qst.iconPosition.y())
+		: 0;
+	const auto corner = std::max({ header, radius, outline, iconsize });
+	const auto top = qpadding.left()
+		+ (qheader.isEmpty()
+			? 0
+			: (_st->font->monospace()->width(qheader)
+				+ _st->pre.headerPosition.x()))
 		+ std::max(
 			qpadding.right(),
-			((qst && !qst->icon.empty())
-				? (qst->iconPosition.x() + qst->icon.width())
+			(!qst.icon.empty()
+				? (qst.iconPosition.x() + qst.icon.width())
 				: 0));
+	return std::max(top, 2 * corner);
 }
 
 const QString &String::quoteHeaderText(QuoteDetails *quote) const {
@@ -1221,11 +1245,19 @@ void String::enumerateText(
 
 	int linkIndex = 0;
 	uint16 linkPosition = 0;
+	int quoteIndex = _startQuoteIndex;
 
-	int32 flags = 0;
+	TextBlockFlags flags = {};
 	for (auto i = _blocks.cbegin(), e = _blocks.cend(); true; ++i) {
-		const auto blockPosition = (i == e) ? uint16(_text.size()) : (*i)->position();
+		const auto blockPosition = (i == e)
+			? uint16(_text.size())
+			: (*i)->position();
 		const auto blockFlags = (i == e) ? TextBlockFlags() : (*i)->flags();
+		const auto blockQuoteIndex = (i == e)
+			? 0
+			: ((*i)->type() != TextBlockType::Newline)
+			? quoteIndex
+			: static_cast<const NewlineBlock*>(i->get())->quoteIndex();
 		const auto blockLinkIndex = [&] {
 			if (IsMono(blockFlags) || (i == e)) {
 				return 0;
@@ -1240,7 +1272,10 @@ void String::enumerateText(
 				auto rangeFrom = qMax(selection.from, linkPosition);
 				auto rangeTo = qMin(selection.to, blockPosition);
 				if (rangeTo > rangeFrom) { // handle click handler
-					const auto r = base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom);
+					const auto r = base::StringViewMid(
+						_text,
+						rangeFrom,
+						rangeTo - rangeFrom);
 					// Ignore links that are partially copied.
 					const auto handler = (linkPosition != rangeFrom
 						|| blockPosition != rangeTo
@@ -1267,11 +1302,20 @@ void String::enumerateText(
 
 		const auto checkBlockFlags = (blockPosition >= selection.from)
 			&& (blockPosition <= selection.to);
-		if (checkBlockFlags && blockFlags != flags) {
-			flagsChangeCallback(flags, blockFlags);
+		if (checkBlockFlags
+			&& (blockFlags != flags
+				|| ((flags & TextBlockFlag::Pre)
+					&& blockQuoteIndex != quoteIndex))) {
+			flagsChangeCallback(
+				flags,
+				quoteIndex,
+				blockFlags,
+				blockQuoteIndex);
 			flags = blockFlags;
 		}
-		if (i == e || (linkIndex ? linkPosition : blockPosition) >= selection.to) {
+		quoteIndex = blockQuoteIndex;
+		if (i == e
+			|| (linkIndex ? linkPosition : blockPosition) >= selection.to) {
 			break;
 		}
 
@@ -1393,18 +1437,33 @@ TextForMimeData String::toText(
 			{ TextBlockFlag::Pre, EntityType::Pre },
 			{ TextBlockFlag::Blockquote, EntityType::Blockquote },
 		} : std::vector<MarkdownTagTracker>();
-	const auto flagsChangeCallback = [&](int32 oldFlags, int32 newFlags) {
+	const auto flagsChangeCallback = [&](
+			TextBlockFlags oldFlags,
+			int oldQuoteIndex,
+			TextBlockFlags newFlags,
+			int newQuoteIndex) {
 		if (!composeEntities) {
 			return;
 		}
 		for (auto &tracker : markdownTrackers) {
 			const auto flag = tracker.flag;
-			if ((oldFlags & flag) && !(newFlags & flag)) {
+			const auto quoteWithLanguage = (flag == TextBlockFlag::Pre);
+			const auto quoteWithLanguageChanged = quoteWithLanguage
+				&& (oldQuoteIndex != newQuoteIndex);
+			const auto data = (quoteWithLanguage && oldQuoteIndex)
+				? _extended->quotes[oldQuoteIndex - 1].language
+				: QString();
+			if (((oldFlags & flag) && !(newFlags & flag))
+				|| quoteWithLanguageChanged) {
 				insertEntity({
 					tracker.type,
 					tracker.start,
-					int(result.rich.text.size()) - tracker.start });
-			} else if ((newFlags & flag) && !(oldFlags & flag)) {
+					int(result.rich.text.size()) - tracker.start,
+					data,
+				});
+			}
+			if (((newFlags & flag) && !(oldFlags & flag))
+				|| quoteWithLanguageChanged) {
 				tracker.start = result.rich.text.size();
 			}
 		}

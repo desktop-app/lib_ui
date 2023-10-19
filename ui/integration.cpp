@@ -9,6 +9,7 @@
 #include "ui/gl/gl_detection.h"
 #include "ui/text/text_entity.h"
 #include "ui/text/text_block.h"
+#include "ui/toast/toast.h"
 #include "ui/basic_click_handlers.h"
 #include "base/platform/base_platform_info.h"
 
@@ -86,6 +87,11 @@ bool Integration::handleUrlClick(
 		const QString &url,
 		const QVariant &context) {
 	return false;
+}
+
+bool Integration::copyPreOnClick(const QVariant &context) {
+	Toast::Show(u"Code copied to clipboard."_q);
+	return true;
 }
 
 QString Integration::convertTagToMimeTag(const QString &tagId) {

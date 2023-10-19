@@ -243,6 +243,7 @@ void Parser::ensureAtNewline(QuoteDetails quote) {
 		createNewlineBlock(false);
 		_customEmojiData = base::take(saved);
 	}
+	_quoteStartPosition = _t->_text.size();
 	auto &quotes = _t->ensureExtended()->quotes;
 	quotes.push_back(std::move(quote));
 	const auto index = _quoteIndex = int(quotes.size());
@@ -274,6 +275,18 @@ void Parser::finishEntities() {
 					if ((*flags)
 						& (TextBlockFlag::Pre
 							| TextBlockFlag::Blockquote)) {
+						if (_quoteIndex) {
+							auto &quotes = _t->ensureExtended()->quotes;
+							auto &quote = quotes[_quoteIndex - 1];
+							const auto from = _quoteStartPosition;
+							const auto till = _t->_text.size();
+							if (quote.pre && till > from) {
+								quote.copy = std::make_shared<PreClickHandler>(
+									_t,
+									from,
+									till - from);
+							}
+						}
 						_quoteIndex = 0;
 						if (lastType != TextBlockType::Newline) {
 							_newlineAwaited = true;

@@ -404,22 +404,8 @@ void Renderer::enumerate() {
 }
 
 void Renderer::fillParagraphBg(int paddingBottom) {
-	const auto cache = (!_p || !_quote)
-		? nullptr
-		: _quote->pre
-		? _quotePreCache
-		: _quote->blockquote
-		? _quoteBlockquoteCache
-		: nullptr;
-	if (cache) {
+	if (_quote) {
 		const auto &st = _t->quoteStyle(_quote);
-		auto &valid = _quote->pre
-			? _quotePreValid
-			: _quoteBlockquoteValid;
-		if (!valid) {
-			valid = true;
-			ValidateQuotePaintCache(*cache, st);
-		}
 		const auto skip = st.verticalSkip;
 		const auto isTop = (_y != _quoteLineTop);
 		const auto isBottom = (paddingBottom != 0);
@@ -428,19 +414,48 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 		const auto fill = _y + _lineHeight + paddingBottom - top
 			- (isBottom ? skip : 0);
 		const auto rect = QRect(left, top, _startLineWidth, fill);
-		FillQuotePaint(*_p, rect, *cache, st, {
-			.skipTop = !isTop,
-			.skipBottom = !isBottom,
-		});
 
+		const auto cache = (!_p || !_quote)
+			? nullptr
+			: _quote->pre
+			? _quotePreCache
+			: _quote->blockquote
+			? _quoteBlockquoteCache
+			: nullptr;
+		if (cache) {
+			auto &valid = _quote->pre
+				? _quotePreValid
+				: _quoteBlockquoteValid;
+			if (!valid) {
+				valid = true;
+				ValidateQuotePaintCache(*cache, st);
+			}
+			FillQuotePaint(*_p, rect, *cache, st, {
+				.skipTop = !isTop,
+				.skipBottom = !isBottom,
+			});
+		}
 		if (isTop && st.header > 0) {
-			const auto font = _t->_st->font->monospace();
-			const auto topleft = rect.topLeft();
-			const auto position = topleft + st.headerPosition;
-			const auto baseline = position + QPoint(0, font->ascent);
-			_p->setFont(font);
-			_p->setPen(_palette->monoFg->p);
-			_p->drawText(baseline, _t->quoteHeaderText(_quote));
+			if (_p) {
+				const auto font = _t->_st->font->monospace();
+				const auto topleft = rect.topLeft();
+				const auto position = topleft + st.headerPosition;
+				const auto lbaseline = position + QPoint(0, font->ascent);
+				_p->setFont(font);
+				_p->setPen(_palette->monoFg->p);
+				_p->drawText(lbaseline, _t->quoteHeaderText(_quote));
+			} else if (_lookupX >= left
+				&& _lookupX < left + _startLineWidth
+				&& _lookupY >= top
+				&& _lookupY < top + st.header) {
+				if (_lookupLink) {
+					_lookupResult.link = _quote->copy;
+				}
+				if (_lookupSymbol) {
+					_lookupResult.symbol = _lineStart;
+					_lookupResult.afterSymbol = false;
+				}
+			}
 		}
 	}
 	_quoteLineTop = _y + _lineHeight + paddingBottom;
