@@ -224,7 +224,6 @@ void ValidateQuotePaintCache(
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
 
-	auto rect = QRect(QPoint(), full);
 	if (header) {
 		p.setBrush(cache.header);
 		p.setClipRect(outline, 0, side - outline, header);
