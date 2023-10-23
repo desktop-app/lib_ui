@@ -165,6 +165,7 @@ private:
 	int _quoteShift = 0;
 	int _quoteIndex = 0;
 	QMargins _quotePadding;
+	int _quoteTop = 0;
 	int _quoteLineTop = 0;
 	QuotePaintCache *_quotePreCache = nullptr;
 	QuotePaintCache *_quoteBlockquoteCache = nullptr;

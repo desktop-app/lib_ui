@@ -191,13 +191,15 @@ void ValidateQuotePaintCache(
 	const auto icon = st.icon.empty() ? nullptr : &st.icon;
 	if (!cache.corners.isNull()
 		&& cache.bgCached == cache.bg
-		&& cache.outlineCached == cache.outline
+		&& cache.outline1Cached == cache.outline1
+		&& cache.outline2Cached == cache.outline2
 		&& (!st.header || cache.headerCached == cache.header)
 		&& (!icon || cache.iconCached == cache.icon)) {
 		return;
 	}
 	cache.bgCached = cache.bg;
-	cache.outlineCached = cache.outline;
+	cache.outline1Cached = cache.outline1;
+	cache.outline2Cached = cache.outline2;
 	if (st.header) {
 		cache.headerCached = cache.header;
 	}
@@ -217,6 +219,28 @@ void ValidateQuotePaintCache(
 	const auto side = 2 * corner + middle;
 	const auto full = QSize(side, side);
 	const auto ratio = style::DevicePixelRatio();
+
+	if (cache.outline1 == cache.outline2) {
+		cache.outline = QImage();
+	} else if (const auto outline = st.outline) {
+		const auto size = QSize(outline, outline * 6);
+		cache.outline = QImage(
+			size * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		cache.outline.fill(cache.outline1);
+		cache.outline.setDevicePixelRatio(ratio);
+		auto p = QPainter(&cache.outline);
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		auto hq = PainterHighQualityEnabler(p);
+		auto path = QPainterPath();
+		path.moveTo(outline, outline);
+		path.lineTo(outline, outline * 4);
+		path.lineTo(0, outline * 5);
+		path.lineTo(0, outline * 2);
+		path.lineTo(outline, outline);
+		p.fillPath(path, cache.outline2);
+	}
+
 	auto image = QImage(full * ratio, QImage::Format_ARGB32_Premultiplied);
 	image.fill(Qt::transparent);
 	image.setDevicePixelRatio(ratio);
@@ -230,9 +254,16 @@ void ValidateQuotePaintCache(
 		p.drawRoundedRect(0, 0, side, corner + radius, radius, radius);
 	}
 	if (outline) {
-		p.setBrush(cache.outline);
-		p.setClipRect(0, 0, outline, side);
-		p.drawRoundedRect(0, 0, outline + radius * 2, side, radius, radius);
+		const auto rect = QRect(0, 0, outline + radius * 2, side);
+		if (!cache.outline.isNull()) {
+			p.setBrush(cache.outline);
+			p.setClipRect(0, 0, outline, side);
+			p.drawRoundedRect(rect, radius, radius);
+		} else {
+			p.setBrush(cache.outline1);
+			p.setClipRect(0, 0, outline, side);
+			p.drawRoundedRect(rect, radius, radius);
+		}
 	}
 	p.setBrush(cache.bg);
 	p.setClipRect(outline, header, side - outline, side - header);
@@ -264,7 +295,7 @@ void FillQuotePaint(
 	const auto width = rect.width();
 	auto y = rect.top();
 	auto height = rect.height();
-	if (!parts.skipTop) {
+	if (!parts.skippedTop) {
 		const auto top = std::min(height, ihalf);
 		p.drawImage(
 			QRect(x, y, ihalf, top),
@@ -293,15 +324,17 @@ void FillQuotePaint(
 		y += top;
 		rect.setTop(y);
 	}
+	const auto outline = st.outline;
 	if (!parts.skipBottom) {
 		const auto bottom = std::min(height, ihalf);
+		const auto skip = !cache.outline.isNull() ? outline : 0;
 		p.drawImage(
-			QRect(x, y + height - bottom, ihalf, bottom),
+			QRect(x + skip, y + height - bottom, ihalf - skip, bottom),
 			image,
 			QRect(
-				0,
+				skip * ratio,
 				(iheight - bottom) * ratio,
-				ihalf * ratio,
+				(ihalf - skip) * ratio,
 				bottom * ratio));
 		p.drawImage(
 			QRect(
@@ -320,15 +353,63 @@ void FillQuotePaint(
 				QRect(x + ihalf, y + height - bottom, middle, bottom),
 				cache.bg);
 		}
+		if (skip) {
+			if (cache.bottomCorner.size() != QSize(skip, ihalf)) {
+				cache.bottomCorner = QImage(
+					QSize(skip, ihalf) * ratio,
+					QImage::Format_ARGB32_Premultiplied);
+				cache.bottomCorner.setDevicePixelRatio(ratio);
+				cache.bottomCorner.fill(Qt::transparent);
+
+				cache.bottomRounding = QImage(
+					QSize(skip, ihalf) * ratio,
+					QImage::Format_ARGB32_Premultiplied);
+				cache.bottomRounding.setDevicePixelRatio(ratio);
+				cache.bottomRounding.fill(Qt::transparent);
+				const auto radius = st.radius;
+				auto q = QPainter(&cache.bottomRounding);
+				auto hq = PainterHighQualityEnabler(q);
+				q.setPen(Qt::NoPen);
+				q.setBrush(Qt::white);
+				q.drawRoundedRect(
+					0,
+					-2 * radius,
+					skip + 2 * radius,
+					ihalf + 2 * radius,
+					radius,
+					radius);
+			}
+			auto q = QPainter(&cache.bottomCorner);
+			const auto skipped = ihalf
+				+ int(parts.skippedTop)
+				+ (height - bottom);
+			q.translate(0, -skipped);
+			q.fillRect(0, skipped, skip, bottom, cache.outline);
+			q.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+			q.drawImage(0, skipped + bottom - ihalf, cache.bottomRounding);
+			q.end();
+
+			p.drawImage(
+				QRect(x, y + height - bottom, skip, bottom),
+				cache.bottomCorner,
+				QRect(0, 0, skip * ratio, bottom * ratio));
+		}
 		height -= bottom;
 		if (!height) {
 			return;
 		}
 		rect.setHeight(height);
 	}
-	const auto outline = st.outline;
 	if (outline) {
-		p.fillRect(x, y, outline, height, cache.outline);
+		if (!cache.outline.isNull()) {
+			const auto skipped = ihalf + int(parts.skippedTop);
+			const auto top = y - skipped;
+			p.translate(x, top);
+			p.fillRect(0, skipped, outline, height, cache.outline);
+			p.translate(-x, -top);
+		} else {
+			p.fillRect(x, y, outline, height, cache.outline1);
+		}
 	}
 	p.fillRect(x + outline, y, width - outline, height, cache.bg);
 }
@@ -541,54 +622,15 @@ void String::recountNaturalSize(
 }
 
 int String::countMaxMonospaceWidth() const {
-	auto result = QFixed();
-	auto paragraphWidth = QFixed();
-	auto fullMonospace = true;
-	QFixed _width = 0, last_rBearing = 0, last_rPadding = 0;
-	for (auto &block : _blocks) {
-		auto b = block.get();
-		auto _btype = b->type();
-		if (_btype == TextBlockType::Newline) {
-			last_rBearing = b->f_rbearing();
-			last_rPadding = b->f_rpadding();
-
-			if (fullMonospace) {
-				accumulate_max(paragraphWidth, _width);
-				accumulate_max(result, paragraphWidth);
-				paragraphWidth = 0;
-			} else {
-				fullMonospace = true;
+	auto result = 0;
+	if (_extended) {
+		for (const auto &quote : _extended->quotes) {
+			if (quote.pre) {
+				accumulate_max(result, quote.maxWidth);
 			}
-			_width = (b->f_width() - last_rBearing);
-			continue;
 		}
-		if (!(b->flags() & (TextBlockFlag::Pre | TextBlockFlag::Code))
-			&& (b->type() != TextBlockType::Skip)) {
-			fullMonospace = false;
-		}
-		auto b__f_rbearing = b->f_rbearing(); // cache
-
-		// We need to accumulate max width after each block, because
-		// some blocks have width less than -1 * previous right bearing.
-		// In that cases the _width gets _smaller_ after moving to the next block.
-		//
-		// But when we layout block and we're sure that _maxWidth is enough
-		// for all the blocks to fit on their line we check each block, even the
-		// intermediate one with a large negative right bearing.
-		if (fullMonospace) {
-			accumulate_max(paragraphWidth, _width);
-		}
-		_width += last_rBearing + (last_rPadding + b->f_width() - b__f_rbearing);
-
-		last_rBearing = b__f_rbearing;
-		last_rPadding = b->f_rpadding();
-		continue;
 	}
-	if (_width > 0 && fullMonospace) {
-		accumulate_max(paragraphWidth, _width);
-		accumulate_max(result, paragraphWidth);
-	}
-	return result.ceil().toInt();
+	return result;
 }
 
 void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options, const std::any &context) {
