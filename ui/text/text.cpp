@@ -373,8 +373,10 @@ void String::ExtendedWrap::adjustFrom(const ExtendedWrap *other) {
 			reinterpret_cast<String*>(otherText + raw(this) - raw(other)));
 	};
 	if (data) {
-		if (data->spoiler) {
-			adjust(data->spoiler->link);
+		if (const auto spoiler = data->spoiler.get()) {
+			if (spoiler->link) {
+				adjust(spoiler->link);
+			}
 		}
 		for (auto &quote : data->quotes) {
 			if (quote.copy) {
