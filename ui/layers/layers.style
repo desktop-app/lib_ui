@@ -84,7 +84,7 @@ boxTitle: FlatLabel(defaultFlatLabel) {
 		font: boxTitleFont;
 	}
 }
-boxTitlePosition: point(24px, 18px);
+boxTitlePosition: point(24px, 13px);
 boxTitleHeight: 48px;
 boxTitleAdditionalSkip: 9px;
 boxTitleAdditionalFont: normalFont;
