@@ -1424,7 +1424,11 @@ QStringList PrepareSearchWords(
 }
 
 bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
-	if (left.text.isEmpty() || !limit) return false;
+	Expects(limit > 0);
+
+	if (left.text.isEmpty()) {
+		return false;
+	}
 
 	int32 currentEntity = 0, goodEntity = currentEntity, entityCount = left.entities.size();
 	bool goodInEntity = false, goodCanBreakEntity = false;
@@ -1533,10 +1537,7 @@ bool CutPart(TextWithEntities &sending, TextWithEntities &left, int32 limit) {
 			return true;
 		}
 	}
-	sending.text = left.text;
-	left.text = QString();
-	sending.entities = left.entities;
-	left.entities = EntitiesInText();
+	sending = base::take(left);
 	return true;
 }
 
