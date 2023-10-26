@@ -27,6 +27,7 @@ QuoteStyle {
 	icon: icon;
 	iconPosition: point;
 	outline: pixels;
+	outlineShift: pixels;
 	radius: pixels;
 	scrollable: bool;
 }

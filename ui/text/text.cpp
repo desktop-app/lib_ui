@@ -191,15 +191,13 @@ void ValidateQuotePaintCache(
 	const auto icon = st.icon.empty() ? nullptr : &st.icon;
 	if (!cache.corners.isNull()
 		&& cache.bgCached == cache.bg
-		&& cache.outline1Cached == cache.outline1
-		&& cache.outline2Cached == cache.outline2
+		&& cache.outlines == cache.outlines
 		&& (!st.header || cache.headerCached == cache.header)
 		&& (!icon || cache.iconCached == cache.icon)) {
 		return;
 	}
 	cache.bgCached = cache.bg;
-	cache.outline1Cached = cache.outline1;
-	cache.outline2Cached = cache.outline2;
+	cache.outlinesCached = cache.outlines;
 	if (st.header) {
 		cache.headerCached = cache.header;
 	}
@@ -220,25 +218,35 @@ void ValidateQuotePaintCache(
 	const auto full = QSize(side, side);
 	const auto ratio = style::DevicePixelRatio();
 
-	if (cache.outline1 == cache.outline2) {
+	if (!cache.outlines[1].alpha()) {
 		cache.outline = QImage();
 	} else if (const auto outline = st.outline) {
-		const auto size = QSize(outline, outline * 6);
+		const auto third = (cache.outlines[2].alpha() != 0);
+		const auto size = QSize(outline, outline * (third ? 6 : 4));
 		cache.outline = QImage(
 			size * ratio,
 			QImage::Format_ARGB32_Premultiplied);
-		cache.outline.fill(cache.outline1);
+		cache.outline.fill(cache.outlines[0]);
 		cache.outline.setDevicePixelRatio(ratio);
 		auto p = QPainter(&cache.outline);
 		p.setCompositionMode(QPainter::CompositionMode_Source);
 		auto hq = PainterHighQualityEnabler(p);
 		auto path = QPainterPath();
 		path.moveTo(outline, outline);
-		path.lineTo(outline, outline * 4);
-		path.lineTo(0, outline * 5);
+		path.lineTo(outline, outline * (third ? 4 : 3));
+		path.lineTo(0, outline * (third ? 5 : 4));
 		path.lineTo(0, outline * 2);
 		path.lineTo(outline, outline);
-		p.fillPath(path, cache.outline2);
+		p.fillPath(path, cache.outlines[third ? 2 : 1]);
+		if (third) {
+			auto path = QPainterPath();
+			path.moveTo(outline, outline * 3);
+			path.lineTo(outline, outline * 5);
+			path.lineTo(0, outline * 6);
+			path.lineTo(0, outline * 4);
+			path.lineTo(outline, outline * 3);
+			p.fillPath(path, cache.outlines[1]);
+		}
 	}
 
 	auto image = QImage(full * ratio, QImage::Format_ARGB32_Premultiplied);
@@ -256,11 +264,14 @@ void ValidateQuotePaintCache(
 	if (outline) {
 		const auto rect = QRect(0, 0, outline + radius * 2, side);
 		if (!cache.outline.isNull()) {
+			const auto shift = QPoint(0, st.outlineShift);
+			p.translate(shift);
 			p.setBrush(cache.outline);
-			p.setClipRect(0, 0, outline, side);
-			p.drawRoundedRect(rect, radius, radius);
+			p.setClipRect(QRect(-shift, QSize(outline, side)));
+			p.drawRoundedRect(rect.translated(-shift), radius, radius);
+			p.translate(-shift);
 		} else {
-			p.setBrush(cache.outline1);
+			p.setBrush(cache.outlines[0]);
 			p.setClipRect(0, 0, outline, side);
 			p.drawRoundedRect(rect, radius, radius);
 		}
@@ -380,9 +391,9 @@ void FillQuotePaint(
 					radius);
 			}
 			auto q = QPainter(&cache.bottomCorner);
-			const auto skipped = ihalf
-				+ int(parts.skippedTop)
-				+ (height - bottom);
+			const auto skipped = (height - bottom)
+				+ (parts.skippedTop ? int(parts.skippedTop) : ihalf)
+				- st.outlineShift;
 			q.translate(0, -skipped);
 			q.fillRect(0, skipped, skip, bottom, cache.outline);
 			q.setCompositionMode(QPainter::CompositionMode_DestinationIn);
@@ -402,13 +413,14 @@ void FillQuotePaint(
 	}
 	if (outline) {
 		if (!cache.outline.isNull()) {
-			const auto skipped = ihalf + int(parts.skippedTop);
-			const auto top = y - skipped;
+			const auto skipped = st.outlineShift
+				- (parts.skippedTop ? int(parts.skippedTop) : ihalf);
+			const auto top = y + skipped;
 			p.translate(x, top);
-			p.fillRect(0, skipped, outline, height, cache.outline);
+			p.fillRect(0, -skipped, outline, height, cache.outline);
 			p.translate(-x, -top);
 		} else {
-			p.fillRect(x, y, outline, height, cache.outline1);
+			p.fillRect(x, y, outline, height, cache.outlines[0]);
 		}
 	}
 	p.fillRect(x + outline, y, width - outline, height, cache.bg);

@@ -165,22 +165,22 @@ struct GeometryDescriptor {
 	bool elisionOneLine,
 	bool elisionBreakEverywhere);
 
+constexpr auto kMaxQuoteOutlines = 3;
+
 struct QuotePaintCache {
 	QImage corners;
 	QImage outline;
 	mutable QImage bottomCorner;
 	mutable QImage bottomRounding;
 
+	std::array<QColor, kMaxQuoteOutlines> outlinesCached;
 	QColor headerCached;
 	QColor bgCached;
-	QColor outline1Cached;
-	QColor outline2Cached;
 	QColor iconCached;
 
+	std::array<QColor, kMaxQuoteOutlines> outlines;
 	QColor header;
 	QColor bg;
-	QColor outline1;
-	QColor outline2;
 	QColor icon;
 };
 
