@@ -207,15 +207,18 @@ void ValidateQuotePaintCache(
 	const auto radius = st.radius;
 	const auto header = st.header;
 	const auto outline = st.outline;
-	const auto iconsize = icon
-		? std::max(
-			icon->width() + st.iconPosition.x(),
-			icon->height() + st.iconPosition.y())
+	const auto wiconsize = icon
+		? (icon->width() + st.iconPosition.x())
 		: 0;
-	const auto corner = std::max({ header, radius, outline, iconsize });
+	const auto hiconsize = icon
+		? (icon->height() + st.iconPosition.y())
+		: 0;
+	const auto wcorner = std::max({ radius, outline, wiconsize });
+	const auto hcorner = std::max({ header, radius, hiconsize });
 	const auto middle = st::lineWidth;
-	const auto side = 2 * corner + middle;
-	const auto full = QSize(side, side);
+	const auto wside = 2 * wcorner + middle;
+	const auto hside = 2 * hcorner + middle;
+	const auto full = QSize(wside, hside);
 	const auto ratio = style::DevicePixelRatio();
 
 	if (!cache.outlines[1].alpha()) {
@@ -258,32 +261,32 @@ void ValidateQuotePaintCache(
 
 	if (header) {
 		p.setBrush(cache.header);
-		p.setClipRect(outline, 0, side - outline, header);
-		p.drawRoundedRect(0, 0, side, corner + radius, radius, radius);
+		p.setClipRect(outline, 0, wside - outline, header);
+		p.drawRoundedRect(0, 0, wside, hcorner + radius, radius, radius);
 	}
 	if (outline) {
-		const auto rect = QRect(0, 0, outline + radius * 2, side);
+		const auto rect = QRect(0, 0, outline + radius * 2, hside);
 		if (!cache.outline.isNull()) {
 			const auto shift = QPoint(0, st.outlineShift);
 			p.translate(shift);
 			p.setBrush(cache.outline);
-			p.setClipRect(QRect(-shift, QSize(outline, side)));
+			p.setClipRect(QRect(-shift, QSize(outline, hside)));
 			p.drawRoundedRect(rect.translated(-shift), radius, radius);
 			p.translate(-shift);
 		} else {
 			p.setBrush(cache.outlines[0]);
-			p.setClipRect(0, 0, outline, side);
+			p.setClipRect(0, 0, outline, hside);
 			p.drawRoundedRect(rect, radius, radius);
 		}
 	}
 	p.setBrush(cache.bg);
-	p.setClipRect(outline, header, side - outline, side - header);
-	p.drawRoundedRect(0, 0, side, side, radius, radius);
+	p.setClipRect(outline, header, wside - outline, hside - header);
+	p.drawRoundedRect(0, 0, wside, hside, radius, radius);
 	if (icon) {
 		p.setClipping(false);
-		const auto left = side - icon->width() - st.iconPosition.x();
+		const auto left = wside - icon->width() - st.iconPosition.x();
 		const auto top = st.iconPosition.y();
-		icon->paint(p, left, top, side, cache.icon);
+		icon->paint(p, left, top, wside, cache.icon);
 	}
 
 	p.end();
@@ -301,30 +304,31 @@ void FillQuotePaint(
 	const auto iwidth = image.width() / ratio;
 	const auto iheight = image.height() / ratio;
 	const auto imiddle = st::lineWidth;
-	const auto ihalf = (iheight - imiddle) / 2;
+	const auto whalf = (iwidth - imiddle) / 2;
+	const auto hhalf = (iheight - imiddle) / 2;
 	const auto x = rect.left();
 	const auto width = rect.width();
 	auto y = rect.top();
 	auto height = rect.height();
 	if (!parts.skippedTop) {
-		const auto top = std::min(height, ihalf);
+		const auto top = std::min(height, hhalf);
 		p.drawImage(
-			QRect(x, y, ihalf, top),
+			QRect(x, y, whalf, top),
 			image,
-			QRect(0, 0, ihalf * ratio, top * ratio));
+			QRect(0, 0, whalf * ratio, top * ratio));
 		p.drawImage(
-			QRect(x + width - ihalf, y, ihalf, top),
+			QRect(x + width - whalf, y, whalf, top),
 			image,
-			QRect((iwidth - ihalf) * ratio, 0, ihalf * ratio, top * ratio));
-		if (const auto middle = width - 2 * ihalf) {
+			QRect((iwidth - whalf) * ratio, 0, whalf * ratio, top * ratio));
+		if (const auto middle = width - 2 * whalf) {
 			const auto header = st.header;
 			const auto fillHeader = std::min(header, top);
 			if (fillHeader) {
-				p.fillRect(x + ihalf, y, middle, fillHeader, cache.header);
+				p.fillRect(x + whalf, y, middle, fillHeader, cache.header);
 			}
 			if (const auto fillBody = top - fillHeader) {
 				p.fillRect(
-					QRect(x + ihalf, y + fillHeader, middle, fillBody),
+					QRect(x + whalf, y + fillHeader, middle, fillBody),
 					cache.bg);
 			}
 		}
@@ -337,43 +341,43 @@ void FillQuotePaint(
 	}
 	const auto outline = st.outline;
 	if (!parts.skipBottom) {
-		const auto bottom = std::min(height, ihalf);
+		const auto bottom = std::min(height, hhalf);
 		const auto skip = !cache.outline.isNull() ? outline : 0;
 		p.drawImage(
-			QRect(x + skip, y + height - bottom, ihalf - skip, bottom),
+			QRect(x + skip, y + height - bottom, whalf - skip, bottom),
 			image,
 			QRect(
 				skip * ratio,
 				(iheight - bottom) * ratio,
-				(ihalf - skip) * ratio,
+				(whalf - skip) * ratio,
 				bottom * ratio));
 		p.drawImage(
 			QRect(
-				x + width - ihalf,
+				x + width - whalf,
 				y + height - bottom,
-				ihalf,
+				whalf,
 				bottom),
 			image,
 			QRect(
-				(iwidth - ihalf) * ratio,
+				(iwidth - whalf) * ratio,
 				(iheight - bottom) * ratio,
-				ihalf * ratio,
+				whalf * ratio,
 				bottom * ratio));
-		if (const auto middle = width - 2 * ihalf) {
+		if (const auto middle = width - 2 * whalf) {
 			p.fillRect(
-				QRect(x + ihalf, y + height - bottom, middle, bottom),
+				QRect(x + whalf, y + height - bottom, middle, bottom),
 				cache.bg);
 		}
 		if (skip) {
-			if (cache.bottomCorner.size() != QSize(skip, ihalf)) {
+			if (cache.bottomCorner.size() != QSize(skip, whalf)) {
 				cache.bottomCorner = QImage(
-					QSize(skip, ihalf) * ratio,
+					QSize(skip, hhalf) * ratio,
 					QImage::Format_ARGB32_Premultiplied);
 				cache.bottomCorner.setDevicePixelRatio(ratio);
 				cache.bottomCorner.fill(Qt::transparent);
 
 				cache.bottomRounding = QImage(
-					QSize(skip, ihalf) * ratio,
+					QSize(skip, hhalf) * ratio,
 					QImage::Format_ARGB32_Premultiplied);
 				cache.bottomRounding.setDevicePixelRatio(ratio);
 				cache.bottomRounding.fill(Qt::transparent);
@@ -386,18 +390,18 @@ void FillQuotePaint(
 					0,
 					-2 * radius,
 					skip + 2 * radius,
-					ihalf + 2 * radius,
+					hhalf + 2 * radius,
 					radius,
 					radius);
 			}
 			auto q = QPainter(&cache.bottomCorner);
 			const auto skipped = (height - bottom)
-				+ (parts.skippedTop ? int(parts.skippedTop) : ihalf)
+				+ (parts.skippedTop ? int(parts.skippedTop) : hhalf)
 				- st.outlineShift;
 			q.translate(0, -skipped);
 			q.fillRect(0, skipped, skip, bottom, cache.outline);
 			q.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-			q.drawImage(0, skipped + bottom - ihalf, cache.bottomRounding);
+			q.drawImage(0, skipped + bottom - hhalf, cache.bottomRounding);
 			q.end();
 
 			p.drawImage(
@@ -414,7 +418,7 @@ void FillQuotePaint(
 	if (outline) {
 		if (!cache.outline.isNull()) {
 			const auto skipped = st.outlineShift
-				- (parts.skippedTop ? int(parts.skippedTop) : ihalf);
+				- (parts.skippedTop ? int(parts.skippedTop) : hhalf);
 			const auto top = y + skipped;
 			p.translate(x, top);
 			p.fillRect(0, -skipped, outline, height, cache.outline);
