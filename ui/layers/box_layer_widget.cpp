@@ -10,7 +10,6 @@
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/painter.h"
-#include "base/integration.h"
 #include "base/timer.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"
@@ -41,11 +40,6 @@ BoxLayerWidget::BoxLayerWidget(
 , _roundRect(st::boxRadius, st().bg) {
 	_content->setParent(this);
 	_content->setDelegate(this);
-
-	const auto &object = *_content;
-	base::Integration::Instance().setCrashAnnotation(
-		"BoxName",
-		QString::fromUtf8(typeid(object).name()));
 
 	_additionalTitle.changes(
 	) | rpl::start_with_next([=] {
