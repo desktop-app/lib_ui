@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/algorithm.h"
+#include "base/assertion.h"
 
 #include <QtCore/QSize>
 
@@ -33,6 +34,7 @@ void SetScale(int scale);
 template <typename T>
 [[nodiscard]] inline T ConvertScale(T value, int scale) {
 	if (value < 0.) {
+		Assert(!(T(-value) < 0.)); // T = int, value = INT_MIN.
 		return -ConvertScale(-value, scale);
 	}
 	const auto result = T(base::SafeRound(
