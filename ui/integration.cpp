@@ -214,4 +214,8 @@ QString Integration::phraseBotAllowWriteConfirm() {
 	return "Allow";
 }
 
+QString Integration::phraseQuoteHeaderCopy() {
+	return "copy";
+}
+
 } // namespace Ui

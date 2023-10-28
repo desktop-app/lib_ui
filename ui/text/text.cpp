@@ -12,6 +12,7 @@
 #include "ui/text/text_parser.h"
 #include "ui/text/text_renderer.h"
 #include "ui/basic_click_handlers.h"
+#include "ui/integration.h"
 #include "ui/painter.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/style_basic.h"
@@ -1279,7 +1280,8 @@ int String::quoteMinWidth(QuoteDetails *quote) const {
 
 const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 	static const auto kEmptyHeader = QString();
-	static const auto kDefaultHeader = u"code"_q;
+	static const auto kDefaultHeader
+		= Integration::Instance().phraseQuoteHeaderCopy();
 	return (!quote || !quote->pre)
 		? kEmptyHeader
 		: quote->language.isEmpty()

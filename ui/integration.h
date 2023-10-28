@@ -99,6 +99,7 @@ public:
 	[[nodiscard]] virtual QString phraseBotAllowWrite();
 	[[nodiscard]] virtual QString phraseBotAllowWriteTitle();
 	[[nodiscard]] virtual QString phraseBotAllowWriteConfirm();
+	[[nodiscard]] virtual QString phraseQuoteHeaderCopy();
 
 };
 
