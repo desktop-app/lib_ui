@@ -129,7 +129,9 @@ RpWidget *VerticalLayout::insertChild(
 		auto availRowWidth = widthNoMargins()
 			- margin.left()
 			- margin.right();
-		weak->resizeToNaturalWidth(availRowWidth);
+		if (availRowWidth > 0) {
+			weak->resizeToNaturalWidth(availRowWidth);
+		}
 		weak->heightValue(
 		) | rpl::start_with_next_done([=] {
 			if (!_inResize) {
