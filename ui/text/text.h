@@ -199,6 +199,13 @@ void FillQuotePaint(
 	const style::QuoteStyle &st,
 	SkipBlockPaintParts parts = {});
 
+struct HighlightInfoRequest {
+	TextSelection range;
+	QRect interpolateTo;
+	float64 interpolateProgress = 0.;
+	QPainterPath *outPath = nullptr;
+};
+
 struct PaintContext {
 	QPoint position;
 	int outerWidth = 0; // For automatic RTL Ui inversion.
@@ -219,6 +226,8 @@ struct PaintContext {
 
 	TextSelection selection;
 	bool fullWidthSelection = true;
+
+	HighlightInfoRequest *highlight = nullptr;
 
 	int elisionHeight = 0;
 	int elisionRemoveFromEnd = 0;

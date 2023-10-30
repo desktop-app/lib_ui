@@ -197,6 +197,7 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_breakEverywhere = _geometry.breakEverywhere;
 	_spoilerCache = context.spoiler;
 	_selection = context.selection;
+	_highlight = context.highlight;
 	_fullWidthSelection = context.fullWidthSelection;
 	_align = context.align;
 	_cachedNow = context.now;
@@ -244,6 +245,9 @@ void Renderer::enumerate() {
 	const auto guard = gsl::finally([&] {
 		if (_p) {
 			paintSpoilerRects();
+		}
+		if (_highlight) {
+			composeHighlightPath();
 		}
 	});
 
@@ -892,39 +896,39 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 					}
 				}
 				return false;
-			} else if (_p && (_type == TextBlockType::Emoji || _type == TextBlockType::CustomEmoji)) {
+			} else if (_p
+				&& (_type == TextBlockType::Emoji
+					|| _type == TextBlockType::CustomEmoji)) {
 				auto glyphX = x;
 				auto spacesWidth = (si.width - currentBlock->f_width());
 				if (rtl) {
 					glyphX += spacesWidth;
 				}
-				FixedRange fillSelect;
-				FixedRange fillSpoiler;
-				if (_background.selectActiveBlock) {
-					fillSelect = { x, x + si.width };
-				} else if (_localFrom + si.position < _selection.to) {
-					auto chFrom = _str + currentBlock->position();
-					auto chTo = chFrom + ((nextBlock ? nextBlock->position() : _t->_text.size()) - currentBlock->position());
-					if (_localFrom + si.position >= _selection.from) { // could be without space
-						if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || _selection.to >= (chTo - _str)) {
-							fillSelect = { x, x + si.width };
-						} else { // or with space
-							fillSelect = { glyphX, glyphX + currentBlock->f_width() };
-						}
-					} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= _selection.from) {
-						if (rtl) { // rtl space only
-							fillSelect = { x, glyphX };
-						} else { // ltr space only
-							fillSelect = { x + currentBlock->f_width(), x + si.width };
-						}
-					}
+				const auto fillSelect = _background.selectActiveBlock
+					? FixedRange{ x, x + si.width }
+					: findSelectEmojiRange(
+						si,
+						currentBlock,
+						nextBlock,
+						x,
+						glyphX,
+						_selection);
+				fillSelectRange(fillSelect);
+				if (_highlight) {
+					pushHighlightRange(findSelectEmojiRange(
+						si,
+						currentBlock,
+						nextBlock,
+						x,
+						glyphX,
+						_highlight->range));
 				}
+
 				const auto hasSpoiler = _background.spoiler
 					&& (_spoilerOpacity > 0.);
-				if (hasSpoiler) {
-					fillSpoiler = { x, x + si.width };
-				}
-				fillSelectRange(fillSelect);
+				const auto fillSpoiler = hasSpoiler
+					? FixedRange{ x, x + si.width }
+					: FixedRange();
 				const auto opacity = _p->opacity();
 				if (!hasSpoiler || _spoilerOpacity < 1.) {
 					if (hasSpoiler) {
@@ -1058,58 +1062,39 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 			gf.justified = false;
 			InitTextItemWithScriptItem(gf, si);
 
-			auto itemRange = FixedRange{ x, x + itemWidth };
-			auto fillSelect = FixedRange();
-			auto hasSelected = false;
-			auto hasNotSelected = true;
+			const auto itemRange = FixedRange{ x, x + itemWidth };
 			auto selectedRect = QRect();
-			if (_background.selectActiveBlock) {
-				fillSelect = itemRange;
-				fillSelectRange(fillSelect);
-			} else if (_localFrom + itemStart < _selection.to && _localFrom + itemEnd > _selection.from) {
-				hasSelected = true;
-				auto selX = x;
-				auto selWidth = itemWidth;
-				if (_localFrom + itemStart >= _selection.from && _localFrom + itemEnd <= _selection.to) {
-					hasNotSelected = false;
-				} else {
-					selWidth = 0;
-					int itemL = itemEnd - itemStart;
-					int selStart = _selection.from - (_localFrom + itemStart), selEnd = _selection.to - (_localFrom + itemStart);
-					if (selStart < 0) selStart = 0;
-					if (selEnd > itemL) selEnd = itemL;
-					for (int ch = 0, g; ch < selEnd;) {
-						g = logClusters[itemStart - si.position + ch];
-						QFixed gwidth = glyphs.effectiveAdvance(g);
-						// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
-						int ch2 = ch + 1;
-						while ((ch2 < itemL) && (g == logClusters[itemStart - si.position + ch2])) {
-							++ch2;
-						}
-						if (ch2 <= selStart) {
-							selX += gwidth;
-						} else if (ch >= selStart && ch2 <= selEnd) {
-							selWidth += gwidth;
-						} else {
-							int sStart = ch, sEnd = ch2;
-							if (ch < selStart) {
-								sStart = selStart;
-								selX += QFixed(sStart - ch) * gwidth / QFixed(ch2 - ch);
-							}
-							if (ch2 >= selEnd) {
-								sEnd = selEnd;
-								selWidth += QFixed(sEnd - sStart) * gwidth / QFixed(ch2 - ch);
-								break;
-							}
-							selWidth += QFixed(sEnd - sStart) * gwidth / QFixed(ch2 - ch);
-						}
-						ch = ch2;
-					}
-				}
-				if (rtl) selX = x + itemWidth - (selX - x) - selWidth;
-				selectedRect = QRect(selX.toInt(), _y + _yDelta, (selX + selWidth).toInt() - selX.toInt(), _fontHeight);
-				fillSelect = { selX, selX + selWidth };
-				fillSelectRange(fillSelect);
+			auto fillSelect = itemRange;
+			if (!_background.selectActiveBlock) {
+				fillSelect = findSelectTextRange(
+					si,
+					itemStart,
+					itemEnd,
+					x,
+					itemWidth,
+					gf,
+					_selection);
+				const auto from = fillSelect.from.toInt();
+				selectedRect = QRect(
+					from,
+					_y + _yDelta,
+					fillSelect.till.toInt() - from,
+					_fontHeight);
+			}
+			const auto hasSelected = !fillSelect.empty();
+			const auto hasNotSelected = (fillSelect.from != itemRange.from)
+				|| (fillSelect.till != itemRange.till);
+			fillSelectRange(fillSelect);
+
+			if (_highlight) {
+				pushHighlightRange(findSelectTextRange(
+					si,
+					itemStart,
+					itemEnd,
+					x,
+					itemWidth,
+					gf,
+					_highlight->range));
 			}
 			const auto hasSpoiler = _background.spoiler
 				&& (_spoilerOpacity > 0.);
@@ -1200,8 +1185,96 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 
 		x += itemWidth;
 	}
-	fillSpoilerRects();
+	fillRectsFromRanges();
 	return !_elidedLine;
+}
+
+FixedRange Renderer::findSelectEmojiRange(
+		const QScriptItem &si,
+		const Ui::Text::AbstractBlock *currentBlock,
+		const Ui::Text::AbstractBlock *nextBlock,
+		QFixed x,
+		QFixed glyphX,
+		TextSelection selection) const {
+	if (_localFrom + si.position >= selection.to) {
+		return {};
+	}
+	auto chFrom = _str + currentBlock->position();
+	auto chTo = chFrom + ((nextBlock ? nextBlock->position() : _t->_text.size()) - currentBlock->position());
+	if (_localFrom + si.position >= selection.from) { // could be without space
+		if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || selection.to >= (chTo - _str)) {
+			return { x, x + si.width };
+		} else { // or with space
+			return { glyphX, glyphX + currentBlock->f_width() };
+		}
+	} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= selection.from) {
+		const auto rtl = (si.analysis.bidiLevel % 2);
+		if (rtl) { // rtl space only
+			return { x, glyphX };
+		} else { // ltr space only
+			return { x + currentBlock->f_width(), x + si.width };
+		}
+	}
+	return {};
+}
+
+FixedRange Renderer::findSelectTextRange(
+		const QScriptItem &si,
+		int itemStart,
+		int itemEnd,
+		QFixed x,
+		QFixed itemWidth,
+		const QTextItemInt &gf,
+		TextSelection selection) const {
+	if (_localFrom + itemStart >= selection.to
+		|| _localFrom + itemEnd <= selection.from) {
+		return {};
+	}
+	auto selX = x;
+	auto selWidth = itemWidth;
+	const auto rtl = (si.analysis.bidiLevel % 2);
+	if (_localFrom + itemStart < selection.from
+		|| _localFrom + itemEnd > selection.to) {
+		selWidth = 0;
+		const auto itemL = itemEnd - itemStart;
+		const auto selStart = std::max(
+			selection.from - (_localFrom + itemStart),
+			0);
+		const auto selEnd = std::min(
+			selection.to - (_localFrom + itemStart),
+			itemL);
+		const auto lczero = gf.logClusters[0];
+		for (int ch = 0, g; ch < selEnd;) {
+			g = gf.logClusters[ch];
+			const auto gwidth = gf.glyphs.effectiveAdvance(g - lczero);
+			// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
+			int ch2 = ch + 1;
+			while ((ch2 < itemL) && (g == gf.logClusters[ch2])) {
+				++ch2;
+			}
+			if (ch2 <= selStart) {
+				selX += gwidth;
+			} else if (ch >= selStart && ch2 <= selEnd) {
+				selWidth += gwidth;
+			} else {
+				int sStart = ch, sEnd = ch2;
+				if (ch < selStart) {
+					sStart = selStart;
+					selX += QFixed(sStart - ch) * gwidth / QFixed(ch2 - ch);
+				}
+				if (ch2 >= selEnd) {
+					sEnd = selEnd;
+					selWidth += QFixed(sEnd - sStart) * gwidth / QFixed(ch2 - ch);
+					break;
+				}
+				selWidth += QFixed(sEnd - sStart) * gwidth / QFixed(ch2 - ch);
+			}
+			ch = ch2;
+		}
+	}
+	if (rtl) selX = x + itemWidth - (selX - x) - selWidth;
+
+	return { selX, selX + selWidth };
 }
 
 void Renderer::fillSelectRange(FixedRange range) {
@@ -1211,6 +1284,13 @@ void Renderer::fillSelectRange(FixedRange range) {
 	const auto left = range.from.toInt();
 	const auto width = range.till.toInt() - left;
 	_p->fillRect(left, _y + _yDelta, width, _fontHeight, _palette->selectBg);
+}
+
+void Renderer::pushHighlightRange(FixedRange range) {
+	if (range.empty()) {
+		return;
+	}
+	AppendRange(_highlightRanges, range);
 }
 
 void Renderer::pushSpoilerRange(
@@ -1233,12 +1313,13 @@ void Renderer::pushSpoilerRange(
 	}
 }
 
-void Renderer::fillSpoilerRects() {
-	fillSpoilerRects(_spoilerRects, _spoilerRanges);
-	fillSpoilerRects(_spoilerSelectedRects, _spoilerSelectedRanges);
+void Renderer::fillRectsFromRanges() {
+	fillRectsFromRanges(_spoilerRects, _spoilerRanges);
+	fillRectsFromRanges(_spoilerSelectedRects, _spoilerSelectedRanges);
+	fillRectsFromRanges(_highlightRects, _highlightRanges);
 }
 
-void Renderer::fillSpoilerRects(
+void Renderer::fillRectsFromRanges(
 		QVarLengthArray<QRect, kSpoilersRectsSize> &rects,
 		QVarLengthArray<FixedRange> &ranges) {
 	if (ranges.empty()) {
@@ -1302,6 +1383,32 @@ void Renderer::paintSpoilerRects(
 		// Show forgotten spoiler context part.
 		for (const auto &rect : rects) {
 			_p->fillRect(rect, Qt::red);
+		}
+	}
+}
+
+void Renderer::composeHighlightPath() {
+	Expects(_highlight != nullptr);
+	Expects(_highlight->outPath != nullptr);
+
+	if (_highlight->interpolateProgress >= 1.) {
+		_highlight->outPath->addRect(_highlight->interpolateTo);
+	} else if (_highlight->interpolateProgress <= 0.) {
+		for (const auto &rect : _highlightRects) {
+			_highlight->outPath->addRect(rect);
+		}
+	} else {
+		const auto to = _highlight->interpolateTo;
+		const auto progress = _highlight->interpolateProgress;
+		const auto lerp = [=](int from, int to) {
+			return from + (to - from) * progress;
+		};
+		for (const auto &rect : _highlightRects) {
+			_highlight->outPath->addRect(
+				lerp(rect.x(), to.x()),
+				lerp(rect.y(), to.y()),
+				lerp(rect.width(), to.width()),
+				lerp(rect.height(), to.height()));
 		}
 	}
 }
