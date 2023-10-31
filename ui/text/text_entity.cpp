@@ -2111,14 +2111,11 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				closeType(type);
 			}
 		}
-		if (linkChanged && !nextState.link.isEmpty()) {
-			if (Ui::InputField::IsCustomEmojiLink(nextState.link)) {
-				const auto data = Ui::InputField::CustomEmojiEntityData(
-					nextState.link);
-				if (!data.isEmpty()) {
-					openType(EntityType::CustomEmoji, data);
-				}
-			} else if (IsMentionLink(nextState.link)) {
+		const auto openLink = linkChanged && !nextState.link.isEmpty();
+		const auto openCustomEmoji = openLink
+			&& Ui::InputField::IsCustomEmojiLink(nextState.link);
+		if (openLink && !openCustomEmoji) {
+			if (IsMentionLink(nextState.link)) {
 				const auto data = MentionEntityData(nextState.link);
 				if (!data.isEmpty()) {
 					openType(EntityType::MentionName, data);
@@ -2130,6 +2127,13 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		for (const auto type : kInMaskTypes) {
 			if (nextState.has(type) && !state.has(type)) {
 				openType(type, nextState.language);
+			}
+		}
+		if (openCustomEmoji) {
+			const auto data = Ui::InputField::CustomEmojiEntityData(
+				nextState.link);
+			if (!data.isEmpty()) {
+				openType(EntityType::CustomEmoji, data);
 			}
 		}
 		state = nextState;
