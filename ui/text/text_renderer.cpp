@@ -2250,8 +2250,14 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 
 		if (const auto color = block->colorIndex()) {
 			if (color == 1) {
-				_currentPen = &_palette->linkFg->p;
-				_currentPenSelected = &_palette->selectLinkFg->p;
+				if (_quote && _quote->blockquote && _quoteBlockquoteCache) {
+					_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->outlines[0]);
+					_currentPen = &_quoteLinkPenOverride;
+					_currentPenSelected = &_quoteLinkPenOverride;
+				} else {
+					_currentPen = &_palette->linkFg->p;
+					_currentPenSelected = &_palette->selectLinkFg->p;
+				}
 			} else if (color - 1 <= _colors.size()) {
 				_currentPen = _colors[color - 2].pen;
 				_currentPenSelected = _colors[color - 2].penSelected;
@@ -2263,8 +2269,14 @@ void Renderer::applyBlockProperties(const AbstractBlock *block) {
 			_currentPen = &_palette->monoFg->p;
 			_currentPenSelected = &_palette->selectMonoFg->p;
 		} else if (block->linkIndex()) {
-			_currentPen = &_palette->linkFg->p;
-			_currentPenSelected = &_palette->selectLinkFg->p;
+			if (_quote && _quote->blockquote && _quoteBlockquoteCache) {
+				_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->outlines[0]);
+				_currentPen = &_quoteLinkPenOverride;
+				_currentPenSelected = &_quoteLinkPenOverride;
+			} else {
+				_currentPen = &_palette->linkFg->p;
+				_currentPenSelected = &_palette->selectLinkFg->p;
+			}
 		} else {
 			_currentPen = &_originalPen;
 			_currentPenSelected = &_originalPenSelected;

@@ -146,6 +146,7 @@ private:
 	style::align _align = style::al_topleft;
 	QPen _originalPen;
 	QPen _originalPenSelected;
+	QPen _quoteLinkPenOverride;
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
 	struct {
