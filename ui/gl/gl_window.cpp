@@ -24,20 +24,20 @@ namespace {
 
 constexpr auto kUseNativeChild = false;// ::Platform::IsWindows();
 
-class RpWidgetNoRhi : public RpWidget {
+class RpWidgetOpenGL : public RpWidget {
 protected:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
 	std::optional<QPlatformBackingStoreRhiConfig> rhiConfig() const override {
-		return QPlatformBackingStoreRhiConfig();
+		return { QPlatformBackingStoreRhiConfig::OpenGL };
 	}
 #endif // Qt >= 6.4.0
 };
 
-class RpWindowNoRhi : public RpWindow {
+class RpWindowOpenGL : public RpWindow {
 protected:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
 	std::optional<QPlatformBackingStoreRhiConfig> rhiConfig() const override {
-		return QPlatformBackingStoreRhiConfig();
+		return { QPlatformBackingStoreRhiConfig::OpenGL };
 	}
 #endif // Qt >= 6.4.0
 };
@@ -79,7 +79,7 @@ not_null<RpWidget*> Window::widget() const {
 
 std::unique_ptr<RpWindow> Window::createWindow(
 		const Fn<Backend(Capabilities)> &chooseBackend) {
-	std::unique_ptr<RpWindow> result = std::make_unique<RpWindowNoRhi>();
+	std::unique_ptr<RpWindow> result = std::make_unique<RpWindowOpenGL>();
 	if constexpr (!kUseNativeChild) {
 		_backend = chooseBackend(CheckCapabilities(result.get()));
 		if (_backend != Backend::OpenGL) {
@@ -96,7 +96,7 @@ std::unique_ptr<RpWidget> Window::createNativeBodyWrap(
 		return nullptr;
 	}
 	const auto create = [] {
-		auto result = std::make_unique<RpWidgetNoRhi>();
+		auto result = std::make_unique<RpWidgetOpenGL>();
 		result->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
 		result->setAttribute(Qt::WA_NativeWindow);
 		result->setAttribute(Qt::WA_DontCreateNativeAncestors);
