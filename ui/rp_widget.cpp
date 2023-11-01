@@ -29,9 +29,6 @@ public:
 		if (const auto config = q->rhiConfig()) {
 			return *config;
 		}
-		if (::Platform::IsMac10_14OrGreater()) {
-			return { QPlatformBackingStoreRhiConfig::Metal };
-		}
 		// We can't specify the widget here as q_evaluateRhiConfig is called
 		// in QWidgetWindow constructor, while windowHandle is set right after
 		// the constructor is completed
