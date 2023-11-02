@@ -258,6 +258,7 @@ public:
 	Object(not_null<Instance*> instance, Fn<void()> repaint);
 	~Object();
 
+	int width() override;
 	QString entityData() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
@@ -273,10 +274,11 @@ private:
 
 };
 
-class Internal final : public Ui::Text::CustomEmoji {
+class Internal final : public Text::CustomEmoji {
 public:
 	Internal(QString entityData, QImage image, bool colored);
 
+	int width() override;
 	QString entityData() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;

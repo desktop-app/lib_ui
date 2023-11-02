@@ -819,6 +819,10 @@ Object::~Object() {
 	unload();
 }
 
+int Object::width() {
+	return st::emojiSize + 2 * st::emojiPadding;
+}
+
 QString Object::entityData() {
 	return _instance->entityData();
 }
@@ -862,6 +866,10 @@ Internal::Internal(QString entityData, QImage image, bool colored)
 : _entityData(std::move(entityData))
 , _image(std::move(image))
 , _colored(colored) {
+}
+
+int Internal::width() {
+	return _image.width() / _image.devicePixelRatio();
 }
 
 QString Internal::entityData() {

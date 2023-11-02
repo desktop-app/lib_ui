@@ -40,6 +40,7 @@ class CustomEmoji {
 public:
 	virtual ~CustomEmoji() = default;
 
+	[[nodiscard]] virtual int width() = 0;
 	[[nodiscard]] virtual QString entityData() = 0;
 
 	using Context = CustomEmojiPaintContext;
@@ -58,6 +59,7 @@ class ShiftedEmoji final : public CustomEmoji {
 public:
 	ShiftedEmoji(std::unique_ptr<CustomEmoji> wrapped, QPoint shift);
 
+	int width() override;
 	QString entityData() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
@@ -74,6 +76,7 @@ class FirstFrameEmoji final : public CustomEmoji {
 public:
 	explicit FirstFrameEmoji(std::unique_ptr<CustomEmoji> wrapped);
 
+	int width() override;
 	QString entityData() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
@@ -92,6 +95,7 @@ public:
 		int limit,
 		bool stopOnLast = false);
 
+	int width() override;
 	QString entityData() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;

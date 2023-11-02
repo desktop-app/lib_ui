@@ -551,7 +551,7 @@ CustomEmojiBlock::CustomEmojiBlock(
 	linkIndex,
 	colorIndex)
 , _custom(std::move(custom)) {
-	_width = int(st::emojiSize + 2 * st::emojiPadding);
+	_width = _custom->width();
 	_rpadding = 0;
 	for (auto i = length; i != 0;) {
 		auto ch = text[_position + (--i)];

@@ -275,6 +275,7 @@ public:
 		std::vector<int> lineWidths;
 	};
 	struct DimensionsRequest {
+		bool breakEverywhere = false;
 		bool lineWidths = false;
 		int reserve = 0;
 	};
@@ -414,13 +415,17 @@ private:
 		FlagsChangeCallback flagsChangeCallback) const;
 
 	// Template method for countWidth(), countHeight(), countLineWidths().
-	// callback(lineWidth, lineHeight) will be called for all lines with:
-	// QFixed lineWidth, int lineHeight
+	// callback(lineWidth, lineBottom) will be called for all lines with:
+	// QFixed lineWidth, int lineBottom
 	template <typename Callback>
 	void enumerateLines(
 		int w,
 		bool breakEverywhere,
-		Callback callback) const;
+		Callback &&callback) const;
+	template <typename Callback>
+	void enumerateLines(
+		GeometryDescriptor geometry,
+		Callback &&callback) const;
 
 	void insertModifications(int position, int delta);
 	void removeModificationsAfter(int size);

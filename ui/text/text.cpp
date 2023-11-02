@@ -838,13 +838,37 @@ void String::removeModificationsAfter(int size) {
 	}
 }
 
+String::DimensionsResult String::countDimensions(
+		GeometryDescriptor geometry) const {
+	return countDimensions(std::move(geometry), {});
+}
+
+String::DimensionsResult String::countDimensions(
+		GeometryDescriptor geometry,
+		DimensionsRequest request) const {
+	auto result = DimensionsResult();
+	if (request.lineWidths && request.reserve) {
+		result.lineWidths.reserve(request.reserve);
+	}
+	enumerateLines(geometry, [&](QFixed lineWidth, int lineBottom) {
+		const auto width = lineWidth.ceil().toInt();
+		if (request.lineWidths) {
+			result.lineWidths.push_back(width);
+		}
+		result.width = std::max(result.width, width);
+		result.height = lineBottom;
+	});
+	return result;
+
+}
+
 int String::countWidth(int width, bool breakEverywhere) const {
 	if (QFixed(width) >= _maxWidth) {
 		return _maxWidth;
 	}
 
 	QFixed maxLineWidth = 0;
-	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineHeight) {
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int) {
 		if (lineWidth > maxLineWidth) {
 			maxLineWidth = lineWidth;
 		}
@@ -857,8 +881,8 @@ int String::countHeight(int width, bool breakEverywhere) const {
 		return _minHeight;
 	}
 	int result = 0;
-	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineHeight) {
-		result += lineHeight;
+	enumerateLines(width, breakEverywhere, [&](auto, int lineBottom) {
+		result = lineBottom;
 	});
 	return result;
 }
@@ -874,7 +898,7 @@ std::vector<int> String::countLineWidths(
 	if (options.reserve) {
 		result.reserve(options.reserve);
 	}
-	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int lineHeight) {
+	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int) {
 		result.push_back(lineWidth.ceil().toInt());
 	});
 	return result;
@@ -884,18 +908,85 @@ template <typename Callback>
 void String::enumerateLines(
 		int w,
 		bool breakEverywhere,
-		Callback callback) const {
-	const auto width = QFixed(std::max(w, _minResizeWidth));
+		Callback &&callback) const {
+	if (isEmpty()) {
+		return;
+	}
+	const auto width = std::max(w, _minResizeWidth);
+	auto g = SimpleGeometry(width, _st->font->height, 0, 0, false, false);
+	g.breakEverywhere = breakEverywhere;
+	enumerateLines(g, std::forward<Callback>(callback));
+}
 
-	auto qindex = quoteIndex(nullptr);
-	auto quote = quoteByIndex(qindex);
-	auto qpadding = quotePadding(quote);
-	auto widthLeft = width - qpadding.left() - qpadding.right();
+template <typename Callback>
+void String::enumerateLines(
+		GeometryDescriptor geometry,
+		Callback &&callback) const {
+	auto qindex = 0;
+	auto quote = (QuoteDetails*)nullptr;
+	auto qpadding = QMargins();
+
+	auto top = 0;
+	auto lineLeft = 0;
+	auto lineWidth = 0;
+	auto widthLeft = QFixed(0);
+	auto paragraphWidthRemaining = QFixed();
+	const auto initNextLine = [&] {
+		const auto line = geometry.layout({
+			.left = 0,
+			.top = top,
+			.width = paragraphWidthRemaining.ceil().toInt(),
+		});
+		lineLeft = line.left;
+		lineWidth = line.width;
+		if (quote && quote->maxWidth < lineWidth) {
+			const auto delta = lineWidth - quote->maxWidth;
+			lineWidth = quote->maxWidth;
+		}
+		widthLeft = lineWidth - qpadding.left() - qpadding.right();
+	};
+	const auto initNextParagraph = [&](
+			TextBlocks::const_iterator i,
+			int16 paragraphIndex) {
+		paragraphWidthRemaining = 0;
+		if (qindex != paragraphIndex) {
+			top += qpadding.bottom();
+			qindex = paragraphIndex;
+			quote = quoteByIndex(qindex);
+			qpadding = quotePadding(quote);
+			top += qpadding.top();
+			qpadding.setTop(0);
+		}
+		const auto e = _blocks.cend();
+		if (i != e) {
+			auto last_rPadding = QFixed(0);
+			auto last_rBearing = QFixed(0);
+			for (; i != e; ++i) {
+				if ((*i)->type() == TextBlockType::Newline) {
+					break;
+				}
+				const auto rBearing = (*i)->f_rbearing();
+				paragraphWidthRemaining += last_rBearing
+					+ last_rPadding
+					+ (*i)->f_width()
+					- rBearing;
+				last_rBearing = rBearing;
+			}
+		}
+		paragraphWidthRemaining += qpadding.left() + qpadding.right();
+		initNextLine();
+	};
+
+	if ((*_blocks.cbegin())->type() != TextBlockType::Newline) {
+		initNextParagraph(_blocks.cbegin(), _startQuoteIndex);
+	}
+
 	auto lineHeight = 0;
 	auto last_rBearing = QFixed();
 	auto last_rPadding = QFixed();
 	bool longWordLine = true;
-	for (auto &b : _blocks) {
+	for (auto i = _blocks.cbegin(); i != _blocks.cend(); ++i) {
+		const auto &b = *i;
 		auto _btype = b->type();
 		const auto blockHeight = CountBlockHeight(b.get(), _st);
 
@@ -903,25 +994,16 @@ void String::enumerateLines(
 			if (!lineHeight) {
 				lineHeight = blockHeight;
 			}
-			lineHeight += qpadding.top();
-			const auto index = quoteIndex(b.get());
-			if (qindex != index) {
+			const auto index = b.unsafe<const NewlineBlock>().quoteIndex();
+			const auto changed = (qindex != index);
+			if (changed) {
 				lineHeight += qpadding.bottom();
-				qindex = index;
-				quote = quoteByIndex(qindex);
-				qpadding = quotePadding(quote);
-			} else {
-				qpadding.setTop(0);
 			}
 
-			callback(width - widthLeft, lineHeight);
-
+			callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
 			lineHeight = 0;
-			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
-			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
-			widthLeft = width - qpadding.left() - qpadding.right();
-			// - (b->f_width() - last_rBearing); (0 for newline)
 
+			initNextParagraph(i + 1, index);
 			longWordLine = true;
 			continue;
 		}
@@ -974,23 +1056,23 @@ void String::enumerateLines(
 					continue;
 				}
 
-				if (f != j && !breakEverywhere) {
+				if (f != j && !geometry.breakEverywhere) {
 					j = f;
 					widthLeft = f_wLeft;
 					lineHeight = f_lineHeight;
 					j_width = (j->f_width() >= 0) ? j->f_width() : -j->f_width();
 				}
 
-				callback(width - widthLeft, lineHeight + qpadding.top());
-				qpadding.setTop(0);
+				callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
 
 				lineHeight = qMax(0, blockHeight);
+
+				paragraphWidthRemaining -= (lineWidth - widthLeft) - last_rPadding + last_rBearing;
+				initNextLine();
+
 				last_rBearing = j->f_rbearing();
 				last_rPadding = j->f_rpadding();
-				widthLeft = width
-					- qpadding.left()
-					- qpadding.right()
-					- (j_width - last_rBearing);
+				widthLeft -= j_width - last_rBearing;
 
 				longWordLine = !wordEndsHere;
 				f = j + 1;
@@ -1000,24 +1082,23 @@ void String::enumerateLines(
 			continue;
 		}
 
-		callback(width - widthLeft, lineHeight + qpadding.top());
-		qpadding.setTop(0);
+		callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
 
 		lineHeight = qMax(0, blockHeight);
+		paragraphWidthRemaining -= (lineWidth - widthLeft) - last_rPadding + last_rBearing;
+		initNextLine();
+
 		last_rBearing = b__f_rbearing;
 		last_rPadding = b->f_rpadding();
-		widthLeft = width
-			- qpadding.left()
-			- qpadding.right()
-			- (b->f_width() - last_rBearing);
+		widthLeft -= b->f_width() - last_rBearing;
 
 		longWordLine = true;
 		continue;
 	}
-	if (widthLeft < width) {
+	if (widthLeft < lineWidth) {
 		callback(
-			width - widthLeft,
-			lineHeight + qpadding.top() + qpadding.bottom());
+			lineLeft + lineWidth - widthLeft,
+			top + lineHeight + qpadding.bottom());
 	}
 }
 

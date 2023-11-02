@@ -19,6 +19,10 @@ ShiftedEmoji::ShiftedEmoji(
 , _shift(shift) {
 }
 
+int ShiftedEmoji::width() {
+	return _wrapped->width();
+}
+
 QString ShiftedEmoji::entityData() {
 	return _wrapped->entityData();
 }
@@ -43,6 +47,10 @@ bool ShiftedEmoji::readyInDefaultState() {
 
 FirstFrameEmoji::FirstFrameEmoji(std::unique_ptr<CustomEmoji> wrapped)
 : _wrapped(std::move(wrapped)) {
+}
+
+int FirstFrameEmoji::width() {
+	return _wrapped->width();
 }
 
 QString FirstFrameEmoji::entityData() {
@@ -75,6 +83,10 @@ LimitedLoopsEmoji::LimitedLoopsEmoji(
 : _wrapped(std::move(wrapped))
 , _limit(limit)
 , _stopOnLast(stopOnLast) {
+}
+
+int LimitedLoopsEmoji::width() {
+	return _wrapped->width();
 }
 
 QString LimitedLoopsEmoji::entityData() {

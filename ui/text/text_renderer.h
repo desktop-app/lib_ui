@@ -169,7 +169,6 @@ private:
 	QVarLengthArray<QRect, kSpoilersRectsSize> _highlightRects;
 
 	std::optional<CustomEmoji::Context> _customEmojiContext;
-	int _customEmojiSize = 0;
 	int _customEmojiSkip = 0;
 	int _indexOfElidedBlock = -1; // For spoilers.
 

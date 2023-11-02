@@ -949,14 +949,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
 						const auto color = (selected
 							? _currentPenSelected
 							: _currentPen)->color();
-						if (!_customEmojiSize) {
-							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
-							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+						if (!_customEmojiContext) {
 							_customEmojiContext = CustomEmoji::Context{
 								.textColor = color,
 								.now = now(),
 								.paused = _pausedEmoji,
 							};
+							_customEmojiSkip = (st::emojiSize
+								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
 						} else {
 							_customEmojiContext->textColor = color;
 						}
