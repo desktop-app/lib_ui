@@ -273,4 +273,21 @@ private:
 
 };
 
+class Internal final : public Ui::Text::CustomEmoji {
+public:
+	Internal(QString entityData, QImage image, bool colored);
+
+	QString entityData() override;
+	void paint(QPainter &p, const Context &context) override;
+	void unload() override;
+	bool ready() override;
+	bool readyInDefaultState() override;
+
+private:
+	const QString _entityData;
+	const QImage _image;
+	const bool _colored = false;
+
+};
+
 } // namespace Ui::CustomEmoji

@@ -858,4 +858,33 @@ void Object::repaint() {
 	_repaint();
 }
 
+Internal::Internal(QString entityData, QImage image, bool colored)
+: _entityData(std::move(entityData))
+, _image(std::move(image))
+, _colored(colored) {
+}
+
+QString Internal::entityData() {
+	return _entityData;
+}
+
+void Internal::paint(QPainter &p, const Context &context) {
+	context.internal.colorized = _colored;
+
+	const auto size = _image.size() / style::DevicePixelRatio();
+	const auto rect = QRect(context.position, size);
+	PaintScaledImage(p, rect, { &_image }, context);
+}
+
+void Internal::unload() {
+}
+
+bool Internal::ready() {
+	return true;
+}
+
+bool Internal::readyInDefaultState() {
+	return true;
+}
+
 } // namespace Ui::CustomEmoji
