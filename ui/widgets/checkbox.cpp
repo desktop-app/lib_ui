@@ -807,8 +807,10 @@ Text::StateResult Checkbox::getTextState(const QPoint &m) const {
 		+ _st.textPosition.x();
 	const auto availableTextWidth = std::max(width() - textSkip, 1);
 	const auto textTop = _st.margin.top() + _st.textPosition.y();
+	auto request = Ui::Text::StateRequestElided();
+	request.lines = _allowTextLines;
 	return !_allowTextLines
-		? _text.getStateElided(
+		? _text.getState(
 			m - QPoint(textSkip, textTop),
 			availableTextWidth,
 			{})
@@ -816,7 +818,7 @@ Text::StateResult Checkbox::getTextState(const QPoint &m) const {
 			m - QPoint(textSkip, textTop),
 			availableTextWidth,
 			width(),
-			{});
+			request);
 }
 
 QPixmap Checkbox::grabCheckCache() const {
