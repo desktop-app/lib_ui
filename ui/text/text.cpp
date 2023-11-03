@@ -922,6 +922,9 @@ template <typename Callback>
 void String::enumerateLines(
 		GeometryDescriptor geometry,
 		Callback &&callback) const {
+	if (isEmpty()) {
+		return;
+	}
 	auto qindex = 0;
 	auto quote = (QuoteDetails*)nullptr;
 	auto qpadding = QMargins();
