@@ -276,7 +276,11 @@ private:
 
 class Internal final : public Text::CustomEmoji {
 public:
-	Internal(QString entityData, QImage image, bool colored);
+	Internal(
+		QString entityData,
+		QImage image,
+		QMargins padding,
+		bool colored);
 
 	int width() override;
 	QString entityData() override;
@@ -288,6 +292,7 @@ public:
 private:
 	const QString _entityData;
 	const QImage _image;
+	const QMargins _padding;
 	const bool _colored = false;
 
 };
