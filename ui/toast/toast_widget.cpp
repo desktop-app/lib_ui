@@ -44,7 +44,7 @@ Widget::Widget(QWidget *parent, const Config &config)
 , _adaptive(config.adaptive)
 , _maxTextWidth(widthWithoutPadding(_st->maxWidth))
 , _maxTextHeight(
-	config.st->style.font->height * (_multiline ? config.maxLines : 1))
+	_st->style.font->height * (_multiline ? config.maxLines : 1))
 , _text(_multiline ? widthWithoutPadding(config.st->minWidth) : kQFixedMax)
 , _clickHandlerFilter(config.filter) {
 	const auto toastOptions = TextParseOptions{
@@ -200,7 +200,9 @@ void Widget::mouseMoveEvent(QMouseEvent *e) {
 	}
 	const auto point = e->pos()
 		- QPoint(_st->padding.left(), _textTop);
-	const auto state = _text.getStateElided(point, _textWidth + 1);
+	auto request = Ui::Text::StateRequestElided();
+	request.lines = (_maxTextHeight / _st->style.font->height);
+	const auto state = _text.getStateElided(point, _textWidth + 1, request);
 	const auto was = ClickHandler::getActive();
 	if (was != state.link) {
 		ClickHandler::setActive(state.link);
