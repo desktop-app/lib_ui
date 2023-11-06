@@ -937,7 +937,6 @@ void String::enumerateLines(
 		lineWidth = line.width;
 		lineElided = line.elided;
 		if (quote && quote->maxWidth < lineWidth) {
-			const auto delta = lineWidth - quote->maxWidth;
 			lineWidth = quote->maxWidth;
 		}
 		widthLeft = lineWidth - qpadding.left() - qpadding.right();
