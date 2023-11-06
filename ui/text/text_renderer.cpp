@@ -524,6 +524,11 @@ void Renderer::initNextParagraph(
 	} else {
 		_lineStart = _paragraphStart = (*i)->position();
 		_lineStartBlock = i - _t->_blocks.cbegin();
+		for (; i != e; ++i) {
+			if ((*i)->type() == TextBlockType::Newline) {
+				break;
+			}
+		}
 		_paragraphLength = ((i == e)
 			? _t->_text.size()
 			: (*i)->position())
