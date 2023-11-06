@@ -189,10 +189,10 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 		? context.geometry
 		: SimpleGeometry(
 			context.availableWidth,
-			_t->_st->font->height,
-			context.elisionHeight,
+			(context.elisionLines
+				? context.elisionLines
+				: (context.elisionHeight / _t->_st->font->height)),
 			context.elisionRemoveFromEnd,
-			context.elisionOneLine,
 			context.elisionBreakEverywhere);
 	_breakEverywhere = _geometry.breakEverywhere;
 	_spoilerCache = context.spoiler;
@@ -213,6 +213,8 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 }
 
 void Renderer::enumerate() {
+	Expects(!_geometry.outElided);
+
 	_blocksSize = _t->_blocks.size();
 	_str = _t->_text.unicode();
 
@@ -356,7 +358,6 @@ void Renderer::enumerate() {
 				_lineHeight = qMax(0, blockHeight);
 				_lineStart = j->position();
 				_lineStartBlock = blockIndex;
-				_paragraphWidthRemaining -= (_lineWidth - _wLeft) - _last_rPadding + last_rBearing;
 				initNextLine();
 
 				last_rBearing = j->f_rbearing();
@@ -385,7 +386,6 @@ void Renderer::enumerate() {
 		_lineHeight = qMax(0, blockHeight);
 		_lineStart = b->position();
 		_lineStartBlock = blockIndex;
-		_paragraphWidthRemaining -= (_lineWidth - _wLeft) - _last_rPadding + last_rBearing;
 		initNextLine();
 
 		last_rBearing = b__f_rbearing;
@@ -506,7 +506,6 @@ void Renderer::initNextParagraph(
 		? style::LayoutDirection()
 		: direction;
 	_paragraphStartBlock = i;
-	_paragraphWidthRemaining = 0;
 	if (_quoteIndex != paragraphIndex) {
 		_y += _quotePadding.bottom();
 		_quoteIndex = paragraphIndex;
@@ -525,39 +524,18 @@ void Renderer::initNextParagraph(
 	} else {
 		_lineStart = _paragraphStart = (*i)->position();
 		_lineStartBlock = i - _t->_blocks.cbegin();
-
-		auto last_rPadding = QFixed(0);
-		auto last_rBearing = QFixed(0);
-		for (; i != e; ++i) {
-			if ((*i)->type() == TextBlockType::Newline) {
-				break;
-			}
-			const auto rBearing = (*i)->f_rbearing();
-			_paragraphWidthRemaining += last_rBearing
-				+ last_rPadding
-				+ (*i)->f_width()
-				- rBearing;
-			last_rBearing = rBearing;
-		}
 		_paragraphLength = ((i == e)
 			? _t->_text.size()
 			: (*i)->position())
 			- _paragraphStart;
 	}
 	_paragraphAnalysis.resize(0);
-	_paragraphWidthRemaining += _quotePadding.left() + _quotePadding.right();
 	initNextLine();
 }
 
 void Renderer::initNextLine() {
-	const auto line = _geometry.layout({
-		.left = 0,
-		.top = (_y - _startTop),
-		.width = _paragraphWidthRemaining.ceil().toInt(),
-	});
-	_quoteLineTop += _startTop + line.top - _y;
+	const auto line = _geometry.layout(_lineIndex++);
 	_x = _startLeft + line.left + _quotePadding.left();
-	_y = _startTop + line.top;
 	_startLineWidth = line.width;
 	_quoteShift = 0;
 	if (_quote && _quote->maxWidth < _startLineWidth) {

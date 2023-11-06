@@ -146,23 +146,21 @@ struct SpecialColor {
 
 struct LineGeometry {
 	int left = 0;
-	int top = 0;
 	int width = 0;
 	bool elided = false;
 };
 struct GeometryDescriptor {
-	Fn<LineGeometry(LineGeometry line)> layout;
+	Fn<LineGeometry(int line)> layout;
 	bool breakEverywhere = false;
+	bool *outElided = nullptr;
 };
 
 [[nodiscard]] not_null<SpoilerMessCache*> DefaultSpoilerCache();
 
 [[nodiscard]] GeometryDescriptor SimpleGeometry(
 	int availableWidth,
-	int fontHeight,
-	int elisionHeight,
+	int elisionLines,
 	int elisionRemoveFromEnd,
-	bool elisionOneLine,
 	bool elisionBreakEverywhere);
 
 constexpr auto kMaxQuoteOutlines = 3;
@@ -230,8 +228,8 @@ struct PaintContext {
 	HighlightInfoRequest *highlight = nullptr;
 
 	int elisionHeight = 0;
+	int elisionLines = 0;
 	int elisionRemoveFromEnd = 0;
-	bool elisionOneLine = false;
 	bool elisionBreakEverywhere = false;
 };
 

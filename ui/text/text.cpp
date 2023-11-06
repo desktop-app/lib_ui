@@ -142,47 +142,36 @@ not_null<SpoilerMessCache*> DefaultSpoilerCache() {
 
 GeometryDescriptor SimpleGeometry(
 		int availableWidth,
-		int fontHeight,
-		int elisionHeight,
+		int elisionLines,
 		int elisionRemoveFromEnd,
-		bool elisionOneLine,
 		bool elisionBreakEverywhere) {
 	constexpr auto wrap = [](
-			Fn<LineGeometry(LineGeometry)> layout,
+			Fn<LineGeometry(int line)> layout,
 			bool breakEverywhere = false) {
 		return GeometryDescriptor{ std::move(layout), breakEverywhere };
 	};
 
 	// Try to minimize captured values (to minimize Fn allocations).
-	if (!elisionOneLine && !elisionHeight) {
-		return wrap([=](LineGeometry line) {
-			line.width = availableWidth;
-			return line;
+	if (!elisionLines) {
+		return wrap([=](int line) {
+			return LineGeometry{ .width = availableWidth };
 		});
-	} else if (elisionOneLine) {
-		return wrap([=](LineGeometry line) {
-			line.elided = true;
-			line.width = availableWidth - elisionRemoveFromEnd;
-			return line;
-		}, elisionBreakEverywhere);
 	} else if (!elisionRemoveFromEnd) {
-		return wrap([=](LineGeometry line) {
-			if (line.top + fontHeight * 2 > elisionHeight) {
-				line.elided = true;
-			}
-			line.width = availableWidth;
-			return line;
-		});
+		return wrap([=](int line) {
+			return LineGeometry{
+				.width = availableWidth,
+				.elided = (line + 1 >= elisionLines),
+			};
+		}, elisionBreakEverywhere);
 	} else {
-		return wrap([=](LineGeometry line) {
-			if (line.top + fontHeight * 2 > elisionHeight) {
-				line.elided = true;
-				line.width = availableWidth - elisionRemoveFromEnd;
-			} else {
-				line.width = availableWidth;
-			}
-			return line;
-		});
+		return wrap([=](int line) {
+			const auto elided = (line + 1 >= elisionLines);
+			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
+			return LineGeometry{
+				.width = availableWidth - removeFromEnd,
+				.elided = elided,
+			};
+		}, elisionBreakEverywhere);
 	}
 };
 
@@ -913,7 +902,7 @@ void String::enumerateLines(
 		return;
 	}
 	const auto width = std::max(w, _minResizeWidth);
-	auto g = SimpleGeometry(width, _st->font->height, 0, 0, false, false);
+	auto g = SimpleGeometry(width, 0, 0, false);
 	g.breakEverywhere = breakEverywhere;
 	enumerateLines(g, std::forward<Callback>(callback));
 }
@@ -925,6 +914,13 @@ void String::enumerateLines(
 	if (isEmpty()) {
 		return;
 	}
+
+	const auto withElided = [&](bool elided) {
+		if (geometry.outElided) {
+			*geometry.outElided = elided;
+		}
+	};
+
 	auto qindex = 0;
 	auto quote = (QuoteDetails*)nullptr;
 	auto qpadding = QMargins();
@@ -932,16 +928,14 @@ void String::enumerateLines(
 	auto top = 0;
 	auto lineLeft = 0;
 	auto lineWidth = 0;
+	auto lineElided = false;
 	auto widthLeft = QFixed(0);
-	auto paragraphWidthRemaining = QFixed();
+	auto lineIndex = 0;
 	const auto initNextLine = [&] {
-		const auto line = geometry.layout({
-			.left = 0,
-			.top = top,
-			.width = paragraphWidthRemaining.ceil().toInt(),
-		});
+		const auto line = geometry.layout(lineIndex++);
 		lineLeft = line.left;
 		lineWidth = line.width;
+		lineElided = line.elided;
 		if (quote && quote->maxWidth < lineWidth) {
 			const auto delta = lineWidth - quote->maxWidth;
 			lineWidth = quote->maxWidth;
@@ -951,7 +945,6 @@ void String::enumerateLines(
 	const auto initNextParagraph = [&](
 			TextBlocks::const_iterator i,
 			int16 paragraphIndex) {
-		paragraphWidthRemaining = 0;
 		if (qindex != paragraphIndex) {
 			top += qpadding.bottom();
 			qindex = paragraphIndex;
@@ -960,23 +953,6 @@ void String::enumerateLines(
 			top += qpadding.top();
 			qpadding.setTop(0);
 		}
-		const auto e = _blocks.cend();
-		if (i != e) {
-			auto last_rPadding = QFixed(0);
-			auto last_rBearing = QFixed(0);
-			for (; i != e; ++i) {
-				if ((*i)->type() == TextBlockType::Newline) {
-					break;
-				}
-				const auto rBearing = (*i)->f_rbearing();
-				paragraphWidthRemaining += last_rBearing
-					+ last_rPadding
-					+ (*i)->f_width()
-					- rBearing;
-				last_rBearing = rBearing;
-			}
-		}
-		paragraphWidthRemaining += qpadding.left() + qpadding.right();
 		initNextLine();
 	};
 
@@ -1004,6 +980,9 @@ void String::enumerateLines(
 			}
 
 			callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+			if (lineElided) {
+				return withElided(true);
+			}
 			lineHeight = 0;
 
 			initNextParagraph(i + 1, index);
@@ -1059,7 +1038,9 @@ void String::enumerateLines(
 					continue;
 				}
 
-				if (f != j && !geometry.breakEverywhere) {
+				if (lineElided) {
+					lineHeight = qMax(lineHeight, blockHeight);
+				} else if (f != j && !geometry.breakEverywhere) {
 					j = f;
 					widthLeft = f_wLeft;
 					lineHeight = f_lineHeight;
@@ -1067,10 +1048,12 @@ void String::enumerateLines(
 				}
 
 				callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+				if (lineElided) {
+					return withElided(true);
+				}
 
 				lineHeight = qMax(0, blockHeight);
 
-				paragraphWidthRemaining -= (lineWidth - widthLeft) - last_rPadding + last_rBearing;
 				initNextLine();
 
 				last_rBearing = j->f_rbearing();
@@ -1085,10 +1068,15 @@ void String::enumerateLines(
 			continue;
 		}
 
+		if (lineElided) {
+			lineHeight = qMax(lineHeight, blockHeight);
+		}
 		callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+		if (lineElided) {
+			return withElided(true);
+		}
 
 		lineHeight = qMax(0, blockHeight);
-		paragraphWidthRemaining -= (lineWidth - widthLeft) - last_rPadding + last_rBearing;
 		initNextLine();
 
 		last_rBearing = b__f_rbearing;
@@ -1103,6 +1091,7 @@ void String::enumerateLines(
 			lineLeft + lineWidth - widthLeft,
 			top + lineHeight + qpadding.bottom());
 	}
+	return withElided(false);
 }
 
 void String::draw(QPainter &p, const PaintContext &context) const {
@@ -1144,11 +1133,8 @@ void String::drawElided(Painter &p, int32 left, int32 top, int32 w, int32 lines,
 		.palette = &p.textPalette(),
 		.paused = p.inactive(),
 		.selection = selection,
-		.elisionHeight = ((!isEmpty() && lines > 1)
-			? (lines * _st->font->height)
-			: 0),
+		.elisionLines = lines,
 		.elisionRemoveFromEnd = removeFromEnd,
-		.elisionOneLine = (lines == 1),
 	});
 }
 
@@ -1185,7 +1171,7 @@ StateResult String::getState(QPoint point, int width, StateRequest request) cons
 	}
 	return Renderer(*this).getState(
 		point,
-		SimpleGeometry(width, _st->font->height, 0, 0, false, false),
+		SimpleGeometry(width, 0, 0, false),
 		request);
 }
 
@@ -1199,10 +1185,8 @@ StateResult String::getStateElided(QPoint point, int width, StateRequestElided r
 	}
 	return Renderer(*this).getState(point, SimpleGeometry(
 		width,
-		_st->font->height,
-		(request.lines > 1) ? (request.lines * _st->font->height) : 0,
+		request.lines,
 		request.removeFromEnd,
-		(request.lines == 1),
 		request.flags & StateRequest::Flag::BreakEverywhere
 	), static_cast<StateRequest>(request));
 }

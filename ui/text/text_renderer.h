@@ -179,7 +179,6 @@ private:
 	int _paragraphLength = 0;
 	bool _paragraphHasBidi = false;
 	QVarLengthArray<QScriptAnalysis, 4096> _paragraphAnalysis;
-	QFixed _paragraphWidthRemaining = 0;
 
 	// current quote data
 	QuoteDetails *_quote = nullptr;
@@ -203,6 +202,7 @@ private:
 	QFixed _x, _wLeft, _last_rPadding;
 	int _y = 0;
 	int _yDelta = 0;
+	int _lineIndex = 0;
 	int _lineHeight = 0;
 	int _fontHeight = 0;
 	bool _breakEverywhere = false;
