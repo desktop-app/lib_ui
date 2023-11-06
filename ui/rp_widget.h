@@ -226,7 +226,7 @@ public:
 
 	// Updates the area that is visible inside the scroll container.
 	void setVisibleTopBottom(int visibleTop, int visibleBottom) {
-		auto max = height();
+		const auto max = std::max(height(), 0);
 		visibleTopBottomUpdated(
 			std::clamp(visibleTop, 0, max),
 			std::clamp(visibleBottom, 0, max));
