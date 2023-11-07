@@ -28,6 +28,7 @@ void UpdateOverlayed(not_null<QWidget*> widget);
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus = true);
 void IgnoreAllActivation(not_null<QWidget*> widget);
 void ClearTransientParent(not_null<QWidget*> widget);
+void AcceptAllMouseInput(not_null<QWidget*> widget);
 
 void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio);
 

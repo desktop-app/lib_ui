@@ -490,6 +490,7 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 		PostponeCall(this, [=] {
 			showChildren();
 			_animatePhase = AnimatePhase::Shown;
+			Platform::AcceptAllMouseInput(this);
 		});
 	} else {
 		paintBg(p);
