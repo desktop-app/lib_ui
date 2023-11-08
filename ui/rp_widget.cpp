@@ -23,7 +23,9 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
 	QPlatformBackingStoreRhiConfig rhiConfig() const override {
 		const auto q = static_cast<TWidget*>(q_ptr);
-		if (!q->testAttribute(Qt::WA_WState_Created)) {
+		if (!q->testAttribute(Qt::WA_WState_Created)
+			|| (!q->testAttribute(Qt::WA_NativeWindow)
+				&& !q->isWindow())) {
 			return QWidgetPrivate::rhiConfig();
 		}
 		if (const auto config = q->rhiConfig()) {
