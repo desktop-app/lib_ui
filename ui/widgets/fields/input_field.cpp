@@ -33,7 +33,12 @@
 
 #ifdef Q_OS_WIN
 #include <WinUser.h>
-#endif // Q_OS_WIN
+#elif !defined DESKTOP_APP_DISABLE_X11_INTEGRATION // Q_OS_WIN
+#include "base/platform/linux/base_linux_xcb_utilities.h"
+
+#include <xcb/xcb_keysyms.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
+#endif // !Q_OS_WIN && !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 namespace Ui {
 namespace {
@@ -1007,6 +1012,14 @@ private:
 		return static_cast<InputField*>(parentWidget());
 	}
 	friend class InputField;
+
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	base::Platform::XCB::ObjectWithConnection<
+		xcb_key_symbols_t,
+		xcb_key_symbols_alloc,
+		xcb_key_symbols_free
+	> _xcbKeySymbols;
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 };
 
@@ -2916,14 +2929,25 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 	const auto matchesCtrlShiftDot = [&] {
 		// We can't match ctrl+shift+. with QKeySequence because
 		// shift+. gives us '>' and ctrl+shift+> is not the same.
-		// So we check by nativeVirtualKey instead.
+		// So we check with native code instead.
 #ifdef Q_OS_WIN
 		return e->modifiers().testFlag(Qt::ControlModifier)
 			&& e->modifiers().testFlag(Qt::ShiftModifier)
 			&& (e->nativeVirtualKey() == VK_OEM_PERIOD);
-#else // Q_OS_WIN
+#elif !defined DESKTOP_APP_DISABLE_X11_INTEGRATION // Q_OS_WIN
+		if (!_inner->_xcbKeySymbols) {
+			return false;
+		}
+		const auto keysym = xcb_key_symbols_get_keysym(
+			_inner->_xcbKeySymbols.get(),
+			e->nativeScanCode(),
+			0);
+		return e->modifiers().testFlag(Qt::ControlModifier)
+			&& e->modifiers().testFlag(Qt::ShiftModifier)
+			&& (keysym == XKB_KEY_period);
+#else // !Q_OS_WIN && !DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return false;
-#endif // !Q_OS_WIN
+#endif // !Q_OS_WIN && DESKTOP_APP_DISABLE_X11_INTEGRATION
 	};
 	if (e == QKeySequence::Bold) {
 		toggleSelectionMarkdown(kTagBold);
