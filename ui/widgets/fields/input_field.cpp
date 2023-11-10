@@ -2910,12 +2910,16 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 		return sequence.matches(events) == QKeySequence::ExactMatch;
 	};
 	const auto matchesCtrlShiftDot = [&] {
+#ifdef Q_OS_WIN
 		// We can't match ctrl+shift+. with QKeySequence because
 		// shift+. gives us '>' and ctrl+shift+> is not the same.
 		// So we check by nativeVirtualKey instead.
 		return e->modifiers().testFlag(Qt::ControlModifier)
 			&& e->modifiers().testFlag(Qt::ShiftModifier)
-			&& (e->nativeVirtualKey() == 190);
+			&& (e->nativeVirtualKey() == 190); // VK_OEM_PERIOD
+#else // Q_OS_WIN
+		return false;
+#endif // Q_OS_WIN
 	};
 	if (e == QKeySequence::Bold) {
 		toggleSelectionMarkdown(kTagBold);
