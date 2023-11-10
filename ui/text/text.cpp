@@ -787,7 +787,8 @@ bool String::removeSkipBlock() {
 void String::insertModifications(int position, int delta) {
 	auto &modifications = ensureExtended()->modifications;
 	auto i = end(modifications);
-	while (i != begin(modifications) && (--i)->position >= position) {
+	while (i != begin(modifications) && (i - 1)->position >= position) {
+		--i;
 		if (i->position < position) {
 			break;
 		} else if (delta > 0) {
