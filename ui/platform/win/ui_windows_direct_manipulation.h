@@ -7,11 +7,11 @@
 #pragma once
 
 #include "base/platform/win/base_windows_winrt.h"
-#include "base/platform/win/base_windows_h.h"
 #include "ui/effects/animations.h"
 
 #include <QtCore/QPoint>
 
+#include <windows.h>
 #include <directmanipulation.h>
 
 namespace Ui {

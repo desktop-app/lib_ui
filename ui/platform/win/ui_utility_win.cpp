@@ -6,13 +6,13 @@
 //
 #include "ui/platform/win/ui_utility_win.h"
 
-#include "base/platform/win/base_windows_h.h"
 #include "ui/widgets/popup_menu.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtCore/QAbstractNativeEventFilter>
 
+#include <windows.h>
 #include <wrl/client.h>
 #include <Shobjidl.h>
 
