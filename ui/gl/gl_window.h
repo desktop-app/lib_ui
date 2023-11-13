@@ -6,7 +6,6 @@
 //
 #pragma once
 
-
 namespace Ui {
 class RpWindow;
 class RpWidget;

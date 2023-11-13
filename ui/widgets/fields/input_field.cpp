@@ -32,6 +32,7 @@
 #include <QtWidgets/QTextEdit>
 
 #ifdef Q_OS_WIN
+#include "base/platform/win/base_windows_h.h"
 #include <WinUser.h>
 #elif !defined DESKTOP_APP_DISABLE_X11_INTEGRATION // Q_OS_WIN
 #include "base/platform/linux/base_linux_xcb_utilities.h"

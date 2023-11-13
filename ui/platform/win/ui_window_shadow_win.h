@@ -6,9 +6,12 @@
 //
 #pragma once
 
+#include "base/platform/win/base_windows_h.h"
 #include "base/flags.h"
 
-#include <windows.h>
+#include <rpc.h>
+#include <rpcndr.h>
+#include <Unknwn.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) < (b) ? (b) : (a))

@@ -28,6 +28,7 @@
 #include <qpa/qwindowsysteminterface.h>
 
 #include <dwmapi.h>
+#include <shellapi.h>
 #include <uxtheme.h>
 #include <windowsx.h>
 

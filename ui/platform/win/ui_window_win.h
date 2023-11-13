@@ -9,8 +9,6 @@
 #include "ui/platform/ui_platform_window.h"
 #include "ui/platform/win/ui_window_shadow_win.h"
 
-#include <windef.h>
-
 namespace Ui {
 namespace Platform {
 
