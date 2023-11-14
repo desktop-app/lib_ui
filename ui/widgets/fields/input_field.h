@@ -14,6 +14,9 @@
 #include "ui/text/text_custom_emoji.h"
 
 #include <QtGui/QTextObjectInterface>
+#include <QtGui/qtextlayout.h>
+#include <QtGui/qtextdocument.h>
+#include <QtGui/qtextcursor.h>
 
 #include <rpl/variable.h>
 
@@ -136,7 +139,8 @@ public:
 	static const QString kTagSpoiler;
 	static const QString kTagBlockquote;
 	static const QString kCustomEmojiTagStart;
-	static const int kCustomEmojiFormat;
+	static const int kCustomEmojiFormat; // QTextFormat::ObjectTypes
+	static const int kCustomEmojiId; // QTextFormat::Property
 
 	InputField(
 		QWidget *parent,
@@ -323,6 +327,7 @@ public:
 	[[nodiscard]] rpl::producer<> cancelled() const;
 	[[nodiscard]] rpl::producer<> changes() const;
 	[[nodiscard]] rpl::producer<Qt::KeyboardModifiers> submits() const;
+	void forceProcessContentsChanges();
 
 	~InputField();
 
@@ -564,5 +569,7 @@ private:
 	rpl::event_stream<Qt::KeyboardModifiers> _submits;
 
 };
+
+void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 
 } // namespace Ui
