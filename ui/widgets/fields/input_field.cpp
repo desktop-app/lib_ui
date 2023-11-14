@@ -158,7 +158,7 @@ bool IsNewline(QChar ch) {
 	return base::StringViewMid(
 		link,
 		skip,
-		(index <= skip) ? -1 : (index - skip - 1)
+		(index <= skip) ? -1 : (index - skip)
 	).toULongLong();
 }
 
