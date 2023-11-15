@@ -113,6 +113,8 @@ locationSize: size(320px, 240px);
 
 transparentPlaceholderSize: 4px;
 
+defaultVerticalListSkip: 6px;
+
 // floating badge colors
 roundedFg: radialFg;
 roundedBg: radialBg; // closest to #00000066
