@@ -94,6 +94,8 @@ boxRowPadding: margins(24px, 0px, 24px, 0px);
 
 boxTopMargin: 8px;
 
+boxTitleCloseIcon: icon {{ "box_button_close", boxTitleCloseFg }};
+boxTitleCloseIconOver: icon {{ "box_button_close", boxTitleCloseFgOver }};
 boxTitleClose: IconButton(defaultIconButton) {
 	width: boxTitleHeight;
 	height: boxTitleHeight;

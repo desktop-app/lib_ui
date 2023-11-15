@@ -102,52 +102,14 @@ noContactsColor: windowSubTextFg;
 activeFadeInDuration: 500;
 activeFadeOutDuration: 3000;
 
-searchedBarHeight: 32px;
-searchedBarFont: normalFont;
-searchedBarPosition: point(17px, 7px);
-
 smallCloseIcon: icon {{ "simple_close", smallCloseIconFg }};
 smallCloseIconOver: icon {{ "simple_close", smallCloseIconFgOver }};
-
-dragFont: font(27px semibold);
-dragSubfont: font(19px semibold);
-dragColor: windowSubTextFg;
-dragDropColor: windowActiveTextFg;
-
-dragMargin: margins(0px, 10px, 0px, 10px);
-dragPadding: margins(20px, 10px, 20px, 10px);
-
-dragHeight: 72px;
 
 radialSize: size(50px, 50px);
 radialLine: 3px;
 radialDuration: 350;
 radialPeriod: 3000;
 locationSize: size(320px, 240px);
-
-mediaPlayerSuppressDuration: 150;
-
-botDescSkip: 8px;
-
-inlineResultsLeft: 11px;
-inlineResultsSkip: 3px;
-inlineMediaHeight: 96px;
-inlineThumbSize: 64px;
-inlineThumbSkip: 10px;
-inlineTitleFg: windowFg;
-inlineDescriptionFg: windowSubTextFg;
-inlineRowMargin: 6px;
-inlineRowBorder: 1px;
-inlineRowBorderFg: shadowFg;
-inlineRowFileNameTop: 2px;
-inlineRowFileDescriptionTop: 23px;
-inlineResultsMinWidth: 48px;
-inlineDurationMargin: 3px;
-
-historyReplyCancelIcon: icon {{ "box_button_close", historyReplyCancelFg }};
-historyReplyCancelIconOver: icon {{ "box_button_close", historyReplyCancelFgOver }};
-boxTitleCloseIcon: icon {{ "box_button_close", boxTitleCloseFg }};
-boxTitleCloseIconOver: icon {{ "box_button_close", boxTitleCloseFgOver }};
 
 transparentPlaceholderSize: 4px;
 
