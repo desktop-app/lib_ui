@@ -533,10 +533,14 @@ std::optional<bool> IsOverlapped(
 
 bool WindowMarginsSupported() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-	using namespace QNativeInterface::Private;
-	QWindow window;
-	window.create();
-	if (window.nativeInterface<QWaylandWindow>()) {
+	static const auto WaylandResult = [] {
+		using namespace QNativeInterface::Private;
+		QWindow window;
+		window.create();
+		return bool(window.nativeInterface<QWaylandWindow>());
+	}();
+
+	if (WaylandResult) {
 		return true;
 	}
 #endif // Qt >= 6.5.0
