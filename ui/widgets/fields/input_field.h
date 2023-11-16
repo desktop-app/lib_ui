@@ -14,9 +14,6 @@
 #include "ui/text/text_custom_emoji.h"
 
 #include <QtGui/QTextObjectInterface>
-#include <QtGui/qtextlayout.h>
-#include <QtGui/qtextdocument.h>
-#include <QtGui/qtextcursor.h>
 
 #include <rpl/variable.h>
 
