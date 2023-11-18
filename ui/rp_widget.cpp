@@ -21,6 +21,20 @@
 class TWidgetPrivate : public QWidgetPrivate {
 public:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
+	TWidgetPrivate(int version = QObjectPrivateVersion)
+	: QWidgetPrivate(version) {
+		[[maybe_unused]] static const auto Once = [] {
+			if (::Platform::IsWayland()
+				&& Ui::GL::ChooseBackendDefault(
+						Ui::GL::CheckCapabilities(nullptr, true))
+					== Ui::GL::Backend::OpenGL) {
+				qApp->setProperty("_q_widgets_highdpi_downscale", true);
+				WaylandGL = true;
+			}
+			return true;
+		}();
+	}
+
 	QPlatformBackingStoreRhiConfig rhiConfig() const override {
 		const auto q = static_cast<TWidget*>(q_ptr);
 		if (!q->testAttribute(Qt::WA_WState_Created)
@@ -31,19 +45,19 @@ public:
 		if (const auto config = q->rhiConfig()) {
 			return *config;
 		}
-		// We can't specify the widget here as q_evaluateRhiConfig is called
-		// in QWidgetWindow constructor, while windowHandle is set right after
-		// the constructor is completed
-		if (::Platform::IsWayland() // old versions of mutter produce flicker without OpenGL
-			&& Ui::GL::ChooseBackendDefault(
-					Ui::GL::CheckCapabilities(nullptr))
-				== Ui::GL::Backend::OpenGL) {
+		// fix flickering on GNOME
+		if (WaylandGL) {
 			return { QPlatformBackingStoreRhiConfig::OpenGL };
 		}
 		return QWidgetPrivate::rhiConfig();
 	}
 #endif // Qt >= 6.4.0
+
+private:
+	static bool WaylandGL;
 };
+
+bool TWidgetPrivate::WaylandGL = false;
 
 TWidget::TWidget(QWidget *parent)
 : TWidgetHelper<QWidget>(*(new TWidgetPrivate), parent, {}) {
