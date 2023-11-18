@@ -137,7 +137,8 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 		}
 	}
 
-	setGeometry(QRect(p, s));
+	move(p);
+	setFixedSize(s);
 
 	_hideByLeaveTimer.cancel();
 	show();
@@ -234,7 +235,7 @@ void ImportantTooltip::resizeToContent() {
 	if (size.width() < 2 * (_st.arrowSkipMin + _st.arrow)) {
 		size.setWidth(2 * (_st.arrowSkipMin + _st.arrow));
 	}
-	resize(size);
+	setFixedSize(size);
 	updateGeometry();
 }
 
