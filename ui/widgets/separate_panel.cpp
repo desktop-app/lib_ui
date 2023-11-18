@@ -671,21 +671,15 @@ void SeparatePanel::initGeometry(QSize size) {
 		const QRect initRect(QPoint(), size);
 		return initRect.translated(center - initRect.center()).marginsAdded(_padding);
 	}();
-	setGeometry(rect);
-	setMinimumSize(rect.size());
-	setMaximumSize(rect.size());
+	move(rect.topLeft());
+	setFixedSize(rect.size());
 	updateControlsGeometry();
 }
 
 void SeparatePanel::updateGeometry(QSize size) {
-	const auto rect = QRect(
-		x(),
-		y(),
+	setFixedSize(
 		_padding.left() + size.width() + _padding.right(),
 		_padding.top() + size.height() + _padding.bottom());
-	setGeometry(rect);
-	setMinimumSize(rect.size());
-	setMaximumSize(rect.size());
 	updateControlsGeometry();
 	update();
 }

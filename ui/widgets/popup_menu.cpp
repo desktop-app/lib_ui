@@ -384,8 +384,7 @@ void PopupMenu::handleMenuResize() {
 			newWidth,
 			_padding.top() + scrollHeight + _padding.bottom());
 		if (::Platform::IsMac()) {
-			setMaximumSize(newSize);
-			setMinimumSize(newSize);
+			setFixedSize(newSize);
 		}
 		resize(newSize);
 	}
