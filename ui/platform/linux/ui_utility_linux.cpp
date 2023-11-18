@@ -16,6 +16,7 @@
 #include <QtCore/QPoint>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <qpa/qplatformwindow.h>
 #include <qpa/qplatformwindow_p.h>
 
 extern "C" {
@@ -561,9 +562,13 @@ bool WindowMarginsSupported() {
 void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 	using namespace QNativeInterface::Private;
-	if (const auto native = not_null(widget->windowHandle())
-			->nativeInterface<QWaylandWindow>()) {
-		native->setCustomMargins(margins);
+	const auto window = not_null(widget->windowHandle());
+	const auto platformWindow = not_null(window->handle());
+	if (const auto native = window->nativeInterface<QWaylandWindow>()) {
+		native->setCustomMargins(
+			margins
+				* window->devicePixelRatio()
+				/ platformWindow->devicePixelRatio());
 		return;
 	}
 #endif // Qt >= 6.5.0
