@@ -24,7 +24,9 @@ struct Capabilities {
 	bool transparency = false;
 };
 
-[[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
+[[nodiscard]] Capabilities CheckCapabilities(
+	QWidget *widget = nullptr,
+	bool avoidWidgetCreation = false);
 [[nodiscard]] Backend ChooseBackendDefault(Capabilities capabilities);
 
 void ForceDisable(bool disable);
