@@ -847,7 +847,7 @@ int CountBlockHeight(
 		const style::TextStyle *st) {
 	return (block->type() == TextBlockType::Skip)
 		? static_cast<const SkipBlock*>(block)->height()
-		: (st->lineHeight > st->font->height)
+		: st->lineHeight
 		? st->lineHeight
 		: st->font->height;
 }
