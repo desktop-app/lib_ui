@@ -1065,7 +1065,9 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 
 	startShowAnimation();
 
-	Platform::UpdateOverlayed(this);
+	if (::Platform::IsWindows()) {
+		ForceFullRepaintSync(this);
+	}
 	show();
 	Platform::ShowOverAll(this);
 	raise();

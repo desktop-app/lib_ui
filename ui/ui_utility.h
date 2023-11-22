@@ -140,6 +140,7 @@ void RenderWidget(
 	= QWidget::DrawChildren | QWidget::IgnoreMask);
 
 void ForceFullRepaint(not_null<QWidget*> widget);
+void ForceFullRepaintSync(not_null<QWidget*> widget);
 
 void PostponeCall(FnMut<void()> &&callable);
 

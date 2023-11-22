@@ -17,9 +17,6 @@ inline bool TranslucentWindowsSupported() {
 	return true;
 }
 
-inline void UpdateOverlayed(not_null<QWidget*> widget) {
-}
-
 inline void ClearTransientParent(not_null<QWidget*> widget) {
 }
 

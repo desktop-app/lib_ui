@@ -24,7 +24,6 @@ void InitOnTopPanel(not_null<QWidget*> panel);
 void DeInitOnTopPanel(not_null<QWidget*> panel);
 void ReInitOnTopPanel(not_null<QWidget*> panel);
 
-void UpdateOverlayed(not_null<QWidget*> widget);
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus = true);
 void IgnoreAllActivation(not_null<QWidget*> widget);
 void ClearTransientParent(not_null<QWidget*> widget);
