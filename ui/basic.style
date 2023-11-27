@@ -115,6 +115,9 @@ transparentPlaceholderSize: 4px;
 
 defaultVerticalListSkip: 6px;
 
+shakeShift: 4px;
+shakeDuration: 300;
+
 // floating badge colors
 roundedFg: radialFg;
 roundedBg: radialBg; // closest to #00000066
