@@ -69,7 +69,7 @@ inline constexpr auto Upper = details::ToUpperType{};
 }
 
 [[nodiscard]] inline auto ToLink(const QString &url = "internal:action") {
-	return rpl::map([=](const QString &text) {
+	return rpl::map([=](const auto &text) {
 		return Link(text, url);
 	});
 }
