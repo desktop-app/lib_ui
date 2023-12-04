@@ -55,6 +55,8 @@ public:
 		-> rpl::producer<Platform::HitTestResult>;
 	[[nodiscard]] auto systemButtonDown() const
 		-> rpl::producer<Platform::HitTestResult>;
+	void overrideSystemButtonOver(Platform::HitTestResult button);
+	void overrideSystemButtonDown(Platform::HitTestResult button);
 
 	void setTitle(const QString &title);
 	void setTitleStyle(const style::WindowTitle &st);

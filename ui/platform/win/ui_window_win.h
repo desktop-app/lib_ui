@@ -43,6 +43,8 @@ public:
 		-> rpl::producer<HitTestResult> override;
 	[[nodiscard]] auto systemButtonDown() const
 		-> rpl::producer<HitTestResult> override;
+	void overrideSystemButtonOver(HitTestResult button) override;
+	void overrideSystemButtonDown(HitTestResult button) override;
 
 private:
 	class NativeFilter;

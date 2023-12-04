@@ -150,6 +150,14 @@ rpl::producer<HitTestResult> BasicWindowHelper::systemButtonDown() const {
 	return rpl::never<HitTestResult>();
 }
 
+void BasicWindowHelper::overrideSystemButtonOver(HitTestResult button) {
+	Expects(button == HitTestResult::None);
+}
+
+void BasicWindowHelper::overrideSystemButtonDown(HitTestResult button) {
+	Expects(button == HitTestResult::None);
+}
+
 void BasicWindowHelper::setTitle(const QString &title) {
 	_window->setWindowTitle(title);
 }

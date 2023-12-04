@@ -49,6 +49,8 @@ public:
 		-> rpl::producer<HitTestResult>;
 	[[nodiscard]] virtual auto systemButtonDown() const
 		-> rpl::producer<HitTestResult>;
+	virtual void overrideSystemButtonOver(HitTestResult button);
+	virtual void overrideSystemButtonDown(HitTestResult button);
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);

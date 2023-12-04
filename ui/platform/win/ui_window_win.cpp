@@ -389,6 +389,14 @@ rpl::producer<HitTestResult> WindowHelper::systemButtonDown() const {
 	return _systemButtonDown.events();
 }
 
+void WindowHelper::overrideSystemButtonOver(HitTestResult button) {
+	_systemButtonOver.fire_copy(button);
+}
+
+void WindowHelper::overrideSystemButtonDown(HitTestResult button) {
+	_systemButtonDown.fire_copy(button);
+}
+
 void WindowHelper::init() {
 	_title->show();
 	GetNativeFilter()->registerWindow(_handle, this);
