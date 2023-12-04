@@ -104,7 +104,18 @@ void TitleWidget::setText(const QString &text) {
 
 void TitleWidget::setStyle(const style::WindowTitle &st) {
 	_controls.setStyle(st);
+	if (!st.shadow) {
+		_shadow.destroy();
+	} else if (!_shadow) {
+		_shadow.create(this, st::titleShadow);
+		updateShadowGeometry();
+	}
 	refreshGeometryWithWidth(window()->width());
+}
+
+void TitleWidget::updateShadowGeometry() {
+	const auto thickness = st::lineWidth;
+	_shadow->setGeometry(0, height() - thickness, width(), thickness);
 }
 
 void TitleWidget::refreshGeometryWithWidth(int width) {
@@ -136,8 +147,9 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 }
 
 void TitleWidget::resizeEvent(QResizeEvent *e) {
-	const auto thickness = st::lineWidth;
-	_shadow->setGeometry(0, height() - thickness, width(), thickness);
+	if (_shadow) {
+		updateShadowGeometry();
+	}
 }
 
 HitTestResult TitleWidget::hitTest(

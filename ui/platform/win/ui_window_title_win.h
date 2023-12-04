@@ -61,6 +61,7 @@ private:
 	[[nodiscard]] bool additionalPaddingRequired() const;
 	void refreshGeometryWithWidth(int width);
 	void setAdditionalPadding(int padding);
+	void updateShadowGeometry();
 
 	std::unique_ptr<PaddingHelper> _paddingHelper;
 	TitleControls _controls;
