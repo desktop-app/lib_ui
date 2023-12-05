@@ -384,6 +384,7 @@ void PopupMenu::handleMenuResize() {
 			newWidth,
 			_padding.top() + scrollHeight + _padding.bottom());
 		setFixedSize(newSize);
+		resize(newSize);
 	}
 	_inner = rect().marginsRemoved(_padding);
 }
