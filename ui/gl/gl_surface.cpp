@@ -9,6 +9,7 @@
 #include "ui/rp_widget.h"
 #include "ui/painter.h"
 
+#include <QtCore/QCoreApplication>
 #include <QtGui/QtEvents>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QWindow>
