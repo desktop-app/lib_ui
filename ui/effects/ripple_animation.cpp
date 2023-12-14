@@ -10,6 +10,7 @@
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/image/image_prepare.h"
+#include "styles/style_widgets.h"
 
 namespace Ui {
 

@@ -6,13 +6,15 @@
 //
 #pragma once
 
-#include "styles/style_widgets.h"
-
 #include <deque>
 
 namespace Images {
 struct CornersMaskRef;
 } // namespace Images
+
+namespace style {
+struct RippleAnimation;
+} // namespace style
 
 namespace Ui {
 
