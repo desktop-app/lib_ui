@@ -82,10 +82,10 @@ MaskedInputField::MaskedInputField(
 
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
-	connect(this, SIGNAL(textChanged(const QString&)), this, SLOT(onTextChange(const QString&)));
+	connect(this, SIGNAL(textChanged(QString)), this, SLOT(onTextChange(QString)));
 	connect(this, SIGNAL(cursorPositionChanged(int,int)), this, SLOT(onCursorPositionChanged(int,int)));
 
-	connect(this, SIGNAL(textEdited(const QString&)), this, SLOT(onTextEdited()));
+	connect(this, SIGNAL(textEdited(QString)), this, SLOT(onTextEdited()));
 	connect(this, &MaskedInputField::selectionChanged, [] {
 		Integration::Instance().textActionsUpdated();
 	});
