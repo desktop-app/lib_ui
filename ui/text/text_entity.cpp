@@ -1236,8 +1236,9 @@ const QRegularExpression &RegExpBotCommand() {
 	return result;
 }
 
-QRegularExpression RegExpDigitsExclude() {
-	return QRegularExpression("[^\\d]");
+const QRegularExpression &RegExpDigitsExclude() {
+	static const auto result = QRegularExpression("[^\\d]");
+	return result;
 }
 
 QString MarkdownBoldGoodBefore() {
@@ -2225,9 +2226,10 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 		};
 		switch (entity.type()) {
 		case EntityType::MentionName: {
-			const auto match = QRegularExpression(
+			static const auto RegExp = QRegularExpression(
 				"^(\\d+\\.\\d+:\\d+)$"
-			).match(entity.data());
+			);
+			const auto match = RegExp.match(entity.data());
 			if (match.hasMatch()) {
 				push(kMentionTagStart + entity.data());
 			}
@@ -2240,9 +2242,8 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 			}
 		} break;
 		case EntityType::CustomEmoji: {
-			const auto match = QRegularExpression(
-				"^(\\d+)$"
-			).match(entity.data());
+			static const auto RegExp = QRegularExpression("^(\\d+)$");
+			const auto match = RegExp.match(entity.data());
 			if (match.hasMatch()) {
 				push(Ui::InputField::CustomEmojiLink(entity.data()));
 			}
@@ -2261,8 +2262,8 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 		case EntityType::Code: push(Ui::InputField::kTagCode); break;
 		case EntityType::Pre: {
 			if (!entity.data().isEmpty()) {
-				const auto language = QRegularExpression("^[a-z0-9\\-]+$");
-				if (language.match(entity.data()).hasMatch()) {
+				static const auto Language = QRegularExpression("^[a-z0-9\\-]+$");
+				if (Language.match(entity.data()).hasMatch()) {
 					push(Ui::InputField::kTagPre + entity.data());
 					break;
 				}
