@@ -17,8 +17,9 @@ namespace Ui {
 namespace {
 
 QTime ValidateTime(const QString &value) {
-	const auto match = QRegularExpression(
-		"^(\\d{1,2})\\:(\\d\\d)$").match(value);
+	static const auto RegExp = QRegularExpression(
+		"^(\\d{1,2})\\:(\\d\\d)$");
+	const auto match = RegExp.match(value);
 	if (!match.hasMatch()) {
 		return QTime();
 	}
