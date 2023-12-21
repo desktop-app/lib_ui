@@ -199,9 +199,9 @@ not_null<QOpenGLShader*> MakeShader(
 		const QString &source) {
 	const auto result = new QOpenGLShader(type, program);
 	if (!result->compileSourceCode(source)) {
-		LOG(("Shader Compilation Failed: %1, error %2."
-			).arg(source
-			).arg(result->log()));
+		LOG(("Shader Compilation Failed: %1, error %2.").arg(
+			source,
+			result->log()));
 	}
 	program->addShader(result);
 	return result;
