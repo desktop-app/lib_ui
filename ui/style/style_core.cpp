@@ -106,6 +106,7 @@ void colorizeImage(
 	auto width = srcRect.width();
 	auto height = srcRect.height();
 	Assert(outResult->rect().contains(QRect(dstPoint, srcRect.size())));
+	outResult->detach();
 
 	auto pattern = anim::shifted(color);
 
