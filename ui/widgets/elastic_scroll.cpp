@@ -1277,8 +1277,7 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e) {
 			style::ConvertScale(point.x()),
 			style::ConvertScale(point.y())) * kMagicScrollMultiplier;
 	};
-	if (Platform::IsMac()
-		|| (Platform::IsWindows() && e->phase() != Qt::NoScrollPhase)) {
+	if (!e->pixelDelta().isNull()) {
 		return convert(e->pixelDelta());
 	}
 	return convert(e->angleDelta() / kPixelToAngleDelta);
