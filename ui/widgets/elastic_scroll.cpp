@@ -1280,7 +1280,7 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e) {
 		|| (Platform::IsWindows() && e->phase() != Qt::NoScrollPhase)) {
 		return convert(e->pixelDelta());
 	}
-	return convert(e->angleDelta() * style::DevicePixelRatio());
+	return convert(e->angleDelta() / kPixelToAngleDelta);
 }
 
 } // namespace Ui

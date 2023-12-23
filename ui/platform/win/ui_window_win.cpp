@@ -11,6 +11,7 @@
 #include "ui/platform/win/ui_windows_direct_manipulation.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
+#include "ui/widgets/elastic_scroll.h"
 #include "base/platform/win/base_windows_safe_library.h"
 #include "base/platform/base_platform_info.h"
 #include "base/integration.h"
@@ -505,7 +506,7 @@ void WindowHelper::handleDirectManipulationEvent(
 				QPointF(local.x, local.y),
 				QPointF(global.x, global.y),
 				event.delta,
-				event.delta,
+				event.delta * kPixelToAngleDelta,
 				LookupModifiers(),
 				phase,
 				Qt::MouseEventSynthesizedBySystem);
