@@ -659,7 +659,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	const auto guard = gsl::finally([&] {
 		_lastScroll = now;
 	});
-	const auto pixels = ScrollDelta(e) / (touch ? kMagicScrollMultiplier : 1.);
+	const auto pixels = ScrollDelta(e, touch);
 	auto delta = _vertical ? -pixels.y() : pixels.x();
 	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
 		delta = 0;
@@ -1271,14 +1271,15 @@ rpl::producer<ElasticScrollMovement> ElasticScroll::movementValue() const {
 	return _movement.value();
 }
 
-QPoint ScrollDelta(not_null<QWheelEvent*> e) {
+QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
 	const auto convert = [](QPoint point) {
 		return QPoint(
 			style::ConvertScale(point.x()),
 			style::ConvertScale(point.y()));
 	};
 	if (!e->pixelDelta().isNull()) {
-		return convert(e->pixelDelta()) * kMagicScrollMultiplier;
+		return convert(e->pixelDelta())
+			* (touch ? 1. : kMagicScrollMultiplier);
 	}
 	return convert(e->angleDelta()) / kPixelToAngleDelta;
 }

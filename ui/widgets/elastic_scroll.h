@@ -275,6 +275,6 @@ private:
 
 };
 
-[[nodiscard]] QPoint ScrollDelta(not_null<QWheelEvent*> e);
+[[nodiscard]] QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch = false);
 
 } // namespace Ui
