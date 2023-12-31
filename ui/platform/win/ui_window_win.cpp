@@ -501,12 +501,14 @@ void WindowHelper::handleDirectManipulationEvent(
 			::GetCursorPos(&global);
 			auto local = global;
 			::ScreenToClient(_handle, &local);
+			const auto dpi = _dpi.current() ? double(_dpi.current()) : 96.;
+			const auto delta = QPointF(event.delta) / (dpi / 96.);
 			QWindowSystemInterface::handleWheelEvent(
 				windowHandle,
 				QPointF(local.x, local.y),
 				QPointF(global.x, global.y),
-				event.delta,
-				event.delta * kPixelToAngleDelta,
+				delta.toPoint(),
+				(delta * kPixelToAngleDelta).toPoint(),
 				LookupModifiers(),
 				phase,
 				Qt::MouseEventSynthesizedBySystem);
