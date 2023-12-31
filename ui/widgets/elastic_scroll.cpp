@@ -24,6 +24,7 @@ constexpr auto kOverscrollReturnDuration = crl::time(250);
 constexpr auto kOverscrollFromThreshold = -(1 << 30);
 constexpr auto kOverscrollTillThreshold = (1 << 30);
 constexpr auto kTouchOverscrollMultiplier = 2;
+constexpr auto kMagicScrollMultiplier = Platform::IsLinux() ? 2.5 : 1.;
 
 constexpr auto kLogA = 16.;
 constexpr auto kLogB = 10.;
@@ -658,7 +659,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	const auto guard = gsl::finally([&] {
 		_lastScroll = now;
 	});
-	const auto pixels = ScrollDelta(e);
+	const auto pixels = ScrollDelta(e) / (touch ? kMagicScrollMultiplier : 1.);
 	auto delta = _vertical ? -pixels.y() : pixels.x();
 	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
 		delta = 0;
@@ -1274,7 +1275,7 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e) {
 	const auto convert = [](QPoint point) {
 		return QPoint(
 			style::ConvertScale(point.x()),
-			style::ConvertScale(point.y()));
+			style::ConvertScale(point.y())) * kMagicScrollMultiplier;
 	};
 	if (Platform::IsMac()
 		|| (Platform::IsWindows() && e->phase() != Qt::NoScrollPhase)) {
