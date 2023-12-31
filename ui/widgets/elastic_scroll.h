@@ -22,7 +22,7 @@ extern const style::ScrollArea &defaultScrollArea;
 
 namespace Ui {
 
-constexpr auto kPixelToAngleDelta = 10;
+inline constexpr auto kPixelToAngleDelta = 2;
 
 struct ScrollState {
 	int visibleFrom = 0;

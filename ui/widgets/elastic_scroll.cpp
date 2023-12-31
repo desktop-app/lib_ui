@@ -1275,12 +1275,12 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e) {
 	const auto convert = [](QPoint point) {
 		return QPoint(
 			style::ConvertScale(point.x()),
-			style::ConvertScale(point.y())) * kMagicScrollMultiplier;
+			style::ConvertScale(point.y()));
 	};
 	if (!e->pixelDelta().isNull()) {
-		return convert(e->pixelDelta());
+		return convert(e->pixelDelta()) * kMagicScrollMultiplier;
 	}
-	return convert(e->angleDelta() / kPixelToAngleDelta);
+	return convert(e->angleDelta()) / kPixelToAngleDelta;
 }
 
 } // namespace Ui
