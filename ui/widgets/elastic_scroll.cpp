@@ -24,7 +24,7 @@ constexpr auto kOverscrollReturnDuration = crl::time(250);
 constexpr auto kOverscrollFromThreshold = -(1 << 30);
 constexpr auto kOverscrollTillThreshold = (1 << 30);
 constexpr auto kTouchOverscrollMultiplier = 2;
-constexpr auto kMagicScrollMultiplier = Platform::IsLinux() ? 2.5 : 1.;
+constexpr auto kMagicScrollMultiplier = 2.5;
 
 constexpr auto kLogA = 16.;
 constexpr auto kLogB = 10.;
@@ -1279,7 +1279,9 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
 	};
 	if (!e->pixelDelta().isNull()) {
 		return convert(e->pixelDelta())
-			* (touch ? 1. : kMagicScrollMultiplier);
+			* ((Platform::IsWayland() && !touch)
+				? kMagicScrollMultiplier
+				: 1.);
 	}
 	return convert(e->angleDelta()) / kPixelToAngleDelta;
 }
