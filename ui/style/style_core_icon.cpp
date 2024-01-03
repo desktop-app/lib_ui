@@ -29,16 +29,18 @@ base::flat_set<IconData*> iconData;
 
 [[nodiscard]] QImage CreateIconMask(
 		not_null<const IconMask*> mask,
-		int scale) {
+		int scale,
+		bool ignoreDpr = false) {
+	const auto ratio = ignoreDpr ? 1 : DevicePixelRatio();
+
 	auto maskImage = QImage::fromData(mask->data(), mask->size(), "PNG");
-	maskImage.setDevicePixelRatio(DevicePixelRatio());
+	maskImage.setDevicePixelRatio(ratio);
 	Assert(!maskImage.isNull());
 
-	// images are layouted like this:
+	// images are laid out like this:
 	// 100x 200x
 	// 300x
-	const auto factor = DevicePixelRatio();
-	const auto realscale = scale * factor;
+	const auto realscale = scale * ratio;
 	const auto width = maskImage.width() / 3;
 	const auto height = maskImage.height() / 5;
 	const auto one = QRect(0, 0, width, height);
@@ -54,8 +56,8 @@ base::flat_set<IconData*> iconData;
 	return maskImage.copy(
 		(realscale > 200) ? three : two
 	).scaled(
-		ConvertScale(width, scale) * factor,
-		ConvertScale(height, scale) * factor,
+		ConvertScale(width, scale) * ratio,
+		ConvertScale(height, scale) * ratio,
 		Qt::IgnoreAspectRatio,
 		Qt::SmoothTransformation);
 }
@@ -71,7 +73,10 @@ base::flat_set<IconData*> iconData;
 	).first->second;
 }
 
-QSize readGeneratedSize(const IconMask *mask, int scale) {
+[[nodiscard]] QSize readGeneratedSize(
+		const IconMask *mask,
+		int scale,
+		bool ignoreDpr = false) {
 	auto data = mask->data();
 	auto size = mask->size();
 
@@ -239,10 +244,15 @@ void MonoIcon::fill(
 	}
 }
 
-QImage MonoIcon::instance(QColor colorOverride, int scale) const {
+QImage MonoIcon::instance(
+		QColor colorOverride,
+		int scale,
+		bool ignoreDpr) const {
 	if (scale == kScaleAuto) {
 		ensureLoaded();
-		auto result = QImage(size() * DevicePixelRatio(), QImage::Format_ARGB32_Premultiplied);
+		auto result = QImage(
+			size() * DevicePixelRatio(),
+			QImage::Format_ARGB32_Premultiplied);
 		result.setDevicePixelRatio(DevicePixelRatio());
 		if (_pixmap.isNull()) {
 			result.fill(colorOverride);
@@ -251,16 +261,19 @@ QImage MonoIcon::instance(QColor colorOverride, int scale) const {
 		}
 		return result;
 	}
-	auto size = readGeneratedSize(_mask, scale);
+	const auto ratio = ignoreDpr ? 1 : DevicePixelRatio();
+	auto size = readGeneratedSize(_mask, scale, ignoreDpr);
 	if (!size.isEmpty()) {
-		auto result = QImage(size * DevicePixelRatio(), QImage::Format_ARGB32_Premultiplied);
-		result.setDevicePixelRatio(DevicePixelRatio());
+		auto result = QImage(
+			size * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		result.setDevicePixelRatio(ratio);
 		result.fill(colorOverride);
 		return result;
 	}
-	auto mask = CreateIconMask(_mask, scale);
+	auto mask = CreateIconMask(_mask, scale, ignoreDpr);
 	auto result = QImage(mask.size(), QImage::Format_ARGB32_Premultiplied);
-	result.setDevicePixelRatio(DevicePixelRatio());
+	result.setDevicePixelRatio(ratio);
 	colorizeImage(mask, colorOverride, &result);
 	return result;
 }
@@ -340,12 +353,15 @@ void IconData::fill(QPainter &p, const QRect &rect, QColor colorOverride) const 
 	}
 }
 
-QImage IconData::instance(QColor colorOverride, int scale) const {
+QImage IconData::instance(
+		QColor colorOverride,
+		int scale,
+		bool ignoreDpr) const {
 	Expects(_parts.size() == 1);
 
 	auto &part = _parts[0];
 	Assert(part.offset() == QPoint(0, 0));
-	return part.instance(colorOverride, scale);
+	return part.instance(colorOverride, scale, ignoreDpr);
 }
 
 int IconData::width() const {

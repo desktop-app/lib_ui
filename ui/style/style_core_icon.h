@@ -62,7 +62,10 @@ public:
 	void paint(QPainter &p, const QPoint &pos, int outerw, const style::palette &paletteOverride) const;
 	void fill(QPainter &p, const QRect &rect, const style::palette &paletteOverride) const;
 
-	QImage instance(QColor colorOverride, int scale) const;
+	[[nodiscard]] QImage instance(
+		QColor colorOverride,
+		int scale,
+		bool ignoreDpr) const;
 
 	~MonoIcon() {
 	}
@@ -123,7 +126,10 @@ public:
 	}
 	void fill(QPainter &p, const QRect &rect, const style::palette &paletteOverride) const;
 
-	QImage instance(QColor colorOverride, int scale) const;
+	[[nodiscard]] QImage instance(
+		QColor colorOverride,
+		int scale,
+		bool ignoreDpr) const;
 
 	int width() const;
 	int height() const;
@@ -218,8 +224,11 @@ public:
 		return _data->fill(p, rect, colorOverride);
 	}
 
-	QImage instance(QColor colorOverride, int scale = kScaleAuto) const {
-		return _data->instance(colorOverride, scale);
+	[[nodiscard]] QImage instance(
+			QColor colorOverride,
+			int scale = kScaleAuto,
+			bool ignoreDpr = false) const {
+		return _data->instance(colorOverride, scale, ignoreDpr);
 	}
 
 	class Proxy {
