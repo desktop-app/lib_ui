@@ -583,10 +583,17 @@ void SeparatePanel::destroyLayer() {
 	layer = nullptr;
 }
 
+RpWidget *SeparatePanel::inner() const {
+	return _inner.get();
+}
+
 void SeparatePanel::showInner(base::unique_qptr<RpWidget> inner) {
 	Expects(!size().isEmpty());
 
+	auto old = base::take(_inner);
 	_inner = std::move(inner);
+	old = nullptr; // Make sure in old destructor inner() != old.
+
 	_inner->setParent(_body);
 	_inner->move(0, 0);
 	_body->sizeValue(

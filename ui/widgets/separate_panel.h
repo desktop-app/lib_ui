@@ -60,6 +60,7 @@ public:
 	void showAndActivate();
 	int hideGetDuration();
 
+	[[nodiscard]] RpWidget *inner() const;
 	void showInner(base::unique_qptr<RpWidget> inner);
 	void showBox(
 		object_ptr<BoxContent> box,
