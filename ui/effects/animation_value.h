@@ -322,6 +322,11 @@ TG_FORCE_INLINE QBrush brush(style::color a, style::color b, float64 b_ratio) {
 	return (b_ratio > 0) ? ((b_ratio < 1) ? brush(a->c, b->c, b_ratio) : b) : a;
 }
 
+TG_FORCE_INLINE QColor with_alpha(QColor color, float64 alpha) {
+	color.setAlphaF(color.alphaF() * alpha);
+	return color;
+}
+
 template <int N>
 QPainterPath interpolate(QPointF (&from)[N], QPointF (&to)[N], float64 k) {
 	static_assert(N > 1, "Wrong points count in path!");
