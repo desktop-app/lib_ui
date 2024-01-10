@@ -25,6 +25,7 @@ constexpr auto kOverscrollFromThreshold = -(1 << 30);
 constexpr auto kOverscrollTillThreshold = (1 << 30);
 constexpr auto kTouchOverscrollMultiplier = 2;
 constexpr auto kMagicScrollMultiplier = 2.5;
+constexpr auto kDefaultWheelScrollLines = 3;
 
 constexpr auto kLogA = 16.;
 constexpr auto kLogB = 10.;
@@ -1283,7 +1284,8 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
 				? kMagicScrollMultiplier
 				: 1.);
 	}
-	return convert(e->angleDelta()) / kPixelToAngleDelta;
+	return (convert(e->angleDelta()) * QApplication::wheelScrollLines())
+		/ (kPixelToAngleDelta * kDefaultWheelScrollLines);
 }
 
 } // namespace Ui
