@@ -14,6 +14,7 @@
 #include "ui/widgets/elastic_scroll.h"
 #include "base/platform/win/base_windows_safe_library.h"
 #include "base/platform/base_platform_info.h"
+#include "base/event_filter.h"
 #include "base/integration.h"
 #include "base/invoke_queued.h"
 #include "base/debug_log.h"
@@ -492,6 +493,34 @@ void WindowHelper::init() {
 			handleDirectManipulationEvent(event);
 		}, window()->lifetime());
 	}
+
+	window()->shownValue() | rpl::filter([=](bool shown) {
+		return !shown;
+	}) | rpl::start_with_next([=] {
+		BOOL cloak = TRUE;
+		DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &cloak, sizeof(cloak));
+
+		const auto firstPaintEventFilter = std::make_shared<QObject*>(nullptr);
+		*firstPaintEventFilter = base::install_event_filter(
+			window()->windowHandle(),
+			[=](not_null<QEvent*> e) {
+				if (!*firstPaintEventFilter
+						|| e->type() != QEvent::Expose
+						|| !window()->windowHandle()->isExposed()) {
+					return base::EventFilterResult::Continue;
+				}
+				InvokeQueued(*firstPaintEventFilter, [=] {
+					BOOL cloak = FALSE;
+					DwmSetWindowAttribute(
+						_handle,
+						DWMWA_CLOAK,
+						&cloak,
+						sizeof(cloak));
+					delete base::take(*firstPaintEventFilter);
+				});
+				return base::EventFilterResult::Continue;
+			});
+	}, window()->lifetime());
 }
 
 void WindowHelper::handleDirectManipulationEvent(
