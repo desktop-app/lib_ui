@@ -16,6 +16,10 @@
 #include <wrl/client.h>
 #include <Shobjidl.h>
 
+#include "base/event_filter.h"
+#include <QTimer>
+#include <QScreen>
+
 using namespace Microsoft::WRL;
 
 namespace Ui::Platform {
@@ -175,6 +179,21 @@ void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
 
 	QGuiApplication::instance()->installNativeEventFilter(
 		menu->lifetime().make_state<Filter>(menu));
+}
+
+void SetGeometryWithPossibleScreenChange(
+		not_null<QWidget*> widget,
+		QRect geometry) {
+	const auto screen = QGuiApplication::screenAt(geometry.center());
+	const auto window = widget->window();
+	window->createWinId();
+	const auto handle = window->windowHandle();
+	if (handle->screen() != screen) {
+		handle->setScreen(screen);
+		window->move(screen->availableGeometry().topLeft());
+		window->show();
+	}
+	widget->setGeometry(geometry);
 }
 
 } // namespace Ui::Platform

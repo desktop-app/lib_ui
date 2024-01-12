@@ -252,4 +252,10 @@ QPoint MapFrom(
 	return { MapFrom(to, from, rect.topLeft()), rect.size() };
 }
 
+void SetGeometryWithPossibleScreenChange(
+		not_null<QWidget*> widget,
+		QRect geometry) {
+	Platform::SetGeometryWithPossibleScreenChange(widget, geometry);
+}
+
 } // namespace Ui

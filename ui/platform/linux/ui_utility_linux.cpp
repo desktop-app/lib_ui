@@ -615,5 +615,11 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
+void SetGeometryWithPossibleScreenChange(
+		not_null<QWidget*> widget,
+		QRect geometry) {
+	widget->setGeometry(geometry);
+}
+
 } // namespace Platform
 } // namespace Ui

@@ -45,6 +45,10 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);
 
+void SetGeometryWithPossibleScreenChange(
+    not_null<QWidget*> widget,
+    QRect geometry);
+
 } // namespace Ui::Platform
 
 // Platform dependent implementations.
