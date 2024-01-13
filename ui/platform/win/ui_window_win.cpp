@@ -580,12 +580,17 @@ bool WindowHelper::handleNativeEvent(
 					+ GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)
 				: GetSystemMetrics(SM_CXSIZEFRAME)
 					+ GetSystemMetrics(SM_CXPADDEDBORDER);
+			const auto borderHeight = (GetSystemMetricsForDpiSupported() && dpi)
+				? GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
+					+ GetSystemMetricsForDpi(SM_CYPADDEDBORDER, dpi)
+				: GetSystemMetrics(SM_CYSIZEFRAME)
+					+ GetSystemMetrics(SM_CYPADDEDBORDER);
 			r->left += borderWidth;
 			r->right -= borderWidth;
 			if (maximized) {
-				r->top += borderWidth;
+				r->top += borderHeight;
 			}
-			r->bottom -= borderWidth;
+			r->bottom -= borderHeight;
 		}
 		if (maximized) {
 			const auto hMonitor = MonitorFromWindow(
