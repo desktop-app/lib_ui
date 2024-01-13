@@ -112,13 +112,25 @@ RadialState RadialAnimation::computeState() const {
 	return { _opacity, from, length };
 }
 
+void InfiniteRadialAnimation::init() {
+	anim::Disables() | rpl::filter([=] {
+		return animating();
+	}) | rpl::start_with_next([=](bool disabled) {
+		if (!disabled && !_animation.animating()) {
+			_animation.start();
+		} else if (disabled && _animation.animating()) {
+			_animation.stop();
+		}
+	}, _lifetime);
+}
+
 void InfiniteRadialAnimation::start(crl::time skip) {
-	const auto now = crl::now();
-	if (_workFinished <= now && (_workFinished || !_workStarted)) {
+	if (!animating()) {
+		const auto now = crl::now();
 		_workStarted = std::max(now + _st.sineDuration - skip, crl::time(1));
 		_workFinished = 0;
 	}
-	if (!_animation.animating()) {
+	if (!anim::Disabled() && !_animation.animating()) {
 		_animation.start();
 	}
 }
@@ -213,7 +225,7 @@ RadialState InfiniteRadialAnimation::computeState() {
 	const auto now = crl::now();
 	const auto linear = kFullArcLength
 		- int(((now * kFullArcLength) / _st.linearPeriod) % kFullArcLength);
-	if (!_workStarted || (_workFinished && _workFinished <= now)) {
+	if (!animating()) {
 		const auto shown = 0.;
 		_animation.stop();
 		return {

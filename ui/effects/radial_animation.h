@@ -73,7 +73,7 @@ public:
 		const style::InfiniteRadialAnimation &st);
 
 	[[nodiscard]] bool animating() const {
-		return _animation.animating();
+		return _workStarted && (!_workFinished || _workFinished > crl::now());
 	}
 
 	void start(crl::time skip = 0);
@@ -101,10 +101,13 @@ public:
 	[[nodiscard]] RadialState computeState();
 
 private:
+	void init();
+
 	const style::InfiniteRadialAnimation &_st;
 	crl::time _workStarted = 0;
 	crl::time _workFinished = 0;
 	Ui::Animations::Basic _animation;
+	rpl::lifetime _lifetime;
 
 };
 
@@ -114,6 +117,7 @@ inline InfiniteRadialAnimation::InfiniteRadialAnimation(
 	const style::InfiniteRadialAnimation &st)
 : _st(st)
 , _animation(std::forward<Callback>(callback)) {
+	init();
 }
 
 } // namespace Ui
