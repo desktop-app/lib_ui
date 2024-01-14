@@ -235,6 +235,9 @@ void ImportantTooltip::resizeToContent() {
 	if (size.width() < 2 * (_st.arrowSkipMin + _st.arrow)) {
 		size.setWidth(2 * (_st.arrowSkipMin + _st.arrow));
 	}
+	if (_side & RectPart::Right) {
+		size.setWidth(size.width() + _st.arrow);
+	}
 	setFixedSize(size);
 	updateGeometry();
 }
@@ -250,9 +253,11 @@ void ImportantTooltip::countApproachSide(RectParts preferSide) {
 	auto allowedBelow = (availableBelow >= requiredSpace + _st.margin.bottom());
 	if ((allowedAbove && allowedBelow) || (!allowedAbove && !allowedBelow)) {
 		_side = preferSide;
+	} else if (preferSide & RectPart::Right) {
+		_side = preferSide;
 	} else {
 		_side = (allowedAbove ? RectPart::Top : RectPart::Bottom)
-			| (preferSide & (RectPart::Left | RectPart::Center | RectPart::Right));
+			| (preferSide & (RectPart::Left | RectPart::Center));
 	}
 	auto arrow = QImage(
 		QSize(_st.arrow * 2, _st.arrow) * style::DevicePixelRatio(),
@@ -272,6 +277,8 @@ void ImportantTooltip::countApproachSide(RectParts preferSide) {
 	}
 	if (_side & RectPart::Bottom) {
 		arrow = std::move(arrow).transformed(QTransform(1, 0, 0, -1, 0, 0));
+	} else if (_side & RectPart::Right) {
+		arrow = std::move(arrow).transformed(QTransform().rotate(-90));
 	}
 	_arrow = PixmapFromImage(std::move(arrow));
 }
@@ -366,11 +373,15 @@ void ImportantTooltip::updateGeometry() {
 	const auto position = _countPosition
 		? _countPosition(size())
 		: countPosition();
+	const auto isTop = (_side & RectPart::Top);
+	const auto isBottom = (_side & RectPart::Bottom);
 	const auto shift = anim::interpolate(
-		(_side & RectPart::Top) ? -_st.shift : _st.shift,
+		(isTop || (_side & RectPart::Left)) ? -_st.shift : _st.shift,
 		0,
 		_visibleAnimation.value(_visible ? 1. : 0.));
-	move(position.x(), position.y() + shift);
+	move(
+		position.x() + (isTop || isBottom ? 0 : shift),
+		position.y() + (isTop || isBottom ? shift : 0));
 }
 
 void ImportantTooltip::resizeEvent(QResizeEvent *e) {
@@ -407,8 +418,14 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
 		auto arrowLeft = areaMiddle - _st.arrow;
 		if (_side & RectPart::Top) {
 			p.drawPixmapLeft(arrowLeft, inner.y() + inner.height(), width(), _arrow);
-		} else {
+		} else if (_side & RectPart::Bottom) {
 			p.drawPixmapLeft(arrowLeft, inner.y() - _st.arrow, width(), _arrow);
+		} else if (_side & RectPart::Right) {
+			p.drawPixmapLeft(
+				inner.x() + inner.width(),
+				inner.y() + (inner.height() - _st.arrow) / 2,
+				width(),
+				_arrow);
 		}
 	}
 }
