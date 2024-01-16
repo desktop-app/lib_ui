@@ -52,6 +52,7 @@ private:
 
 	void init();
 	void updateMargins();
+	void updateCloaking();
 	void updateWindowFrameColors();
 	void updateWindowFrameColors(bool active);
 	void initialShadowUpdate();
