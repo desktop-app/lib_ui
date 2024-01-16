@@ -497,27 +497,25 @@ void WindowHelper::init() {
 	window()->shownValue() | rpl::filter([=](bool shown) {
 		return !shown;
 	}) | rpl::start_with_next([=] {
-		BOOL cloak = TRUE;
-		DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &cloak, sizeof(cloak));
+		const auto toggleCloak = [=](bool enabled) {
+			const auto flag = BOOL(enabled ? TRUE : FALSE);
+			DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &flag, sizeof(flag));
+		};
+		toggleCloak(true);
 
-		const auto firstPaintEventFilter = std::make_shared<QObject*>(nullptr);
+		const auto qwindow = window()->windowHandle();
+		const auto firstPaintEventFilter = std::make_shared<QObject*>();
 		*firstPaintEventFilter = base::install_event_filter(
-			window()->windowHandle(),
+			qwindow,
 			[=](not_null<QEvent*> e) {
-				if (!*firstPaintEventFilter
-						|| e->type() != QEvent::Expose
-						|| !window()->windowHandle()->isExposed()) {
-					return base::EventFilterResult::Continue;
-				}
-				InvokeQueued(*firstPaintEventFilter, [=] {
-					BOOL cloak = FALSE;
-					DwmSetWindowAttribute(
-						_handle,
-						DWMWA_CLOAK,
-						&cloak,
-						sizeof(cloak));
+				if (e->type() == QEvent::Expose && qwindow->isExposed()) {
+					InvokeQueued(qwindow, [=] {
+						InvokeQueued(qwindow, [=] {
+							toggleCloak(false);
+						});
+					});
 					delete base::take(*firstPaintEventFilter);
-				});
+				}
 				return base::EventFilterResult::Continue;
 			});
 	}, window()->lifetime());
