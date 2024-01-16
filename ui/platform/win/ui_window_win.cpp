@@ -611,9 +611,9 @@ bool WindowHelper::handleNativeEvent(
 					+ GetSystemMetrics(SM_CXPADDEDBORDER);
 			const auto borderHeight = (GetSystemMetricsForDpiSupported() && dpi)
 				? GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
-					+ GetSystemMetricsForDpi(SM_CYPADDEDBORDER, dpi)
+					+ GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)
 				: GetSystemMetrics(SM_CYSIZEFRAME)
-					+ GetSystemMetrics(SM_CYPADDEDBORDER);
+					+ GetSystemMetrics(SM_CXPADDEDBORDER);
 			r->left += borderWidth;
 			r->right -= borderWidth;
 			if (maximized) {
