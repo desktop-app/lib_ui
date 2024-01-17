@@ -909,9 +909,15 @@ void WindowHelper::updateWindowFrameColors(bool active) {
 }
 
 void WindowHelper::updateCloaking() {
-	const auto enabled = window()->isHidden() && !_isFullScreen;
+	const auto enabled = window()->isHidden();
 	const auto flag = BOOL(enabled ? TRUE : FALSE);
 	DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &flag, sizeof(flag));
+	if (!enabled) {
+		SetWindowLongPtr(
+			_handle,
+			GWL_STYLE,
+			GetWindowLongPtr(_handle, GWL_STYLE));
+	}
 }
 
 void WindowHelper::updateMargins() {
