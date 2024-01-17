@@ -367,7 +367,6 @@ void WindowHelper::showFullScreen() {
 		_isFullScreen = true;
 		updateMargins();
 		updateCornersRounding();
-		updateCloaking();
 	}
 	window()->showFullScreen();
 }
@@ -378,7 +377,6 @@ void WindowHelper::showNormal() {
 		_isFullScreen = false;
 		updateMargins();
 		updateCornersRounding();
-		updateCloaking();
 	}
 }
 
@@ -496,26 +494,12 @@ void WindowHelper::init() {
 		}, window()->lifetime());
 	}
 
-	window()->shownValue() | rpl::filter([=](bool shown) {
-		return !shown;
-	}) | rpl::start_with_next([=] {
-		updateCloaking();
-
-		const auto qwindow = window()->windowHandle();
-		const auto firstPaintEventFilter = std::make_shared<QObject*>();
-		*firstPaintEventFilter = base::install_event_filter(
-			qwindow,
-			[=](not_null<QEvent*> e) {
-				if (e->type() == QEvent::Expose && qwindow->isExposed()) {
-					InvokeQueued(qwindow, [=] {
-						InvokeQueued(qwindow, [=] {
-							updateCloaking();
-						});
-					});
-					delete base::take(*firstPaintEventFilter);
-				}
-				return base::EventFilterResult::Continue;
-			});
+	window()->shownValue() | rpl::start_with_next([=](bool shown) {
+		if (shown) {
+			UpdateWindow(_handle);
+		}
+		const auto cloak = !shown;
+		DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &cloak, sizeof(cloak));
 	}, window()->lifetime());
 }
 
@@ -906,12 +890,6 @@ void WindowHelper::updateWindowFrameColors(bool active) {
 		kDWMWA_TEXT_COLOR,
 		&fgRef,
 		sizeof(COLORREF));
-}
-
-void WindowHelper::updateCloaking() {
-	const auto enabled = window()->isHidden() && !_isFullScreen;
-	const auto flag = BOOL(enabled ? TRUE : FALSE);
-	DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &flag, sizeof(flag));
 }
 
 void WindowHelper::updateMargins() {
