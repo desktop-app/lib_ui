@@ -184,14 +184,15 @@ void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
 void SetGeometryWithPossibleScreenChange(
 		not_null<QWidget*> widget,
 		QRect geometry) {
-	const auto screen = QGuiApplication::screenAt(geometry.center());
-	const auto window = widget->window();
-	window->createWinId();
-	const auto handle = window->windowHandle();
-	if (handle->screen() != screen) {
-		handle->setScreen(screen);
-		window->move(screen->availableGeometry().topLeft());
-		window->show();
+	if (const auto screen = QGuiApplication::screenAt(geometry.center())) {
+		const auto window = widget->window();
+		window->createWinId();
+		const auto handle = window->windowHandle();
+		if (handle->screen() != screen) {
+			handle->setScreen(screen);
+			window->move(screen->availableGeometry().topLeft());
+			window->show();
+		}
 	}
 	widget->setGeometry(geometry);
 }
