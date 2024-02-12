@@ -8,6 +8,7 @@
 
 #include "ui/effects/animation_value.h"
 #include "ui/effects/frame_generator.h"
+#include "ui/dynamic_image.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
 
@@ -900,6 +901,56 @@ bool Internal::ready() {
 }
 
 bool Internal::readyInDefaultState() {
+	return true;
+}
+
+DynamicImageEmoji::DynamicImageEmoji(
+	QString entityData,
+	std::shared_ptr<DynamicImage> image,
+	Fn<void()> repaint,
+	QMargins padding,
+	int size)
+: _entityData(entityData)
+, _image(std::move(image))
+, _repaint(std::move(repaint))
+, _padding(padding)
+, _size(size) {
+}
+
+int DynamicImageEmoji::width() {
+	return _padding.left() + _size + _padding.right();
+}
+
+QString DynamicImageEmoji::entityData() {
+	return _entityData;
+}
+
+void DynamicImageEmoji::paint(QPainter &p, const Context &context) {
+	if (!_subscribed) {
+		_subscribed = true;
+		_image->subscribeToUpdates(_repaint);
+	}
+
+	const auto rect = QRect(
+		context.position + QPoint(_padding.left(), _padding.top()),
+		QSize(_size, _size));
+	auto image = _image->image(_size);
+	context.internal.colorized = false;
+	PaintScaledImage(p, rect, { &image }, context);
+}
+
+void DynamicImageEmoji::unload() {
+	if (_subscribed) {
+		_subscribed = false;
+		_image->subscribeToUpdates(nullptr);
+	}
+}
+
+bool DynamicImageEmoji::ready() {
+	return true;
+}
+
+bool DynamicImageEmoji::readyInDefaultState() {
 	return true;
 }
 

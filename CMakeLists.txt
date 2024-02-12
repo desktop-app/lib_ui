@@ -273,6 +273,7 @@ PRIVATE
     ui/delayed_activation.h
     ui/dragging_scroll_manager.cpp
     ui/dragging_scroll_manager.h
+    ui/dynamic_image.h
     ui/emoji_config.cpp
     ui/emoji_config.h
     ui/focus_persister.h

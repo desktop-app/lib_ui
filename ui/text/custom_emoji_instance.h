@@ -17,6 +17,7 @@ class QColor;
 class QPainter;
 
 namespace Ui {
+class DynamicImage;
 class FrameGenerator;
 } // namespace Ui
 
@@ -293,6 +294,32 @@ private:
 	const QImage _image;
 	const QMargins _padding;
 	const bool _colored = false;
+
+};
+
+class DynamicImageEmoji final : public Ui::Text::CustomEmoji {
+public:
+	DynamicImageEmoji(
+		QString entityData,
+		std::shared_ptr<DynamicImage> image,
+		Fn<void()> repaint,
+		QMargins padding,
+		int size);
+
+	int width() override;
+	QString entityData() override;
+	void paint(QPainter &p, const Context &context) override;
+	void unload() override;
+	bool ready() override;
+	bool readyInDefaultState() override;
+
+private:
+	const QString _entityData;
+	const std::shared_ptr<DynamicImage> _image;
+	const Fn<void()> _repaint;
+	const QMargins _padding;
+	const int _size = 0;
+	bool _subscribed = false;
 
 };
 
