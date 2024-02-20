@@ -68,6 +68,25 @@ void GenericBox::addSkip(int height) {
 	addRow(object_ptr<Ui::FixedHeightWidget>(this, height));
 }
 
+void GenericBox::setInnerFocus() {
+	if (_focus) {
+		_focus();
+	} else {
+		BoxContent::setInnerFocus();
+	}
+}
+
+void GenericBox::showFinished() {
+	const auto guard = QPointer(this);
+	if (const auto onstack = _showFinished) {
+		onstack();
+		if (!guard) {
+			return;
+		}
+	}
+	_showFinishes.fire({});
+}
+
 not_null<Ui::RpWidget*> GenericBox::doSetPinnedToTopContent(
 		object_ptr<Ui::RpWidget> content) {
 	_pinnedToTopContent = std::move(content);

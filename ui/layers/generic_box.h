@@ -41,6 +41,9 @@ public:
 	void setShowFinishedCallback(Fn<void()> callback) {
 		_showFinished = callback;
 	}
+	[[nodiscard]] rpl::producer<> showFinishes() const {
+		return _showFinishes.events();
+	}
 
 	[[nodiscard]] int rowsCount() const;
 	[[nodiscard]] int width() const;
@@ -81,18 +84,8 @@ public:
 		_scrollSt = &st;
 	}
 
-	void setInnerFocus() override {
-		if (_focus) {
-			_focus();
-		} else {
-			BoxContent::setInnerFocus();
-		}
-	}
-	void showFinished() override {
-		if (_showFinished) {
-			_showFinished();
-		}
-	}
+	void setInnerFocus() override;
+	void showFinished() override;
 
 	template <typename Widget>
 	not_null<Widget*> setPinnedToTopContent(object_ptr<Widget> content) {
@@ -144,6 +137,7 @@ private:
 	FnMut<void(not_null<GenericBox*>)> _init;
 	Fn<void()> _focus;
 	Fn<void()> _showFinished;
+	rpl::event_stream<> _showFinishes;
 	object_ptr<Ui::VerticalLayout> _owned;
 	not_null<Ui::VerticalLayout*> _content;
 	const style::ScrollArea *_scrollSt = nullptr;
