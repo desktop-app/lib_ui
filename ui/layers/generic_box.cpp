@@ -62,6 +62,10 @@ void GenericBox::prepare() {
 			pinnedToBottom->move(0, outer - height);
 		}, pinnedToBottom->lifetime());
 	}
+
+	if (const auto onstack = _initScroll) {
+		onstack();
+	}
 }
 
 void GenericBox::addSkip(int height) {

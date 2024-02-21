@@ -38,6 +38,9 @@ public:
 	void setFocusCallback(Fn<void()> callback) {
 		_focus = callback;
 	}
+	void setInitScrollCallback(Fn<void()> callback) {
+		_initScroll = callback;
+	}
 	void setShowFinishedCallback(Fn<void()> callback) {
 		_showFinished = callback;
 	}
@@ -136,6 +139,7 @@ private:
 
 	FnMut<void(not_null<GenericBox*>)> _init;
 	Fn<void()> _focus;
+	Fn<void()> _initScroll;
 	Fn<void()> _showFinished;
 	rpl::event_stream<> _showFinishes;
 	object_ptr<Ui::VerticalLayout> _owned;
