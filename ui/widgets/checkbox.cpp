@@ -907,9 +907,23 @@ void RadiobuttonGroup::setValue(int value) {
 	for (const auto button : _buttons) {
 		button->handleNewGroupValue(_value);
 	}
-	if (const auto callback = _changedCallback) {
-		callback(_value);
+	const auto guard = weak_from_this();
+	_changes.fire_copy(value);
+	if (guard.lock()) {
+		if (const auto callback = _changedCallback) {
+			callback(_value);
+		}
 	}
+}
+
+void RadiobuttonGroup::registerButton(Radiobutton *button) {
+	if (!base::contains(_buttons, button)) {
+		_buttons.push_back(button);
+	}
+}
+
+void RadiobuttonGroup::unregisterButton(Radiobutton *button) {
+	_buttons.erase(ranges::remove(_buttons, button), _buttons.end());
 }
 
 Radiobutton::Radiobutton(
@@ -927,7 +941,7 @@ Radiobutton::Radiobutton(
 	st,
 	std::make_unique<RadioView>(
 		radioSt,
-		(group->hasValue() && group->value() == value))) {
+		(group->hasValue() && group->current() == value))) {
 }
 
 Radiobutton::Radiobutton(
@@ -946,7 +960,7 @@ Radiobutton::Radiobutton(
 , _value(value) {
 	using namespace rpl::mappers;
 
-	checkbox()->setChecked(group->hasValue() && group->value() == value);
+	checkbox()->setChecked(group->hasValue() && group->current() == value);
 	_group->registerButton(this);
 	checkbox()->checkedChanges(
 	) | rpl::filter(

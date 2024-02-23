@@ -191,9 +191,9 @@ public:
 	using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 	void setClickHandlerFilter(ClickHandlerFilter &&filter);
 
-	bool checked() const;
-	rpl::producer<bool> checkedChanges() const;
-	rpl::producer<bool> checkedValue() const;
+	[[nodiscard]] bool checked() const;
+	[[nodiscard]] rpl::producer<bool> checkedChanges() const;
+	[[nodiscard]] rpl::producer<bool> checkedValue() const;
 	enum class NotifyAboutChange {
 		Notify,
 		DontNotify,
@@ -204,17 +204,17 @@ public:
 
 	void finishAnimating();
 
-	QMargins getMargins() const override {
+	[[nodiscard]] QMargins getMargins() const override {
 		return _st.margin;
 	}
-	int naturalWidth() const override;
+	[[nodiscard]] int naturalWidth() const override;
 
 	void updateCheck() {
 		rtlupdate(checkRect());
 	}
-	QRect checkRect() const;
+	[[nodiscard]] QRect checkRect() const;
 
-	not_null<AbstractCheckView*> checkView() const {
+	[[nodiscard]] not_null<AbstractCheckView*> checkView() const {
 		return _check.get();
 	}
 
@@ -257,7 +257,8 @@ private:
 
 class Radiobutton;
 
-class RadiobuttonGroup {
+class RadiobuttonGroup
+	: public std::enable_shared_from_this<RadiobuttonGroup> {
 public:
 	RadiobuttonGroup() = default;
 	RadiobuttonGroup(int value) : _value(value), _hasValue(true) {
@@ -266,29 +267,32 @@ public:
 	void setChangedCallback(Fn<void(int value)> callback) {
 		_changedCallback = std::move(callback);
 	}
+	[[nodiscard]] rpl::producer<int> changes() const {
+		return _changes.events();
+	}
+	[[nodiscard]] rpl::producer<int> value() const {
+		return hasValue()
+			? _changes.events_starting_with_copy(_value)
+			: changes();
+	}
 
-	bool hasValue() const {
+	[[nodiscard]] bool hasValue() const {
 		return _hasValue;
 	}
-	int value() const {
+	[[nodiscard]] int current() const {
 		return _value;
 	}
 	void setValue(int value);
 
 private:
 	friend class Radiobutton;
-	void registerButton(Radiobutton *button) {
-		if (!base::contains(_buttons, button)) {
-			_buttons.push_back(button);
-		}
-	}
-	void unregisterButton(Radiobutton *button) {
-		_buttons.erase(std::remove(_buttons.begin(), _buttons.end(), button), _buttons.end());
-	}
+	void registerButton(Radiobutton *button);
+	void unregisterButton(Radiobutton *button);
 
 	int _value = 0;
 	bool _hasValue = false;
 	Fn<void(int value)> _changedCallback;
+	rpl::event_stream<int> _changes;
 	std::vector<Radiobutton*> _buttons;
 
 };
@@ -340,34 +344,41 @@ template <typename Enum>
 class Radioenum;
 
 template <typename Enum>
-class RadioenumGroup {
+class RadioenumGroup : public RadiobuttonGroup {
+	using Parent = RadiobuttonGroup;
+
+	[[nodiscard]] static Enum Cast(int value) {
+		return static_cast<Enum>(value);
+	}
+
 public:
 	RadioenumGroup() = default;
-	RadioenumGroup(Enum value) : _group(static_cast<int>(value)) {
+	RadioenumGroup(Enum value) : Parent(static_cast<int>(value)) {
 	}
 
 	template <typename Callback>
 	void setChangedCallback(Callback &&callback) {
-		_group.setChangedCallback([callback](int value) {
-			callback(static_cast<Enum>(value));
+		Parent::setChangedCallback([copy = std::move(callback)](int value) {
+			copy(Cast(value));
 		});
 	}
 
-	bool hasValue() const {
-		return _group.hasValue();
+	[[nodiscard]] rpl::producer<Enum> changes() const {
+		return Parent::changes() | rpl::map(Cast);
 	}
-	Enum value() const {
-		return static_cast<Enum>(_group.value());
+	[[nodiscard]] rpl::producer<Enum> value() const {
+		return Parent::value() | rpl::map(Cast);
+	}
+	[[nodiscard]] Enum current() const {
+		return Cast(Parent::current());
 	}
 	void setValue(Enum value) {
-		_group.setValue(static_cast<int>(value));
+		Parent::setValue(static_cast<int>(value));
 	}
 
 private:
 	template <typename OtherEnum>
 	friend class Radioenum;
-
-	RadiobuttonGroup _group;
 
 };
 
@@ -382,7 +393,7 @@ public:
 		const style::Checkbox &st = st::defaultCheckbox)
 	: Radiobutton(
 		parent,
-		std::shared_ptr<RadiobuttonGroup>(group, &group->_group),
+		group->shared_from_this(),
 		static_cast<int>(value),
 		text,
 		st) {
@@ -394,13 +405,13 @@ public:
 		const QString &text,
 		const style::Checkbox &st,
 		std::unique_ptr<AbstractCheckView> check)
-		: Radiobutton(
-			parent,
-			std::shared_ptr<RadiobuttonGroup>(group, &group->_group),
-			static_cast<int>(value),
-			text,
-			st,
-			std::move(check)) {
+	: Radiobutton(
+		parent,
+		group->shared_from_this(),
+		static_cast<int>(value),
+		text,
+		st,
+		std::move(check)) {
 	}
 
 };
