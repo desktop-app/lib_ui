@@ -25,7 +25,7 @@
 namespace Ui {
 namespace {
 
-constexpr auto kVersion = 1;
+constexpr auto kVersion = 2;
 constexpr auto kFramesPerRow = 10;
 constexpr auto kImageSpoilerDarkenAlpha = 32;
 constexpr auto kMaxCacheSize = 5 * 1024 * 1024;
@@ -186,7 +186,9 @@ struct Particle {
 	auto hq = PainterHighQualityEnabler(p);
 	p.setPen(Qt::NoPen);
 	p.setBrush(Qt::white);
-	p.drawRoundedRect(1., 1., width, height, radius, radius);
+	QPainterPath path;
+	path.addRoundedRect(1., 1., width, height, radius, radius);
+	p.drawPath(path);
 	p.end();
 	return result;
 }
