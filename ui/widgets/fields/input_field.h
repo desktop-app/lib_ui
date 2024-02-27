@@ -569,4 +569,6 @@ private:
 
 void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 
+[[nodiscard]] int FieldCharacterCount(not_null<InputField*> field);
+
 } // namespace Ui

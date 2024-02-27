@@ -3988,4 +3988,9 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document) {
 	}
 }
 
+int FieldCharacterCount(not_null<InputField*> field) {
+	// This method counts emoji properly.
+	return field->document()->characterCount() - 1;
+}
+
 } // namespace Ui
