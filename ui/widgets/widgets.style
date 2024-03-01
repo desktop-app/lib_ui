@@ -1404,6 +1404,7 @@ defaultToast: Toast {
 
 defaultMultilineToast: Toast(defaultToast) {
 	minWidth: 160px;
+	maxWidth: 360px;
 }
 
 // Windows specific title
