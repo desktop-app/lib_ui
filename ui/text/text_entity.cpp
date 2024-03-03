@@ -2125,7 +2125,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				openType(EntityType::CustomUrl, nextState.link);
 			}
 		}
-		for (const auto type : kInMaskTypes) {
+		for (const auto type : kInMaskTypes | ranges::views::reverse) {
 			if (nextState.has(type) && !state.has(type)) {
 				openType(type, nextState.language);
 			}
