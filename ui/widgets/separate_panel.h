@@ -117,8 +117,7 @@ private:
 	void ensureLayerCreated();
 	void destroyLayer();
 
-	void updateTitleGeometry(int newWidth);
-	void updateTitlePosition();
+	void updateTitleGeometry(int newWidth) const;
 	void paintShadowBorder(QPainter &p) const;
 	void paintOpaqueBorder(QPainter &p) const;
 

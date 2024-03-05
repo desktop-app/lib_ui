@@ -21,6 +21,7 @@
 #include "ui/layers/show.h"
 #include "ui/style/style_core_palette.h"
 #include "ui/painter.h"
+#include "ui/rect.h"
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
 #include "styles/style_widgets.h"
@@ -170,15 +171,13 @@ void SeparatePanel::initControls() {
 	) | rpl::start_with_next([=](int width) {
 		_back->moveToLeft(_padding.left(), _padding.top());
 		_close->moveToRight(_padding.right(), _padding.top());
-		if (_title) {
-			updateTitleGeometry(width);
-		}
+		updateTitleGeometry(width);
 	}, lifetime());
 
 	_back->toggledValue(
 	) | rpl::start_with_next([=](bool toggled) {
 		_titleLeft.start(
-			[=] { updateTitlePosition(); },
+			[=] { updateTitleGeometry(width()); },
 			toggled ? 0. : 1.,
 			toggled ? 1. : 0.,
 			st::fadeWrapDuration);
@@ -238,15 +237,7 @@ void SeparatePanel::overrideTitleColor(std::optional<QColor> color) {
 	update();
 }
 
-void SeparatePanel::updateTitleGeometry(int newWidth) {
-	_title->resizeToWidth(newWidth
-		- _padding.left() - _back->width()
-		- _padding.right() - _close->width()
-		- (_menuToggle ? _menuToggle->width() : 0));
-	updateTitlePosition();
-}
-
-void SeparatePanel::updateTitlePosition() {
+void SeparatePanel::updateTitleGeometry(int newWidth) const {
 	if (!_title) {
 		return;
 	}
@@ -255,6 +246,11 @@ void SeparatePanel::updateTitlePosition() {
 		st::separatePanelTitleLeft,
 		_back->width() + st::separatePanelTitleSkip,
 		progress);
+	_title->resizeToWidth(newWidth
+		- rect::m::sum::h(_padding)
+		- left
+		- _close->width()
+		- (_menuToggle ? _menuToggle->width() : 0));
 	_title->moveToLeft(
 		_padding.left() + left,
 		_padding.top() + st::separatePanelTitleTop);
@@ -295,6 +291,7 @@ void SeparatePanel::setMenuAllowed(
 			_padding.right() + _close->width(),
 			_padding.top());
 	}, _menuToggle->lifetime());
+	updateTitleGeometry(width());
 }
 
 void SeparatePanel::showMenu(Fn<void(const Menu::MenuCallback&)> fill) {
