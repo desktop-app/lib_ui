@@ -241,6 +241,9 @@ public:
 	const QString &getLastText() const {
 		return _lastTextWithTags.text;
 	}
+	[[nodiscard]] int lastTextSizeWithoutSurrogatePairsCount() const {
+		return _lastTextSizeWithoutSurrogatePairsCount;
+	}
 	void setPlaceholder(
 		rpl::producer<QString> placeholder,
 		int afterSymbols = 0);
@@ -380,7 +383,11 @@ private:
 
 	// "start" and "end" are in coordinates of text where emoji are replaced
 	// by ObjectReplacementCharacter. If "end" = -1 means get text till the end.
-	QString getTextPart(
+	struct TextPart final {
+		QString text;
+		int textSizeWithoutSurrogatePairsCount = 0;
+	};
+	TextPart getTextPart(
 		int start,
 		int end,
 		TagList &outTagsList,
@@ -484,6 +491,7 @@ private:
 	TextWithTags _lastTextWithTags;
 	std::vector<MarkdownTag> _lastMarkdownTags;
 	QString _lastPreEditText;
+	int _lastTextSizeWithoutSurrogatePairsCount = 0;
 	std::optional<QString> _inputMethodCommit;
 
 	QMargins _additionalMargins;
