@@ -39,6 +39,22 @@ namespace sum {
 }
 
 } // namespace sum
+
+namespace pos {
+
+/*
+	Top-left.
+	rect::m::pos::tl(mypadding);
+*/
+[[nodiscard]] inline QPoint tl(const QMargins &margins) {
+	return { margins.left(), margins.top() };
+}
+
+[[nodiscard]] inline QPointF tl(const QMarginsF &margins) {
+	return { margins.left(), margins.top() };
+}
+
+} // namespace pos
 } // namespace m
 
 /*
