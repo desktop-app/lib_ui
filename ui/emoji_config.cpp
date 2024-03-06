@@ -373,6 +373,24 @@ void ClearUniversalChecked() {
 	}
 }
 
+[[nodiscard]] uint8 EmojiSurrogatePairs(const QString &e) {
+	if (e.size() > 1) {
+		auto count = uint8(0);
+		const auto begin = e.data();
+		auto ch = begin;
+		for (const auto end = begin + e.size(); ch != end; ++ch) {
+			if ((ch + 1 < end)
+				&& ch->isHighSurrogate()
+				&& (ch + 1)->isLowSurrogate()) {
+				count++;
+			}
+		}
+		return count;
+	} else {
+		return 0;
+	}
+}
+
 } // namespace
 
 namespace internal {
@@ -626,6 +644,22 @@ int GetSizeTouchbar() {
 		: TouchbarSize;
 }
 #endif
+
+One::One(
+	const QString &id,
+	EmojiPtr original,
+	uint32 index,
+	bool hasPostfix,
+	bool colorizable,
+	const CreationTag &)
+: _id(id)
+, _original(original)
+, _index(index)
+, _hasPostfix(hasPostfix)
+, _colorizable(colorizable)
+, _surrogatePairs(EmojiSurrogatePairs(text())) {
+	Expects(!_colorizable || !colored());
+}
 
 int One::variantsCount() const {
 	return hasVariants() ? 5 : 0;

@@ -51,58 +51,61 @@ class One {
 
 public:
 	One(One &&other) = default;
-	One(const QString &id, EmojiPtr original, uint32 index, bool hasPostfix, bool colorizable, const CreationTag &)
-	: _id(id)
-	, _original(original)
-	, _index(index)
-	, _hasPostfix(hasPostfix)
-	, _colorizable(colorizable) {
-		Expects(!_colorizable || !colored());
-	}
+	One(
+		const QString &id,
+		EmojiPtr original,
+		uint32 index,
+		bool hasPostfix,
+		bool colorizable,
+		const CreationTag &);
 
-	QString id() const {
+	[[nodiscard]] QString id() const {
 		return _id;
 	}
-	QString text() const {
+	[[nodiscard]] QString text() const {
 		return hasPostfix() ? (_id + QChar(kPostfix)) : _id;
 	}
 
-	bool colored() const {
+	[[nodiscard]] bool colored() const {
 		return (_original != nullptr);
 	}
-	EmojiPtr original() const {
+	[[nodiscard]] EmojiPtr original() const {
 		return _original ? _original : this;
 	}
-	QString nonColoredId() const {
+	[[nodiscard]] QString nonColoredId() const {
 		return original()->id();
 	}
 
-	bool hasPostfix() const {
+	[[nodiscard]] bool hasPostfix() const {
 		return _hasPostfix;
 	}
 
-	bool hasVariants() const {
+	[[nodiscard]] bool hasVariants() const {
 		return _colorizable || colored();
 	}
-	int variantsCount() const;
-	int variantIndex(EmojiPtr variant) const;
-	EmojiPtr variant(int index) const;
+	[[nodiscard]] int variantsCount() const;
+	[[nodiscard]] int variantIndex(EmojiPtr variant) const;
+	[[nodiscard]] EmojiPtr variant(int index) const;
 
-	int index() const {
+	[[nodiscard]] int index() const {
 		return _index;
 	}
-	int sprite() const {
+	[[nodiscard]] int sprite() const {
 		return int(_index >> 9);
 	}
-	int row() const {
+	[[nodiscard]] int row() const {
 		return int((_index >> 5) & 0x0FU);
 	}
-	int column() const {
+	[[nodiscard]] int column() const {
 		return int(_index & 0x1FU);
 	}
 
-	QString toUrl() const {
+	[[nodiscard]] QString toUrl() const {
 		return "emoji://e." + QString::number(index());
+	}
+
+	[[nodiscard]] uint8 surrogatePairs() const {
+		return _surrogatePairs;
 	}
 
 private:
@@ -111,6 +114,7 @@ private:
 	const uint32 _index = 0;
 	const bool _hasPostfix = false;
 	const bool _colorizable = false;
+	const uint8 _surrogatePairs;
 
 	friend void internal::Init();
 
