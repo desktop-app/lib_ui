@@ -2919,10 +2919,10 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 	if (!_markdownEnabled) {
 		return false;
 	}
+	const auto modifiers = e->modifiers()
+		& ~(Qt::KeypadModifier | Qt::GroupSwitchModifier);
 	const auto matches = [&](const QKeySequence &sequence) {
-		const auto searchKey = (e->modifiers() | e->key())
-			& ~(Qt::KeypadModifier | Qt::GroupSwitchModifier);
-		const auto events = QKeySequence(searchKey);
+		const auto events = QKeySequence(modifiers | e->key());
 		return sequence.matches(events) == QKeySequence::ExactMatch;
 	};
 	const auto matchesCtrlShiftDot = [&] {
@@ -2930,8 +2930,7 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 		// shift+. gives us '>' and ctrl+shift+> is not the same.
 		// So we check with native code instead.
 #ifdef Q_OS_WIN
-		return e->modifiers().testFlag(Qt::ControlModifier)
-			&& e->modifiers().testFlag(Qt::ShiftModifier)
+		return (modifiers == (Qt::ControlModifier | Qt::ShiftModifier))
 			&& (e->nativeVirtualKey() == VK_OEM_PERIOD);
 #elif !defined DESKTOP_APP_DISABLE_X11_INTEGRATION // Q_OS_WIN
 		if (!_inner->_xcbKeySymbols) {
@@ -2941,8 +2940,7 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 			_inner->_xcbKeySymbols.get(),
 			e->nativeScanCode(),
 			0);
-		return e->modifiers().testFlag(Qt::ControlModifier)
-			&& e->modifiers().testFlag(Qt::ShiftModifier)
+		return (modifiers == (Qt::ControlModifier | Qt::ShiftModifier))
 			&& (keysym == XKB_KEY_period);
 #else // !Q_OS_WIN && !DESKTOP_APP_DISABLE_X11_INTEGRATION
 		return false;
