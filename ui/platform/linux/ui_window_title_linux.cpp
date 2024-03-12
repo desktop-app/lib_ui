@@ -8,6 +8,8 @@
 
 #include "base/platform/linux/base_linux_xdp_utilities.h"
 
+#include "base/integration.h"
+
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xsettings.h"
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
@@ -75,7 +77,11 @@ TitleControls::Layout TitleControlsLayout() {
 		static const XDP::SettingWatcher settingWatcher(
 			"org.gnome.desktop.wm.preferences",
 			"button-layout",
-			[] { NotifyTitleControlsLayoutChanged(); });
+			[] {
+				base::Integration::Instance().enterFromEventLoop([] {
+					NotifyTitleControlsLayoutChanged();
+				});
+			});
 
 		return true;
 	}();
