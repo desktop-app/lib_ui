@@ -576,6 +576,7 @@ bool WindowHelper::handleNativeEvent(
 		}
 		updateWindowFrameColors(active);
 		window()->update();
+		_title->update();
 	} return false;
 
 	case WM_NCPAINT: {
