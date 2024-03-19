@@ -424,11 +424,36 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 				rect.bottomRight() - QPoint(radiusWithFix, radiusWithFix),
 				radiusSize
 			)) || !rect.contains(clip);
-	}) | rpl::start_with_next([=] {
+	}) | rpl::start_with_next([=](QRect clip) {
 		Painter p(_roundingOverlay);
-		const auto rect = window()->rect().marginsRemoved(resizeArea());
+		const auto skip = resizeArea();
+		const auto outer = window()->rect();
+
+		const auto rect = outer.marginsRemoved(skip);
 		p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 		_roundRect.paint(p, rect, RectPart::AllCorners);
+
+		p.setCompositionMode(QPainter::CompositionMode_Source);
+		const auto outside = std::array{
+			QRect(0, 0, outer.width(), skip.top()),
+			QRect(0, skip.top(), skip.left(), outer.height() - skip.top()),
+			QRect(
+				outer.width() - skip.right(),
+				skip.top(),
+				skip.right(),
+				outer.height() - skip.top()),
+			QRect(
+				skip.left(),
+				outer.height() - skip.bottom(),
+				outer.width() - skip.left() - skip.right(),
+				skip.bottom())
+		};
+		for (const auto &part : outside) {
+			if (const auto fill = clip.intersected(part); !fill.isEmpty()) {
+				p.fillRect(fill, Qt::transparent);
+			}
+		}
+
 		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 		Shadow::paint(p, rect, window()->width(), Shadow(), _sides, _corners);
 	}, _roundingOverlay->lifetime());
