@@ -381,6 +381,14 @@ ElasticScroll::ElasticScroll(
 	}, _bar->lifetime());
 }
 
+ElasticScroll::~ElasticScroll() {
+	// Destroy the _bar cleanly (keeping _bar == nullptr) to avoid a crash:
+	//
+	// _bar destructor may send LeaveEvent to ElasticScroll,
+	// which will try to toggle(false) the _bar in leaveEventHook.
+	base::take(_bar);
+}
+
 void ElasticScroll::setHandleTouch(bool handle) {
 	if (_touchDisabled != handle) {
 		return;
@@ -1071,13 +1079,15 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
 }
 
 void ElasticScroll::enterEventHook(QEnterEvent *e) {
-	if (!_disabled) {
+	if (_bar && !_disabled) {
 		_bar->toggle(true);
 	}
 }
 
 void ElasticScroll::leaveEventHook(QEvent *e) {
-	_bar->toggle(false);
+	if (_bar) {
+		_bar->toggle(false);
+	}
 }
 
 void ElasticScroll::scrollTo(ScrollToRequest request) {

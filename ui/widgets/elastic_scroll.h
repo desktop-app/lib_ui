@@ -113,6 +113,7 @@ public:
 		QWidget *parent,
 		const style::ScrollArea &st = st::defaultScrollArea,
 		Qt::Orientation orientation = Qt::Vertical);
+	~ElasticScroll();
 
 	void setHandleTouch(bool handle);
 	bool viewportEvent(QEvent *e);
