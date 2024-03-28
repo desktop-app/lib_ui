@@ -77,7 +77,7 @@ Tooltip::~Tooltip() {
 
 void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *st) {
 	const auto usingScreenGeometry = !::Platform::IsWayland();
-	const auto screen = usingScreenGeometry ? QGuiApplication::screenAt(m) : nullptr;
+	const auto screen = QGuiApplication::screenAt(m);
 	if (usingScreenGeometry && !screen) {
 		Hide();
 		return;
@@ -118,10 +118,13 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 		p.setX(m.x() - (s.width() / 2));
 	}
 
-	// adjust tooltip position
 	if (screen) {
 		createWinId();
 		windowHandle()->setScreen(screen);
+	}
+
+	// adjust tooltip position
+	if (usingScreenGeometry) {
 		const auto r = screen->availableGeometry();
 		if (r.x() + r.width() - _st->skip < p.x() + s.width() && p.x() + s.width() > m.x()) {
 			p.setX(qMax(r.x() + r.width() - int32(_st->skip) - s.width(), m.x() - s.width()));
