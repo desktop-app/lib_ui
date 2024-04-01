@@ -117,6 +117,10 @@ public:
 		const style::FlatLabel &st = st::defaultFlatLabel,
 		const style::PopupMenu &stMenu = st::defaultPopupMenu);
 
+	[[nodiscard]] const style::FlatLabel &st() const {
+		return _st;
+	}
+
 	void setOpacity(float64 o);
 	void setTextColorOverride(std::optional<QColor> color);
 
