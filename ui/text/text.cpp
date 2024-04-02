@@ -984,6 +984,8 @@ void String::enumerateLines(
 				return withElided(true);
 			}
 			lineHeight = 0;
+			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
+			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
 
 			initNextParagraph(i + 1, index);
 			longWordLine = true;
