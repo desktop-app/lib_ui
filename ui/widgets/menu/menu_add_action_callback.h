@@ -8,6 +8,10 @@
 
 #include "ui/style/style_core.h"
 
+namespace style {
+struct MenuSeparator;
+} // namespace style
+
 namespace Ui {
 class PopupMenu;
 } // namespace Ui
@@ -20,6 +24,7 @@ public:
 		QString text;
 		Fn<void()> handler;
 		const style::icon *icon;
+		const style::MenuSeparator *separatorSt = nullptr;
 		Fn<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
 		int addTopShift = 0;
 		bool isSeparator = false;
