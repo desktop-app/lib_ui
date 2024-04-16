@@ -42,18 +42,32 @@ rpl::producer<> TimePart::erasePrevious() const {
 	return _erasePrevious.events();
 }
 
+rpl::producer<> TimePart::jumpToPrevious() const {
+	return _jumpToPrevious.events();
+}
+
 rpl::producer<QChar> TimePart::putNext() const {
 	return _putNext.events();
 }
 
 void TimePart::keyPressEvent(QKeyEvent *e) {
-	const auto isBackspace = (e->key() == Qt::Key_Backspace);
-	const auto isBeginning = (cursorPosition() == 0);
-	if (isBackspace && isBeginning && !hasSelectedText()) {
-		_erasePrevious.fire({});
-	} else {
-		MaskedInputField::keyPressEvent(e);
+	const auto position = cursorPosition();
+	const auto selection = hasSelectedText();
+	if (!selection && !position) {
+		if (e->key() == Qt::Key_Backspace) {
+			_erasePrevious.fire({});
+			return;
+		} else if (e->key() == Qt::Key_Left) {
+			_jumpToPrevious.fire({});
+			return;
+		}
+	} else if (!selection && position == getLastText().size()) {
+		if (e->key() == Qt::Key_Right) {
+			_putNext.fire(QChar(0));
+			return;
+		}
 	}
+	MaskedInputField::keyPressEvent(e);
 }
 
 void TimePart::wheelEvent(QWheelEvent *e) {
@@ -78,10 +92,10 @@ void TimePart::correctValue(
 		int wasCursor,
 		QString &now,
 		int &nowCursor) {
-	auto newText = QString();
-	auto newCursor = -1;
 	const auto oldCursor = nowCursor;
 	const auto oldLength = now.size();
+	auto newCursor = (oldCursor > 0) ? -1 : 0;
+	auto newText = QString();
 	auto accumulated = 0;
 	auto limit = 0;
 	for (; limit != oldLength; ++limit) {

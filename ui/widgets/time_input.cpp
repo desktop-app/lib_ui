@@ -110,6 +110,10 @@ TimeInput::TimeInput(
 	_minute->erasePrevious() | rpl::start_with_next([=] {
 		erasePrevious(_hour);
 	}, lifetime());
+	_minute->jumpToPrevious() | rpl::start_with_next([=] {
+		_hour->setCursorPosition(_hour->getLastText().size());
+		_hour->setFocus();
+	}, lifetime());
 	_separator1->setAttribute(Qt::WA_TransparentForMouseEvents);
 	setMouseTracking(true);
 

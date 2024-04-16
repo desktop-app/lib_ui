@@ -18,6 +18,7 @@ public:
 	void setWheelStep(int value);
 
 	[[nodiscard]] rpl::producer<> erasePrevious() const;
+	[[nodiscard]] rpl::producer<> jumpToPrevious() const;
 	[[nodiscard]] rpl::producer<QChar> putNext() const;
 
 	[[nodiscard]] std::optional<int> number();
@@ -37,6 +38,7 @@ private:
 	int _maxDigits = 0;
 	int _wheelStep = 0;
 	rpl::event_stream<> _erasePrevious;
+	rpl::event_stream<> _jumpToPrevious;
 	rpl::event_stream<QChar> _putNext;
 
 };
