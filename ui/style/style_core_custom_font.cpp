@@ -51,6 +51,9 @@ QFont ResolveFont(const QString &familyOverride, uint32 flags, int size) {
 		result = Database.font(custom.family, custom.style, point);
 	} else {
 		result.setFamily(GetFontOverride(flags));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+		result.setFeature("ss03", true);
+#endif // Qt >= 6.7.0
 		if (bold) {
 #ifdef LIB_UI_USE_PACKAGED_FONTS
 			result.setWeight(QFont::DemiBold);
