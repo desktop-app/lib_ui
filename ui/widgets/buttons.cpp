@@ -25,9 +25,7 @@ LinkButton::LinkButton(
 , _st(st)
 , _text(text)
 , _textWidth(st.font->width(_text)) {
-	resize(
-		naturalWidth(),
-		_st.padding.top() + _st.font->height + _st.padding.bottom());
+	resizeToText();
 	setCursor(style::cur_pointer);
 }
 
@@ -59,8 +57,14 @@ void LinkButton::paintEvent(QPaintEvent *e) {
 void LinkButton::setText(const QString &text) {
 	_text = text;
 	_textWidth = _st.font->width(_text);
-	resize(naturalWidth(), _st.font->height);
+	resizeToText();
 	update();
+}
+
+void LinkButton::resizeToText() {
+	resize(
+		naturalWidth(),
+		_st.padding.top() + _st.font->height + _st.padding.bottom());
 }
 
 void LinkButton::setColorOverride(std::optional<QColor> textFg) {

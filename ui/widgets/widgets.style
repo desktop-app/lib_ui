@@ -1016,6 +1016,7 @@ SettingsSlider {
 	labelStyle: TextStyle;
 	labelFg: color;
 	labelFgActive: color;
+	strictSkip: pixels;
 	duration: int;
 	rippleBottomSkip: pixels;
 	rippleBg: color;

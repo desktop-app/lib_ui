@@ -37,6 +37,8 @@ protected:
 	void onStateChanged(State was, StateChangeSource source) override;
 
 private:
+	void resizeToText();
+
 	const style::LinkButton &_st;
 	QString _text;
 	int _textWidth = 0;
