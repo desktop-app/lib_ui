@@ -139,8 +139,6 @@ PRIVATE
     ui/style/style_core.h
     ui/style/style_core_color.cpp
     ui/style/style_core_color.h
-    ui/style/style_core_custom_font.cpp
-    ui/style/style_core_custom_font.h
     ui/style/style_core_direction.cpp
     ui/style/style_core_direction.h
     ui/style/style_core_font.cpp
