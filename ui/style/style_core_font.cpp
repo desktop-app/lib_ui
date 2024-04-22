@@ -51,14 +51,14 @@ namespace {
 
 #ifndef LIB_UI_USE_PACKAGED_FONTS
 const auto FontTypes = std::array{
-	std::make_pair("OpenSans-Regular", 0),
-	std::make_pair("OpenSans-Italic", FontItalic),
-	std::make_pair("OpenSans-SemiBold", FontSemibold),
-	std::make_pair("OpenSans-SemiBoldItalic", FontSemibold | FontItalic),
+	std::make_pair(u"OpenSans-Regular"_q, FontFlags()),
+	std::make_pair(u"OpenSans-Italic"_q, FontItalic),
+	std::make_pair(u"OpenSans-SemiBold"_q, FontSemibold),
+	std::make_pair(u"OpenSans-SemiBoldItalic"_q, FontFlags(FontSemibold | FontItalic)),
 };
 const auto PersianFontTypes = std::array{
-	std::make_pair("Vazirmatn-UI-NL-Regular", 0),
-	std::make_pair("Vazirmatn-UI-NL-SemiBold", FontSemibold),
+	std::make_pair(u"Vazirmatn-UI-NL-Regular"_q, FontFlags()),
+	std::make_pair(u"Vazirmatn-UI-NL-SemiBold"_q, FontSemibold),
 };
 #endif // !LIB_UI_USE_PACKAGED_FONTS
 
@@ -129,11 +129,11 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 
 [[nodiscard]] QString ManualMonospaceFont() {
 	const auto kTryFirst = std::initializer_list<QString>{
-		"Cascadia Mono",
-		"Consolas",
-		"Liberation Mono",
-		"Menlo",
-		"Courier"
+		u"Cascadia Mono"_q,
+		u"Consolas"_q,
+		u"Liberation Mono"_q,
+		u"Menlo"_q,
+		u"Courier"_q,
 	};
 	for (const auto &family : kTryFirst) {
 		const auto resolved = QFontInfo(QFont(family)).family();
@@ -199,18 +199,18 @@ void StartFonts() {
 	style_InitFontsResource();
 
 #ifndef LIB_UI_USE_PACKAGED_FONTS
-	bool good = true;
-	const auto name = "Open Sans";
-	const auto persianFallback = "Vazirmatn UI NL";
+	[[maybe_unused]] bool good = true;
+	const auto name = u"Open Sans"_q;
+	const auto persianFallback = u"Vazirmatn UI NL"_q;
 
 	for (const auto &[file, flags] : FontTypes) {
-		if (!LoadCustomFont(":/gui/fonts/" + file + ".ttf", name, flags)) {
+		if (!LoadCustomFont(u":/gui/fonts/"_q + file + u".ttf"_q, name, flags)) {
 			good = false;
 		}
 	}
 
 	for (const auto &[file, flags] : PersianFontTypes) {
-		LoadCustomFont(":/gui/fonts/" + file + ".ttf", persianFallback, flags);
+		LoadCustomFont(u":/gui/fonts/"_q + file + u".ttf"_q, persianFallback, flags);
 	}
 	QFont::insertSubstitution(name, persianFallback);
 
@@ -219,11 +219,11 @@ void StartFonts() {
 	// See https://github.com/telegramdesktop/tdesktop/issues/3276 for details.
 	// Crash happens on "options.maxh / _t->_st->font->height" with "division by zero".
 	// In that place "_t->_st->font" is "semiboldFont" is "font(13 "Open Sans Semibold").
-	const auto fallback = "Segoe UI";
+	const auto fallback = u"Segoe UI"_q;
 	if (!good) {
 		if (ValidateFont(fallback, flags)) {
 			FontOverride = fallback;
-			LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback).arg(name));
+			LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback, name));
 		}
 	}
 	// Disable default fallbacks to Segoe UI, see:
@@ -234,10 +234,10 @@ void StartFonts() {
 
 #ifdef Q_OS_MAC
 	const auto list = QStringList{
-		"STIXGeneral",
-		".SF NS Text",
-		"Helvetica Neue",
-		"Lucida Grande",
+		u"STIXGeneral"_q,
+		u".SF NS Text"_q,
+		u"Helvetica Neue"_q,
+		u"Lucida Grande"_q,
 	};
 	QFont::insertSubstitutions(name, list);
 #endif // Q_OS_MAC
@@ -249,7 +249,7 @@ void StartFonts() {
 }
 
 QString GetFontOverride(int32 flags) {
-	return FontOverride.isEmpty() ? "Open Sans" : FontOverride;
+	return FontOverride.isEmpty() ? u"Open Sans"_q : FontOverride;
 }
 
 void destroyFonts() {
