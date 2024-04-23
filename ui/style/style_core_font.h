@@ -26,7 +26,6 @@ void SetCustomFont(const QString &font);
 namespace internal {
 
 void StartFonts();
-[[nodiscard]] QString GetFontOverride(int32 flags = 0);
 
 void destroyFonts();
 int registerFontFamily(const QString &family);
