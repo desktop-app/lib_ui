@@ -6,8 +6,9 @@
 //
 #include "ui/effects/animations.h"
 
-#include "ui/ui_utility.h"
 #include "base/invoke_queued.h"
+#include "ui/ui_utility.h"
+#include "styles/style_basic.h"
 
 #include <QtCore/QPointer>
 
@@ -22,7 +23,7 @@ namespace Ui {
 namespace Animations {
 namespace {
 
-constexpr auto kAnimationTick = crl::time(1000) / 120;
+constexpr auto kAnimationTick = crl::time(1000) / st::universalDuration;
 constexpr auto kIgnoreUpdatesTimeout = crl::time(4);
 
 Manager *ManagerInstance = nullptr;
