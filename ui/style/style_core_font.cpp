@@ -38,11 +38,16 @@ void style_InitFontsResource() {
 namespace style {
 namespace {
 
-CustomFont Custom;
+QString Custom;
 
 } // namespace
 
-void SetCustomFont(const CustomFont &font) {
+const QString &SystemFontTag() {
+	static const auto result = u"(system)"_q + QChar(0);
+	return result;
+}
+
+void SetCustomFont(const QString &font) {
 	Custom = font;
 }
 
@@ -165,6 +170,8 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 }
 
 [[nodiscard]] int ComputePixelSize(QFont font, uint32 flags, int size) {
+	constexpr auto kMaxSizeShift = 6;
+
 	const auto family = font.family();
 	const auto basic = GetFontOverride(flags);
 	if (family == basic) {
@@ -172,56 +179,68 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 	}
 	auto copy = font;
 	copy.setFamily(basic);
-	const auto desired = QFontMetricsF(copy).capHeight();
-	if (desired < 1.) {
+	const auto basicMetrics = QFontMetricsF(copy);
+	const auto desiredHeight = basicMetrics.height();
+	const auto desiredCap = basicMetrics.capHeight();
+	if (desiredHeight < 1. || desiredCap < 1.) {
 		return size;
 	}
 	font.setPixelSize(size);
-	auto current = QFontMetricsF(font).capHeight();
-	constexpr auto kMaxSizeShift = 4;
-	if (current < 1. || std::abs(current - desired) < 0.2) {
+	const auto currentMetrics = QFontMetricsF(font);
+	auto currentHeight = currentMetrics.height();
+	auto currentCap = currentMetrics.capHeight();
+	const auto max = std::min(kMaxSizeShift, size - 1);
+	if (currentHeight < 1.
+		|| currentCap < 1.
+		|| std::abs(currentCap - desiredCap) < 0.2
+		|| std::abs(currentHeight - desiredHeight) < 0.2) {
 		return size;
-	} else if (current < desired) {
-		for (auto i = 0; i != kMaxSizeShift; ++i) {
+	} else if (currentHeight < desiredHeight) {
+		for (auto i = 0; i != max; ++i) {
 			const auto shift = i + 1;
 			font.setPixelSize(size + shift);
-			const auto now = QFontMetricsF(font).capHeight();
-			if (now > desired) {
-				return (now - desired * 2 < desired - current)
-					? (size + shift)
-					: (size + shift - 1);
+			const auto metrics = QFontMetricsF(font);
+			const auto nowHeight = metrics.height();
+			const auto nowCap = metrics.capHeight();
+			if (nowHeight > desiredHeight || nowCap > desiredCap) {
+				return (size + shift - 1);
 			}
-			current = now;
+			currentHeight = nowHeight;
+			currentCap = nowCap;
 		}
 		return size + kMaxSizeShift;
 	} else {
-		for (auto i = 0; i != kMaxSizeShift; ++i) {
+		for (auto i = 0; i != max; ++i) {
 			const auto shift = i + 1;
 			font.setPixelSize(size - shift);
-			const auto now = QFontMetricsF(font).capHeight();
-			if (now < desired) {
-				return (desired - now * 2 < current - desired)
-					? (size - shift)
-					: (size - shift + 1);
+			const auto metrics = QFontMetricsF(font);
+			const auto nowHeight = metrics.height();
+			const auto nowCap = metrics.capHeight();
+			if (nowHeight < desiredHeight || nowCap < desiredCap) {
+				return (size - shift + 1);
 			}
-			current = now;
+			currentHeight = nowHeight;
+			currentCap = nowCap;
 		}
 		return size - kMaxSizeShift;
 	}
 }
 
 [[nodiscard]] QFont ResolveFont(
-		const QString &familyOverride,
+		const QString &family,
 		uint32 flags,
-		int size) {
+		int size,
+		bool skipSizeAdjustment) {
 	auto result = QFont();
-	if (!familyOverride.isEmpty()) {
-		result.setFamily(familyOverride);
-	} else if (flags & FontMonospace) {
+	const auto monospace = (flags & FontMonospace) != 0;
+	const auto system = !monospace && (family == SystemFontTag());
+	const auto overriden = !monospace && !system && !family.isEmpty();
+	if (monospace) {
 		result.setFamily(MonospaceFont());
-	} else if (const auto name = std::get_if<QString>(&Custom)) {
-		result.setFamily(*name);
-	} else if (!v::is<SystemFont>(Custom)) {
+	} else if (system) {
+	} else if (overriden) {
+		result.setFamily(family);
+	} else {
 		result.setFamily(GetFontOverride(flags));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 		result.setFeature("ss03", true);
@@ -233,9 +252,9 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 	result.setItalic(flags & FontItalic);
 	result.setUnderline(flags & FontUnderline);
 	result.setStrikeOut(flags & FontStrikeOut);
-	result.setPixelSize(familyOverride.isEmpty()
-		? ComputePixelSize(result, flags, size)
-		: size);
+	result.setPixelSize((monospace || !overriden || skipSizeAdjustment)
+		? size
+		: ComputePixelSize(result, flags, size));
 	return result;
 }
 
@@ -320,7 +339,11 @@ int registerFontFamily(const QString &family) {
 }
 
 FontData::FontData(int size, uint32 flags, int family, Font *other)
-: f(ResolveFont(family ? fontFamilies[family] : QString(), flags, size))
+: f(ResolveFont(
+	family ? fontFamilies[family] : Custom,
+	flags,
+	size,
+	family != 0))
 , _m(f)
 , _size(size)
 , _flags(flags)
@@ -414,4 +437,9 @@ void Font::init(int size, uint32 flags, int family, Font *modified) {
 }
 
 } // namespace internal
+
+QFont ResolveFont(const QString &custom, uint32 flags, int size) {
+	return internal::ResolveFont(custom, flags, size, false);
+}
+
 } // namespace style
