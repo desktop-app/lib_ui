@@ -13,6 +13,7 @@
 #include "ui/widgets/labels.h"
 #include "ui/layers/layer_widget.h"
 #include "ui/layers/show.h"
+#include "ui/effects/animations.h"
 #include "ui/effects/animation_value.h"
 #include "ui/text/text_entity.h"
 #include "ui/rp_widget.h"
@@ -59,6 +60,7 @@ class ScrollArea;
 class FlatLabel;
 class FadeShadow;
 class BoxContent;
+struct ScrollToRequest;
 
 class BoxContentDelegate {
 public:
@@ -213,6 +215,9 @@ public:
 	void scrollByDraggingDelta(int delta);
 
 	void scrollToY(int top, int bottom = -1);
+	void scrollTo(
+		ScrollToRequest request,
+		anim::type animated = anim::type::instant);
 	void sendScrollViewportEvent(not_null<QEvent*> event);
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] int scrollTop() const;
@@ -309,6 +314,7 @@ private:
 	object_ptr<FadeShadow> _bottomShadow = { nullptr };
 
 	Ui::DraggingScrollManager _draggingScroll;
+	Ui::Animations::Simple _scrollAnimation;
 
 	rpl::event_stream<> _boxClosingStream;
 

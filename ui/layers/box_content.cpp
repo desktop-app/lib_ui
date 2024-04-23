@@ -263,8 +263,21 @@ RectParts BoxContent::customCornersFilling() {
 }
 
 void BoxContent::scrollToY(int top, int bottom) {
+	scrollTo({ top, bottom });
+}
+
+void BoxContent::scrollTo(ScrollToRequest request, anim::type animated) {
 	if (_scroll) {
-		_scroll->scrollToY(top, bottom);
+		const auto v = _scroll->computeScrollTo(request.ymin, request.ymax);
+		const auto now = _scroll->scrollTop();
+		if (animated == anim::type::instant || v == now) {
+			_scrollAnimation.stop();
+			_scroll->scrollToY(v);
+		} else {
+			_scrollAnimation.start([=] {
+				_scroll->scrollToY(_scrollAnimation.value(v));
+			}, now, v, st::slideWrapDuration, anim::sineInOut);
+		}
 	}
 }
 
