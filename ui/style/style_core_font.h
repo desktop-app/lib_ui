@@ -11,13 +11,15 @@
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
 
+#include <variant>
 #include <cmath>
 
 namespace style {
 
-struct SystemFont {};
-using Font = std::variant<std::monostate, SystemFont, QString>;
-void SetCustomFont(const Font &font);
+struct SystemFont{
+};
+using CustomFont = std::variant<std::monostate, SystemFont, QString>;
+void SetCustomFont(const CustomFont &font);
 
 namespace internal {
 

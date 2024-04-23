@@ -38,12 +38,12 @@ void style_InitFontsResource() {
 namespace style {
 namespace {
 
-Font CustomFont;
+CustomFont Custom;
 
 } // namespace
 
-void SetCustomFont(const Font &font) {
-	CustomFont = font;
+void SetCustomFont(const CustomFont &font) {
+	Custom = font;
 }
 
 namespace internal {
@@ -144,7 +144,7 @@ bool LoadCustomFont(const QString &filePath, const QString &familyName, int flag
 	return QString();
 }
 
-QString MonospaceFont() {
+[[nodiscard]] QString MonospaceFont() {
 	static const auto family = [&]() -> QString {
 		const auto manual = ManualMonospaceFont();
 		const auto system = SystemMonospaceFont();
@@ -164,15 +164,64 @@ QString MonospaceFont() {
 	return family;
 }
 
-QFont ResolveFont(const QString &familyOverride, uint32 flags, int size) {
+[[nodiscard]] int ComputePixelSize(QFont font, uint32 flags, int size) {
+	const auto family = font.family();
+	const auto basic = GetFontOverride(flags);
+	if (family == basic) {
+		return size;
+	}
+	auto copy = font;
+	copy.setFamily(basic);
+	const auto desired = QFontMetricsF(copy).capHeight();
+	if (desired < 1.) {
+		return size;
+	}
+	font.setPixelSize(size);
+	auto current = QFontMetricsF(font).capHeight();
+	constexpr auto kMaxSizeShift = 4;
+	if (current < 1. || std::abs(current - desired) < 0.2) {
+		return size;
+	} else if (current < desired) {
+		for (auto i = 0; i != kMaxSizeShift; ++i) {
+			const auto shift = i + 1;
+			font.setPixelSize(size + shift);
+			const auto now = QFontMetricsF(font).capHeight();
+			if (now > desired) {
+				return (now - desired * 2 < desired - current)
+					? (size + shift)
+					: (size + shift - 1);
+			}
+			current = now;
+		}
+		return size + kMaxSizeShift;
+	} else {
+		for (auto i = 0; i != kMaxSizeShift; ++i) {
+			const auto shift = i + 1;
+			font.setPixelSize(size - shift);
+			const auto now = QFontMetricsF(font).capHeight();
+			if (now < desired) {
+				return (desired - now * 2 < current - desired)
+					? (size - shift)
+					: (size - shift + 1);
+			}
+			current = now;
+		}
+		return size - kMaxSizeShift;
+	}
+}
+
+[[nodiscard]] QFont ResolveFont(
+		const QString &familyOverride,
+		uint32 flags,
+		int size) {
 	auto result = QFont();
 	if (!familyOverride.isEmpty()) {
 		result.setFamily(familyOverride);
 	} else if (flags & FontMonospace) {
 		result.setFamily(MonospaceFont());
-	} else if (v::is<QString>(CustomFont)) {
-		result.setFamily(v::get<QString>(CustomFont));
-	} else if (!v::is<SystemFont>(CustomFont)) {
+	} else if (const auto name = std::get_if<QString>(&Custom)) {
+		result.setFamily(*name);
+	} else if (!v::is<SystemFont>(Custom)) {
 		result.setFamily(GetFontOverride(flags));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 		result.setFeature("ss03", true);
@@ -184,7 +233,9 @@ QFont ResolveFont(const QString &familyOverride, uint32 flags, int size) {
 	result.setItalic(flags & FontItalic);
 	result.setUnderline(flags & FontUnderline);
 	result.setStrikeOut(flags & FontStrikeOut);
-	result.setPixelSize(size);
+	result.setPixelSize(familyOverride.isEmpty()
+		? ComputePixelSize(result, flags, size)
+		: size);
 	return result;
 }
 
@@ -199,18 +250,19 @@ void StartFonts() {
 	style_InitFontsResource();
 
 #ifndef LIB_UI_USE_PACKAGED_FONTS
-	[[maybe_unused]] bool good = true;
+	//[[maybe_unused]] auto badFlags = std::optional<int>();
+	const auto base = u":/gui/fonts/"_q;
 	const auto name = u"Open Sans"_q;
 	const auto persianFallback = u"Vazirmatn UI NL"_q;
 
 	for (const auto &[file, flags] : FontTypes) {
-		if (!LoadCustomFont(u":/gui/fonts/"_q + file + u".ttf"_q, name, flags)) {
-			good = false;
+		if (!LoadCustomFont(base + file + u".ttf"_q, name, flags)) {
+			//badFlags = flags;
 		}
 	}
 
 	for (const auto &[file, flags] : PersianFontTypes) {
-		LoadCustomFont(u":/gui/fonts/"_q + file + u".ttf"_q, persianFallback, flags);
+		LoadCustomFont(base + file + u".ttf"_q, persianFallback, flags);
 	}
 	QFont::insertSubstitution(name, persianFallback);
 
@@ -219,13 +271,11 @@ void StartFonts() {
 	// See https://github.com/telegramdesktop/tdesktop/issues/3276 for details.
 	// Crash happens on "options.maxh / _t->_st->font->height" with "division by zero".
 	// In that place "_t->_st->font" is "semiboldFont" is "font(13 "Open Sans Semibold").
-	const auto fallback = u"Segoe UI"_q;
-	if (!good) {
-		if (ValidateFont(fallback, flags)) {
-			FontOverride = fallback;
-			LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback, name));
-		}
-	}
+	//const auto fallback = u"Segoe UI"_q;
+	//if (badFlags && ValidateFont(fallback, *badFlags)) {
+	//	FontOverride = fallback;
+	//	LOG(("Fonts Info: Using '%1' instead of '%2'.").arg(fallback, name));
+	//}
 	// Disable default fallbacks to Segoe UI, see:
 	// https://github.com/telegramdesktop/tdesktop/issues/5368
 	//
