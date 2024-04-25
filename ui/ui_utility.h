@@ -56,16 +56,21 @@ inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
 
 template <typename Value, typename Parent, typename ...Args>
 inline Value *CreateChild(
-		Parent *parent,
+		Parent parent,
 		Args &&...args) {
-	Expects(parent != nullptr);
+	if constexpr (std::is_pointer_v<Parent>) {
+		Expects(parent != nullptr);
 
-	if constexpr (std::is_base_of_v<QObject, Value>) {
-		return new Value(parent, std::forward<Args>(args)...);
+		if constexpr (std::is_base_of_v<QObject, Value>) {
+			return new Value(parent, std::forward<Args>(args)...);
+		} else {
+			return CreateChild<details::AttachmentOwner<Value>>(
+				parent,
+				std::forward<Args>(args)...)->value();
+		}
 	} else {
-		return CreateChild<details::AttachmentOwner<Value>>(
-			parent,
-			std::forward<Args>(args)...)->value();
+		static_assert(requires(const Parent &t) { t.get(); });
+		return new Value(parent.get(), std::forward<Args>(args)...);
 	}
 }
 
