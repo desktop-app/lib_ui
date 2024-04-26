@@ -169,7 +169,13 @@ bool LoadCustomFont(const QString &filePath) {
 			const auto nowHeight = metrics.height();
 			const auto nowCap = metrics.capHeight();
 			if (nowHeight > desiredHeight || nowCap > desiredCap) {
-				return (size + shift - 1);
+				const auto heightBetter = (nowHeight - desiredHeight)
+					< (desiredHeight - currentHeight);
+				const auto capBetter = (nowCap - desiredCap)
+					< (desiredCap - currentCap);
+				return (heightBetter && capBetter)
+					? (size + shift)
+					: (size + shift - 1);
 			}
 			currentHeight = nowHeight;
 			currentCap = nowCap;
@@ -183,7 +189,13 @@ bool LoadCustomFont(const QString &filePath) {
 			const auto nowHeight = metrics.height();
 			const auto nowCap = metrics.capHeight();
 			if (nowHeight < desiredHeight || nowCap < desiredCap) {
-				return (size - shift + 1);
+				const auto heightBetter = (desiredHeight - nowHeight)
+					< (currentHeight - desiredHeight);
+				const auto capBetter = (desiredCap - nowCap)
+					< (currentCap - desiredCap);
+				return (heightBetter && capBetter)
+					? (size - shift)
+					: (size - shift + 1);
 			}
 			currentHeight = nowHeight;
 			currentCap = nowCap;
