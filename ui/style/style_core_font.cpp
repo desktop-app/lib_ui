@@ -227,6 +227,14 @@ bool LoadCustomFont(const QString &filePath) {
 	result.setWeight(((flags & FontBold) || (flags & FontSemibold))
 		? QFont::DemiBold
 		: QFont::Normal);
+	if (result.bold()) {
+		const auto style = QFontInfo(result).styleName();
+		if (!style.isEmpty() && !style.startsWith(
+				"Semibold",
+				Qt::CaseInsensitive)) {
+			result.setBold(true);
+		}
+	}
 	result.setItalic(flags & FontItalic);
 	result.setUnderline(flags & FontUnderline);
 	result.setStrikeOut(flags & FontStrikeOut);
