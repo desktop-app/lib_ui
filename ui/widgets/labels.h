@@ -158,7 +158,7 @@ public:
 	struct ContextMenuRequest {
 		not_null<PopupMenu*> menu;
 		ClickHandlerPtr link;
-		bool hasSelection = false;
+		TextSelection selection;
 		bool uponSelection = false;
 		bool fullSelection = false;
 	};

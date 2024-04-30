@@ -687,7 +687,7 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) 
 	const auto request = ContextMenuRequest{
 		.menu = _contextMenu.get(),
 		.link = ClickHandler::getActive(),
-		.hasSelection = hasSelection,
+		.selection = _selectable ? _selection : TextSelection(),
 		.uponSelection = uponSelection,
 		.fullSelection = _selectable && _text.isFullSelection(_selection),
 	};
@@ -716,7 +716,7 @@ void FlatLabel::fillContextMenu(ContextMenuRequest request) {
 			Integration::Instance().phraseContextCopySelected(),
 			[=] { copySelectedText(); });
 	} else if (_selectable
-		&& !request.hasSelection
+		&& request.selection.empty()
 		&& !_contextCopyText.isEmpty()) {
 		request.menu->addAction(
 			_contextCopyText,
