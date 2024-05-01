@@ -136,71 +136,64 @@ bool LoadCustomFont(const QString &filePath) {
 }
 
 [[nodiscard]] int ComputePixelSize(QFont font, uint32 flags, int size) {
-	constexpr auto kMaxSizeShift = 6;
+	constexpr auto kMaxSizeShift = 8;
 
 	const auto family = font.family();
 	const auto basic = u"Open Sans"_q;
 	if (family == basic) {
 		return size;
 	}
+	font.setPixelSize(size);
+
 	auto copy = font;
 	copy.setFamily(basic);
 	const auto basicMetrics = QFontMetricsF(copy);
-	const auto desiredHeight = basicMetrics.height();
-	const auto desiredCap = basicMetrics.capHeight();
-	if (desiredHeight < 1. || desiredCap < 1.) {
+
+	//static const auto Test = u"bdfghijklpqtyBDFGHIJKLPQTY1234567890[]{}()"_q;
+	static const auto Test = u"acemnorsuvwxz"_q;
+
+	const auto desired = basicMetrics.tightBoundingRect(Test).height();
+	//const auto tightAscent = -tightRect.y();
+	//const auto tightDescent = tightRect.y() + tightRect.height();
+
+	if (desired < 1.) {
 		return size;
 	}
-	font.setPixelSize(size);
 	const auto currentMetrics = QFontMetricsF(font);
-	auto currentHeight = currentMetrics.height();
-	auto currentCap = currentMetrics.capHeight();
+
+	auto current = currentMetrics.tightBoundingRect(Test).height();
+	//const auto tightAscent = -tightRect.y();
+	//const auto tightDescent = tightRect.y() + tightRect.height();
+
 	const auto max = std::min(kMaxSizeShift, size - 1);
-	if (currentHeight < 1.
-		|| currentCap < 1.
-		|| std::abs(currentCap - desiredCap) < 0.2
-		|| std::abs(currentHeight - desiredHeight) < 0.2) {
+	if (current < 1. || std::abs(current - desired) < 0.2) {
 		return size;
-	} else if (currentHeight < desiredHeight) {
+	} else if (current < desired) {
 		for (auto i = 0; i != max; ++i) {
 			const auto shift = i + 1;
 			font.setPixelSize(size + shift);
 			const auto metrics = QFontMetricsF(font);
-			const auto nowHeight = metrics.height();
-			const auto nowCap = metrics.capHeight();
-			if (nowHeight > desiredHeight || nowCap > desiredCap) {
-				const auto heightBetter = (nowHeight - desiredHeight)
-					< (desiredHeight - currentHeight);
-				const auto capBetter = (nowCap - desiredCap)
-					< (desiredCap - currentCap);
-				return (heightBetter && capBetter)
-					? (size + shift)
-					: (size + shift - 1);
+			const auto now = metrics.tightBoundingRect(Test).height();
+			if (now > desired) {
+				const auto better = (now - desired) < (desired - current);
+				return better ? (size + shift) : (size + shift - 1);
 			}
-			currentHeight = nowHeight;
-			currentCap = nowCap;
+			current = now;
 		}
-		return size + kMaxSizeShift;
+		return size + max;
 	} else {
 		for (auto i = 0; i != max; ++i) {
 			const auto shift = i + 1;
 			font.setPixelSize(size - shift);
 			const auto metrics = QFontMetricsF(font);
-			const auto nowHeight = metrics.height();
-			const auto nowCap = metrics.capHeight();
-			if (nowHeight < desiredHeight || nowCap < desiredCap) {
-				const auto heightBetter = (desiredHeight - nowHeight)
-					< (currentHeight - desiredHeight);
-				const auto capBetter = (desiredCap - nowCap)
-					< (currentCap - desiredCap);
-				return (heightBetter && capBetter)
-					? (size - shift)
-					: (size - shift + 1);
+			const auto now = metrics.tightBoundingRect(Test).height();
+			if (now < desired) {
+				const auto better = (desired - now) < (current - desired);
+				return better ? (size - shift) : (size - shift + 1);
 			}
-			currentHeight = nowHeight;
-			currentCap = nowCap;
+			current = now;
 		}
-		return size - kMaxSizeShift;
+		return size - max;
 	}
 }
 
@@ -319,7 +312,7 @@ FontData::FontData(int size, uint32 flags, int family, Font *other)
 	ascent = int(base::SafeRound(_m.ascent()));
 	descent = int(base::SafeRound(_m.descent()));
 	spacew = width(QLatin1Char(' '));
-	elidew = width("...");
+	elidew = width(u"..."_q);
 }
 
 Font FontData::bold(bool set) const {
