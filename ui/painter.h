@@ -23,12 +23,16 @@ public:
 	void drawTextLeft(int x, int y, int outerw, const QString &text, int textWidth = -1) {
 		QFontMetrics m(fontMetrics());
 		if (style::RightToLeft() && textWidth < 0) textWidth = m.horizontalAdvance(text);
-		drawText(style::RightToLeft() ? (outerw - x - textWidth) : x, y + m.ascent(), text);
+		const auto result = style::FindAdjustResult(font());
+		const auto ascent = result ? result->iascent : m.ascent();
+		drawText(style::RightToLeft() ? (outerw - x - textWidth) : x, y + ascent, text);
 	}
 	void drawTextRight(int x, int y, int outerw, const QString &text, int textWidth = -1) {
 		QFontMetrics m(fontMetrics());
 		if (!style::RightToLeft() && textWidth < 0) textWidth = m.horizontalAdvance(text);
-		drawText(style::RightToLeft() ? x : (outerw - x - textWidth), y + m.ascent(), text);
+		const auto result = style::FindAdjustResult(font());
+		const auto ascent = result ? result->iascent : m.ascent();
+		drawText(style::RightToLeft() ? x : (outerw - x - textWidth), y + ascent, text);
 	}
 	void drawPixmapLeft(int x, int y, int outerw, const QPixmap &pix, const QRect &from) {
 		drawPixmap(QPoint(style::RightToLeft() ? (outerw - x - (from.width() / pix.devicePixelRatio())) : x, y), pix, from);

@@ -295,8 +295,8 @@ private:
 
 };
 
-void resetIcons();
-void destroyIcons();
+void ResetIcons();
+void DestroyIcons();
 
 } // namespace internal
 } // namespace style

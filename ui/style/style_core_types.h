@@ -27,6 +27,7 @@ using cursor = Qt::CursorShape;
 using align = Qt::Alignment;
 using margins = QMargins;
 using font = internal::Font;
+using owned_font = internal::OwnedFont;
 using color = internal::Color;
 using owned_color = internal::OwnedColor;
 using complex_color = internal::ComplexColor;

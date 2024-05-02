@@ -57,27 +57,28 @@ public:
 		_data->set(r, g, b, a);
 	}
 
-	operator const QBrush &() const {
+	[[nodiscard]] operator const QBrush &() const {
 		return _data->b;
 	}
 
-	operator const QPen &() const {
+	[[nodiscard]] operator const QPen &() const {
 		return _data->p;
 	}
 
-	ColorData *operator->() const {
+	[[nodiscard]] ColorData *operator->() const {
 		return _data;
 	}
-	ColorData *v() const {
+	[[nodiscard]] ColorData *get() const {
 		return _data;
 	}
 
-	explicit operator bool() const {
+	[[nodiscard]] explicit operator bool() const {
 		return !!_data;
 	}
 
 	class Proxy;
-	Proxy operator[](const style::palette &paletteOverride) const;
+	[[nodiscard]] Proxy operator[](
+		const style::palette &paletteOverride) const;
 
 private:
 	friend class OwnedColor;
@@ -164,12 +165,12 @@ public:
 	}
 	Proxy(const Proxy &other) = default;
 
-	operator const QBrush &() const { return _color; }
-	operator const QPen &() const { return _color; }
-	ColorData *operator->() const { return _color.v(); }
-	ColorData *v() const { return _color.v(); }
-	explicit operator bool() const { return _color ? true : false; }
-	Color clone() const { return _color; }
+	[[nodiscard]] operator const QBrush &() const { return _color; }
+	[[nodiscard]] operator const QPen &() const { return _color; }
+	[[nodiscard]] ColorData *operator->() const { return _color.get(); }
+	[[nodiscard]] ColorData *get() const { return _color.get(); }
+	[[nodiscard]] explicit operator bool() const { return !!_color; }
+	[[nodiscard]] Color clone() const { return _color; }
 
 private:
 	Color _color;

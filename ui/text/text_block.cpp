@@ -373,28 +373,31 @@ bool BlockParser::isSpaceBreak(
 style::font WithFlags(
 		const style::font &font,
 		TextBlockFlags flags,
-		uint32 fontFlags) {
+		style::FontFlags fontFlags) {
 	using namespace style::internal;
 
+	using Flag = style::FontFlag;
 	if (!flags && !fontFlags) {
 		return font;
-	} else if (IsMono(flags) || (fontFlags & FontMonospace)) {
+	} else if (IsMono(flags) || (fontFlags & Flag::Monospace)) {
 		return font->monospace();
 	}
 	auto result = font;
-	if ((flags & TextBlockFlag::Bold) || (fontFlags & FontBold)) {
+	if ((flags & TextBlockFlag::Bold) || (fontFlags & Flag::Bold)) {
 		result = result->bold();
 	} else if ((flags & TextBlockFlag::Semibold)
-		|| (fontFlags & FontSemibold)) {
+		|| (fontFlags & Flag::Semibold)) {
 		result = result->semibold();
 	}
-	if ((flags & TextBlockFlag::Italic) || (fontFlags & FontItalic)) {
+	if ((flags & TextBlockFlag::Italic) || (fontFlags & Flag::Italic)) {
 		result = result->italic();
 	}
-	if ((flags & TextBlockFlag::Underline) || (fontFlags & FontUnderline)) {
+	if ((flags & TextBlockFlag::Underline)
+		|| (fontFlags & Flag::Underline)) {
 		result = result->underline();
 	}
-	if ((flags & TextBlockFlag::StrikeOut) || (fontFlags & FontStrikeOut)) {
+	if ((flags & TextBlockFlag::StrikeOut)
+		|| (fontFlags & Flag::StrikeOut)) {
 		result = result->strikeout();
 	}
 	if (flags & TextBlockFlag::Tilde) { // Tilde fix in OpenSans.

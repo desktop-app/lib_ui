@@ -47,7 +47,7 @@ using TextBlockFlags = base::flags<TextBlockFlag>;
 [[nodiscard]] style::font WithFlags(
 	const style::font &font,
 	TextBlockFlags flags,
-	uint32 fontFlags = 0);
+	style::FontFlags fontFlags = 0);
 
 [[nodiscard]] Qt::LayoutDirection UnpackParagraphDirection(
 	bool ltr,

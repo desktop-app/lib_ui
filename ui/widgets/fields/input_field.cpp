@@ -3912,7 +3912,9 @@ void InputField::refreshPlaceholder(const QString &text) {
 		_placeholder = metrics.elidedText(text, Qt::ElideRight, availableWidth);
 		_placeholderPath = QPainterPath();
 		if (!_placeholder.isEmpty()) {
-			_placeholderPath.addText(0, QFontMetrics(placeholderFont).ascent(), placeholderFont, _placeholder);
+			const auto result = style::FindAdjustResult(placeholderFont);
+			const auto ascent = result ? result->iascent : metrics.ascent();
+			_placeholderPath.addText(0, ascent, placeholderFont, _placeholder);
 		}
 	} else {
 		_placeholder = _st.placeholderFont->elided(text, availableWidth);

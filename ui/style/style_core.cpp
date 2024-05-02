@@ -29,12 +29,12 @@ auto PaletteVersion = 0;
 auto ShortAnimationRunning = rpl::variable<bool>(false);
 auto RunningShortAnimations = 0;
 
-std::vector<internal::ModuleBase*> &StyleModules() {
+[[nodiscard]] std::vector<internal::ModuleBase*> &StyleModules() {
 	static auto result = std::vector<internal::ModuleBase*>();
 	return result;
 }
 
-void startModules(int scale) {
+void StartModules(int scale) {
 	for (const auto module : StyleModules()) {
 		module->start(scale);
 	}
@@ -60,14 +60,14 @@ void StopShortAnimation() {
 
 } // namespace internal
 
-void startManager(int scale) {
-	internal::registerFontFamily("Open Sans");
-	internal::startModules(scale);
+void StartManager(int scale) {
+	internal::RegisterFontFamily("Open Sans");
+	internal::StartModules(scale);
 }
 
-void stopManager() {
-	internal::destroyFonts();
-	internal::destroyIcons();
+void StopManager() {
+	internal::DestroyFonts();
+	internal::DestroyIcons();
 }
 
 rpl::producer<> PaletteChanged() {

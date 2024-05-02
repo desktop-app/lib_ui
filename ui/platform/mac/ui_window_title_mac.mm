@@ -107,13 +107,13 @@ void TitleWidget::init(int height) {
 			const auto apple = (family == u".AppleSystemUIFont"_q);
 			setFromFont(style::font(
 				apple ? 13 : (height * 15) / 24,
-				apple ? style::internal::FontBold : 0,
+				apple ? style::FontFlag::Bold : 0,
 				family));
 			break;
 		}
 	}
 	if (!_textStyle) {
-		setFromFont(style::font(13, style::internal::FontSemibold, 0));
+		setFromFont(style::font(13, style::FontFlag::Semibold, 0));
 	}
 }
 

@@ -52,6 +52,19 @@ void SetCustomFont(const QString &font) {
 }
 
 namespace internal {
+
+struct ResolvedFont {
+	ResolvedFont(FontResolveResult result, FontVariants *modified);
+
+	FontResolveResult result;
+	FontData data;
+};
+
+ResolvedFont::ResolvedFont(FontResolveResult result, FontVariants *modified)
+: result(std::move(result))
+, data(this->result, modified) {
+}
+
 namespace {
 
 #ifndef LIB_UI_USE_PACKAGED_FONTS
@@ -69,12 +82,33 @@ const auto PersianFontTypes = std::array{
 
 bool Started = false;
 
-QMap<QString, int> fontFamilyMap;
-QVector<QString> fontFamilies;
-QMap<uint32, FontData*> fontsMap;
+base::flat_map<QString, int> FontFamilyIndices;
+std::vector<QString> FontFamilies;
+base::flat_map<uint32, std::unique_ptr<ResolvedFont>> FontsByKey;
+base::flat_map<uint64, uint32> QtFontsKeys;
 
-uint32 fontKey(int size, uint32 flags, int family) {
-	return (((uint32(family) << 12) | uint32(size)) << 6) | flags;
+[[nodiscard]] uint32 FontKey(int size, FontFlags flags, int family) {
+	return (uint32(family) << 18)
+		| (uint32(size) << 6)
+		| uint32(flags.value());
+}
+
+[[nodiscard]] uint64 QtFontKey(const QFont &font) {
+	static auto Families = base::flat_map<QString, int>();
+
+	const auto pixelSize = font.pixelSize();
+	const auto family = font.family();
+	auto i = Families.find(family);
+	if (i == end(Families)) {
+		i = Families.emplace(family, Families.size()).first;
+	}
+	return (uint64(i->second) << 24)
+		| (uint64(font.weight()) << 16)
+		| (uint64(font.bold() ? 1 : 0) << 15)
+		| (uint64(font.italic() ? 1 : 0) << 14)
+		| (uint64(font.underline() ? 1 : 0) << 13)
+		| (uint64(font.strikeOut() ? 1 : 0) << 12)
+		| (uint64(font.pixelSize()));
 }
 
 #ifndef LIB_UI_USE_PACKAGED_FONTS
@@ -135,106 +169,161 @@ bool LoadCustomFont(const QString &filePath) {
 	return family;
 }
 
-[[nodiscard]] int ComputePixelSize(QFont font, uint32 flags, int size) {
+struct Metrics {
+	int pixelSize = 0;
+	float64 ascent = 0.;
+	float64 height = 0.;
+};
+[[nodiscard]] Metrics ComputeMetrics(QFont font, bool adjust) {
 	constexpr auto kMaxSizeShift = 8;
+
+	const auto startSize = font.pixelSize();
+	const auto metrics = QFontMetricsF(font);
+	const auto simple = [&] {
+		return Metrics{
+			.pixelSize = startSize,
+			.ascent = metrics.ascent(),
+			.height = metrics.height(),
+		};
+	};
 
 	const auto family = font.family();
 	const auto basic = u"Open Sans"_q;
 	if (family == basic) {
-		return size;
+		return simple();
 	}
-	font.setPixelSize(size);
 
 	auto copy = font;
 	copy.setFamily(basic);
 	const auto basicMetrics = QFontMetricsF(copy);
 
-	//static const auto Test = u"bdfghijklpqtyBDFGHIJKLPQTY1234567890[]{}()"_q;
+	static const auto Full = u"bdfghijklpqtyBDFGHIJKLPQTY1234567890[]{}()"_q;
 	static const auto Test = u"acemnorsuvwxz"_q;
 
 	const auto desired = basicMetrics.tightBoundingRect(Test).height();
-	//const auto tightAscent = -tightRect.y();
-	//const auto tightDescent = tightRect.y() + tightRect.height();
-
-	if (desired < 1.) {
-		return size;
+	const auto desiredFull = basicMetrics.tightBoundingRect(Full);
+	if (desired < 1. || desiredFull.height() < desired) {
+		return simple();
 	}
-	const auto currentMetrics = QFontMetricsF(font);
 
-	auto current = currentMetrics.tightBoundingRect(Test).height();
-	//const auto tightAscent = -tightRect.y();
-	//const auto tightDescent = tightRect.y() + tightRect.height();
+	const auto adjusted = [&](int size, const QFontMetricsF &metrics) {
+		const auto full = metrics.tightBoundingRect(Full);
+		const auto desiredTightAscent = -desiredFull.y();
+		const auto desiredTightHeight = desiredFull.height();
+		const auto ascentAdd = basicMetrics.ascent() - desiredTightAscent;
+		const auto heightAdd = basicMetrics.height() - desiredTightHeight;
+		const auto tightAscent = -full.y();
+		const auto tightHeight = full.height();
+		return Metrics{
+			.pixelSize = size,
+			.ascent = tightAscent + ascentAdd,
+			.height = tightHeight + heightAdd,
+		};
+	};
 
-	const auto max = std::min(kMaxSizeShift, size - 1);
-	if (current < 1. || std::abs(current - desired) < 0.2) {
-		return size;
-	} else if (current < desired) {
+	auto current = metrics.tightBoundingRect(Test).height();
+	if (current < 1.) {
+		return simple();
+	} else if (std::abs(current - desired) < 0.2) {
+		return adjusted(startSize, metrics);
+	}
+
+	const auto adjustedByFont = [&](const QFont &font) {
+		return adjusted(font.pixelSize(), QFontMetricsF(font));
+	};
+	const auto max = std::min(kMaxSizeShift, startSize - 1);
+	if (current < desired) {
 		for (auto i = 0; i != max; ++i) {
 			const auto shift = i + 1;
-			font.setPixelSize(size + shift);
+			font.setPixelSize(startSize + shift);
 			const auto metrics = QFontMetricsF(font);
 			const auto now = metrics.tightBoundingRect(Test).height();
 			if (now > desired) {
 				const auto better = (now - desired) < (desired - current);
-				return better ? (size + shift) : (size + shift - 1);
+				if (better) {
+					return adjusted(startSize + shift, metrics);
+				}
+				font.setPixelSize(startSize + shift - 1);
+				return adjustedByFont(font);
 			}
 			current = now;
 		}
-		return size + max;
+		font.setPixelSize(startSize + max);
+		return adjustedByFont(font);
 	} else {
 		for (auto i = 0; i != max; ++i) {
 			const auto shift = i + 1;
-			font.setPixelSize(size - shift);
+			font.setPixelSize(startSize - shift);
 			const auto metrics = QFontMetricsF(font);
 			const auto now = metrics.tightBoundingRect(Test).height();
 			if (now < desired) {
 				const auto better = (desired - now) < (current - desired);
-				return better ? (size - shift) : (size - shift + 1);
+				if (better) {
+					return adjusted(startSize - shift, metrics);
+				}
+				font.setPixelSize(startSize - shift + 1);
+				return adjustedByFont(font);
 			}
 			current = now;
 		}
-		return size - max;
+		font.setPixelSize(startSize - max);
+		return adjustedByFont(font);
 	}
 }
 
-[[nodiscard]] QFont ResolveFont(
+[[nodiscard]] FontResolveResult ResolveFont(
 		const QString &family,
-		uint32 flags,
+		FontFlags flags,
 		int size,
 		bool skipSizeAdjustment) {
-	auto result = QFont();
-	const auto monospace = (flags & FontMonospace) != 0;
+	auto font = QFont();
+
+	const auto monospace = (flags & FontFlag::Monospace) != 0;
 	const auto system = !monospace && (family == SystemFontTag());
 	const auto overriden = !monospace && !system && !family.isEmpty();
 	if (monospace) {
-		result.setFamily(MonospaceFont());
+		font.setFamily(MonospaceFont());
 	} else if (system) {
 	} else if (overriden) {
-		result.setFamily(family);
+		font.setFamily(family);
 	} else {
-		result.setFamily("Open Sans"_q);
+		font.setFamily("Open Sans"_q);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-		result.setFeature("ss03", true);
+		font.setFeature("ss03", true);
 #endif // Qt >= 6.7.0
 	}
-	result.setWeight(((flags & FontBold) || (flags & FontSemibold))
+	font.setPixelSize(size);
+
+	font.setWeight((flags & (FontFlag::Bold | FontFlag::Semibold))
 		? QFont::DemiBold
 		: QFont::Normal);
-	if (result.bold()) {
-		const auto style = QFontInfo(result).styleName();
+	if (font.bold()) {
+		const auto style = QFontInfo(font).styleName();
 		if (!style.isEmpty() && !style.startsWith(
 				"Semibold",
 				Qt::CaseInsensitive)) {
-			result.setBold(true);
+			font.setBold(true);
 		}
 	}
-	result.setItalic(flags & FontItalic);
-	result.setUnderline(flags & FontUnderline);
-	result.setStrikeOut(flags & FontStrikeOut);
-	result.setPixelSize((monospace || !overriden || skipSizeAdjustment)
-		? size
-		: ComputePixelSize(result, flags, size));
-	return result;
+
+	font.setItalic(flags & FontFlag::Italic);
+	font.setUnderline(flags & FontFlag::Underline);
+	font.setStrikeOut(flags & FontFlag::StrikeOut);
+
+	const auto adjust = (overriden && !skipSizeAdjustment);
+	const auto metrics = ComputeMetrics(font, adjust);
+	font.setPixelSize(metrics.pixelSize);
+
+	return {
+		.font = font,
+		.ascent = metrics.ascent,
+		.height = metrics.height,
+		.iascent = int(base::SafeRound(metrics.ascent)),
+		.iheight = int(base::SafeRound(metrics.height)),
+		.requestedFamily = RegisterFontFamily(family),
+		.requestedSize = size,
+		.requestedFlags = flags,
+	};
 }
 
 } // namespace
@@ -276,74 +365,66 @@ void StartFonts() {
 	QApplication::setFont(appFont);
 }
 
-void destroyFonts() {
-	for (auto fontData : std::as_const(fontsMap)) {
-		delete fontData;
-	}
-	fontsMap.clear();
+void DestroyFonts() {
+	base::take(FontsByKey);
 }
 
-int registerFontFamily(const QString &family) {
-	auto result = fontFamilyMap.value(family, -1);
-	if (result < 0) {
-		result = fontFamilies.size();
-		fontFamilyMap.insert(family, result);
-		fontFamilies.push_back(family);
+int RegisterFontFamily(const QString &family) {
+	auto i = FontFamilyIndices.find(family);
+	if (i == end(FontFamilyIndices)) {
+		i = FontFamilyIndices.emplace(family, FontFamilies.size()).first;
+		FontFamilies.push_back(family);
 	}
-	return result;
+	return i->second;
 }
 
-FontData::FontData(int size, uint32 flags, int family, Font *other)
-: f(ResolveFont(
-	family ? fontFamilies[family] : Custom,
-	flags,
-	size,
-	family != 0))
+FontData::FontData(const FontResolveResult &result, FontVariants *modified)
+: f(result.font)
 , _m(f)
-, _size(size)
-, _flags(flags)
-, _family(family) {
-	if (other) {
-		memcpy(_modified, other, sizeof(_modified));
+, _size(result.requestedSize)
+, _family(result.requestedFamily)
+, _flags(result.requestedFlags) {
+	if (modified) {
+		memcpy(&_modified, modified, sizeof(_modified));
 	}
-	_modified[_flags] = Font(this);
+	_modified[int(_flags)] = Font(this);
 
-	height = int(base::SafeRound(_m.height()));
-	ascent = int(base::SafeRound(_m.ascent()));
-	descent = int(base::SafeRound(_m.descent()));
+	height = int(base::SafeRound(result.height));
+	ascent = int(base::SafeRound(result.ascent));
+	descent = height - ascent;
 	spacew = width(QLatin1Char(' '));
 	elidew = width(u"..."_q);
 }
 
 Font FontData::bold(bool set) const {
-	return otherFlagsFont(FontBold, set);
+	return otherFlagsFont(FontFlag::Bold, set);
 }
 
 Font FontData::italic(bool set) const {
-	return otherFlagsFont(FontItalic, set);
+	return otherFlagsFont(FontFlag::Italic, set);
 }
 
 Font FontData::underline(bool set) const {
-	return otherFlagsFont(FontUnderline, set);
+	return otherFlagsFont(FontFlag::Underline, set);
 }
 
 Font FontData::strikeout(bool set) const {
-	return otherFlagsFont(FontStrikeOut, set);
+	return otherFlagsFont(FontFlag::StrikeOut, set);
 }
 
 Font FontData::semibold(bool set) const {
-	return otherFlagsFont(FontSemibold, set);
+	return otherFlagsFont(FontFlag::Semibold, set);
 }
 
 Font FontData::monospace(bool set) const {
-	return otherFlagsFont(FontMonospace, set);
+	return otherFlagsFont(FontFlag::Monospace, set);
 }
 
 int FontData::size() const {
 	return _size;
 }
 
-uint32 FontData::flags() const {
+FontFlags FontData::flags() const {
 	return _flags;
 }
 
@@ -351,50 +432,61 @@ int FontData::family() const {
 	return _family;
 }
 
-Font FontData::otherFlagsFont(uint32 flag, bool set) const {
-	int32 newFlags = set ? (_flags | flag) : (_flags & ~flag);
-	if (!_modified[newFlags].v()) {
-		_modified[newFlags] = Font(_size, newFlags, _family, _modified);
+Font FontData::otherFlagsFont(FontFlag flag, bool set) const {
+	const auto newFlags = set ? (_flags | flag) : (_flags & ~flag);
+	if (!_modified[newFlags]) {
+		_modified[newFlags] = Font(_size, newFlags, _family, &_modified);
 	}
 	return _modified[newFlags];
 }
 
-Font::Font(int size, uint32 flags, const QString &family) {
-	if (fontFamilyMap.isEmpty()) {
-		for (uint32 i = 0, s = fontFamilies.size(); i != s; ++i) {
-			fontFamilyMap.insert(fontFamilies.at(i), i);
-		}
-	}
-
-	auto i = fontFamilyMap.constFind(family);
-	if (i == fontFamilyMap.cend()) {
-		fontFamilies.push_back(family);
-		i = fontFamilyMap.insert(family, fontFamilies.size() - 1);
-	}
-	init(size, flags, i.value(), 0);
+Font::Font(int size, FontFlags flags, const QString &family) {
+	init(size, flags, RegisterFontFamily(family), 0);
 }
 
-Font::Font(int size, uint32 flags, int family) {
+Font::Font(int size, FontFlags flags, int family) {
 	init(size, flags, family, 0);
 }
 
-Font::Font(int size, uint32 flags, int family, Font *modified) {
+Font::Font(int size, FontFlags flags, int family, FontVariants *modified) {
 	init(size, flags, family, modified);
 }
 
-void Font::init(int size, uint32 flags, int family, Font *modified) {
-	uint32 key = fontKey(size, flags, family);
-	auto i = fontsMap.constFind(key);
-	if (i == fontsMap.cend()) {
-		i = fontsMap.insert(key, new FontData(size, flags, family, modified));
+void Font::init(
+		int size,
+		FontFlags flags,
+		int family,
+		FontVariants *modified) {
+	const auto key = FontKey(size, flags, family);
+	auto i = FontsByKey.find(key);
+	if (i == end(FontsByKey)) {
+		i = FontsByKey.emplace(
+			key,
+			std::make_unique<ResolvedFont>(
+				ResolveFont(
+					family ? FontFamilies[family] : Custom,
+					flags,
+					size,
+					family != 0),
+				modified)).first;
+		QtFontsKeys.emplace(QtFontKey(i->second->data.f), key);
 	}
-	ptr = i.value();
+	_data = &i->second->data;
+}
+
+OwnedFont::OwnedFont(const QString &custom, FontFlags flags, int size)
+: _data(ResolveFont(custom, flags, size, false), nullptr) {
+	_font._data = &_data;
 }
 
 } // namespace internal
 
-QFont ResolveFont(const QString &custom, uint32 flags, int size) {
-	return internal::ResolveFont(custom, flags, size, false);
+const FontResolveResult *FindAdjustResult(const QFont &font) {
+	const auto key = internal::QtFontKey(font);
+	const auto i = internal::QtFontsKeys.find(key);
+	return (i != end(internal::QtFontsKeys))
+		? &internal::FontsByKey[i->second]->result
+		: nullptr;
 }
 
 } // namespace style

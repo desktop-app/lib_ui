@@ -35,8 +35,8 @@ void StopShortAnimation();
 
 } // namespace internal
 
-void startManager(int scale);
-void stopManager();
+void StartManager(int scale);
+void StopManager();
 
 [[nodiscard]] rpl::producer<> PaletteChanged();
 [[nodiscard]] int PaletteVersion();

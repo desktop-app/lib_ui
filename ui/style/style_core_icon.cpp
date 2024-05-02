@@ -393,14 +393,14 @@ Icon Icon::withPalette(const style::palette &palette) const {
 	return result;
 }
 
-void resetIcons() {
+void ResetIcons() {
 	iconPixmaps.clear();
 	for (const auto data : iconData) {
 		data->reset();
 	}
 }
 
-void destroyIcons() {
+void DestroyIcons() {
 	iconData.clear();
 	iconPixmaps.clear();
 
