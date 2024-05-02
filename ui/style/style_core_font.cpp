@@ -251,15 +251,12 @@ struct Metrics {
 
 	const auto adjusted = [&](int size, const QFontMetricsF &metrics) {
 		const auto full = metrics.tightBoundingRect(Full);
-		const auto desiredTightAscent = -desiredFull.y();
 		const auto desiredTightHeight = desiredFull.height();
-		const auto ascentAdd = basicMetrics.ascent() - desiredTightAscent;
 		const auto heightAdd = basicMetrics.height() - desiredTightHeight;
-		const auto tightAscent = -full.y();
 		const auto tightHeight = full.height();
 		return Metrics{
 			.pixelSize = size,
-			.ascent = tightAscent + ascentAdd,
+			.ascent = basicMetrics.ascent(),
 			.height = tightHeight + heightAdd,
 		};
 	};
@@ -337,6 +334,10 @@ struct Metrics {
 	}
 	font.setPixelSize(size);
 
+	const auto adjust = (overriden && !skipSizeAdjustment);
+	const auto metrics = ComputeMetrics(font, adjust);
+	font.setPixelSize(metrics.pixelSize);
+
 	font.setWeight((flags & (FontFlag::Bold | FontFlag::Semibold))
 		? QFont::DemiBold
 		: QFont::Normal);
@@ -352,10 +353,6 @@ struct Metrics {
 	font.setItalic(flags & FontFlag::Italic);
 	font.setUnderline(flags & FontFlag::Underline);
 	font.setStrikeOut(flags & FontFlag::StrikeOut);
-
-	const auto adjust = (overriden && !skipSizeAdjustment);
-	const auto metrics = ComputeMetrics(font, adjust);
-	font.setPixelSize(metrics.pixelSize);
 
 	return {
 		.font = font,
