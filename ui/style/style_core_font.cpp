@@ -188,7 +188,7 @@ struct Metrics {
 
 	const auto family = font.family();
 	const auto basic = u"Open Sans"_q;
-	if (family == basic) {
+	if (family == basic || !adjust) {
 		return simple();
 	}
 
@@ -334,7 +334,7 @@ struct Metrics {
 	}
 	font.setPixelSize(size);
 
-	const auto adjust = (overriden && !skipSizeAdjustment);
+	const auto adjust = !skipSizeAdjustment && (overriden || system);
 	const auto metrics = ComputeMetrics(font, adjust);
 	font.setPixelSize(metrics.pixelSize);
 
