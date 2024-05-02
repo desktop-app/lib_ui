@@ -107,7 +107,7 @@ void TitleWidget::init(int height) {
 			const auto apple = (family == u".AppleSystemUIFont"_q);
 			setFromFont(style::font(
 				apple ? 13 : (height * 15) / 24,
-				apple ? style::FontFlag::Bold : 0,
+				apple ? style::FontFlag::Bold : style::FontFlag(),
 				family));
 			break;
 		}

@@ -96,7 +96,6 @@ base::flat_map<uint64, uint32> QtFontsKeys;
 [[nodiscard]] uint64 QtFontKey(const QFont &font) {
 	static auto Families = base::flat_map<QString, int>();
 
-	const auto pixelSize = font.pixelSize();
 	const auto family = font.family();
 	auto i = Families.find(family);
 	if (i == end(Families)) {
