@@ -18,10 +18,6 @@
 #include <QtCore/QPointer>
 #include <QtGui/QtEvents>
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-#include <qpa/qplatformbackingstore.h>
-#endif // Qt >= 6.4.0
-
 namespace Ui {
 
 void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible);
@@ -29,7 +25,6 @@ void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible);
 } // namespace Ui
 
 class TWidget;
-class TWidgetPrivate;
 
 template <typename Base>
 class TWidgetHelper : public Base {
@@ -151,12 +146,6 @@ protected:
 	virtual void enterFromChildEvent(QEvent *e, QWidget *child) {
 	}
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 4, 0)
-	virtual std::optional<QPlatformBackingStoreRhiConfig> rhiConfig() const {
-		return std::nullopt;
-	}
-#endif // Qt >= 6.4.0
-
 private:
 	TWidget *tparent() {
 		return qobject_cast<TWidget*>(Base::parentWidget());
@@ -167,8 +156,6 @@ private:
 
 	template <typename OtherBase>
 	friend class TWidgetHelper;
-
-	friend class TWidgetPrivate;
 
 };
 
