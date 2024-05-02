@@ -198,9 +198,53 @@ struct Metrics {
 	const auto basicMetrics = QFontMetricsF(copy);
 
 	static const auto Full = u"bdfghijklpqtyBDFGHIJKLPQTY1234567890[]{}()"_q;
-	static const auto Test = u"acemnorsuvwxz"_q;
 
-	const auto desired = basicMetrics.tightBoundingRect(Test).height();
+	// I tried to choose height in such way that
+	// - normal fonts won't be too large,
+	// - some exotic fonts, like Symbol (Greek), won't be too small,
+	// - some other exotic fonts, like Segoe Script, won't be too large.
+	const auto Height = [](const QFontMetricsF &metrics) {
+		//static const auto Test = u"acemnorsuvwxz"_q;
+		//return metrics.tightBoundingRect(Test).height();
+
+		//static const auto Test = u"acemnorsuvwxz"_q;
+		//auto result = metrics.boundingRect(Test[0]).height();
+		//for (const auto &ch : Test | ranges::views::drop(1)) {
+		//	const auto single = metrics.boundingRect(ch).height();
+		//	if (result > single) {
+		//		result = single;
+		//	}
+		//}
+		//return result;
+
+		//static const auto Test = u"acemnorsuvwxz"_q;
+		//auto result = 0.;
+		//for (const auto &ch : Test) {
+		//	result -= metrics.boundingRect(ch).y();
+		//}
+		//return result / Test.size();
+
+		static const char16_t Test[] = u"acemnorsuvwxz";
+		constexpr auto kCount = int(std::size(Test)) - 1;
+
+		auto heights = std::array<float64, kCount>{};
+		for (auto i = 0; i != kCount; ++i) {
+			heights[i] = -metrics.boundingRect(QChar(Test[i])).y();
+		}
+		ranges::sort(heights);
+		//return heights[kCount / 2];
+
+		// Average the middle third.
+		const auto from = kCount / 3;
+		const auto till = kCount - from;
+		auto result = 0.;
+		for (auto i = from; i != till; ++i) {
+			result += heights[i];
+		}
+		return result / (till - from);
+	};
+
+	const auto desired = Height(basicMetrics);
 	const auto desiredFull = basicMetrics.tightBoundingRect(Full);
 	if (desired < 1. || desiredFull.height() < desired) {
 		return simple();
@@ -221,7 +265,7 @@ struct Metrics {
 		};
 	};
 
-	auto current = metrics.tightBoundingRect(Test).height();
+	auto current = Height(metrics);
 	if (current < 1.) {
 		return simple();
 	} else if (std::abs(current - desired) < 0.2) {
@@ -237,7 +281,7 @@ struct Metrics {
 			const auto shift = i + 1;
 			font.setPixelSize(startSize + shift);
 			const auto metrics = QFontMetricsF(font);
-			const auto now = metrics.tightBoundingRect(Test).height();
+			const auto now = Height(metrics);
 			if (now > desired) {
 				const auto better = (now - desired) < (desired - current);
 				if (better) {
@@ -255,7 +299,7 @@ struct Metrics {
 			const auto shift = i + 1;
 			font.setPixelSize(startSize - shift);
 			const auto metrics = QFontMetricsF(font);
-			const auto now = metrics.tightBoundingRect(Test).height();
+			const auto now = Height(metrics);
 			if (now < desired) {
 				const auto better = (desired - now) < (current - desired);
 				if (better) {
