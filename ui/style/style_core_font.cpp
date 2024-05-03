@@ -314,8 +314,7 @@ struct Metrics {
 [[nodiscard]] FontResolveResult ResolveFont(
 		const QString &family,
 		FontFlags flags,
-		int size,
-		bool skipSizeAdjustment) {
+		int size) {
 	auto font = QFont();
 
 	const auto monospace = (flags & FontFlag::Monospace) != 0;
@@ -334,7 +333,7 @@ struct Metrics {
 	}
 	font.setPixelSize(size);
 
-	const auto adjust = !skipSizeAdjustment && (overriden || system);
+	const auto adjust = (overriden || system);
 	const auto metrics = ComputeMetrics(font, adjust);
 	font.setPixelSize(metrics.pixelSize);
 
@@ -354,13 +353,14 @@ struct Metrics {
 	font.setUnderline(flags & FontFlag::Underline);
 	font.setStrikeOut(flags & FontFlag::StrikeOut);
 
+	const auto index = (family == Custom) ? 0 : RegisterFontFamily(family);
 	return {
 		.font = font,
 		.ascent = metrics.ascent,
 		.height = metrics.height,
 		.iascent = int(base::SafeRound(metrics.ascent)),
 		.iheight = int(base::SafeRound(metrics.height)),
-		.requestedFamily = RegisterFontFamily(family),
+		.requestedFamily = index,
 		.requestedSize = size,
 		.requestedFlags = flags,
 	};
@@ -506,8 +506,7 @@ void Font::init(
 				ResolveFont(
 					family ? FontFamilies[family] : Custom,
 					flags,
-					size,
-					family != 0),
+					size),
 				modified)).first;
 		QtFontsKeys.emplace(QtFontKey(i->second->data.f), key);
 	}
@@ -515,7 +514,7 @@ void Font::init(
 }
 
 OwnedFont::OwnedFont(const QString &custom, FontFlags flags, int size)
-: _data(ResolveFont(custom, flags, size, false), nullptr) {
+: _data(ResolveFont(custom, flags, size), nullptr) {
 	_font._data = &_data;
 }
 
