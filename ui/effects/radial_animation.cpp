@@ -6,16 +6,14 @@
 //
 #include "ui/effects/radial_animation.h"
 
+#include "ui/arc_angles.h"
 #include "ui/painter.h"
 #include "styles/style_widgets.h"
 
 namespace Ui {
 namespace {
 
-constexpr auto kFullArcLength = 360 * 16;
-constexpr auto kQuarterArcLength = (kFullArcLength / 4);
-constexpr auto kMinArcLength = (kFullArcLength / 360);
-constexpr auto kAlmostFullArcLength = (kFullArcLength - kMinArcLength);
+constexpr auto kFullArcLength = arc::kFullLength;
 
 } // namespace
 
@@ -23,14 +21,14 @@ const int RadialState::kFull = kFullArcLength;
 
 void RadialAnimation::start(float64 prg) {
 	_firstStart = _lastStart = _lastTime = crl::now();
-	const auto iprg = qRound(qMax(prg, 0.0001) * kAlmostFullArcLength);
-	const auto iprgstrict = qRound(prg * kAlmostFullArcLength);
+	const auto iprg = qRound(qMax(prg, 0.0001) * arc::kAlmostFullLength);
+	const auto iprgstrict = qRound(prg * arc::kAlmostFullLength);
 	_arcEnd = anim::value(iprgstrict, iprg);
 	_animation.start();
 }
 
 bool RadialAnimation::update(float64 prg, bool finished, crl::time ms) {
-	const auto iprg = qRound(qMax(prg, 0.0001) * kAlmostFullArcLength);
+	const auto iprg = qRound(qMax(prg, 0.0001) * arc::kAlmostFullLength);
 	const auto result = (iprg != qRound(_arcEnd.to()))
 		|| (_finished != finished);
 	if (_finished != finished) {
@@ -101,13 +99,13 @@ void RadialAnimation::draw(
 }
 
 RadialState RadialAnimation::computeState() const {
-	auto length = kMinArcLength + qRound(_arcEnd.current());
-	auto from = kQuarterArcLength
+	auto length = arc::kMinLength + qRound(_arcEnd.current());
+	auto from = arc::kQuarterLength
 		- length
 		- (anim::Disabled() ? 0 : qRound(_arcStart.current()));
 	if (style::RightToLeft()) {
-		from = kQuarterArcLength - (from - kQuarterArcLength) - length;
-		if (from < 0) from += kFullArcLength;
+		from = arc::kQuarterLength - (from - arc::kQuarterLength) - length;
+		if (from < 0) from += arc::kFullLength;
 	}
 	return { _opacity, from, length };
 }

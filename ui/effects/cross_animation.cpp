@@ -7,6 +7,7 @@
 #include "ui/effects/cross_animation.h"
 
 #include "ui/effects/animation_value.h"
+#include "ui/arc_angles.h"
 #include "ui/painter.h"
 
 #include <QtCore/QtMath>
@@ -17,7 +18,6 @@ namespace {
 
 constexpr auto kPointCount = 12;
 constexpr auto kStaticLoadingValue = float64(-666);
-constexpr auto kFullArcLength = 360 * 16;
 
 
 //
@@ -148,12 +148,12 @@ void CrossAnimation::paint(
 	auto pathDeleteSize = kPointCount;
 
 	const auto staticLoading = (loading == kStaticLoadingValue);
-	auto loadingArcLength = staticLoading ? kFullArcLength : 0;
+	auto loadingArcLength = staticLoading ? arc::kFullLength : 0;
 	if (loading > 0.) {
 		transformLoadingCross(loading, pathDelete, pathDeleteSize);
 
 		auto loadingArc = (loading >= 0.5) ? (loading - 1.) : loading;
-		loadingArcLength = qRound(-loadingArc * 2 * kFullArcLength);
+		loadingArcLength = qRound(-loadingArc * 2 * arc::kFullLength);
 	}
 
 	if (!staticLoading) {
@@ -184,9 +184,9 @@ void CrossAnimation::paint(
 		if (staticLoading) {
 			anim::DrawStaticLoading(p, roundPart, stroke, color);
 		} else {
-			auto loadingArcStart = kFullArcLength / 8;
+			auto loadingArcStart = arc::kQuarterLength / 2;
 			if (shown < 1.) {
-				loadingArcStart -= qRound(-(shown - 1.) * kFullArcLength / 4.);
+				loadingArcStart -= qRound(-(shown - 1.) * arc::kQuarterLength);
 			}
 			if (loadingArcLength < 0) {
 				loadingArcStart += loadingArcLength;

@@ -261,6 +261,7 @@ PRIVATE
     ui/abstract_button.h
     ui/animated_icon.cpp
     ui/animated_icon.h
+    ui/arc_angles.h
     ui/basic_click_handlers.cpp
     ui/basic_click_handlers.h
     ui/cached_special_layer_shadow_corners.cpp
