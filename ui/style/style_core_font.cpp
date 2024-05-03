@@ -16,7 +16,6 @@
 #include <QtCore/QVector>
 #include <QtGui/QFontInfo>
 #include <QtGui/QFontDatabase>
-#include <QtWidgets/QApplication>
 
 void style_InitFontsResource() {
 #ifdef Q_OS_MAC // Use resources from the .app bundle on macOS.
@@ -399,10 +398,6 @@ void StartFonts() {
 	QFont::insertSubstitutions(name, list);
 #endif // Q_OS_MAC
 #endif // !LIB_UI_USE_PACKAGED_FONTS
-
-	auto appFont = QApplication::font();
-	appFont.setStyleStrategy(QFont::PreferQuality);
-	QApplication::setFont(appFont);
 }
 
 void DestroyFonts() {
