@@ -315,7 +315,7 @@ struct Metrics {
 		const QString &family,
 		FontFlags flags,
 		int size) {
-	auto font = QFont();
+	auto font = QFont(QFont().family());
 
 	const auto monospace = (flags & FontFlag::Monospace) != 0;
 	const auto system = !monospace && (family == SystemFontTag());
