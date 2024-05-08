@@ -77,7 +77,10 @@ class CustomEmojiObject : public QObject, public QTextObjectInterface {
 public:
 	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
 
-	CustomEmojiObject(Factory factory, Fn<bool()> paused);
+	CustomEmojiObject(
+		const style::font &font,
+		Factory factory,
+		Fn<bool()> paused);
 	~CustomEmojiObject();
 
 	void *qt_metacast(const char *iid) override;
@@ -97,6 +100,7 @@ public:
 	void clear();
 
 private:
+	const style::font _font;
 	Factory _factory;
 	Fn<bool()> _paused;
 	base::flat_map<uint64, std::unique_ptr<Text::CustomEmoji>> _emoji;
@@ -495,6 +499,8 @@ private:
 	std::optional<QString> _inputMethodCommit;
 
 	QMargins _additionalMargins;
+	QMargins _customFontMargins;
+	int _placeholderCustomFontSkip = 0;
 
 	bool _forcePlaceholderHidden = false;
 	bool _reverseMarkdownReplacement = false;
@@ -557,6 +563,7 @@ private:
 	base::unique_qptr<PopupMenu> _contextMenu;
 
 	QTextCharFormat _defaultCharFormat;
+	QTextBlockFormat _defaultBlockFormat;
 
 	rpl::variable<int> _scrollTop;
 

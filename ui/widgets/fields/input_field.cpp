@@ -698,16 +698,16 @@ QString AccumulateText(Iterator begin, Iterator end) {
 	return result;
 }
 
-QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, const QFont &font) {
+QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 	const auto factor = style::DevicePixelRatio();
 	const auto size = Emoji::GetSizeNormal();
 	const auto width = size + st::emojiPadding * factor * 2;
-	const auto height = std::max(QFontMetrics(font).height() * factor, size);
+	const auto height = std::max(lineHeight * factor, size);
 	auto result = QTextImageFormat();
 	result.setWidth(width / factor);
 	result.setHeight(height / factor);
 	result.setName(emoji->toUrl());
-	result.setVerticalAlignment(QTextCharFormat::AlignBottom);
+	result.setVerticalAlignment(QTextCharFormat::AlignTop);
 	return result;
 }
 
@@ -747,6 +747,7 @@ QTextCharFormat PrepareTagFormat(
 			result.setProperty(
 				kCustomEmojiId,
 				CustomEmojiIdFromLink(replaceWith));
+			result.setVerticalAlignment(QTextCharFormat::AlignTop);
 		} else if (IsValidMarkdownLink(tag)) {
 			color = st::defaultTextPalette.linkFg;
 		} else if (tag == kTagBold) {
@@ -919,6 +920,7 @@ struct FormattingAction {
 		RemoveTag,
 		RemoveNewline,
 		ClearInstantReplace,
+		FixLineHeight,
 	};
 
 	Type type = Type::Invalid;
@@ -1018,7 +1020,12 @@ private:
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 	const auto currentFormat = cursor.charFormat();
-	auto format = PrepareEmojiFormat(emoji, currentFormat.font());
+	const auto blockFormat = cursor.blockFormat();
+	const auto type = blockFormat.lineHeightType();
+	const auto height = (type == QTextBlockFormat::FixedHeight)
+		? blockFormat.lineHeight()
+		: QFontMetrics(cursor.charFormat().font()).height();
+	auto format = PrepareEmojiFormat(emoji, height);
 	ApplyTagFormat(format, currentFormat);
 	cursor.insertText(kObjectReplacement, format);
 }
@@ -1035,7 +1042,7 @@ void InsertCustomEmojiAtCursor(
 	format.setProperty(kCustomEmojiText, text);
 	format.setProperty(kCustomEmojiLink, unique);
 	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
-	format.setVerticalAlignment(QTextCharFormat::AlignBottom);
+	format.setVerticalAlignment(QTextCharFormat::AlignTop);
 	format.setFont(field->st().font);
 	format.setForeground(field->st().textFg);
 	format.setBackground(QBrush());
@@ -1097,8 +1104,12 @@ const InstantReplaces &InstantReplaces::TextOnly() {
 	return result;
 }
 
-CustomEmojiObject::CustomEmojiObject(Factory factory, Fn<bool()> paused)
-: _factory(std::move(factory))
+CustomEmojiObject::CustomEmojiObject(
+	const style::font &font,
+	Factory factory,
+	Fn<bool()> paused)
+: _font(font)
+, _factory(std::move(factory))
 , _paused(std::move(paused))
 , _now(crl::now()) {
 }
@@ -1118,8 +1129,7 @@ QSizeF CustomEmojiObject::intrinsicSize(
 		const QTextFormat &format) {
 	const auto size = st::emojiSize * 1.;
 	const auto width = size + st::emojiPadding * 2.;
-	const auto font = format.toCharFormat().font();
-	const auto height = std::min(QFontMetrics(font).height() * 1., size);
+	const auto height = std::max(_font->height * 1., size);
 	if (!_skip) {
 		const auto emoji = Ui::Text::AdjustCustomEmojiSize(st::emojiSize);
 		_skip = (st::emojiSize - emoji) / 2;
@@ -1211,6 +1221,30 @@ InputField::InputField(
 	_inner->setAcceptRichText(false);
 	resize(_st.width, _minHeight);
 
+	{ // In case of default fonts all those should be zero.
+		const auto metrics = QFontMetricsF(_st.font->f);
+		const auto realAscent = int(base::SafeRound(metrics.ascent()));
+		const auto ascentAdd = _st.font->ascent - realAscent;
+		//const auto realHeight = int(base::SafeRound(metrics.height()));
+		//const auto heightAdd = _st.font->height - realHeight - ascentAdd;
+		//_customFontMargins = QMargins(0, ascentAdd, 0, heightAdd);
+		_customFontMargins = QMargins(0, ascentAdd, 0, -ascentAdd);
+		// We move _inner down by ascentAdd for the first line to look
+		// at the same vertical position as in the default font.
+		//
+		// But we don't want to get vertical scroll in case the field
+		// fits pixel-perfect with the default font, so we allow the
+		// bottom margin to be the same shift, but negative.
+
+		if (_mode != Mode::SingleLine) {
+			const auto metrics = QFontMetricsF(_st.font->f);
+			const auto leading = qMax(metrics.leading(), qreal(0.0));
+			const auto adjustment = (metrics.ascent() + leading)
+				- ((_st.font->height * 4) / 5);
+			_placeholderCustomFontSkip = int(base::SafeRound(-adjustment));
+		}
+	}
+
 	if (_st.textBg->c.alphaF() >= 1.
 		&& !_st.borderRadius) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
@@ -1231,11 +1265,21 @@ InputField::InputField(
 	) | rpl::start_with_next([=] {
 		updatePalette();
 	}, lifetime());
+	{
+		auto cursor = _inner->textCursor();
 
-	_defaultCharFormat = _inner->textCursor().charFormat();
-	updatePalette();
-	_inner->textCursor().setCharFormat(_defaultCharFormat);
+		_defaultCharFormat = cursor.charFormat();
+		updatePalette();
+		cursor.setCharFormat(_defaultCharFormat);
 
+		_defaultBlockFormat = cursor.blockFormat();
+		_defaultBlockFormat.setLineHeight(
+			_st.font->height,
+			QTextBlockFormat::FixedHeight);
+		cursor.setBlockFormat(_defaultBlockFormat);
+
+		_inner->setTextCursor(cursor);
+	}
 	_inner->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	_inner->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
@@ -1277,6 +1321,7 @@ InputField::InputField(
 		auto cursor = textCursor();
 		if (!cursor.hasSelection() && !cursor.position()) {
 			cursor.setCharFormat(_defaultCharFormat);
+			cursor.setBlockFormat(_defaultBlockFormat);
 			setTextCursor(cursor);
 		}
 	}, lifetime());
@@ -1435,7 +1480,7 @@ void InputField::setTagMimeProcessor(Fn<QString(QStringView)> processor) {
 void InputField::setCustomEmojiFactory(
 		CustomEmojiFactory factory,
 		Fn<bool()> paused) {
-	_customEmojiObject = std::make_unique<CustomEmojiObject>([=](
+	_customEmojiObject = std::make_unique<CustomEmojiObject>(_st.font, [=](
 			QStringView data) {
 		return factory(data, [=] { customEmojiRepaint(); });
 	}, std::move(paused));
@@ -1740,6 +1785,13 @@ void InputField::paintEvent(QPaintEvent *e) {
 	const auto focusedDegree = _a_focused.value(_focused ? 1. : 0.);
 	paintSurrounding(p, r, errorDegree, focusedDegree);
 
+	const auto skip = int(base::SafeRound(_inner->document()->documentMargin()));
+	const auto margins = _st.textMargins
+		+ _st.placeholderMargins
+		+ QMargins(skip, skip + _placeholderCustomFontSkip, skip, 0)
+		+ _additionalMargins
+		+ _customFontMargins;
+
 	if (_st.placeholderScale > 0. && !_placeholderPath.isEmpty()) {
 		auto placeholderShiftDegree = _a_placeholderShifted.value(_placeholderShifted ? 1. : 0.);
 		p.save();
@@ -1747,7 +1799,7 @@ void InputField::paintEvent(QPaintEvent *e) {
 
 		auto placeholderTop = anim::interpolate(0, _st.placeholderShift, placeholderShiftDegree);
 
-		QRect r(rect().marginsRemoved(_st.textMargins + _st.placeholderMargins));
+		QRect r(rect().marginsRemoved(margins));
 		r.moveTop(r.top() + placeholderTop);
 		if (style::RightToLeft()) r.moveLeft(width() - r.left() - r.width());
 
@@ -1774,15 +1826,14 @@ void InputField::paintEvent(QPaintEvent *e) {
 
 			p.setFont(_st.placeholderFont);
 			p.setPen(anim::pen(_st.placeholderFg, _st.placeholderFgActive, focusedDegree));
-
 			if (_st.placeholderAlign == style::al_topleft && _placeholderAfterSymbols > 0) {
 				const auto skipWidth = placeholderSkipWidth();
 				p.drawText(
-					_st.textMargins.left() + _st.placeholderMargins.left() + skipWidth,
-					_st.textMargins.top() + _st.placeholderMargins.top() + _st.placeholderFont->ascent,
+					margins.left() + skipWidth,
+					margins.top() + _st.placeholderFont->ascent,
 					_placeholder);
 			} else {
-				auto r = rect().marginsRemoved(_st.textMargins + _st.placeholderMargins);
+				auto r = rect().marginsRemoved(margins);
 				r.moveLeft(r.left() + placeholderLeft);
 				if (style::RightToLeft()) r.moveLeft(width() - r.left() - r.width());
 				p.drawText(r, _placeholder, _st.placeholderAlign);
@@ -2117,6 +2168,10 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 		if (tillBlock.isValid()) tillBlock = tillBlock.next();
 
 		for (auto block = fromBlock; block != tillBlock; block = block.next()) {
+			if (block.blockFormat().lineHeightType() != QTextBlockFormat::FixedHeight) {
+				action.type = ActionType::FixLineHeight;
+				break;
+			}
 			for (auto fragmentIt = block.begin(); !fragmentIt.atEnd(); ++fragmentIt) {
 				auto fragment = fragmentIt.fragment();
 				Assert(fragment.isValid());
@@ -2298,6 +2353,11 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 			PrepareFormattingOptimization(document);
 
 			auto cursor = QTextCursor(document);
+			if (action.type == ActionType::FixLineHeight) {
+				cursor.select(QTextCursor::Document);
+				cursor.setBlockFormat(_defaultBlockFormat);
+				continue;
+			}
 			cursor.setPosition(action.intervalStart);
 			cursor.setPosition(action.intervalEnd, QTextCursor::KeepAnchor);
 			if (action.type == ActionType::InsertEmoji
@@ -2627,6 +2687,7 @@ void InputField::setTextWithTags(
 	_realCharsAdded = textWithTags.text.size();
 	const auto document = _inner->document();
 	auto cursor = QTextCursor(document);
+	cursor.setBlockFormat(_defaultBlockFormat);
 	if (historyAction == HistoryAction::Clear) {
 		document->setUndoRedoEnabled(false);
 		cursor.beginEditBlock();
@@ -3303,7 +3364,7 @@ void InputField::commitInstantReplacement(
 			result.setProperty(kCustomEmojiText, with);
 			result.setProperty(kCustomEmojiLink, unique);
 			result.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
-			result.setVerticalAlignment(QTextCharFormat::AlignBottom);
+			result.setVerticalAlignment(QTextCharFormat::AlignTop);
 			return result;
 		}
 		const auto use = Integration::Instance().defaultEmojiVariant(
@@ -3567,6 +3628,7 @@ void InputField::commitMarkdownLinkEdit(
 
 	_reverseMarkdownReplacement = false;
 	cursor.setCharFormat(_defaultCharFormat);
+	cursor.setBlockFormat(_defaultBlockFormat);
 	_inner->setTextCursor(cursor);
 }
 
@@ -3897,14 +3959,18 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 void InputField::resizeEvent(QResizeEvent *e) {
 	refreshPlaceholder(_placeholderFull.current());
 	_inner->setGeometry(rect().marginsRemoved(
-		_st.textMargins + _additionalMargins));
+		_st.textMargins + _additionalMargins + _customFontMargins));
 	_borderAnimationStart = width() / 2;
 	RpWidget::resizeEvent(e);
 	checkContentHeight();
 }
 
 void InputField::refreshPlaceholder(const QString &text) {
-	const auto availableWidth = width() - _st.textMargins.left() - _st.textMargins.right() - _st.placeholderMargins.left() - _st.placeholderMargins.right();
+	const auto margins = _st.textMargins
+		+ _st.placeholderMargins
+		+ _additionalMargins
+		+ _customFontMargins;
+	const auto availableWidth = rect().marginsRemoved(margins).width();
 	if (_st.placeholderScale > 0.) {
 		auto placeholderFont = _st.placeholderFont->f;
 		placeholderFont.setStyleStrategy(QFont::PreferMatch);
