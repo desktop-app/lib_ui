@@ -900,12 +900,6 @@ void PopupMenu::deleteOnHide(bool del) {
 }
 
 void PopupMenu::popup(const QPoint &p) {
-	if (_clearLastSeparator) {
-		_menu->clearLastSeparator();
-		for (const auto &[action, submenu] : _submenus) {
-			submenu->menu()->clearLastSeparator();
-		}
-	}
 	if (prepareGeometryFor(p)) {
 		popupPrepared();
 		return;
@@ -957,6 +951,13 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p) {
 }
 
 bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+	if (_clearLastSeparator) {
+		_menu->clearLastSeparator();
+		for (const auto &[action, submenu] : _submenus) {
+			submenu->menu()->clearLastSeparator();
+		}
+	}
+
 	const auto usingScreenGeometry = !::Platform::IsWayland();
 	const auto screen = QGuiApplication::screenAt(p);
 	if ((usingScreenGeometry && !screen)
