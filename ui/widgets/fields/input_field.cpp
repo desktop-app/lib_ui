@@ -1341,8 +1341,8 @@ InputField::InputField(
 	setCursor(style::cur_text);
 	heightAutoupdated();
 
-	if (!_lastTextWithTags.text.isEmpty()) {
-		setTextWithTags(_lastTextWithTags, HistoryAction::Clear);
+	if (!value.text.isEmpty()) {
+		setTextWithTags(value, HistoryAction::Clear);
 	}
 
 	startBorderAnimation();
