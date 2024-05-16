@@ -1878,7 +1878,7 @@ void InputField::focusInEvent(QFocusEvent *e) {
 		? mapFromGlobal(QCursor::pos()).x()
 		: (width() / 2);
 	InvokeQueued(this, [=] {
-		if (hasFocus()) {
+		if (QWidget::hasFocus()) {
 			focusInner();
 		}
 	});
