@@ -676,6 +676,12 @@ void SeparatePanel::initGeometry(QSize size) {
 	}();
 	move(rect.topLeft());
 	setFixedSize(rect.size());
+	createWinId();
+	if (_useTransparency) {
+		Platform::SetWindowMargins(this, _padding);
+	} else {
+		Platform::UnsetWindowMargins(this);
+	}
 	updateControlsGeometry();
 }
 
