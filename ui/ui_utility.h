@@ -68,9 +68,11 @@ inline Value *CreateChild(
 				parent,
 				std::forward<Args>(args)...)->value();
 		}
-	} else {
-		static_assert(requires(const Parent &t) { t.get(); });
+	} else if constexpr (requires(const Parent & t) { t.get(); }) {
 		return new Value(parent.get(), std::forward<Args>(args)...);
+	} else {
+		static_assert(requires(const Parent &t) { t.data(); });
+		return new Value(parent.data(), std::forward<Args>(args)...);
 	}
 }
 
