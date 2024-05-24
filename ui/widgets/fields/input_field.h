@@ -586,4 +586,6 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 
 [[nodiscard]] int FieldCharacterCount(not_null<InputField*> field);
 
+void AddLengthLimitLabel(not_null<InputField*> field, int limit);
+
 } // namespace Ui

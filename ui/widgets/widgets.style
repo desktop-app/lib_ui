@@ -910,6 +910,9 @@ defaultInputField: InputField {
 	heightMin: 55px;
 	heightMax: 148px;
 }
+defaultInputFieldLimit: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+}
 
 defaultIconButton: IconButton {
 	iconPosition: point(-1px, -1px);
