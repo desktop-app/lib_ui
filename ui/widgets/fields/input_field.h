@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/flat_set.h"
 #include "base/timer.h"
 #include "ui/emoji_config.h"
 #include "ui/rp_widget.h"
@@ -107,6 +108,29 @@ private:
 	crl::time _now = 0;
 	int _skip = 0;
 
+};
+
+struct MarkdownEnabled {
+	base::flat_set<QString> tagsSubset;
+
+	friend inline bool operator==(
+		const MarkdownEnabled &,
+		const MarkdownEnabled &) = default;
+};
+struct MarkdownDisabled {
+	friend inline bool operator==(
+		const MarkdownDisabled &,
+		const MarkdownDisabled &) = default;
+};
+struct MarkdownEnabledState {
+	std::variant<MarkdownDisabled, MarkdownEnabled> data;
+
+	[[nodiscard]] bool disabled() const;
+	[[nodiscard]] bool enabledForTag(QStringView tag) const;
+
+	friend inline bool operator==(
+		const MarkdownEnabledState &,
+		const MarkdownEnabledState &) = default;
 };
 
 class InputField : public RpWidget {
@@ -226,7 +250,8 @@ public:
 
 	void setInstantReplaces(const InstantReplaces &replaces);
 	void setInstantReplacesEnabled(rpl::producer<bool> enabled);
-	void setMarkdownReplacesEnabled(rpl::producer<bool> enabled);
+	void setMarkdownReplacesEnabled(bool enabled);
+	void setMarkdownReplacesEnabled(rpl::producer<MarkdownEnabledState> enabled);
 	void setExtendedContextMenu(rpl::producer<ExtendedContextMenu> value);
 	void commitInstantReplacement(
 		int from,
@@ -268,8 +293,8 @@ public:
 	bool isUndoAvailable() const;
 	bool isRedoAvailable() const;
 
-	bool isMarkdownEnabled() const {
-		return _markdownEnabled;
+	[[nodiscard]] MarkdownEnabledState markdownEnabledState() const {
+		return _markdownEnabledState;
 	}
 
 	using SubmitSettings = InputSubmitSettings;
@@ -523,7 +548,7 @@ private:
 	std::unique_ptr<CustomEmojiObject> _customEmojiObject;
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
-	bool _markdownEnabled = false;
+	MarkdownEnabledState _markdownEnabledState;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
 	bool _inDrop = false;
