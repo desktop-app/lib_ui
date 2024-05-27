@@ -31,6 +31,7 @@ struct Capabilities {
 
 void ForceDisable(bool disable);
 
+void DetectLastCheckCrash();
 [[nodiscard]] bool LastCrashCheckFailed();
 void CrashCheckFinish();
 

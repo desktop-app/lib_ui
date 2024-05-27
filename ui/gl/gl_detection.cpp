@@ -33,6 +33,7 @@ namespace Ui::GL {
 namespace {
 
 bool ForceDisabled/* = false*/;
+bool LastCheckCrashed/* = false*/;
 
 #ifdef Q_OS_WIN
 ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
@@ -59,9 +60,14 @@ void CrashCheckStart() {
 const char kOptionAllowLinuxNvidiaOpenGL[] = "allow-linux-nvidia-opengl";
 
 Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
-	if (ForceDisabled) {
-		LOG_ONCE(("OpenGL: Force-disabled."));
-		return {};
+	if (!Platform::IsMac()) {
+		if (ForceDisabled) {
+			LOG_ONCE(("OpenGL: Force-disabled."));
+			return {};
+		} else if (LastCheckCrashed) {
+			LOG_ONCE(("OpenGL: Last-crashed."));
+			return {};
+		}
 	}
 
 	[[maybe_unused]] static const auto BugListInited = [] {
@@ -243,8 +249,17 @@ Backend ChooseBackendDefault(Capabilities capabilities) {
 	return use ? Backend::OpenGL : Backend::Raster;
 }
 
+void DetectLastCheckCrash() {
+	[[maybe_unused]] static const auto Once = [] {
+		LastCheckCrashed = !Platform::IsMac()
+			&& QFile::exists(Integration::Instance().openglCheckFilePath());
+		return false;
+	}();
+}
+
 bool LastCrashCheckFailed() {
-	return QFile::exists(Integration::Instance().openglCheckFilePath());
+	DetectLastCheckCrash();
+	return LastCheckCrashed;
 }
 
 void CrashCheckFinish() {
@@ -252,7 +267,9 @@ void CrashCheckFinish() {
 }
 
 void ForceDisable(bool disable) {
-	ForceDisabled = disable;
+	if (!Platform::IsMac()) {
+		ForceDisabled = disable;
+	}
 }
 
 #ifdef Q_OS_WIN
