@@ -3630,9 +3630,11 @@ void InputField::commitMarkdownLinkEdit(
 	_insertedTags.clear();
 
 	_reverseMarkdownReplacement = false;
+	_correcting = true;
 	cursor.setCharFormat(_defaultCharFormat);
 	cursor.setBlockFormat(_defaultBlockFormat);
 	_inner->setTextCursor(cursor);
+	_correcting = false;
 }
 
 void InputField::toggleSelectionMarkdown(const QString &tag) {
