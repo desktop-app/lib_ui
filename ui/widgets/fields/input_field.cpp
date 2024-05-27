@@ -2428,7 +2428,6 @@ void InputField::documentContentsChanged(
 	if (_correcting) {
 		return;
 	}
-
 	// In case of input method events Qt emits
 	// document content change signals for a whole
 	// text block where the even took place.
@@ -2949,7 +2948,19 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		if (changeModifiers) {
 			e->setModifiers(oldModifiers & allowedModifiers);
 		}
-		_inner->QTextEdit::keyPressEvent(e);
+		if (e == QKeySequence::InsertParagraphSeparator) {
+			// qtbase commit dbb9579566f3accd8aa5fe61db9692991117afd3 introduced
+			// special logic for repeated 'Enter' key presses, which drops the
+			// block format instead of inserting a newline in case the block format
+			// is non-trivial. For custom fonts we use non-trivial block formats
+			// always for the entire QTextEdit, so we revert that logic and simply
+			// insert a newline as it was before Qt 6.X.Y where this was added.
+			textCursor().insertBlock();
+			_inner->ensureCursorVisible();
+			e->accept();
+		} else {
+			_inner->QTextEdit::keyPressEvent(e);
+		}
 		if (changeModifiers) {
 			e->setModifiers(oldModifiers);
 		}
