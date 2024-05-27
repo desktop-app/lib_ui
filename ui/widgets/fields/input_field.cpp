@@ -2474,7 +2474,7 @@ void InputField::documentContentsChanged(
 		QTextCursor(document).endEditBlock();
 		handleContentsChanged();
 		const auto added = charsAdded - _emojiSurrogateAmount;
-		_documentContentsChanges.fire({position, charsRemoved, added});
+		_documentContentsChanges.fire({ position, charsRemoved, added });
 		_emojiSurrogateAmount = 0;
 	});
 
@@ -2936,7 +2936,9 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 #endif // Q_OS_MAC
 	} else {
 		const auto text = e->text();
-		const auto oldPosition = textCursor().position();
+		const auto old = textCursor();
+		const auto oldPosition = old.position();
+		const auto oldSelection = old.hasSelection();
 		const auto oldModifiers = e->modifiers();
 		const auto allowedModifiers = (enter && ctrl)
 			? (~Qt::ControlModifier)
@@ -2960,7 +2962,10 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			} else if (e->key() == Qt::Key_PageDown || e->key() == Qt::Key_Down) {
 				cursor.movePosition(QTextCursor::End, e->modifiers().testFlag(Qt::ShiftModifier) ? QTextCursor::KeepAnchor : QTextCursor::MoveAnchor);
 				check = true;
-			} else if (e->key() == Qt::Key_Left || e->key() == Qt::Key_Right || e->key() == Qt::Key_Backspace) {
+			} else if (!oldSelection
+				&& (e->key() == Qt::Key_Left
+					|| e->key() == Qt::Key_Right
+					|| e->key() == Qt::Key_Backspace)) {
 				e->ignore();
 			}
 			if (check) {
