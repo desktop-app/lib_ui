@@ -3642,8 +3642,10 @@ void InputField::commitMarkdownLinkEdit(
 
 	_reverseMarkdownReplacement = false;
 	_correcting = true;
+	cursor.joinPreviousEditBlock();
 	cursor.setCharFormat(_defaultCharFormat);
 	cursor.setBlockFormat(_defaultBlockFormat);
+	cursor.endEditBlock();
 	_inner->setTextCursor(cursor);
 	_correcting = false;
 }
