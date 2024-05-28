@@ -1822,6 +1822,9 @@ bool IsDiacritic(QChar ch) { // diacritic and variation selectors
 }
 
 bool IsReplacedBySpace(QChar ch) {
+	// Those symbols are replaced by space on the Telegram server,
+	// so we replace them as well, for sent / received consistency.
+	//
 	// \xe2\x80[\xa8 - \xac\xad] // 8232 - 8237
 	// QString from1 = QString::fromUtf8("\xe2\x80\xa8"), to1 = QString::fromUtf8("\xe2\x80\xad");
 	// \xcc[\xb3\xbf\x8a] // 819, 831, 778
