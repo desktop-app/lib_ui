@@ -1812,8 +1812,7 @@ bool IsSpace(QChar ch) {
 		|| (ch == QChar::LineSeparator)
 		|| (ch == QChar::ObjectReplacementCharacter)
 		|| (ch == QChar::CarriageReturn)
-		|| (ch == QChar::Tabulation)
-		|| (ch == QChar(8203)/*Zero width space.*/);
+		|| (ch == QChar::Tabulation);
 }
 
 bool IsDiacritic(QChar ch) { // diacritic and variation selectors
@@ -1838,7 +1837,9 @@ bool IsReplacedBySpace(QChar ch) {
 }
 
 bool IsTrimmed(QChar ch) {
-	return (IsSpace(ch) || IsBad(ch));
+	return IsSpace(ch)
+		|| IsBad(ch)
+		|| (ch == QChar(8203)); // zero width space
 }
 
 } // namespace Ui::Text
