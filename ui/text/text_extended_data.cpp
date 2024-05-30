@@ -69,5 +69,29 @@ void PreClickHandler::onClick(ClickContext context) const {
 	}
 }
 
+BlockquoteClickHandler::BlockquoteClickHandler(
+	not_null<String*> text,
+	int quoteIndex)
+: _text(text)
+, _quoteIndex(quoteIndex) {
+}
+
+not_null<String*> BlockquoteClickHandler::text() const {
+	return _text;
+}
+
+void BlockquoteClickHandler::setText(not_null<String*> text) {
+	_text = text;
+}
+
+void BlockquoteClickHandler::onClick(ClickContext context) const {
+	if (context.button != Qt::LeftButton) {
+		return;
+	}
+	_text->setBlockquoteExpanded(
+		_quoteIndex,
+		!_text->blockquoteExpanded(_quoteIndex));
+}
+
 } // namespace Ui::Text
 

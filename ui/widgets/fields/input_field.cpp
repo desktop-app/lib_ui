@@ -63,6 +63,7 @@ const auto &kTagStrikeOut = InputField::kTagStrikeOut;
 const auto &kTagCode = InputField::kTagCode;
 const auto &kTagPre = InputField::kTagPre;
 const auto &kTagBlockquote = InputField::kTagBlockquote;
+const auto &kTagBlockquoteCollapsed = InputField::kTagBlockquoteCollapsed;
 const auto &kTagSpoiler = InputField::kTagSpoiler;
 const auto &kCustomEmojiFormat = InputField::kCustomEmojiFormat;
 const auto &kCustomEmojiId = InputField::kCustomEmojiId;
@@ -736,7 +737,7 @@ QTextCharFormat PrepareTagFormat(
 	auto result = QTextCharFormat();
 	auto font = st.font;
 	auto color = std::optional<style::color>();
-	auto bg = std::optional<style::color>();
+	auto bg = std::optional<QColor>();
 	auto replaceWhat = QString();
 	auto replaceWith = QString();
 	const auto applyOne = [&](QStringView tag) {
@@ -759,14 +760,14 @@ QTextCharFormat PrepareTagFormat(
 			font = font->underline();
 		} else if (tag == kTagStrikeOut) {
 			font = font->strikeout();
-		} else if (tag == kTagBlockquote) {
+		} else if (tag == kTagBlockquote || tag == kTagBlockquoteCollapsed) {
 			color = st::defaultTextPalette.monoFg;
 			font = font->italic();
 		} else if (tag == kTagCode || IsTagPre(tag)) {
 			color = st::defaultTextPalette.monoFg;
 			font = font->monospace();
 		} else if (tag == kTagSpoiler) {
-			bg = st::msgInDateFg;
+			bg = st::msgInDateFg->c;
 		}
 	};
 	for (const auto &tag : TextUtilities::SplitTags(tag)) {
@@ -948,6 +949,7 @@ const QString InputField::kTagCode = u"`"_q;
 const QString InputField::kTagPre = u"```"_q;
 const QString InputField::kTagSpoiler = u"||"_q;
 const QString InputField::kTagBlockquote = u">"_q;
+const QString InputField::kTagBlockquoteCollapsed = u">^"_q;
 const QString InputField::kCustomEmojiTagStart = u"custom-emoji://"_q;
 const int InputField::kCustomEmojiFormat = QTextFormat::UserObject + 1;
 const int InputField::kCustomEmojiId = QTextFormat::UserProperty + 7;
@@ -3713,7 +3715,7 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 			: (leftForBlock && rightForBlock)
 			? kTagPre
 			: kTagCode;
-		if (tag == kTagBlockquote) {
+		if (tag == kTagBlockquote || tag == kTagBlockquoteCollapsed) {
 			QTextCursor(document()).beginEditBlock();
 			if (!leftForBlock) {
 				auto copy = textCursor();

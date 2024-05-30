@@ -268,17 +268,22 @@ void Renderer::enumerate() {
 		auto blockHeight = CountBlockHeight(b, _t->_st);
 
 		if (_btype == TextBlockType::Newline) {
+			const auto qindex = static_cast<const NewlineBlock*>(b)->quoteIndex();
+			const auto changed = (_quoteIndex != qindex);
+			const auto hidden = !_quoteLinesLeft;
 			if (!_lineHeight) {
 				_lineHeight = blockHeight;
 			}
-			const auto qindex = static_cast<const NewlineBlock*>(b)->quoteIndex();
-			const auto changed = (_quoteIndex != qindex);
-			fillParagraphBg(changed ? _quotePadding.bottom() : 0);
-			if (!drawLine((*i)->position(), i, e)) {
-				return;
+			if (_quoteLinesLeft) {
+				--_quoteLinesLeft;
 			}
-
-			_y += _lineHeight;
+			if (!hidden) {
+				fillParagraphBg(changed ? _quotePadding.bottom() : 0);
+				if (!drawLine((*i)->position(), i, e) && !_quoteExpandLinkLookup) {
+					return;
+				}
+				_y += _lineHeight;
+			}
 			_lineHeight = 0;
 
 			last_rBearing = 0;
@@ -290,6 +295,8 @@ void Renderer::enumerate() {
 				static_cast<const NewlineBlock*>(b)->paragraphDirection());
 
 			longWordLine = true;
+			continue;
+		} else if (!_quoteLinesLeft) {
 			continue;
 		}
 
@@ -320,6 +327,9 @@ void Renderer::enumerate() {
 			auto f_wLeft = _wLeft; // vars for saving state of the last word start
 			auto f_lineHeight = _lineHeight; // f points to the last word-start element of t->_words
 			for (auto j = t->_words.cbegin(), en = t->_words.cend(), f = j; j != en; ++j) {
+				if (!_quoteLinesLeft) {
+					break;
+				}
 				auto wordEndsHere = (j->f_width() >= 0);
 				auto j_width = wordEndsHere ? j->f_width() : -j->f_width();
 
@@ -356,8 +366,11 @@ void Renderer::enumerate() {
 					: (j + 1 != en)
 					? (j + 1)->position()
 					: _t->countBlockEnd(i, e);
+				if (_quoteLinesLeft) {
+					--_quoteLinesLeft;
+				}
 				fillParagraphBg(0);
-				if (!drawLine(lineEnd, i, e)) {
+				if (!drawLine(lineEnd, i, e) && !_quoteExpandLinkLookup) {
 					return;
 				}
 				_y += _lineHeight;
@@ -384,8 +397,11 @@ void Renderer::enumerate() {
 		const auto lineEnd = !_elidedLine
 			? b->position()
 			: _t->countBlockEnd(i, e);
+		if (_quoteLinesLeft) {
+			--_quoteLinesLeft;
+		}
 		fillParagraphBg(0);
-		if (!drawLine(lineEnd, i, e)) {
+		if (!drawLine(lineEnd, i, e) && !_quoteExpandLinkLookup) {
 			return;
 		}
 		_y += _lineHeight;
@@ -402,6 +418,9 @@ void Renderer::enumerate() {
 		continue;
 	}
 	if (_lineStart < _t->_text.size()) {
+		if (_quoteLinesLeft) {
+			--_quoteLinesLeft;
+		}
 		fillParagraphBg(_quotePadding.bottom());
 		if (!drawLine(_t->_text.size(), e, e)) {
 			return;
@@ -415,6 +434,13 @@ void Renderer::enumerate() {
 
 void Renderer::fillParagraphBg(int paddingBottom) {
 	if (_quote) {
+		const auto cutoff = _quote->collapsed
+			&& ((!paddingBottom && !_quoteLinesLeft) // !expanded
+				|| (paddingBottom // expanded
+					&& _quoteLinesLeft + kQuoteCollapsedLines < -1));
+		if (cutoff) {
+			paddingBottom = _quotePadding.bottom();
+		}
 		const auto &st = _t->quoteStyle(_quote);
 		const auto skip = st.verticalSkip;
 		const auto isTop = (_y != _quoteLineTop);
@@ -444,7 +470,17 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 			FillQuotePaint(*_p, rect, *cache, st, {
 				.skippedTop = uint32(top - start),
 				.skipBottom = !isBottom,
+				.expandIcon = cutoff && !_quote->expanded,
+				.collapseIcon = cutoff && _quote->expanded,
 			});
+		}
+		if (cutoff && _quoteExpandLinkLookup
+			&& _lookupY >= start
+			&& _lookupY < _quoteLineTop + _lineHeight + paddingBottom - skip
+			&& _lookupX >= left
+			&& _lookupX < left + _startLineWidth) {
+			_quoteExpandLinkLookup = false;
+			_quoteExpandLink = _quote->toggle;
 		}
 		if (isTop && st.header > 0) {
 			if (_p) {
@@ -494,6 +530,9 @@ StateResult Renderer::getState(
 	_yTo = _lookupY + 1;
 	_align = _lookupRequest.align;
 	enumerate();
+	if (_quoteExpandLink && !_lookupResult.link) {
+		_lookupResult.link = _quoteExpandLink;
+	}
 	return _lookupResult;
 }
 
@@ -517,10 +556,14 @@ void Renderer::initNextParagraph(
 		_quoteIndex = paragraphIndex;
 		_quote = _t->quoteByIndex(paragraphIndex);
 		_quotePadding = _t->quotePadding(_quote);
+		_quoteLinesLeft = _t->quoteLinesLimit(_quote);
 		_quoteTop = _quoteLineTop = _y;
 		_y += _quotePadding.top();
 		_quotePadding.setTop(0);
 		_quoteDirection = _paragraphDirection;
+		_quoteExpandLinkLookup = _lookupLink
+			&& _quote
+			&& _quote->collapsed;
 	}
 	const auto e = _t->_blocks.cend();
 	if (i == e) {

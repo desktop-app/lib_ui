@@ -19,6 +19,8 @@ struct QScriptItem;
 
 namespace Ui::Text {
 
+inline constexpr auto kQuoteCollapsedLines = 3;
+
 class AbstractBlock;
 
 struct FixedRange {
@@ -186,12 +188,16 @@ private:
 	int _quoteShift = 0;
 	int _quoteIndex = 0;
 	QMargins _quotePadding;
+	int _quoteLinesLeft = -1;
 	int _quoteTop = 0;
 	int _quoteLineTop = 0;
 	QuotePaintCache *_quotePreCache = nullptr;
 	QuotePaintCache *_quoteBlockquoteCache = nullptr;
 	bool _quotePreValid = false;
 	bool _quoteBlockquoteValid = false;
+
+	ClickHandlerPtr _quoteExpandLink;
+	bool _quoteExpandLinkLookup = false;
 
 	// current line data
 	QTextEngine *_e = nullptr;

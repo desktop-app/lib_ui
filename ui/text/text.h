@@ -82,6 +82,7 @@ struct IsolatedEmoji;
 struct OnlyCustomEmoji;
 struct SpoilerData;
 struct QuoteDetails;
+struct QuotesData;
 struct ExtendedData;
 
 struct Modification {
@@ -168,8 +169,11 @@ constexpr auto kMaxQuoteOutlines = 3;
 struct QuotePaintCache {
 	QImage corners;
 	QImage outline;
+	QImage expand;
+	QImage collapse;
 	mutable QImage bottomCorner;
 	mutable QImage bottomRounding;
+	mutable QImage collapsedLine;
 
 	std::array<QColor, kMaxQuoteOutlines> outlinesCached;
 	QColor headerCached;
@@ -187,8 +191,10 @@ void ValidateQuotePaintCache(
 	const style::QuoteStyle &st);
 
 struct SkipBlockPaintParts {
-	uint32 skippedTop : 31 = 0;
+	uint32 skippedTop : 29 = 0;
 	uint32 skipBottom : 1 = 0;
+	uint32 expandIcon : 1 = 0;
+	uint32 collapseIcon : 1 = 0;
 };
 void FillQuotePaint(
 	QPainter &p,
@@ -293,6 +299,13 @@ public:
 	void setSpoilerRevealed(bool revealed, anim::type animated);
 	void setSpoilerLinkFilter(Fn<bool(const ClickContext&)> filter);
 
+	[[nodiscard]] bool hasCollapsedBlockquots() const;
+	[[nodiscard]] bool blockquoteCollapsed(int index) const;
+	[[nodiscard]] bool blockquoteExpanded(int index) const;
+	void setBlockquoteExpanded(int index, bool expanded);
+	void setBlockquoteExpandCallback(
+		Fn<void(int index, bool expanded)> callback);
+
 	[[nodiscard]] bool hasSkipBlock() const;
 	bool updateSkipBlock(int width, int height);
 	bool removeSkipBlock();
@@ -382,6 +395,7 @@ private:
 	};
 
 	[[nodiscard]] not_null<ExtendedData*> ensureExtended();
+	[[nodiscard]] not_null<QuotesData*> ensureQuotes();
 
 	[[nodiscard]] uint16 countBlockEnd(
 		const TextBlocks::const_iterator &i,
@@ -396,7 +410,10 @@ private:
 	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
 	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
 
-	// block must be either nullptr or a pointer to a NewlineBlock.
+	// Returns -1 in case there is no limit.
+	[[nodiscard]] int quoteLinesLimit(QuoteDetails *quote) const;
+
+	// Block must be either nullptr or a pointer to a NewlineBlock.
 	[[nodiscard]] int quoteIndex(const AbstractBlock *block) const;
 
 	// Template method for originalText(), originalTextWithEntities().

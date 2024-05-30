@@ -2044,7 +2044,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 	struct State {
 		QString link;
 		QString language;
-		uint32 mask = 0;
+		uint32 mask : 31 = 0;
+		uint32 collapsed : 1 = 0;
 
 		void set(EntityType type) {
 			mask |= (1 << int(type));
@@ -2127,7 +2128,11 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		}
 		for (const auto type : kInMaskTypes | ranges::views::reverse) {
 			if (nextState.has(type) && !state.has(type)) {
-				openType(type, nextState.language);
+				openType(type, (type == EntityType::Pre)
+					? nextState.language
+					: (type == EntityType::Blockquote && nextState.collapsed)
+					? u"1"_q
+					: QString());
 			}
 		}
 		if (openCustomEmoji) {
@@ -2163,6 +2168,10 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				result.language = single.mid(languageStart).toString();
 			} else if (single == Tags::kTagBlockquote) {
 				result.set(EntityType::Blockquote);
+				result.collapsed = 0;
+			} else if (single == Tags::kTagBlockquoteCollapsed) {
+				result.set(EntityType::Blockquote);
+				result.collapsed = 1;
 			} else if (single == Tags::kTagSpoiler) {
 				result.set(EntityType::Spoiler);
 			} else {
@@ -2271,7 +2280,9 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 			push(Ui::InputField::kTagPre);
 		} break;
 		case EntityType::Blockquote:
-			push(Ui::InputField::kTagBlockquote);
+			push(entity.data().isEmpty()
+				? Ui::InputField::kTagBlockquote
+				: Ui::InputField::kTagBlockquoteCollapsed);
 			break;
 		case EntityType::Spoiler: push(Ui::InputField::kTagSpoiler); break;
 		}

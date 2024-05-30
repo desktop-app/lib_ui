@@ -26,6 +26,10 @@ QuoteStyle {
 	headerPosition: point;
 	icon: icon;
 	iconPosition: point;
+	expand: icon;
+	expandPosition: point;
+	collapse: icon;
+	collapsePosition: point;
 	outline: pixels;
 	outlineShift: pixels;
 	radius: pixels;

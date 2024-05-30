@@ -163,6 +163,7 @@ public:
 	static const QString kTagPre;
 	static const QString kTagSpoiler;
 	static const QString kTagBlockquote;
+	static const QString kTagBlockquoteCollapsed;
 	static const QString kCustomEmojiTagStart;
 	static const int kCustomEmojiFormat; // QTextFormat::ObjectTypes
 	static const int kCustomEmojiId; // QTextFormat::Property

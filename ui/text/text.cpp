@@ -179,11 +179,14 @@ void ValidateQuotePaintCache(
 		QuotePaintCache &cache,
 		const style::QuoteStyle &st) {
 	const auto icon = st.icon.empty() ? nullptr : &st.icon;
+	const auto expand = st.expand.empty() ? nullptr : &st.expand;
+	const auto collapse = st.collapse.empty() ? nullptr : &st.collapse;
 	if (!cache.corners.isNull()
 		&& cache.bgCached == cache.bg
 		&& cache.outlines == cache.outlines
 		&& (!st.header || cache.headerCached == cache.header)
-		&& (!icon || cache.iconCached == cache.icon)) {
+		&& ((!icon && !expand && !collapse)
+			|| cache.iconCached == cache.icon)) {
 		return;
 	}
 	cache.bgCached = cache.bg;
@@ -191,7 +194,7 @@ void ValidateQuotePaintCache(
 	if (st.header) {
 		cache.headerCached = cache.header;
 	}
-	if (!st.icon.empty()) {
+	if (icon || expand || collapse) {
 		cache.iconCached = cache.icon;
 	}
 	const auto radius = st.radius;
@@ -281,6 +284,8 @@ void ValidateQuotePaintCache(
 
 	p.end();
 	cache.corners = std::move(image);
+	cache.expand = expand ? expand->instance(cache.icon) : QImage();
+	cache.collapse = collapse ? collapse->instance(cache.icon) : QImage();
 }
 
 void FillQuotePaint(
@@ -300,6 +305,7 @@ void FillQuotePaint(
 	const auto width = rect.width();
 	auto y = rect.top();
 	auto height = rect.height();
+	const auto till = y + height;
 	if (!parts.skippedTop) {
 		const auto top = std::min(height, hhalf);
 		p.drawImage(
@@ -400,12 +406,9 @@ void FillQuotePaint(
 				QRect(0, 0, skip * ratio, bottom * ratio));
 		}
 		height -= bottom;
-		if (!height) {
-			return;
-		}
 		rect.setHeight(height);
 	}
-	if (outline) {
+	if (outline && height > 0) {
 		if (!cache.outline.isNull()) {
 			const auto skipped = st.outlineShift
 				- (parts.skippedTop ? int(parts.skippedTop) : hhalf);
@@ -418,6 +421,24 @@ void FillQuotePaint(
 		}
 	}
 	p.fillRect(x + outline, y, width - outline, height, cache.bg);
+	const auto icon = parts.expandIcon
+		? &cache.expand
+		: parts.collapseIcon
+		? &cache.collapse
+		: nullptr;
+	if (icon && !icon->isNull()) {
+		const auto position = parts.expandIcon
+			? st.expandPosition
+			: st.collapsePosition;
+		const auto size = icon->size() / icon->devicePixelRatio();
+		p.drawImage(
+			QRect(
+				x + width - size.width() - position.x(),
+				till - size.height() - position.y(),
+				size.width(),
+				size.height()),
+			*icon);
+	}
 }
 
 String::ExtendedWrap::ExtendedWrap() noexcept = default;
@@ -451,6 +472,9 @@ String::ExtendedWrap::~ExtendedWrap() = default;
 
 void String::ExtendedWrap::adjustFrom(const ExtendedWrap *other) {
 	const auto data = get();
+	if (!data) {
+		return;
+	}
 	const auto raw = [](auto pointer) {
 		return reinterpret_cast<quintptr>(pointer);
 	};
@@ -459,15 +483,18 @@ void String::ExtendedWrap::adjustFrom(const ExtendedWrap *other) {
 		link->setText(
 			reinterpret_cast<String*>(otherText + raw(this) - raw(other)));
 	};
-	if (data) {
-		if (const auto spoiler = data->spoiler.get()) {
-			if (spoiler->link) {
-				adjust(spoiler->link);
-			}
+	if (const auto spoiler = data->spoiler.get()) {
+		if (spoiler->link) {
+			adjust(spoiler->link);
 		}
-		for (auto &quote : data->quotes) {
+	}
+	if (const auto quotes = data->quotes.get()) {
+		for (auto &quote : quotes->list) {
 			if (quote.copy) {
 				adjust(quote.copy);
+			}
+			if (quote.toggle) {
+				adjust(quote.toggle);
 			}
 		}
 	}
@@ -534,6 +561,7 @@ void String::recountNaturalSize(
 	auto quote = quoteByIndex(qindex);
 	auto qpadding = quotePadding(quote);
 	auto qminwidth = quoteMinWidth(quote);
+	auto qlinesleft = quoteLinesLimit(quote);
 	auto qmaxwidth = QFixed(qminwidth);
 	auto qoldheight = 0;
 
@@ -549,14 +577,16 @@ void String::recountNaturalSize(
 		const auto _btype = b->type();
 		const auto blockHeight = CountBlockHeight(b, _st);
 		if (_btype == TextBlockType::Newline) {
+			const auto index = quoteIndex(b);
+			const auto changed = (qindex != index);
+			const auto hidden = !qlinesleft;
 			if (!lineHeight) {
 				lineHeight = blockHeight;
 			}
 			accumulate_max(maxWidth, width);
 			accumulate_max(qmaxwidth, width);
 
-			const auto index = quoteIndex(b);
-			if (qindex != index) {
+			if (changed) {
 				_minHeight += qpadding.bottom();
 				if (quote) {
 					quote->maxWidth = qmaxwidth.ceil().toInt();
@@ -567,9 +597,12 @@ void String::recountNaturalSize(
 				quote = quoteByIndex(qindex);
 				qpadding = quotePadding(quote);
 				qminwidth = quoteMinWidth(quote);
+				qlinesleft = quoteLinesLimit(quote);
 				qmaxwidth = qminwidth;
 				_minHeight += qpadding.top();
 				qpadding.setTop(0);
+			} else if (qlinesleft > 0) {
+				--qlinesleft;
 			}
 			if (initial) {
 				computeParagraphDirection(b->position());
@@ -577,7 +610,9 @@ void String::recountNaturalSize(
 			lastNewlineStart = b->position();
 			lastNewline = &block.unsafe<NewlineBlock>();
 
-			_minHeight += lineHeight;
+			if (!hidden) {
+				_minHeight += lineHeight;
+			}
 			lineHeight = 0;
 			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
 			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
@@ -604,7 +639,6 @@ void String::recountNaturalSize(
 
 		last_rBearing = b__f_rbearing;
 		last_rPadding = b->f_rpadding();
-		continue;
 	}
 	if (initial) {
 		computeParagraphDirection(_text.size());
@@ -613,7 +647,10 @@ void String::recountNaturalSize(
 		if (!lineHeight) {
 			lineHeight = CountBlockHeight(_blocks.back().get(), _st);
 		}
-		_minHeight += qpadding.top() + lineHeight + qpadding.bottom();
+		_minHeight += qpadding.top() + qpadding.bottom();
+		if (qlinesleft != 0) {
+			_minHeight += lineHeight;
+		}
 		accumulate_max(maxWidth, width);
 		accumulate_max(qmaxwidth, width);
 	}
@@ -629,8 +666,8 @@ void String::recountNaturalSize(
 
 int String::countMaxMonospaceWidth() const {
 	auto result = 0;
-	if (_extended) {
-		for (const auto &quote : _extended->quotes) {
+	if (const auto quotes = _extended ? _extended->quotes.get() : nullptr) {
+		for (const auto &quote : quotes->list) {
 			if (quote.pre) {
 				accumulate_max(result, quote.maxWidth);
 			}
@@ -714,12 +751,54 @@ void String::setSpoilerLinkFilter(Fn<bool(const ClickContext&)> filter) {
 		std::move(filter));
 }
 
+void String::setBlockquoteExpandCallback(
+		Fn<void(int index, bool expanded)> callback) {
+	Expects(_extended && _extended->quotes);
+
+	_extended->quotes->expandCallback = std::move(callback);
+}
+
 bool String::hasLinks() const {
 	return _extended && !_extended->links.empty();
 }
 
 bool String::hasSpoilers() const {
 	return _extended && (_extended->spoiler != nullptr);
+}
+
+bool String::hasCollapsedBlockquots() const {
+	return _extended
+		&& _extended->quotes
+		&& ranges::any_of(_extended->quotes->list, &QuoteDetails::collapsed);
+}
+
+bool String::blockquoteCollapsed(int index) const {
+	Expects(_extended && _extended->quotes);
+	Expects(index > 0 && index <= _extended->quotes->list.size());
+
+	return _extended->quotes->list[index - 1].collapsed;
+}
+
+bool String::blockquoteExpanded(int index) const {
+	Expects(_extended && _extended->quotes);
+	Expects(index > 0 && index <= _extended->quotes->list.size());
+
+	return _extended->quotes->list[index - 1].expanded;
+}
+
+void String::setBlockquoteExpanded(int index, bool expanded) {
+	Expects(_extended && _extended->quotes);
+	Expects(index > 0 && index <= _extended->quotes->list.size());
+
+	auto &quote = _extended->quotes->list[index - 1];
+	if (quote.expanded == expanded) {
+		return;
+	}
+	quote.expanded = expanded;
+	recountNaturalSize(false);
+	if (const auto onstack = _extended->quotes->expandCallback) {
+		onstack(index, expanded);
+	}
 }
 
 bool String::hasSkipBlock() const {
@@ -924,6 +1003,7 @@ void String::enumerateLines(
 
 	auto qindex = 0;
 	auto quote = (QuoteDetails*)nullptr;
+	auto qlinesleft = -1;
 	auto qpadding = QMargins();
 
 	auto top = 0;
@@ -950,6 +1030,7 @@ void String::enumerateLines(
 			qindex = paragraphIndex;
 			quote = quoteByIndex(qindex);
 			qpadding = quotePadding(quote);
+			qlinesleft = quoteLinesLimit(quote);
 			top += qpadding.top();
 			qpadding.setTop(0);
 		}
@@ -970,25 +1051,34 @@ void String::enumerateLines(
 		const auto blockHeight = CountBlockHeight(b.get(), _st);
 
 		if (_btype == TextBlockType::Newline) {
+			const auto index = b.unsafe<const NewlineBlock>().quoteIndex();
+			const auto hidden = !qlinesleft;
+			const auto changed = (qindex != index);
 			if (!lineHeight) {
 				lineHeight = blockHeight;
 			}
-			const auto index = b.unsafe<const NewlineBlock>().quoteIndex();
-			const auto changed = (qindex != index);
 			if (changed) {
-				lineHeight += qpadding.bottom();
+				top += qpadding.bottom();
 			}
 
-			callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+			if (qlinesleft > 0) {
+				--qlinesleft;
+			}
+			if (!hidden) {
+				callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+			}
 			if (lineElided) {
 				return withElided(true);
 			}
+
 			lineHeight = 0;
 			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
 			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
 
 			initNextParagraph(i + 1, index);
 			longWordLine = true;
+			continue;
+		} else if (!qlinesleft) {
 			continue;
 		}
 		auto b__f_rbearing = b->f_rbearing();
@@ -1018,6 +1108,9 @@ void String::enumerateLines(
 			auto f_wLeft = widthLeft;
 			int f_lineHeight = lineHeight;
 			for (auto j = t->_words.cbegin(), e = t->_words.cend(), f = j; j != e; ++j) {
+				if (!qlinesleft) {
+					break;
+				}
 				bool wordEndsHere = (j->f_width() >= 0);
 				auto j_width = wordEndsHere ? j->f_width() : -j->f_width();
 
@@ -1049,6 +1142,9 @@ void String::enumerateLines(
 					j_width = (j->f_width() >= 0) ? j->f_width() : -j->f_width();
 				}
 
+				if (qlinesleft > 0) {
+					--qlinesleft;
+				}
 				callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
 				if (lineElided) {
 					return withElided(true);
@@ -1072,6 +1168,10 @@ void String::enumerateLines(
 
 		if (lineElided) {
 			lineHeight = qMax(lineHeight, blockHeight);
+		}
+
+		if (qlinesleft > 0) {
+			--qlinesleft;
 		}
 		callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
 		if (lineElided) {
@@ -1277,6 +1377,14 @@ not_null<ExtendedData*> String::ensureExtended() {
 	return _extended.get();
 }
 
+not_null<QuotesData*> String::ensureQuotes() {
+	const auto extended = ensureExtended();
+	if (!extended->quotes) {
+		extended->quotes = std::make_unique<QuotesData>();
+	}
+	return extended->quotes.get();
+}
+
 uint16 String::countBlockEnd(
 		const TextBlocks::const_iterator &i,
 		const TextBlocks::const_iterator &e) const {
@@ -1291,9 +1399,11 @@ uint16 String::countBlockLength(
 
 QuoteDetails *String::quoteByIndex(int index) const {
 	Expects(!index
-		|| (_extended && index <= _extended->quotes.size()));
+		|| (_extended
+			&& _extended->quotes
+			&& index <= _extended->quotes->list.size()));
 
-	return index ? &_extended->quotes[index - 1] : nullptr;
+	return index ? &_extended->quotes->list[index - 1] : nullptr;
 }
 
 int String::quoteIndex(const AbstractBlock *block) const {
@@ -1357,6 +1467,12 @@ const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 		: quote->language.isEmpty()
 		? kDefaultHeader
 		: quote->language;
+}
+
+int String::quoteLinesLimit(QuoteDetails *quote) const {
+	return (quote && quote->collapsed && !quote->expanded)
+		? kQuoteCollapsedLines
+		: -1;
 }
 
 template <
@@ -1555,37 +1671,50 @@ TextForMimeData String::toText(
 		}
 		result.rich.entities.insert(i, std::move(entity));
 	};
+	using Flag = TextBlockFlag;
+	using Flags = TextBlockFlags;
 	auto linkStart = 0;
 	auto markdownTrackers = composeEntities
 		? std::vector<MarkdownTagTracker>{
-			{ TextBlockFlag::Italic, EntityType::Italic },
-			{ TextBlockFlag::Bold, EntityType::Bold },
-			{ TextBlockFlag::Semibold, EntityType::Semibold },
-			{ TextBlockFlag::Underline, EntityType::Underline },
-			{ TextBlockFlag::Spoiler, EntityType::Spoiler },
-			{ TextBlockFlag::StrikeOut, EntityType::StrikeOut },
-			{ TextBlockFlag::Code, EntityType::Code }, // #TODO entities
-			{ TextBlockFlag::Pre, EntityType::Pre },
-			{ TextBlockFlag::Blockquote, EntityType::Blockquote },
+			{ Flag::Italic, EntityType::Italic },
+			{ Flag::Bold, EntityType::Bold },
+			{ Flag::Semibold, EntityType::Semibold },
+			{ Flag::Underline, EntityType::Underline },
+			{ Flag::Spoiler, EntityType::Spoiler },
+			{ Flag::StrikeOut, EntityType::StrikeOut },
+			{ Flag::Code, EntityType::Code },
+			{ Flag::Pre, EntityType::Pre },
+			{ Flag::Blockquote, EntityType::Blockquote },
 		} : std::vector<MarkdownTagTracker>();
 	const auto flagsChangeCallback = [&](
-			TextBlockFlags oldFlags,
+			Flags oldFlags,
 			int oldQuoteIndex,
-			TextBlockFlags newFlags,
+			Flags newFlags,
 			int newQuoteIndex) {
 		if (!composeEntities) {
 			return;
 		}
 		for (auto &tracker : markdownTrackers) {
 			const auto flag = tracker.flag;
-			const auto quoteWithLanguage = (flag == TextBlockFlag::Pre);
+			const auto quoteWithCollapse = (flag == Flag::Blockquote);
+			const auto quoteWithCollapseChanged = quoteWithCollapse
+				&& (oldQuoteIndex != newQuoteIndex);
+			const auto quoteWithLanguage = (flag == Flag::Pre);
 			const auto quoteWithLanguageChanged = quoteWithLanguage
 				&& (oldQuoteIndex != newQuoteIndex);
-			const auto data = (quoteWithLanguage && oldQuoteIndex)
-				? _extended->quotes[oldQuoteIndex - 1].language
+			const auto quote = !oldQuoteIndex
+				? nullptr
+				: &_extended->quotes->list[oldQuoteIndex - 1];
+			const auto data = !quote
+				? QString()
+				: quote->pre
+				? quote->language
+				: quote->blockquote
+				? (quote->collapsed ? u"1"_q : QString())
 				: QString();
 			if (((oldFlags & flag) && !(newFlags & flag))
-				|| quoteWithLanguageChanged) {
+				|| quoteWithLanguageChanged
+				|| quoteWithCollapseChanged) {
 				insertEntity({
 					tracker.type,
 					tracker.start,
@@ -1594,7 +1723,8 @@ TextForMimeData String::toText(
 				});
 			}
 			if (((newFlags & flag) && !(oldFlags & flag))
-				|| quoteWithLanguageChanged) {
+				|| quoteWithLanguageChanged
+				|| quoteWithCollapseChanged) {
 				tracker.start = result.rich.text.size();
 			}
 		}

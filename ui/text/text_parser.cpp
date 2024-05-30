@@ -254,7 +254,7 @@ void Parser::ensureAtNewline(QuoteDetails quote) {
 		_customEmojiData = base::take(saved);
 	}
 	_quoteStartPosition = _t->_text.size();
-	auto &quotes = _t->ensureExtended()->quotes;
+	auto &quotes = _t->ensureQuotes()->list;
 	quotes.push_back(std::move(quote));
 	const auto index = _quoteIndex = int(quotes.size());
 	if (_t->_blocks.empty()) {
@@ -283,10 +283,9 @@ void Parser::finishEntities() {
 						? TextBlockType::Newline
 						: _t->_blocks.back()->type();
 					if ((*flags)
-						& (TextBlockFlag::Pre
-							| TextBlockFlag::Blockquote)) {
+						& (TextBlockFlag::Pre | TextBlockFlag::Blockquote)) {
 						if (_quoteIndex) {
-							auto &quotes = _t->ensureExtended()->quotes;
+							auto &quotes = _t->ensureQuotes()->list;
 							auto &quote = quotes[_quoteIndex - 1];
 							const auto from = _quoteStartPosition;
 							const auto till = _t->_text.size();
@@ -295,6 +294,10 @@ void Parser::finishEntities() {
 									_t,
 									from,
 									till - from);
+							} else if (quote.blockquote && quote.collapsed) {
+								quote.toggle = std::make_shared<BlockquoteClickHandler>(
+									_t,
+									_quoteIndex);
 							}
 						}
 						_quoteIndex = 0;
@@ -401,7 +404,10 @@ bool Parser::checkEntities() {
 		}
 	} else if (entityType == EntityType::Blockquote) {
 		flags = TextBlockFlag::Blockquote;
-		ensureAtNewline({ .blockquote = true });
+		ensureAtNewline({
+			.blockquote = true,
+			.collapsed = !_waitingEntity->data().isEmpty(),
+		});
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
 		|| entityType == EntityType::Mention
