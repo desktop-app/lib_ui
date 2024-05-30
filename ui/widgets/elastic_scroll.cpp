@@ -772,7 +772,8 @@ bool ElasticScroll::filterOutTouchEvent(QEvent *e) {
 		|| type == QEvent::TouchEnd
 		|| type == QEvent::TouchCancel) {
 		const auto ev = static_cast<QTouchEvent*>(e);
-		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
+		if ((ev->type() == QEvent::TouchCancel && !ev->device())
+			|| (ev->device()->type() == base::TouchDevice::TouchScreen)) {
 			if (_customTouchProcess && _customTouchProcess(ev)) {
 				return true;
 			} else if (!_touchDisabled) {
