@@ -15,6 +15,26 @@ namespace Ui::Menu {
 
 MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 	return MenuCallback([=](MenuCallback::Args a) -> QAction* {
+		const auto initFilter = [&](not_null<Ui::Menu::Action*> action) {
+			if (const auto copy = a.triggerFilter) {
+				action->setClickedCallback([=] {
+					const auto weak = Ui::MakeWeak(action);
+					if (copy() && weak && !action->isDisabled()) {
+						action->setDisabled(true);
+						crl::on_main(
+							weak,
+							[=] { action->setDisabled(false); });
+					}
+				});
+			}
+		};
+		if (a.hideRequests) {
+			std::move(
+				a.hideRequests
+			) | rpl::start_with_next([=](anim::type animated) {
+				menu->hideMenu(animated == anim::type::instant);
+			}, menu->lifetime());
+		}
 		if (a.addTopShift) {
 			menu->setTopShift(a.addTopShift);
 			return nullptr;
@@ -30,7 +50,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 		} else if (a.separatorSt || a.isSeparator) {
 			return menu->addSeparator(a.separatorSt);
 		} else if (a.isAttention) {
-			return menu->addAction(base::make_unique_q<Ui::Menu::Action>(
+			auto owned = base::make_unique_q<Ui::Menu::Action>(
 				menu,
 				st::menuWithIconsAttention,
 				Ui::Menu::CreateAction(
@@ -38,7 +58,21 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 					a.text,
 					std::move(a.handler)),
 				a.icon,
-				a.icon));
+				a.icon);
+			initFilter(owned.get());
+			return menu->addAction(std::move(owned));
+		} else if (a.triggerFilter) {
+			auto owned = base::make_unique_q<Ui::Menu::Action>(
+				menu,
+				menu->st().menu,
+				Ui::Menu::CreateAction(
+					menu->menu().get(),
+					a.text,
+					std::move(a.handler)),
+				a.icon,
+				a.icon);
+			initFilter(owned.get());
+			return menu->addAction(std::move(owned));
 		}
 		return menu->addAction(a.text, std::move(a.handler), a.icon);
 	});
