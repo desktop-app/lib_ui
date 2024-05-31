@@ -156,12 +156,6 @@ bool Distinct(FixedRange a, FixedRange b) {
 Renderer::Renderer(const Ui::Text::String &t)
 : _t(&t)
 , _spoiler(_t->_extended ? _t->_extended->spoiler.get() : nullptr) {
-	[[maybe_unused]] static const auto Once = [] {
-		// Running with a Qt version other than the one built upon is
-		// dangerous due to excessive private API usage in this class
-		Assert(QLatin1String(qVersion()) == QLatin1String(QT_VERSION_STR));
-		return true;
-	}();
 }
 
 Renderer::~Renderer() {
