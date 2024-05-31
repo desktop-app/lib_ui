@@ -410,6 +410,7 @@ bool Parser::checkEntities() {
 		});
 	} else if (entityType == EntityType::Url
 		|| entityType == EntityType::Email
+		|| entityType == EntityType::Phone
 		|| entityType == EntityType::Mention
 		|| entityType == EntityType::Hashtag
 		|| entityType == EntityType::Cashtag
@@ -628,6 +629,7 @@ bool Parser::isLinkEntity(const EntityInText &entity) const {
 		EntityType::Cashtag,
 		EntityType::Mention,
 		EntityType::MentionName,
+		EntityType::Phone,
 		EntityType::BotCommand
 	};
 	return ranges::find(urls, type) != std::end(urls);

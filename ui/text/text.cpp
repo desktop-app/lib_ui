@@ -1742,7 +1742,8 @@ TextForMimeData String::toText(
 		// This logic is duplicated in TextForMimeData::WithExpandedLinks.
 		const auto entity = handler->getTextEntity();
 		const auto plainUrl = (entity.type == EntityType::Url)
-			|| (entity.type == EntityType::Email);
+			|| (entity.type == EntityType::Email)
+			|| (entity.type == EntityType::Phone);
 		const auto full = plainUrl
 			? QStringView(entity.data).mid(0, entity.data.size())
 			: inText;

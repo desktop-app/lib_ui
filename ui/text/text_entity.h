@@ -28,6 +28,7 @@ enum class EntityType : uchar {
 	BotCommand,
 	MediaTimestamp,
 	Colorized, // Senders in chat list, attachments in chat list, etc.
+	Phone,
 
 	Bold,
 	Semibold,
