@@ -420,10 +420,11 @@ void Renderer::enumerate() {
 	if (_lineStart < _t->_text.size()) {
 		if (_quoteLinesLeft) {
 			--_quoteLinesLeft;
-		}
-		fillParagraphBg(_quotePadding.bottom());
-		if (!drawLine(_t->_text.size(), e, e)) {
-			return;
+
+			fillParagraphBg(_quotePadding.bottom());
+			if (!drawLine(_t->_text.size(), e, e)) {
+				return;
+			}
 		}
 	}
 	if (!_p && _lookupSymbol) {
