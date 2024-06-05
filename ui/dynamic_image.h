@@ -12,6 +12,8 @@ class DynamicImage {
 public:
 	virtual ~DynamicImage() = default;
 
+	[[nodiscard]] virtual std::shared_ptr<DynamicImage> clone() = 0;
+
 	[[nodiscard]] virtual QImage image(int size) = 0;
 	virtual void subscribeToUpdates(Fn<void()> callback) = 0;
 };
