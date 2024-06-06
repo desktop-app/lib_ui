@@ -15,6 +15,7 @@
 #include "ui/text/text_custom_emoji.h"
 
 #include <QtGui/QTextObjectInterface>
+#include <QShortcut>
 
 #include <rpl/variable.h>
 
@@ -441,7 +442,6 @@ private:
 	void addMarkdownMenuAction(
 		not_null<QMenu*> menu,
 		not_null<QAction*> action);
-	bool handleMarkdownKey(QKeyEvent *e);
 
 	// We don't want accidentally detach InstantReplaces map.
 	// So we access it only by const reference from this method.
@@ -550,6 +550,15 @@ private:
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
+	QShortcut _boldShortcut;
+	QShortcut _italicShortcut;
+	QShortcut _underlineShortcut;
+	QShortcut _strikeOutShortcut;
+	QShortcut _monospaceShortcut;
+	QShortcut _blockquoteShortcut;
+	QShortcut _spoilerShortcut;
+	QShortcut _clearFormatShortcut;
+	QShortcut _editLinkShortcut;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
 	bool _inDrop = false;
