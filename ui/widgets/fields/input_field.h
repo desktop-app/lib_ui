@@ -27,6 +27,7 @@ class Painter;
 
 namespace Ui::Text {
 class CustomEmoji;
+struct QuotePaintCache;
 } // namespace Ui::Text
 
 namespace style {
@@ -349,6 +350,9 @@ public:
 		return _markdownTagApplies.events();
 	}
 
+	void setPreCache(Fn<not_null<Ui::Text::QuotePaintCache*>()> make);
+	void setBlockquoteCache(Fn<not_null<Ui::Text::QuotePaintCache*>()> make);
+
 	[[nodiscard]] bool menuShown() const;
 	[[nodiscard]] rpl::producer<bool> menuShownValue() const;
 
@@ -409,6 +413,7 @@ private:
 	void dropEventInner(QDropEvent *e);
 	void inputMethodEventInner(QInputMethodEvent *e);
 	void paintEventInner(QPaintEvent *e);
+	void paintQuotes(QPaintEvent *e);
 
 	void mousePressEventInner(QMouseEvent *e);
 	void mouseReleaseEventInner(QMouseEvent *e);
@@ -519,6 +524,8 @@ private:
 	void touchFinish();
 
 	const style::InputField &_st;
+	Fn<not_null<Ui::Text::QuotePaintCache*>()> _preCache;
+	Fn<not_null<Ui::Text::QuotePaintCache*>()> _blockquoteCache;
 
 	Mode _mode = Mode::SingleLine;
 	int _maxLength = -1;
@@ -603,7 +610,6 @@ private:
 	base::unique_qptr<PopupMenu> _contextMenu;
 
 	QTextCharFormat _defaultCharFormat;
-	QTextBlockFormat _defaultBlockFormat;
 
 	rpl::variable<int> _scrollTop;
 
