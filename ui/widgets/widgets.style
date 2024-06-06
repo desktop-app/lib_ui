@@ -287,7 +287,7 @@ InputField {
 	borderRadius: pixels;
 	borderDenominator: int;
 
-	font: font;
+	style: TextStyle;
 	menu: PopupMenu;
 
 	width: pixels;
@@ -878,6 +878,10 @@ defaultPopupMenu: PopupMenu {
 	showDuration: 200;
 }
 
+boxTextStyle: TextStyle(defaultTextStyle) {
+	font: font(boxFontSize);
+}
+
 defaultInputField: InputField {
 	textBg: windowBg;
 	textBgActive: windowBg;
@@ -904,7 +908,7 @@ defaultInputField: InputField {
 	borderRadius: 0px;
 	borderDenominator: 1;
 
-	font: boxTextFont;
+	style: boxTextStyle;
 	menu: defaultPopupMenu;
 
 	heightMin: 55px;
@@ -954,7 +958,7 @@ defaultMultiSelectSearchField: InputField(defaultInputField) {
 
 	heightMin: 32px;
 
-	font: normalFont;
+	style: defaultTextStyle;
 }
 
 boxFieldSearchIcon: icon {{ "box_search", menuIconFg, point(10px, 9px) }};
@@ -1266,10 +1270,6 @@ defaultPeerListItem: PeerListItem {
 	statusFg: windowSubTextFg;
 	statusFgOver: windowSubTextFgOver;
 	statusFgActive: windowActiveTextFg;
-}
-
-boxTextStyle: TextStyle(defaultTextStyle) {
-	font: font(boxFontSize);
 }
 
 defaultPeerListAbout: FlatLabel(defaultFlatLabel) {

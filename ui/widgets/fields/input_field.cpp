@@ -108,7 +108,7 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	auto result = [&] {
 		if (const auto emoji = Emoji::FromUrl(name.toDisplayString())) {
 			const auto height = std::max(
-				_st.font->height * style::DevicePixelRatio(),
+				_st.style.font->height * style::DevicePixelRatio(),
 				Emoji::GetSizeNormal());
 			return QVariant(Emoji::SinglePixmap(emoji, height));
 		}
@@ -718,7 +718,7 @@ void RemoveDocumentTags(
 	format.setProperty(kReplaceTagId, QString());
 	format.setForeground(st.textFg);
 	format.setBackground(QBrush());
-	format.setFont(st.font);
+	format.setFont(st.style.font);
 	cursor.mergeCharFormat(format);
 }
 
@@ -726,7 +726,7 @@ QTextCharFormat PrepareTagFormat(
 		const style::InputField &st,
 		QString tag) {
 	auto result = QTextCharFormat();
-	auto font = st.font;
+	auto font = st.style.font;
 	auto color = std::optional<style::color>();
 	auto bg = std::optional<QColor>();
 	auto replaceWhat = QString();
@@ -1029,7 +1029,7 @@ void InsertCustomEmojiAtCursor(
 	format.setProperty(kCustomEmojiLink, unique);
 	format.setProperty(kCustomEmojiId, CustomEmojiIdFromLink(link));
 	format.setVerticalAlignment(QTextCharFormat::AlignTop);
-	format.setFont(field->st().font);
+	format.setFont(field->st().style.font);
 	format.setForeground(field->st().textFg);
 	format.setBackground(QBrush());
 	ApplyTagFormat(format, currentFormat);
@@ -1218,11 +1218,11 @@ InputField::InputField(
 	resize(_st.width, _minHeight);
 
 	{ // In case of default fonts all those should be zero.
-		const auto metrics = QFontMetricsF(_st.font->f);
+		const auto metrics = QFontMetricsF(_st.style.font->f);
 		const auto realAscent = int(base::SafeRound(metrics.ascent()));
-		const auto ascentAdd = _st.font->ascent - realAscent;
+		const auto ascentAdd = _st.style.font->ascent - realAscent;
 		//const auto realHeight = int(base::SafeRound(metrics.height()));
-		//const auto heightAdd = _st.font->height - realHeight - ascentAdd;
+		//const auto heightAdd = _font->height - realHeight - ascentAdd;
 		//_customFontMargins = QMargins(0, ascentAdd, 0, heightAdd);
 		_customFontMargins = QMargins(0, ascentAdd, 0, -ascentAdd);
 		// We move _inner down by ascentAdd for the first line to look
@@ -1233,10 +1233,10 @@ InputField::InputField(
 		// bottom margin to be the same shift, but negative.
 
 		if (_mode != Mode::SingleLine) {
-			const auto metrics = QFontMetricsF(_st.font->f);
+			const auto metrics = QFontMetricsF(_st.style.font->f);
 			const auto leading = qMax(metrics.leading(), qreal(0.0));
 			const auto adjustment = (metrics.ascent() + leading)
-				- ((_st.font->height * 4) / 5);
+				- ((_st.style.font->height * 4) / 5);
 			_placeholderCustomFontSkip = int(base::SafeRound(-adjustment));
 		}
 	}
@@ -1246,7 +1246,7 @@ InputField::InputField(
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
 
-	_inner->setFont(_st.font->f);
+	_inner->setFont(_st.style.font->f);
 	_inner->setAlignment(_st.textAlign);
 	if (_mode == Mode::SingleLine) {
 		_inner->setWordWrapMode(QTextOption::NoWrap);
@@ -1270,7 +1270,7 @@ InputField::InputField(
 
 		_defaultBlockFormat = cursor.blockFormat();
 		_defaultBlockFormat.setLineHeight(
-			_st.font->height,
+			_st.style.font->height,
 			QTextBlockFormat::FixedHeight);
 		cursor.setBlockFormat(_defaultBlockFormat);
 
@@ -1541,10 +1541,12 @@ void InputField::setTagMimeProcessor(Fn<QString(QStringView)> processor) {
 void InputField::setCustomEmojiFactory(
 		CustomEmojiFactory factory,
 		Fn<bool()> paused) {
-	_customEmojiObject = std::make_unique<CustomEmojiObject>(_st.font, [=](
-			QStringView data) {
-		return factory(data, [=] { customEmojiRepaint(); });
-	}, std::move(paused));
+	_customEmojiObject = std::make_unique<CustomEmojiObject>(
+		_st.style.font,
+		[=](QStringView data) {
+			return factory(data, [=] { customEmojiRepaint(); });
+		},
+		std::move(paused));
 	_inner->document()->documentLayout()->registerHandler(
 		kCustomEmojiFormat,
 		_customEmojiObject.get());
@@ -1911,9 +1913,10 @@ int InputField::placeholderSkipWidth() const {
 		return 0;
 	}
 	const auto &text = getTextWithTags().text;
-	auto result = _st.font->width(text.mid(0, _placeholderAfterSymbols));
+	auto result = _st.style.font->width(
+		text.mid(0, _placeholderAfterSymbols));
 	if (_placeholderAfterSymbols > text.size()) {
-		result += _st.font->spacew;
+		result += _st.style.font->spacew;
 	}
 	return result;
 }
@@ -2197,10 +2200,11 @@ bool InputField::isRedoAvailable() const {
 
 void InputField::processFormatting(int insertPosition, int insertEnd) {
 	// Tilde formatting.
-	const auto tildeFormatting = (_st.font->f.pixelSize() * style::DevicePixelRatio() == 13)
-		&& (_st.font->f.family() == qstr("Open Sans"));
+	const auto ratio = style::DevicePixelRatio();
+	const auto processTilde = (_st.style.font->f.pixelSize() * ratio == 13)
+		&& (_st.style.font->f.family() == qstr("Open Sans"));
 	auto isTildeFragment = false;
-	auto tildeFixedFont = _st.font->semibold()->f;
+	auto tildeFixedFont = _st.style.font->semibold()->f;
 
 	// First tag handling (the one we inserted text to).
 	bool startTagFound = false;
@@ -2259,7 +2263,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					action.intervalEnd = fragmentPosition + fragment.length();
 					break;
 				}
-				if (tildeFormatting) {
+				if (processTilde) {
 					const auto formatFont = format.font();
 					if (!tildeFixedFont.styleName().isEmpty()
 						&& formatFont.styleName().isEmpty()) {
@@ -2364,7 +2368,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 							break;
 						}
 					}
-					if (tildeFormatting) { // Tilde symbol fix in OpenSans.
+					if (processTilde) { // Tilde symbol fix in OpenSans.
 						bool tilde = (ch->unicode() == '~');
 						if ((tilde && !isTildeFragment) || (!tilde && isTildeFragment)) {
 							if (action.type == ActionType::Invalid) {
@@ -3402,7 +3406,7 @@ void InputField::commitInstantReplacement(
 		}
 		const auto use = Integration::Instance().defaultEmojiVariant(
 			emoji);
-		return PrepareEmojiFormat(use, _st.font);
+		return PrepareEmojiFormat(use, _st.style.font);
 	}();
 	const auto replacement = (format.isImageFormat()
 		|| format.objectType() == kCustomEmojiFormat)
@@ -4150,7 +4154,7 @@ void AddLengthLimitLabel(not_null<InputField*> field, int limit) {
 	) | rpl::start_with_next([=] {
 		// Baseline alignment.
 		const auto top = field->st().textMargins.top()
-			+ field->st().font->ascent
+			+ field->st().style.font->ascent
 			- st::defaultInputFieldLimit.style.font->ascent;
 		warning->moveToRight(0, top);
 	}, warning->lifetime());

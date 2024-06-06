@@ -66,7 +66,7 @@ MaskedInputField::MaskedInputField(
 , _placeholderFull(std::move(placeholder)) {
 	resize(_st.width, _st.heightMin);
 
-	setFont(_st.font);
+	setFont(_st.style.font);
 	setAlignment(_st.textAlign);
 
 	_placeholderFull.value(
@@ -480,11 +480,11 @@ QRect MaskedInputField::placeholderRect() const {
 }
 
 style::font MaskedInputField::phFont() {
-	return _st.font;
+	return _st.style.font;
 }
 
 void MaskedInputField::placeholderAdditionalPrepare(QPainter &p) {
-	p.setFont(_st.font);
+	p.setFont(_st.style.font);
 	p.setPen(_st.placeholderFg);
 }
 
