@@ -39,11 +39,11 @@ bool LastCheckCrashed/* = false*/;
 ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
 #endif // Q_OS_WIN
 
-base::options::toggle AllowLinuxNvidiaOpenGL({
-	.id = kOptionAllowLinuxNvidiaOpenGL,
-	.name = "Allow OpenGL on the NVIDIA drivers (Linux)",
-	.description = "Qt+OpenGL have problems on Linux with NVIDIA drivers.",
-	.scope = base::options::linux,
+base::options::toggle AllowX11NvidiaOpenGL({
+	.id = kOptionAllowX11NvidiaOpenGL,
+	.name = "Allow OpenGL on the NVIDIA drivers (X11)",
+	.description = "Qt+OpenGL have problems on X11 with NVIDIA drivers.",
+	.scope = Platform::IsX11,
 	.restartRequired = true,
 });
 
@@ -57,7 +57,7 @@ void CrashCheckStart() {
 
 } // namespace
 
-const char kOptionAllowLinuxNvidiaOpenGL[] = "allow-linux-nvidia-opengl";
+const char kOptionAllowX11NvidiaOpenGL[] = "allow-linux-nvidia-opengl";
 
 Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
 	if (!Platform::IsMac()) {
@@ -207,14 +207,14 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
 		LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
 #endif // Q_OS_WIN
 
-		if (::Platform::IsLinux()
+		if (::Platform::IsX11()
 			&& version
 			&& QByteArray(version).contains("NVIDIA")) {
 			// https://github.com/telegramdesktop/tdesktop/issues/16830
-			if (AllowLinuxNvidiaOpenGL.value()) {
+			if (AllowX11NvidiaOpenGL.value()) {
 				LOG_ONCE(("OpenGL: Allow on NVIDIA driver (experimental)."));
 			} else {
-				LOG_ONCE(("OpenGL: Disable on NVIDIA driver on Linux."));
+				LOG_ONCE(("OpenGL: Disable on NVIDIA driver on X11."));
 				return false;
 			}
 		}
