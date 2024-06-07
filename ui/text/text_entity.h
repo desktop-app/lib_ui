@@ -367,6 +367,7 @@ inline const auto kMentionTagStart = qstr("mention://");
 	const QString &tag,
 	const QString &removed);
 [[nodiscard]] QString TagWithAdded(const QString &tag, const QString &added);
+[[nodiscard]] TextWithTags::Tags SimplifyTags(TextWithTags::Tags tags);
 
 EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags);
 TextWithTags::Tags ConvertEntitiesToTextTags(

@@ -491,11 +491,15 @@ private:
 		const QString &tag,
 		const QString &edge = QString());
 #endif
-	void addMarkdownTag(int from, int till, const QString &tag);
-	void removeMarkdownTag(int from, int till, const QString &tag);
+	struct TextRange {
+		int from = 0;
+		int till = 0;
+	};
+	TextRange insertWithTags(TextRange range, TextWithTags text);
+	TextRange addMarkdownTag(TextRange range, const QString &tag);
+	void removeMarkdownTag(TextRange range, const QString &tag);
 	void finishMarkdownTagChange(
-		int from,
-		int till,
+		TextRange range,
 		const TextWithTags &textWithTags);
 	void toggleSelectionMarkdown(const QString &tag);
 	void clearSelectionMarkdown();

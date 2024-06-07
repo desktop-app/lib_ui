@@ -2025,6 +2025,29 @@ QString TagWithAdded(const QString &tag, const QString &added) {
 	return JoinTag(list);
 }
 
+TextWithTags::Tags SimplifyTags(TextWithTags::Tags tags) {
+	for (auto i = tags.begin(); i != tags.end();) {
+		const auto j = i + 1;
+		if (j == tags.end()) {
+			break;
+		} else if (j->offset > i->offset + i->length) {
+			++i;
+			continue;
+		}
+		auto il = SplitTags(i->id);
+		std::sort(il.begin(), il.end());
+		auto jl = SplitTags(j->id);
+		std::sort(jl.begin(), jl.end());
+		if (JoinTag(il) == JoinTag(jl)) {
+			i->length = j->offset + j->length - i->offset;
+			i = tags.erase(j) - 1;
+		} else {
+			++i;
+		}
+	}
+	return tags;
+}
+
 EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 	auto result = EntitiesInText();
 	if (tags.isEmpty()) {

@@ -62,19 +62,10 @@ const auto &kCustomEmojiId = InputField::kCustomEmojiId;
 const auto kTagCheckLinkMeta = u"^:/:/:^"_q;
 const auto kSoftLine = QChar::LineSeparator;
 const auto kHardLine = QChar::ParagraphSeparator;
-const auto kNewlineChars = QString("\r\n")
-	+ QChar(0xfdd0) // QTextBeginningOfFrame
-	+ QChar(0xfdd1) // QTextEndOfFrame
-	+ QChar(QChar::ParagraphSeparator)
-	+ QChar(QChar::LineSeparator);
 
 // We need unique tags otherwise same custom emoji would join in a single
 // QTextCharFormat with the same properties, including kCustomEmojiText.
 auto GlobalCustomEmojiCounter = 0;
-
-[[nodiscard]] bool IsTagPre(QStringView tag) {
-	return tag.startsWith(kTagPre);
-}
 
 class InputDocument : public QTextDocument {
 public:
@@ -121,8 +112,103 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	return result;
 }
 
-bool IsNewline(QChar ch) {
-	return (kNewlineChars.indexOf(ch) >= 0);
+[[nodiscard]] bool IsNewline(QChar ch) {
+	return (ch == '\r')
+		|| (ch == '\n')
+		|| (ch == QChar(0xfdd0)) // QTextBeginningOfFrame
+		|| (ch == QChar(0xfdd1)) // QTextEndOfFrame
+		|| (ch == QChar(QChar::ParagraphSeparator))
+		|| (ch == QChar(QChar::LineSeparator));
+}
+
+[[nodiscard]] bool IsTagPre(QStringView tag) {
+	return tag.startsWith(kTagPre);
+}
+
+[[nodiscard]] bool IsBlockTag(QStringView tag) {
+	return (tag == kTagBlockquote)
+		|| (tag == kTagBlockquoteCollapsed)
+		|| IsTagPre(tag);
+}
+
+[[nodiscard]] QStringView FindBlockTag(QStringView tag) {
+	for (const auto &tag : TextUtilities::SplitTags(tag)) {
+		if (IsBlockTag(tag)) {
+			return tag;
+		}
+	}
+	return QStringView();
+}
+
+[[nodiscard]] bool HasBlockTag(QStringView tag) {
+	return !FindBlockTag(tag).isEmpty();
+}
+
+[[nodiscard]] QString WithBlockTagRemoved(QStringView tag) {
+	auto list = TextUtilities::SplitTags(tag);
+	list.erase(ranges::remove_if(list, IsBlockTag), list.end());
+	return list.isEmpty() ? QString() : TextUtilities::JoinTag(list);
+}
+
+[[nodiscard]] TextWithTags ShiftLeftBlockTag(TextWithTags text) {
+	while (!text.tags.isEmpty() && text.tags.front().length <= 0) {
+		text.tags.erase(text.tags.begin());
+	}
+	if (text.tags.isEmpty()
+		|| text.empty()
+		|| !IsNewline(text.text.front())) {
+		return text;
+	}
+	auto &tag = text.tags.front();
+	if (!HasBlockTag(tag.id)) {
+		return text;
+	}
+	auto stripped = WithBlockTagRemoved(tag.id);
+	if (tag.length == 1) {
+		if (stripped.isEmpty()) {
+			text.tags.erase(text.tags.begin());
+		} else {
+			tag.id = stripped;
+		}
+	} else {
+		++tag.offset;
+		--tag.length;
+		if (!stripped.isEmpty()) {
+			text.tags.insert(
+				text.tags.begin(),
+				TextWithTags::Tag{ 0, 1, stripped });
+		}
+	}
+	return text;
+}
+
+[[nodiscard]] TextWithTags ShiftRightBlockTag(TextWithTags text) {
+	while (!text.tags.isEmpty() && text.tags.back().length <= 0) {
+		text.tags.pop_back();
+	}
+	if (text.tags.isEmpty()
+		|| text.empty()
+		|| !IsNewline(text.text.back())) {
+		return text;
+	}
+	auto &tag = text.tags.back();
+	if (!HasBlockTag(tag.id)) {
+		return text;
+	}
+	auto stripped = WithBlockTagRemoved(tag.id);
+	if (tag.length == 1) {
+		if (stripped.isEmpty()) {
+			text.tags.pop_back();
+		} else {
+			tag.id = stripped;
+		}
+	} else {
+		--tag.length;
+		if (!stripped.isEmpty()) {
+			text.tags.push_back({ text.text.size() - 1, 1, stripped });
+		}
+	}
+	return text;
 }
 
 [[nodiscard]] bool IsValidMarkdownLink(QStringView link) {
@@ -231,7 +317,7 @@ bool IsNewline(QChar ch) {
 
 class TagAccumulator {
 public:
-	TagAccumulator(TextWithTags::Tags &tags) : _tags(tags) {
+	explicit TagAccumulator(TextWithTags::Tags &tags) : _tags(tags) {
 	}
 
 	[[nodiscard]] bool changed() const {
@@ -782,9 +868,16 @@ void RemoveDocumentTags(
 
 void SetBlockMargins(QTextBlockFormat &format, const style::QuoteStyle &st) {
 	format.setLeftMargin(st.padding.left());
-	format.setTopMargin(st.verticalSkip + st.padding.top() + st.header);
+	format.setTopMargin(st.padding.top()
+		+ st.header
+		+ st.verticalSkip
+		+ st.verticalSkip // Those are overlapping margins, not paddings :(
+		+ st.padding.bottom());
 	format.setRightMargin(st.padding.right());
-	format.setBottomMargin(st.padding.bottom() + st.verticalSkip);
+	format.setBottomMargin(st.padding.bottom()
+		+ st.verticalSkip
+		+ st.verticalSkip // Those are overlapping margins, not paddings :(
+		+ st.padding.top());
 }
 
 [[nodiscard]] QRect ExtendForPaint(QRect rect, const style::QuoteStyle &st) {
@@ -866,43 +959,74 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 			text[position] = ch;
 		}
 	};
+	for (auto i = 0, length = int(data.text.size()); i != length; ++i) {
+		if (newline(i)) {
+			force(i, kSoftLine);
+		}
+	}
 	for (auto i = data.tags.begin(); i != data.tags.end();) {
-		auto &tag = *i;
-		const auto &id = tag.id;
-		auto from = std::min(tag.offset, length);
-		auto till = std::min(tag.offset + tag.length, length);
+		auto &tagStart = *i;
+		const auto &id = tagStart.id;
+		auto from = std::min(tagStart.offset, length);
+		auto till = std::min(tagStart.offset + tagStart.length, length);
 		if (from >= till) {
 			i = data.tags.erase(i);
 			continue;
 		}
-		if (id == kTagBlockquote
-			|| id == kTagBlockquoteCollapsed
-			|| IsTagPre(id)) {
-			if (from > 0 && newline(from - 1)) {
-				force(from - 1, kHardLine);
-			} else if (newline(from)) {
-				force(from, kHardLine);
-				++from;
-				++tag.offset;
+		const auto block = FindBlockTag(id);
+		if (block.isEmpty()) {
+			++i;
+			continue;
+		}
+		auto j = i + 1;
+		for (; j != data.tags.end(); ++j) {
+			auto &next = *j;
+			if (next.offset > till || FindBlockTag(next.id) != block) {
+				break;
 			}
-			if (till < length && newline(till)) {
-				force(till, kHardLine);
-			} else if (newline(till - 1)) {
-				force(till - 1, kHardLine);
-				--till;
-				--tag.length;
+			till = std::min(next.offset + next.length, length);
+		}
+		auto &tagEnd = *(j - 1);
+
+		if (from > 0 && newline(from - 1)) {
+			force(from - 1, kHardLine);
+		} else if (newline(from)) {
+			force(from, kHardLine);
+			++from;
+			++tagStart.offset;
+		} else if (from > 0) {
+			data.text.insert(from, kHardLine);
+			++length;
+
+			for (auto &tag : data.tags) {
+				if (tag.offset >= from) {
+					++tag.offset;
+				} else if (tag.offset + tag.length > from) {
+					++tag.length;
+				}
 			}
-			if (from >= till) {
-				i = data.tags.erase(i);
-				continue;
-			}
-			for (auto i = from; i != till; ++i) {
-				if (newline(i)) {
-					force(i, kSoftLine);
+			++from;
+			++till;
+		}
+		if (till < length && newline(till)) {
+			force(till, kHardLine);
+		} else if (newline(till - 1)) {
+			force(till - 1, kHardLine);
+			--till;
+			--tagEnd.length;
+		} else if (till < length) {
+			data.text.insert(till, kHardLine);
+			++length;
+
+			for (auto &tag : data.tags) {
+				if (tag.offset >= till) {
+					++tag.offset;
+				} else if (tag.offset + tag.length > till) {
+					++tag.length;
 				}
 			}
 		}
-		++i;
+		i = j;
 	}
 	return data;
 }
@@ -916,7 +1040,7 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 		? simple
 		: simple.isEmpty()
 		? quote
-		: TextUtilities::JoinTag({ quote, simple });
+		: TextUtilities::TagWithAdded(simple, quote);
 }
 
 // Returns the position of the first inserted tag or "changedEnd" value if none found.
@@ -948,14 +1072,15 @@ int ProcessInsertedTags(
 					tagFrom);
 			}
 			QTextCursor c(document);
-			if (tag.id == kTagBlockquote
-				|| tag.id == kTagBlockquoteCollapsed
-				|| IsTagPre(tag.id)) {
-				c.setPosition((tagFrom + tagTo) / 2);
+			c.setPosition(tagFrom);
+			c.setPosition(tagTo, QTextCursor::KeepAnchor);
+			if (IsTagPre(tag.id)) {
+				c.setBlockFormat(PrepareBlockFormat(st, tagId));
+				c.mergeCharFormat(PrepareTagFormat(st, tagId));
+			} else if (tag.id == kTagBlockquote
+				|| tag.id == kTagBlockquoteCollapsed) {
 				c.setBlockFormat(PrepareBlockFormat(st, tagId));
 			} else {
-				c.setPosition(tagFrom);
-				c.setPosition(tagTo, QTextCursor::KeepAnchor);
 				c.mergeCharFormat(PrepareTagFormat(st, tagId));
 			}
 
@@ -1685,6 +1810,7 @@ void InputField::paintQuotes(QPaintEvent *e) {
 
 	while (block.isValid()) {
 		const auto format = block.blockFormat();
+		const auto type = format.lineHeightType();
 		const auto id = format.property(kQuoteFormatId).toString();
 		const auto st = IsTagPre(id)
 			? &_st.style.pre
@@ -1698,7 +1824,13 @@ void InputField::paintQuotes(QPaintEvent *e) {
 					-_inner->verticalScrollBar()->value());
 			}
 			const auto rect = layout->blockBoundingRect(block).toRect();
-			const auto target = ExtendForPaint(rect, *st).translated(*shift);
+			const auto added = IsTagPre(id)
+				? QMargins(0, 0, 0, st->verticalSkip)
+				: QMargins();
+			const auto target = ExtendForPaint(
+				rect.marginsAdded(added),
+				*st
+			).translated(*shift);
 			if (target.intersects(clip)) {
 				if (!p) {
 					p.emplace(_inner->viewport());
@@ -1712,7 +1844,6 @@ void InputField::paintQuotes(QPaintEvent *e) {
 		}
 		block = block.next();
 	}
-
 }
 
 void InputField::setAdditionalMargin(int margin) {
@@ -2326,7 +2457,7 @@ InputField::TextPart InputField::getTextPart(
 		if (block != till) {
 			tagAccumulator.feed(
 				TagWithoutCustomEmoji(
-					FullTag(block.charFormat(), block.blockFormat())),
+					FullTag(block.charFormat(), QTextBlockFormat())),
 				result.size());
 			result.append('\n');
 			markdownTagAccumulator.feed(newline, 1, lastTag);
@@ -2703,6 +2834,14 @@ void InputField::documentContentsChanged(
 	}
 	if (document->isEmpty()) {
 		textCursor().setBlockFormat(PrepareBlockFormat(_st));
+	//} else if (IsTagPre(document->firstBlock().blockFormat().property(kQuoteFormatId).toString())) {
+	//	auto format = QTextFrameFormat();
+	//	format.setTopMargin(30);
+	//	_inner->document()->rootFrame()->setFrameFormat(format);
+	//} else {
+	//	auto format = QTextFrameFormat();
+	//	format.setTopMargin(0);
+	//	_inner->document()->rootFrame()->setFrameFormat(format);
 	}
 }
 
@@ -3697,49 +3836,90 @@ bool InputField::commitMarkdownReplacement(
 }
 #endif
 
-void InputField::addMarkdownTag(
-		int from,
-		int till,
-		const QString &tag) {
-	const auto current = getTextWithTagsPart(from, till);
-	const auto currentLength = int(current.text.size());
-
-	// #TODO Trim inserted tag, so that all newlines are left outside.
-	auto tags = TagList();
+auto InputField::addMarkdownTag(TextRange range, const QString &tag)
+-> TextRange {
+	auto current = getTextWithTagsPart(range.from, range.till);
 	auto filled = 0;
-	const auto add = [&](const TextWithTags::Tag &existing) {
-		const auto id = TextUtilities::TagWithAdded(existing.id, tag);
-		tags.push_back({ existing.offset, existing.length, id });
-		filled = std::clamp(
-			existing.offset + existing.length,
-			filled,
-			currentLength);
-	};
+	auto tags = TextWithTags::Tags();
 	if (!TextUtilities::IsSeparateTag(tag)) {
-		for (const auto &existing : current.tags) {
-			if (existing.offset >= currentLength) {
-				break;
-			} else if (existing.offset > filled) {
-				add({ filled, existing.offset - filled, tag });
+		for (auto existing : current.tags) {
+			if (existing.offset > filled) {
+				tags.push_back({ filled, existing.offset - filled, tag });
 			}
-			add(existing);
+			existing.id = TextUtilities::TagWithAdded(existing.id, tag);
+			tags.push_back(std::move(existing));
+			filled = existing.offset + existing.length;
 		}
 	}
-	if (filled < currentLength) {
-		add({ filled, currentLength - filled, tag });
+	if (filled < current.text.size()) {
+		tags.push_back({ filled, current.text.size() - filled, tag });
 	}
-
-	finishMarkdownTagChange(from, till, { current.text, tags });
+	current.tags = TextUtilities::SimplifyTags(std::move(tags));
+	const auto result = insertWithTags(range, std::move(current));
 
 	// Fire the tag to the spellchecker.
-	_markdownTagApplies.fire({ from, till, -1, -1, false, tag });
+	_markdownTagApplies.fire(
+		{ result.from, result.till, -1, -1, false, tag });
+
+	return result;
 }
 
-void InputField::removeMarkdownTag(
-		int from,
-		int till,
-		const QString &tag) {
-	const auto current = getTextWithTagsPart(from, till);
+auto InputField::insertWithTags(TextRange range, TextWithTags text)
+-> TextRange {
+	if (text.empty() || text.tags.isEmpty()) {
+		finishMarkdownTagChange(range, std::move(text));
+		return range;
+	}
+	text = ShiftLeftBlockTag(std::move(text));
+	text = ShiftRightBlockTag(std::move(text));
+	auto result = range;
+	const auto firstTag = text.tags.front();
+	const auto lastTag = text.tags.back();
+	const auto textLength = int(text.text.size());
+	const auto adjustLeft = !firstTag.offset && HasBlockTag(firstTag.id);
+	const auto adjustRight = (lastTag.offset + lastTag.length >= textLength)
+		&& HasBlockTag(lastTag.id);
+	auto cursor = QTextCursor(document());
+	cursor.movePosition(QTextCursor::End);
+	const auto fullLength = cursor.position();
+	const auto goodLeft = !adjustLeft || !range.from;
+	const auto goodRight = !adjustRight || (range.till >= fullLength);
+	const auto leftEdge = goodLeft
+		? TextWithTags()
+		: getTextWithTagsPart(range.from - 1, range.from);
+	const auto rightEdge = goodRight
+		? TextWithTags()
+		: getTextWithTagsPart(range.till, range.till + 1);
+	const auto extendLeft = !leftEdge.empty()
+		&& IsNewline(leftEdge.text.back());
+	const auto extendRight = !rightEdge.empty()
+		&& IsNewline(rightEdge.text.front());
+	const auto growLeft = !goodLeft && !extendLeft;
+	const auto growRight = !goodRight && !extendRight;
+	if (!goodLeft) {
+		text.text.insert(0, kHardLine);
+		for (auto &tag : text.tags) {
+			++tag.offset;
+		}
+		if (extendLeft) {
+			--range.from;
+		} else {
+			++result.from;
+			++result.till;
+		}
+	}
+	if (!goodRight) {
+		text.text.push_back(kHardLine);
+		if (extendRight) {
+			++range.till;
+		}
+	}
+	finishMarkdownTagChange(range, PrepareForInsert(std::move(text)));
+	return result;
+}
+
+void InputField::removeMarkdownTag(TextRange range, const QString &tag) {
+	auto current = getTextWithTagsPart(range.from, range.till);
 
 	auto tags = TagList();
 	for (const auto &existing : current.tags) {
@@ -3756,17 +3936,17 @@ void InputField::removeMarkdownTag(
 			tags.push_back({ existing.offset, existing.length, use });
 		}
 	}
+	current.tags = std::move(tags);
 
-	finishMarkdownTagChange(from, till, { current.text, tags });
+	finishMarkdownTagChange(range, PrepareForInsert(std::move(current)));
 }
 
 void InputField::finishMarkdownTagChange(
-		int from,
-		int till,
+		TextRange range,
 		const TextWithTags &textWithTags) {
 	auto cursor = _inner->textCursor();
-	cursor.setPosition(from);
-	cursor.setPosition(till, QTextCursor::KeepAnchor);
+	cursor.setPosition(range.from);
+	cursor.setPosition(range.till, QTextCursor::KeepAnchor);
 	_insertedTags = textWithTags.tags;
 	_insertedTagsAreFromMime = false;
 	cursor.insertText(textWithTags.text, _defaultCharFormat);
@@ -3838,13 +4018,14 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 	if (from == till) {
 		return;
 	}
+	auto range = TextRange{ from, till };
 	if (tag.isEmpty()) {
 		RemoveDocumentTags(_st, document(), from, till);
 	} else if (HasFullTextTag(getTextWithTagsSelected(), tag)) {
-		removeMarkdownTag(from, till, tag);
+		removeMarkdownTag(range, tag);
 	} else {
 		const auto leftForBlock = [&] {
-			if (!from) {
+			if (from <= 0) {
 				return true;
 			}
 			const auto text = getTextWithTagsPart(
@@ -3856,6 +4037,11 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 				|| IsNewline(text[text.size() - 1]);
 		}();
 		const auto rightForBlock = [&] {
+			auto cursor = QTextCursor(document());
+			cursor.movePosition(QTextCursor::End);
+			if (till >= cursor.position()) {
+				return true;
+			}
 			const auto text = getTextWithTagsPart(
 				till - 1,
 				till + 1
@@ -3870,11 +4056,14 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 			: (leftForBlock && rightForBlock)
 			? kTagPre
 			: kTagCode;
-		addMarkdownTag(from, till, useTag);
+		range = addMarkdownTag(range, useTag);
 	}
 	auto restorePosition = textCursor();
-	restorePosition.setPosition((position == till) ? from : till);
-	restorePosition.setPosition(position, QTextCursor::KeepAnchor);
+	restorePosition.setPosition(
+		(position == till) ? range.from : range.till);
+	restorePosition.setPosition(
+		(position == till) ? range.till : range.from,
+		QTextCursor::KeepAnchor);
 	setTextCursor(restorePosition);
 }
 
@@ -4130,7 +4319,10 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 	_realInsertPosition = cursor.selectionStart();
 	_realCharsAdded = text.size();
 	if (_realCharsAdded > 0) {
-		cursor.insertFragment(QTextDocumentFragment::fromPlainText(text));
+		insertWithTags(
+			{ _realInsertPosition, cursor.selectionEnd() },
+			{ text, _insertedTags });
+	//	cursor.insertFragment(QTextDocumentFragment::fromPlainText(text));
 	}
 	ensureCursorVisible();
 	if (!_inDrop) {
