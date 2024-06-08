@@ -162,7 +162,8 @@ rpl::producer<int> RpWidgetWrap::desiredHeightValue() const {
 
 rpl::producer<bool> RpWidgetWrap::shownValue() const {
 	auto &stream = eventStreams().shown;
-	return stream.events_starting_with(!rpWidget()->isHidden());
+	return stream.events_starting_with(!rpWidget()->isHidden())
+		| rpl::distinct_until_changed();
 }
 
 rpl::producer<QRect> RpWidgetWrap::paintRequest() const {
@@ -214,6 +215,19 @@ bool RpWidgetWrap::handleEvent(QEvent *event) {
 		}
 	}
 	switch (event->type()) {
+	case QEvent::Show:
+	case QEvent::Hide:
+		if (rpWidget()->isWindow() && streams->shown.has_consumers()) {
+			if (!allAreObserved) {
+				that = rpWidget();
+			}
+			streams->shown.fire_copy(!rpWidget()->isHidden());
+			if (!that) {
+				return true;
+			}
+		}
+		break;
+
 	case QEvent::Move:
 	case QEvent::Resize:
 		if (streams->geometry.has_consumers()) {
