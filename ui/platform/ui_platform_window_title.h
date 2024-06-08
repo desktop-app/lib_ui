@@ -133,13 +133,12 @@ private:
 	[[nodiscard]] AbstractButton *controlWidget(Control control) const;
 
 	void init(Fn<void(bool maximized)> maximize);
-	void subscribeToStateChanges();
 	void updateButtonsState();
 	void updateControlsPosition();
 	void updateControlsPositionBySide(
 		const std::vector<Control> &controls,
 		bool right);
-	void handleWindowStateChanged(Qt::WindowState state = Qt::WindowNoState);
+	void handleWindowStateChanged(Qt::WindowStates state = Qt::WindowNoState);
 
 	not_null<const style::WindowTitle*> _st;
 	const std::unique_ptr<AbstractTitleButtons> _buttons;

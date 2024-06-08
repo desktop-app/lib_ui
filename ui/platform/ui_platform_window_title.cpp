@@ -238,34 +238,15 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 		updateControlsPosition();
 	}, _close->lifetime());
 
-	subscribeToStateChanges();
+	base::install_event_filter(window(), [=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::WindowStateChange) {
+			handleWindowStateChanged(window()->windowState());
+		}
+		return base::EventFilterResult::Continue;
+	});
 
 	_activeState = parent()->isActiveWindow();
 	updateButtonsState();
-}
-
-void TitleControls::subscribeToStateChanges() {
-	const auto subscribe = [=] {
-		QObject::connect(
-			window()->windowHandle(),
-			&QWindow::windowStateChanged,
-			[=](Qt::WindowState state) { handleWindowStateChanged(state); });
-	};
-	if (window()->windowHandle()) {
-		subscribe();
-	} else {
-		const auto winIdEventFilter = std::make_shared<QObject*>(nullptr);
-		*winIdEventFilter = base::install_event_filter(
-			window(),
-			[=](not_null<QEvent*> e) {
-				if (!*winIdEventFilter || e->type() != QEvent::WinIdChange) {
-					return base::EventFilterResult::Continue;
-				}
-				subscribe();
-				base::take(*winIdEventFilter)->deleteLater();
-				return base::EventFilterResult::Continue;
-			});
-	}
 }
 
 void TitleControls::setResizeEnabled(bool enabled) {
@@ -427,13 +408,13 @@ void TitleControls::updateControlsPositionBySide(
 	}
 }
 
-void TitleControls::handleWindowStateChanged(Qt::WindowState state) {
-	if (state == Qt::WindowMinimized) {
+void TitleControls::handleWindowStateChanged(Qt::WindowStates state) {
+	if (state & Qt::WindowMinimized) {
 		return;
 	}
 
-	auto maximized = (state == Qt::WindowMaximized)
-		|| (state == Qt::WindowFullScreen);
+	auto maximized = (state & Qt::WindowMaximized)
+		|| (state & Qt::WindowFullScreen);
 	if (_maximizedState != maximized) {
 		_maximizedState = maximized;
 		updateButtonsState();
