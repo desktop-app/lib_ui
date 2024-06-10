@@ -1696,11 +1696,13 @@ TextForMimeData String::toText(
 		}
 		for (auto &tracker : markdownTrackers) {
 			const auto flag = tracker.flag;
-			const auto quoteWithCollapse = (flag == Flag::Blockquote);
-			const auto quoteWithCollapseChanged = quoteWithCollapse
+			const auto quoteWithCollapseChanged = (flag == Flag::Blockquote)
+				&& (oldFlags & flag)
+				&& (newFlags & flag)
 				&& (oldQuoteIndex != newQuoteIndex);
-			const auto quoteWithLanguage = (flag == Flag::Pre);
-			const auto quoteWithLanguageChanged = quoteWithLanguage
+			const auto quoteWithLanguageChanged = (flag == Flag::Pre)
+				&& (oldFlags & flag)
+				&& (newFlags & flag)
 				&& (oldQuoteIndex != newQuoteIndex);
 			const auto quote = !oldQuoteIndex
 				? nullptr
