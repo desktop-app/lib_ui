@@ -242,6 +242,8 @@ public:
 			QString text,
 			QString link,
 			EditLinkAction action)> callback);
+	void setEditLanguageCallback(
+		Fn<void(QString now, Fn<void(QString)> save)> callback);
 
 	struct ExtendedContextMenu {
 		QMenu *menu = nullptr;
@@ -418,6 +420,10 @@ private:
 	void mousePressEventInner(QMouseEvent *e);
 	void mouseReleaseEventInner(QMouseEvent *e);
 	void mouseMoveEventInner(QMouseEvent *e);
+	void leaveEventInner(QEvent *e);
+
+	[[nodiscard]] int lookupActionQuoteId(QPoint point) const;
+	void updateCursorShape();
 
 	QMimeData *createMimeDataFromSelectionInner() const;
 	bool canInsertFromMimeDataInner(const QMimeData *source) const;
@@ -523,6 +529,7 @@ private:
 		float64 focusedDegree);
 	void customEmojiRepaint();
 	void highlightMarkdown();
+	bool exitQuoteWithNewBlock(int key);
 
 	void touchUpdate(QPoint globalPosition);
 	void touchFinish();
@@ -543,6 +550,7 @@ private:
 		QString text,
 		QString link,
 		EditLinkAction action)> _editLinkCallback;
+	Fn<void(QString now, Fn<void(QString)> save)> _editLanguageCallback;
 	TextWithTags _lastTextWithTags;
 	std::vector<MarkdownTag> _lastMarkdownTags;
 	QString _lastPreEditText;
@@ -615,6 +623,8 @@ private:
 
 	QTextCharFormat _defaultCharFormat;
 
+	int _selectedActionQuoteId = 0;
+	int _pressedActionQuoteId = -1;
 	rpl::variable<int> _scrollTop;
 
 	InstantReplaces _mutableInstantReplaces;
