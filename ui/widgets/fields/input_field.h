@@ -14,9 +14,9 @@
 #include "ui/text/text_entity.h"
 #include "ui/text/text_custom_emoji.h"
 
-#include <QtGui/QTextObjectInterface>
-
 #include <rpl/variable.h>
+
+#include <QtGui/QTextCursor>
 
 class QMenu;
 class QShortcut;
@@ -26,7 +26,6 @@ class QContextMenuEvent;
 class Painter;
 
 namespace Ui::Text {
-class CustomEmoji;
 struct QuotePaintCache;
 } // namespace Ui::Text
 
@@ -76,41 +75,7 @@ enum class InputSubmitSettings {
 	None,
 };
 
-class CustomEmojiObject : public QObject, public QTextObjectInterface {
-public:
-	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
-
-	CustomEmojiObject(
-		const style::font &font,
-		Factory factory,
-		Fn<bool()> paused);
-	~CustomEmojiObject();
-
-	void *qt_metacast(const char *iid) override;
-
-	QSizeF intrinsicSize(
-		QTextDocument *doc,
-		int posInDocument,
-		const QTextFormat &format) override;
-	void drawObject(
-		QPainter *painter,
-		const QRectF &rect,
-		QTextDocument *doc,
-		int posInDocument,
-		const QTextFormat &format) override;
-
-	void setNow(crl::time now);
-	void clear();
-
-private:
-	const style::font _font;
-	Factory _factory;
-	Fn<bool()> _paused;
-	base::flat_map<uint64, std::unique_ptr<Text::CustomEmoji>> _emoji;
-	crl::time _now = 0;
-	int _skip = 0;
-
-};
+class CustomFieldObject;
 
 struct MarkdownEnabled {
 	base::flat_set<QString> tagsSubset;
@@ -167,8 +132,11 @@ public:
 	static const QString kTagBlockquote;
 	static const QString kTagBlockquoteCollapsed;
 	static const QString kCustomEmojiTagStart;
+	static const int kCollapsedQuoteFormat; // QTextFormat::ObjectTypes
 	static const int kCustomEmojiFormat; // QTextFormat::ObjectTypes
 	static const int kCustomEmojiId; // QTextFormat::Property
+	static const int kCustomEmojiLink; // QTextFormat::Property
+	static const int kQuoteId; // QTextFormat::Property
 
 	InputField(
 		QWidget *parent,
@@ -381,6 +349,7 @@ protected:
 private:
 	class Inner;
 	friend class Inner;
+	friend class CustomFieldObject;
 	enum class MarkdownActionType {
 		ToggleTag,
 		EditLink,
@@ -531,6 +500,13 @@ private:
 	void highlightMarkdown();
 	bool exitQuoteWithNewBlock(int key);
 
+	void blockActionClicked(int quoteId);
+	void editPreLanguage(int quoteId, QStringView tag);
+	void toggleBlockquoteCollapsed(
+		int quoteId,
+		QStringView tag,
+		TextRange range);
+
 	void touchUpdate(QPoint globalPosition);
 	void touchFinish();
 
@@ -580,13 +556,13 @@ private:
 	int _emojiSurrogateAmount = 0;
 
 	Fn<QString(QStringView)> _tagMimeProcessor;
-	std::unique_ptr<CustomEmojiObject> _customEmojiObject;
+	std::unique_ptr<CustomFieldObject> _customObject;
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
-	bool _inDrop = false;
+	bool _insertedTagsDelayClear = false;
 	bool _inHeightCheck = false;
 
 	bool _customUpDown = false;
