@@ -567,7 +567,8 @@ private:
 
 	// Tags list which we should apply while setText() call or insert from mime data.
 	TagList _insertedTags;
-	bool _insertedTagsAreFromMime;
+	bool _insertedTagsAreFromMime = false;
+	bool _insertedTagsReplace = false;
 
 	// Override insert position and charsAdded from complex text editing
 	// (like drag-n-drop in the same text edit field).
