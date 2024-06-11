@@ -23,6 +23,21 @@
 #include <QtSvg/QSvgRenderer>
 
 #include <jpeglib.h>
+#include <setjmp.h>
+
+struct my_error_mgr : public jpeg_error_mgr {
+	jmp_buf setjmp_buffer;
+};
+
+extern "C" {
+
+static void my_error_exit(j_common_ptr cinfo) {
+	(*cinfo->err->output_message)(cinfo);
+	my_error_mgr* myerr = (my_error_mgr*)cinfo->err;
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
+} // extern "C"
 
 namespace Images {
 namespace {
@@ -1251,119 +1266,108 @@ QImage Prepare(QImage image, int w, int h, const PrepareArgs &args) {
 }
 
 bool IsProgressiveJpeg(const QByteArray &bytes) {
-	try {
-		struct jpeg_decompress_struct info;
-		struct jpeg_error_mgr jerr;
+	struct jpeg_decompress_struct info;
+	struct my_error_mgr jerr;
 
-		info.err = jpeg_std_error(&jerr);
-		jerr.error_exit = [](j_common_ptr cinfo) {
-			(*cinfo->err->output_message)(cinfo);
-			throw std::exception();
-		};
-
-		jpeg_create_decompress(&info);
-		const auto guard = gsl::finally([&] {
-			jpeg_destroy_decompress(&info);
-		});
-
-		jpeg_mem_src(
-			&info,
-			reinterpret_cast<const unsigned char*>(bytes.data()),
-			bytes.size());
-		if (jpeg_read_header(&info, TRUE) != 1) {
-			return false;
-		}
-
-		return (info.progressive_mode > 0);
-	} catch (...) {
+	info.err = jpeg_std_error(&jerr);
+	jerr.error_exit = my_error_exit;
+	if (setjmp(jerr.setjmp_buffer)) {
+		jpeg_destroy_decompress(&info);
 		return false;
 	}
+
+	jpeg_create_decompress(&info);
+	jpeg_mem_src(
+		&info,
+		reinterpret_cast<const unsigned char*>(bytes.data()),
+		bytes.size());
+
+	if (jpeg_read_header(&info, TRUE) != 1) {
+		jpeg_destroy_decompress(&info);
+		return false;
+	}
+
+	jpeg_destroy_decompress(&info);
+	return (info.progressive_mode > 0);
 }
 
 QByteArray MakeProgressiveJpeg(const QByteArray &bytes) {
-	try {
-		struct jpeg_decompress_struct srcinfo;
-		struct jpeg_compress_struct dstinfo;
-		struct jpeg_error_mgr jerr;
+	struct jpeg_decompress_struct srcinfo;
+	struct jpeg_compress_struct dstinfo;
+	struct my_error_mgr jerr;
+	unsigned char* outbuffer = nullptr;
+	long unsigned int outsize = 0;
 
-		srcinfo.err = jpeg_std_error(&jerr);
-		dstinfo.err = jpeg_std_error(&jerr);
-		jerr.error_exit = [](j_common_ptr cinfo) {
-			(*cinfo->err->output_message)(cinfo);
-			throw std::exception();
-		};
-
-		jpeg_create_decompress(&srcinfo);
-		const auto srcguard = gsl::finally([&] {
-			jpeg_abort_decompress(&srcinfo);
-			jpeg_destroy_decompress(&srcinfo);
-		});
-
-		jpeg_create_compress(&dstinfo);
-		const auto dstguard = gsl::finally([&] {
-			jpeg_abort_compress(&dstinfo);
-			jpeg_destroy_compress(&dstinfo);
-		});
-
-		jpeg_mem_src(
-			&srcinfo,
-			reinterpret_cast<const unsigned char*>(bytes.data()),
-			bytes.size());
-
-		jpeg_save_markers(&srcinfo, JPEG_COM, 0xFFFF);
-		for (int m = 0; m < 16; m++) {
-			jpeg_save_markers(&srcinfo, JPEG_APP0 + m, 0xFFFF);
-		}
-
-		jpeg_read_header(&srcinfo, true);
-		const auto coefArrays = jpeg_read_coefficients(&srcinfo);
-		jpeg_copy_critical_parameters(&srcinfo, &dstinfo);
-		jpeg_simple_progression(&dstinfo);
-
-		unsigned char* outbuffer = nullptr;
-		long unsigned int outsize = 0;
-		jpeg_mem_dest(&dstinfo, &outbuffer, &outsize);
-		const auto outbufferGuard = gsl::finally([&] {
-			free(outbuffer);
-		});
-
-		jpeg_write_coefficients(&dstinfo, coefArrays);
-
-		for (jpeg_saved_marker_ptr marker = srcinfo.marker_list
-			; marker != nullptr
-			; marker = marker->next) {
-			if (dstinfo.write_JFIF_header
-				&& marker->marker == JPEG_APP0
-				&& marker->data_length >= 5
-				&& marker->data[0] == 0x4A
-				&& marker->data[1] == 0x46
-				&& marker->data[2] == 0x49
-				&& marker->data[3] == 0x46
-				&& marker->data[4] == 0)
-				continue; // reject duplicate JFIF
-			if (dstinfo.write_Adobe_marker
-				&& marker->marker == JPEG_APP0 + 14
-				&& marker->data_length >= 5
-				&& marker->data[0] == 0x41
-				&& marker->data[1] == 0x64
-				&& marker->data[2] == 0x6F
-				&& marker->data[3] == 0x62
-				&& marker->data[4] == 0x65)
-				continue; // reject duplicate Adobe
-			jpeg_write_marker(
-				&dstinfo,
-				marker->marker,
-				marker->data,
-				marker->data_length);
-		}
-
-		jpeg_finish_compress(&dstinfo);
-		jpeg_finish_decompress(&srcinfo);
-
-		return QByteArray(reinterpret_cast<char*>(outbuffer), outsize);
-	} catch (...) {
+	srcinfo.err = jpeg_std_error(&jerr);
+	dstinfo.err = jpeg_std_error(&jerr);
+	jerr.error_exit = my_error_exit;
+	if (setjmp(jerr.setjmp_buffer)) {
+		free(outbuffer);
+		jpeg_abort_compress(&dstinfo);
+		jpeg_abort_decompress(&srcinfo);
+		jpeg_destroy_compress(&dstinfo);
+		jpeg_destroy_decompress(&srcinfo);
 		return {};
 	}
+
+	jpeg_create_decompress(&srcinfo);
+	jpeg_create_compress(&dstinfo);
+
+	jpeg_mem_src(
+		&srcinfo,
+		reinterpret_cast<const unsigned char*>(bytes.data()),
+		bytes.size());
+
+	jpeg_save_markers(&srcinfo, JPEG_COM, 0xFFFF);
+	for (int m = 0; m < 16; m++) {
+		jpeg_save_markers(&srcinfo, JPEG_APP0 + m, 0xFFFF);
+	}
+
+	jpeg_read_header(&srcinfo, true);
+	const auto coefArrays = jpeg_read_coefficients(&srcinfo);
+	jpeg_copy_critical_parameters(&srcinfo, &dstinfo);
+	jpeg_simple_progression(&dstinfo);
+	jpeg_mem_dest(&dstinfo, &outbuffer, &outsize);
+	jpeg_write_coefficients(&dstinfo, coefArrays);
+
+	for (jpeg_saved_marker_ptr marker = srcinfo.marker_list
+		; marker != nullptr
+		; marker = marker->next) {
+		if (dstinfo.write_JFIF_header
+			&& marker->marker == JPEG_APP0
+			&& marker->data_length >= 5
+			&& marker->data[0] == 0x4A
+			&& marker->data[1] == 0x46
+			&& marker->data[2] == 0x49
+			&& marker->data[3] == 0x46
+			&& marker->data[4] == 0)
+			continue; // reject duplicate JFIF
+		if (dstinfo.write_Adobe_marker
+			&& marker->marker == JPEG_APP0 + 14
+			&& marker->data_length >= 5
+			&& marker->data[0] == 0x41
+			&& marker->data[1] == 0x64
+			&& marker->data[2] == 0x6F
+			&& marker->data[3] == 0x62
+			&& marker->data[4] == 0x65)
+			continue; // reject duplicate Adobe
+		jpeg_write_marker(
+			&dstinfo,
+			marker->marker,
+			marker->data,
+			marker->data_length);
+	}
+
+	jpeg_finish_compress(&dstinfo);
+	jpeg_finish_decompress(&srcinfo);
+	jpeg_destroy_compress(&dstinfo);
+	jpeg_destroy_decompress(&srcinfo);
+
+	const auto outbufferGuard = gsl::finally([&] {
+		free(outbuffer);
+	});
+
+	return QByteArray(reinterpret_cast<char*>(outbuffer), outsize);
 }
 
 QByteArray ExpandInlineBytes(const QByteArray &bytes) {
