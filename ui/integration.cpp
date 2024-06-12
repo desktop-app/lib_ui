@@ -68,7 +68,7 @@ std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 }
 
 std::unique_ptr<Text::CustomEmoji> Integration::createCustomEmoji(
-		const QString &data,
+		QStringView data,
 		const std::any &context) {
 	return nullptr;
 }

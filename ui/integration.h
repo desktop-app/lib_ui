@@ -62,7 +62,7 @@ public:
 	[[nodiscard]] virtual const Emoji::One *defaultEmojiVariant(
 		const Emoji::One *emoji);
 	[[nodiscard]] virtual auto createCustomEmoji(
-		const QString &data,
+		QStringView data,
 		const std::any &context) -> std::unique_ptr<Text::CustomEmoji>;
 	[[nodiscard]] virtual Fn<void()> createSpoilerRepaint(
 		const std::any &context);

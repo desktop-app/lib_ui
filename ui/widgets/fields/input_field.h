@@ -192,9 +192,11 @@ public:
 	// If you need to make some preparations of tags before putting them to QMimeData
 	// (and then to clipboard or to drag-n-drop object), here is a strategy for that.
 	void setTagMimeProcessor(Fn<QString(QStringView)> processor);
-	void setCustomEmojiFactory(
-		CustomEmojiFactory factory,
-		Fn<bool()> paused = nullptr);
+	void setCustomTextContext(
+		Fn<std::any(Fn<void()> repaint)> context,
+		Fn<bool()> pausedEmoji = nullptr,
+		Fn<bool()> pausedSpoiler = nullptr,
+		CustomEmojiFactory factory = nullptr);
 
 	struct EditLinkSelection {
 		int from = 0;
@@ -480,6 +482,7 @@ private:
 	void clearSelectionMarkdown();
 
 	bool revertFormatReplace();
+	bool jumpOutOfBlockByBackspace();
 
 	void paintSurrounding(
 		QPainter &p,
@@ -557,6 +560,7 @@ private:
 
 	Fn<QString(QStringView)> _tagMimeProcessor;
 	std::unique_ptr<CustomFieldObject> _customObject;
+	std::optional<QTextCursor> _formattingCursorUpdate;
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;

@@ -997,6 +997,21 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 	}
 }
 
+[[nodiscard]] bool IsCollapsedQuoteFragment(const QTextFragment &fragment) {
+	return (fragment.charFormat().objectType() == kCollapsedQuoteFormat)
+		&& (fragment.text() == kObjectReplacement);
+}
+
+[[nodiscard]] int FindCollapsedQuoteObject(const QTextBlock &block) {
+	for (auto fragmentIt = block.begin(); !fragmentIt.atEnd(); ++fragmentIt) {
+		auto fragment = fragmentIt.fragment();
+		if (IsCollapsedQuoteFragment(fragment)) {
+			return fragment.position();
+		}
+	}
+	return -1;
+}
+
 [[nodiscard]] TextWithTags PrepareForInsert(TextWithTags data) {
 	auto &text = data.text;
 	auto length = int(data.text.size());
@@ -1093,6 +1108,29 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 		: TextUtilities::TagWithAdded(simple, quote);
 }
 
+[[nodiscard]] TextWithTags WrapInQuote(
+		TextWithTags text,
+		const QString &blockTag) {
+	auto from = 0, till = int(text.text.size());
+	for (auto i = text.tags.begin(); from < till;) {
+		if (i == text.tags.end()) {
+			if (from < till) {
+				text.tags.push_back({ from, till - from, blockTag });
+			}
+			break;
+		} else if (i->offset > from) {
+			i = text.tags.insert(
+				i,
+				{ from, i->offset - from, blockTag });
+			++i;
+		}
+		i->id = TextUtilities::TagWithAdded(i->id, blockTag);
+		from = i->offset + i->length;
+		++i;
+	}
+	return text;
+}
+
 // Returns the position of the first inserted tag or "changedEnd" value if none found.
 int ProcessInsertedTags(
 		const style::InputField &st,
@@ -1124,14 +1162,10 @@ int ProcessInsertedTags(
 			QTextCursor c(document);
 			c.setPosition(tagFrom);
 			c.setPosition(tagTo, QTextCursor::KeepAnchor);
-			if (IsTagPre(tag.id)) {
-				c.setBlockFormat(PrepareBlockFormat(st, tagId));
-			} else if (tag.id == kTagBlockquote
-				|| tag.id == kTagBlockquoteCollapsed) {
-				c.setBlockFormat(PrepareBlockFormat(st, tagId));
+			if (const auto block = FindBlockTag(tag.id); !block.isEmpty()) {
+				c.setBlockFormat(PrepareBlockFormat(st, block));
 			}
 			c.mergeCharFormat(PrepareTagFormat(st, tagId));
-
 			applyNoTagFrom = tagTo;
 		}
 	}
@@ -1191,6 +1225,11 @@ struct FormattingAction {
 		ClearInstantReplace,
 		FixLineHeight,
 		FixPreTag,
+		CollapseBlockquote,
+		CutCollapsedBefore,
+		CutCollapsedAfter,
+		MakeCollapsedBlockquote,
+		RemoveBlockquote,
 	};
 
 	Type type = Type::Invalid;
@@ -1202,7 +1241,7 @@ struct FormattingAction {
 	QString customEmojiLink;
 	int intervalStart = 0;
 	int intervalEnd = 0;
-
+	int quoteId = 0;
 };
 
 } // namespace
@@ -1759,15 +1798,17 @@ void InputField::setTagMimeProcessor(Fn<QString(QStringView)> processor) {
 	_tagMimeProcessor = std::move(processor);
 }
 
-void InputField::setCustomEmojiFactory(
-		CustomEmojiFactory factory,
-		Fn<bool()> paused) {
+void InputField::setCustomTextContext(
+		Fn<std::any(Fn<void()> repaint)> context,
+		Fn<bool()> pausedEmoji,
+		Fn<bool()> pausedSpoiler,
+		CustomEmojiFactory factory) {
 	_customObject = std::make_unique<CustomFieldObject>(
 		this,
-		[=](QStringView data) {
-			return factory(data, [=] { customEmojiRepaint(); });
-		},
-		std::move(paused));
+		std::move(context),
+		std::move(pausedEmoji),
+		std::move(pausedSpoiler),
+		std::move(factory));
 	_inner->document()->documentLayout()->registerHandler(
 		kCustomEmojiFormat,
 		_customObject.get());
@@ -2309,22 +2350,9 @@ void InputField::toggleBlockquoteCollapsed(
 	cursor.removeSelectedText();
 	cursor.setBlockFormat(PrepareBlockFormat(_st, now, quoteId));
 	if (collapsed) {
-		auto from = 0, till = int(text.text.size());
-		for (auto i = text.tags.begin(); from < till;) {
-			if (i == text.tags.end()) {
-				text.tags.push_back({ from, till - from, kTagBlockquote });
-				break;
-			} else if (i->offset > from) {
-				i = text.tags.insert(
-					i,
-					{ from, i->offset - from, kTagBlockquote });
-				++i;
-			}
-			i->id = TextUtilities::TagWithAdded(i->id, kTagBlockquote);
-			from = i->offset + i->length;
-			++i;
-		}
-		insertWithTags({ range.from, range.from }, std::move(text));
+		insertWithTags(
+			{ range.from, range.from },
+			WrapInQuote(std::move(text), kTagBlockquote));
 	} else {
 		cursor.insertText(
 			kObjectReplacement,
@@ -2332,7 +2360,7 @@ void InputField::toggleBlockquoteCollapsed(
 		const auto now = cursor.position();
 		cursor.movePosition(QTextCursor::End);
 		if (cursor.position() == now) {
-			cursor.insertBlock(PrepareBlockFormat(_st));
+			cursor.insertBlock(PrepareBlockFormat(_st), _defaultCharFormat);
 		} else {
 			cursor.setPosition(now + 1);
 		}
@@ -2747,8 +2775,34 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 			const auto blockFormat = block.blockFormat();
 			blockTag = FindBlockTag(
 				blockFormat.property(kQuoteFormatId).toString()).toString();
-			const auto pre = IsTagPre(blockTag);
-			if (blockFormat.lineHeightType() != QTextBlockFormat::FixedHeight && blockTag.isEmpty()) {
+			if (blockTag == kTagBlockquoteCollapsed) {
+				const auto id = blockFormat.property(kQuoteId).toInt();
+				if (!_customObject || !id || block.length() == 1) {
+					action.type = ActionType::RemoveBlockquote;
+					action.intervalStart = block.position();
+					break;
+				}
+				auto collapsedObjectPosition = FindCollapsedQuoteObject(block);
+				if (collapsedObjectPosition < 0) {
+					action.type = ActionType::CollapseBlockquote;
+					action.quoteId = id;
+					action.intervalStart = block.position();
+					action.intervalEnd = block.position() + block.length() - 1;
+					break;
+				} else if (collapsedObjectPosition > block.position()) {
+					action.type = ActionType::CutCollapsedBefore;
+					action.quoteId = id;
+					action.intervalStart = block.position();
+					action.intervalEnd = collapsedObjectPosition;
+					break;
+				} else if (collapsedObjectPosition + 2 < block.position() + block.length()) {
+					action.type = ActionType::CutCollapsedAfter;
+					action.intervalStart = collapsedObjectPosition + 1;
+					break;
+				}
+				continue;
+			} else if (blockFormat.lineHeightType() != QTextBlockFormat::FixedHeight
+				&& blockTag != kTagBlockquoteCollapsed) {
 				action.intervalStart = block.position();
 				action.type = ActionType::FixLineHeight;
 				break;
@@ -2768,7 +2822,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				}
 				int changedPositionInFragment = insertPosition - fragmentPosition; // Can be negative.
 				int changedEndInFragment = insertEnd - fragmentPosition;
-				if (changedEndInFragment <= 0) {
+				if (changedEndInFragment < 0) {
 					break;
 				}
 
@@ -2778,7 +2832,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					action.intervalStart = fragmentPosition;
 					action.intervalEnd = fragmentEnd;
 					break;
-				} else if (pre
+				} else if (IsTagPre(blockTag)
 					&& blockTag != format.property(kTagProperty).toString()
 					&& format.objectType() != kCustomEmojiFormat) {
 					action.type = ActionType::FixPreTag;
@@ -2813,13 +2867,10 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					action.customEmojiLink = format.property(
 						kCustomEmojiLink).toString();
 					break;
-				}
-				if (format.objectType() == kCollapsedQuoteFormat) {
-					if (fragmentText == kObjectReplacement) {
-						checkedTill = fragmentEnd;
-						continue;
-					}
-					action.type = ActionType::RemoveTag;
+				} else if (_customObject
+					&& format.objectType() == kCollapsedQuoteFormat) {
+					action.type = ActionType::MakeCollapsedBlockquote;
+					action.quoteId = format.property(kQuoteId).toInt();
 					action.intervalStart = fragmentPosition;
 					action.intervalEnd = fragmentPosition + fragmentText.size();
 					break;
@@ -2950,11 +3001,102 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 		if (action.type != ActionType::Invalid) {
 			PrepareFormattingOptimization(document);
 
+			if (action.type == ActionType::CollapseBlockquote) {
+				toggleBlockquoteCollapsed(
+					action.quoteId,
+					kTagBlockquote,
+					{ action.intervalStart, action.intervalEnd });
+				continue;
+			}
+
 			auto cursor = QTextCursor(document);
+			if (action.type == ActionType::CutCollapsedBefore) {
+				auto realCursor = textCursor();
+				const auto wasAtEdge = !realCursor.hasSelection()
+					&& realCursor.position() == action.intervalEnd;
+				cursor.setPosition(action.intervalEnd);
+				if (action.intervalEnd > 0
+					&& IsNewline(
+						document->characterAt(action.intervalEnd - 1))) {
+					cursor.setPosition(
+						action.intervalEnd - 1,
+						QTextCursor::KeepAnchor);
+					cursor.insertText(
+						QString(QChar(kHardLine)),
+						_defaultCharFormat);
+				} else {
+					cursor.insertBlock(
+						PrepareBlockFormat(
+							_st,
+							kTagBlockquoteCollapsed,
+							action.quoteId),
+						_defaultCharFormat);
+				}
+				cursor.setPosition(action.intervalStart);
+				cursor.setBlockFormat(PrepareBlockFormat(_st));
+				if (wasAtEdge) {
+					realCursor.setPosition(action.intervalEnd);
+					_formattingCursorUpdate = realCursor;
+				}
+				continue;
+			}
 			cursor.setPosition(action.intervalStart);
 			if (action.type == ActionType::FixLineHeight) {
 				cursor.setBlockFormat(PrepareBlockFormat(_st));
 				continue;
+			} else if (action.type == ActionType::CutCollapsedAfter) {
+				if (IsNewline(document->characterAt(action.intervalStart))) {
+					cursor.setPosition(
+						action.intervalStart + 1,
+						QTextCursor::KeepAnchor);
+					cursor.insertText(
+						QString(QChar(kHardLine)),
+						_defaultCharFormat);
+				} else {
+					cursor.insertBlock(
+						PrepareBlockFormat(_st),
+						_defaultCharFormat);
+					++insertEnd;
+				}
+				continue;
+			} else if (action.type == ActionType::RemoveBlockquote) {
+				cursor.setBlockFormat(PrepareBlockFormat(_st));
+				continue;
+			} else if (action.type == ActionType::MakeCollapsedBlockquote) {
+				auto text = _customObject->collapsedText(action.quoteId);
+				if (text.text.isEmpty()) {
+					cursor.setPosition(action.intervalEnd);
+					cursor.removeSelectedText();
+				} else {
+					const auto blockFormat = PrepareBlockFormat(
+						_st,
+						kTagBlockquoteCollapsed);
+					const auto id = blockFormat.property(kQuoteId).toInt();
+					_customObject->setCollapsedText(id, std::move(text));
+
+					const auto format = PrepareCollapsedQuoteFormat(id);
+					auto bBlock = document->findBlock(action.intervalStart);
+					if (bBlock.position() != action.intervalStart) {
+						cursor.insertText(QString(QChar(kHardLine)), format);
+						++action.intervalStart;
+						++action.intervalEnd;
+					}
+					cursor.setBlockFormat(blockFormat);
+					cursor.setBlockCharFormat(format);
+					const auto after = action.intervalEnd + 1;
+					auto eBlock = document->findBlock(after);
+					if (eBlock.position() != after) {
+						cursor.setPosition(action.intervalEnd);
+						cursor.insertBlock(
+							PrepareBlockFormat(_st),
+							_defaultCharFormat);
+					}
+					cursor.setPosition(action.intervalStart);
+					cursor.setPosition(
+						action.intervalEnd,
+						QTextCursor::KeepAnchor);
+					cursor.setCharFormat(format);
+				}
 			}
 			cursor.setPosition(action.intervalEnd, QTextCursor::KeepAnchor);
 			if (action.type == ActionType::InsertEmoji
@@ -3068,7 +3210,7 @@ void InputField::documentContentsChanged(
 	QTextCursor(document).joinPreviousEditBlock();
 
 	chopByMaxLength(insertPosition, insertLength);
-	if (document->availableRedoSteps() == 0 && insertLength > 0) {
+	if (document->availableRedoSteps() == 0) {
 		const auto pageSize = document->pageSize();
 		processFormatting(insertPosition, insertPosition + insertLength);
 		if (document->pageSize() != pageSize) {
@@ -3095,6 +3237,11 @@ void InputField::documentContentsChanged(
 	}
 	_correcting = false;
 	QTextCursor(document).endEditBlock();
+
+	if (_formattingCursorUpdate) {
+		setTextCursor(*base::take(_formattingCursorUpdate));
+		ensureCursorVisible();
+	}
 
 	handleContentsChanged();
 	const auto added = charsAdded - _emojiSurrogateAmount;
@@ -3162,7 +3309,7 @@ void InputField::handleContentsChanged() {
 	startPlaceholderAnimation();
 	if (_lastTextWithTags.text.isEmpty()) {
 		if (const auto object = _customObject.get()) {
-			object->clear();
+			object->clearEmoji();
 		}
 	}
 	Integration::Instance().textActionsUpdated();
@@ -3304,6 +3451,10 @@ void InputField::setTextWithTags(
 	auto cursor = QTextCursor(document);
 	if (historyAction == HistoryAction::Clear) {
 		document->setUndoRedoEnabled(false);
+		if (const auto object = _customObject.get()) {
+			object->clearEmoji();
+			object->clearQuotes();
+		}
 		cursor.beginEditBlock();
 	} else if (historyAction == HistoryAction::MergeEntry) {
 		cursor.joinPreviousEditBlock();
@@ -3442,7 +3593,7 @@ void InputField::clear() {
 	_inner->clear();
 	startPlaceholderAnimation();
 	if (const auto object = _customObject.get()) {
-		object->clear();
+		object->clearEmoji();
 	}
 }
 
@@ -3508,7 +3659,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		_reverseMarkdownReplacement = false;
 	}
 
-	if (macmeta && backspace) {
+	if (backspace && macmeta) {
 		QTextCursor tc(textCursor()), start(tc);
 		start.movePosition(QTextCursor::StartOfLine);
 		tc.setPosition(start.position(), QTextCursor::KeepAnchor);
@@ -3516,6 +3667,8 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 	} else if (backspace
 		&& e->modifiers() == 0
 		&& revertFormatReplace()) {
+		e->accept();
+	} else if (backspace && jumpOutOfBlockByBackspace()) {
 		e->accept();
 	} else if (enter && enterSubmit) {
 		_submits.fire(e->modifiers());
@@ -3570,9 +3723,13 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		//
 		//const auto createEditBlock = (e != QKeySequence::Undo)
 		//	&& (e != QKeySequence::Redo);
-		//if (createEditBlock) {
-		//	cursor.beginEditBlock();
-		//}
+		const auto createEditBlock = enter
+			|| backspace
+			|| (e->key() == Qt::Key_Space)
+			|| (e->key() == Qt::Key_Delete);
+		if (createEditBlock) {
+			cursor.beginEditBlock();
+		}
 		if (e == QKeySequence::InsertParagraphSeparator) {
 			// qtbase commit dbb9579566f3accd8aa5fe61db9692991117afd3 introduced
 			// special logic for repeated 'Enter' key presses, which drops the
@@ -3588,9 +3745,9 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		} else {
 			_inner->QTextEdit::keyPressEvent(e);
 		}
-		//if (createEditBlock) {
-		//	cursor.endEditBlock();
-		//}
+		if (createEditBlock) {
+			cursor.endEditBlock();
+		}
 		_inner->ensureCursorVisible();
 		if (changeModifiers) {
 			e->setModifiers(oldModifiers);
@@ -3638,15 +3795,16 @@ bool InputField::exitQuoteWithNewBlock(int key) {
 		return false;
 	}
 	if (up) {
-		cursor.insertText(QString(QChar(kHardLine)));
-		cursor.joinPreviousEditBlock();
+		cursor.beginEditBlock();
+		cursor.insertText(QString(QChar(kHardLine)), _defaultCharFormat);
 		cursor.movePosition(QTextCursor::Start);
 		cursor.setBlockFormat(PrepareBlockFormat(_st));
+		cursor.setCharFormat(_defaultCharFormat);
 		cursor.endEditBlock();
 		setTextCursor(cursor);
 		checkContentHeight();
 	} else {
-		cursor.insertBlock(PrepareBlockFormat(_st));
+		cursor.insertBlock(PrepareBlockFormat(_st), _defaultCharFormat);
 	}
 	_inner->ensureCursorVisible();
 	return true;
@@ -4186,7 +4344,8 @@ auto InputField::insertWithTags(TextRange range, TextWithTags text)
 		|| (document()->findBlock(range.from).position() == range.from);
 	const auto goodRight = !adjustRight
 		|| (range.till >= fullLength)
-		|| (document()->findBlock(range.till).position() == range.till);
+		|| (document()->findBlock(range.till + 1).position()
+			== range.till + 1);
 	const auto leftEdge = goodLeft
 		? TextWithTags()
 		: getTextWithTagsPart(range.from - 1, range.from);
@@ -4333,8 +4492,14 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 	auto position = cursor.position();
 	auto from = cursor.selectionStart();
 	auto till = cursor.selectionEnd();
-	if (from == till) {
+	if (from >= till) {
 		return;
+	}
+	if (document()->characterAt(from) == kHardLine) {
+		++from;
+	}
+	if (document()->characterAt(till - 1) == kHardLine) {
+		--till;
 	}
 	auto range = TextRange{ from, till };
 	if (tag.isEmpty()) {
@@ -4476,6 +4641,25 @@ bool InputField::revertFormatReplace() {
 		return false;
 	}
 	return false;
+}
+
+bool InputField::jumpOutOfBlockByBackspace() {
+	auto cursor = textCursor();
+	if (cursor.hasSelection()) {
+		return false;
+	}
+	const auto position = cursor.position();
+	if (!position) {
+		return false;
+	}
+	const auto block = document()->findBlock(position);
+	const auto tagId = block.blockFormat().property(kQuoteFormatId);
+	if (block.position() != position || !HasBlockTag(tagId.toString())) {
+		return false;
+	}
+	cursor.setPosition(position - 1);
+	setTextCursor(cursor);
+	return true;
 }
 
 void InputField::contextMenuEventInner(QContextMenuEvent *e, QMenu *m) {

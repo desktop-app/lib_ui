@@ -9,10 +9,7 @@
 #include <QtGui/QTextObjectInterface>
 
 #include "ui/text/text.h"
-
-namespace Ui::Text {
-class CustomEmoji;
-} // namespace Ui::Text
+#include "ui/text/text_custom_emoji.h"
 
 namespace Ui {
 
@@ -20,12 +17,12 @@ class InputField;
 
 class CustomFieldObject : public QObject, public QTextObjectInterface {
 public:
-	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
-
 	CustomFieldObject(
 		not_null<InputField*> field,
-		Factory factory,
-		Fn<bool()> paused);
+		Fn<std::any(Fn<void()> repaint)> context,
+		Fn<bool()> pausedEmoji,
+		Fn<bool()> pausedSpoiler,
+		Text::CustomEmojiFactory factory);
 	~CustomFieldObject();
 
 	void *qt_metacast(const char *iid) override;
@@ -42,10 +39,12 @@ public:
 		const QTextFormat &format) override;
 
 	void setCollapsedText(int quoteId, TextWithTags text);
-	[[nodiscard]] TextWithTags collapsedText(int quoteId) const;
+	[[nodiscard]] const TextWithTags &collapsedText(int quoteId) const;
 
 	void setNow(crl::time now);
-	void clear();
+
+	void clearEmoji();
+	void clearQuotes();
 
 private:
 	struct Quote {
@@ -53,9 +52,16 @@ private:
 		Text::String string;
 	};
 
+	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
+	[[nodiscard]] Factory makeFactory(
+		Text::CustomEmojiFactory custom = nullptr);
+
 	const not_null<InputField*> _field;
-	Factory _factory;
-	Fn<bool()> _paused;
+	const Fn<std::any(Fn<void()> repaint)> _context;
+	const Fn<bool()> _pausedEmoji;
+	const Fn<bool()> _pausedSpoiler;
+	const Factory _factory;
+
 	base::flat_map<uint64, std::unique_ptr<Text::CustomEmoji>> _emoji;
 	base::flat_map<int, Quote> _quotes;
 	crl::time _now = 0;
