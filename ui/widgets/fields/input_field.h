@@ -99,6 +99,22 @@ struct MarkdownEnabledState {
 		const MarkdownEnabledState &,
 		const MarkdownEnabledState &) = default;
 };
+struct InputFieldTextRange {
+	int from = 0;
+	int till = 0;
+
+	friend inline bool operator==(
+		InputFieldTextRange,
+		InputFieldTextRange) = default;
+
+	[[nodiscard]] bool empty() const {
+		return (till <= from);
+	}
+};
+struct InputFieldSpoilerRect {
+	QRect geometry;
+	bool blockquote = false;
+};
 
 class InputField : public RpWidget {
 public:
@@ -168,16 +184,18 @@ public:
 	void setMinHeight(int minHeight);
 	void setMaxHeight(int maxHeight);
 
-	const TextWithTags &getTextWithTags() const {
+	[[nodiscard]] const TextWithTags &getTextWithTags() const {
 		return _lastTextWithTags;
 	}
-	const std::vector<MarkdownTag> &getMarkdownTags() const {
+	[[nodiscard]] const std::vector<MarkdownTag> &getMarkdownTags() const {
 		return _lastMarkdownTags;
 	}
-	TextWithTags getTextWithTagsPart(int start, int end = -1) const;
-	TextWithTags getTextWithAppliedMarkdown() const;
+	[[nodiscard]] TextWithTags getTextWithTagsPart(
+		int start,
+		int end = -1) const;
+	[[nodiscard]] TextWithTags getTextWithAppliedMarkdown() const;
 	void insertTag(const QString &text, QString tagId = QString());
-	bool empty() const {
+	[[nodiscard]] bool empty() const {
 		return _lastTextWithTags.text.isEmpty();
 	}
 	enum class HistoryAction {
@@ -352,6 +370,9 @@ private:
 	class Inner;
 	friend class Inner;
 	friend class CustomFieldObject;
+	friend class FieldSpoilerOverlay;
+	using TextRange = InputFieldTextRange;
+	using SpoilerRect = InputFieldSpoilerRect;
 	enum class MarkdownActionType {
 		ToggleTag,
 		EditLink,
@@ -468,10 +489,6 @@ private:
 		const QString &tag,
 		const QString &edge = QString());
 #endif
-	struct TextRange {
-		int from = 0;
-		int till = 0;
-	};
 	TextRange insertWithTags(TextRange range, TextWithTags text);
 	TextRange addMarkdownTag(TextRange range, const QString &tag);
 	void removeMarkdownTag(TextRange range, const QString &tag);
@@ -535,6 +552,11 @@ private:
 	QString _lastPreEditText;
 	int _lastTextSizeWithoutSurrogatePairsCount = 0;
 	std::optional<QString> _inputMethodCommit;
+	mutable std::vector<TextRange> _spoilerRangesText;
+	mutable std::vector<TextRange> _spoilerRangesEmoji;
+	mutable std::vector<SpoilerRect> _spoilerRects;
+	mutable QColor _blockquoteBg;
+	std::unique_ptr<RpWidget> _spoilerOverlay;
 
 	QMargins _additionalMargins;
 	QMargins _customFontMargins;

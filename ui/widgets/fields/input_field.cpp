@@ -29,6 +29,7 @@
 #include <QtGui/QClipboard>
 #include <QtGui/QTextBlock>
 #include <QtGui/QTextDocumentFragment>
+#include <QtGui/QRawFont>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
@@ -148,6 +149,15 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 
 [[nodiscard]] bool HasBlockTag(QStringView tag) {
 	return !FindBlockTag(tag).isEmpty();
+}
+
+[[nodiscard]] bool HasBlockTag(const QTextBlock &block) {
+	return HasBlockTag(
+		block.blockFormat().property(kQuoteFormatId).toString());
+}
+
+[[nodiscard]] bool HasSpoilerTag(QStringView tag) {
+	return ranges::contains(TextUtilities::SplitTags(tag), kTagSpoiler);
 }
 
 [[nodiscard]] bool StartsWithPre(not_null<QTextDocument*> document) {
@@ -339,6 +349,40 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	return m.hasMatch() ? m.captured(1).toLower() : QString();
 }
 
+class RangeAccumulator {
+public:
+	explicit RangeAccumulator(std::vector<InputFieldTextRange> &ranges)
+	: _ranges(ranges) {
+	}
+	~RangeAccumulator() {
+		finish();
+	}
+
+	void add(int offset, int length) {
+		if (_count > 0 && _ranges[_count - 1].till >= offset) {
+			accumulate_max(_ranges[_count - 1].till, offset + length);
+			return;
+		}
+		if (_count == _ranges.size()) {
+			_ranges.push_back({ offset, offset + length });
+		} else {
+			_ranges[_count] = { offset, offset + length };
+		}
+		++_count;
+	}
+
+	void finish() {
+		if (_count < _ranges.size()) {
+			_ranges.resize(_count);
+		}
+	}
+
+private:
+	std::vector<InputFieldTextRange> &_ranges;
+	int _count = 0;
+
+};
+
 class TagAccumulator {
 public:
 	explicit TagAccumulator(TextWithTags::Tags &tags) : _tags(tags) {
@@ -375,7 +419,7 @@ public:
 		}
 		_currentTagId = randomTagId;
 		_currentStart = currentPosition;
-	};
+	}
 
 	void finish() {
 		if (_currentTag < _tags.size()) {
@@ -822,7 +866,7 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 		QStringView tag) {
 	auto result = QTextCharFormat();
 	auto font = st.style.font;
-	auto color = std::optional<style::color>();
+	auto color = std::optional<QColor>();
 	auto bg = std::optional<QColor>();
 	auto replaceWhat = QString();
 	auto replaceWith = QString();
@@ -837,7 +881,7 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 				CustomEmojiIdFromLink(replaceWith));
 			result.setVerticalAlignment(QTextCharFormat::AlignTop);
 		} else if (IsValidMarkdownLink(tag)) {
-			color = st::defaultTextPalette.linkFg;
+			color = st::defaultTextPalette.linkFg->c;
 		} else if (tag == kTagBold) {
 			font = font->bold();
 		} else if (tag == kTagItalic) {
@@ -847,17 +891,15 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 		} else if (tag == kTagStrikeOut) {
 			font = font->strikeout();
 		} else if (tag == kTagCode || IsTagPre(tag)) {
-			color = st::defaultTextPalette.monoFg;
+			color = st::defaultTextPalette.monoFg->c;
 			font = font->monospace();
-		} else if (tag == kTagSpoiler) {
-			bg = st::msgInDateFg->c;
 		}
 	};
 	for (const auto &tag : TextUtilities::SplitTags(tag)) {
 		applyOne(tag);
 	}
 	result.setFont(font);
-	result.setForeground(color.value_or(st.textFg));
+	result.setForeground(color.value_or(st.textFg->c));
 	auto value = tag.toString();
 	result.setProperty(
 		kTagProperty,
@@ -1573,6 +1615,12 @@ InputField::InputField(
 			cursor.setCharFormat(_defaultCharFormat);
 			setTextCursor(cursor);
 		}
+		if (_customObject) {
+			_customObject->refreshSpoilerShown({
+				cursor.selectionStart(),
+				cursor.selectionEnd(),
+			});
+		}
 	}, lifetime());
 	base::qt_signal_producer(
 		_inner.get(),
@@ -1836,23 +1884,188 @@ void InputField::paintQuotes(QPaintEvent *e) {
 		return;
 	}
 	const auto clip = e->rect();
+
 	auto p = std::optional<QPainter>();
+	const auto ensurePainter = [&] {
+		if (!p) {
+			p.emplace(_inner->viewport());
+		}
+	};
+
 	auto shift = std::optional<QPoint>();
+	const auto ensureShift = [&] {
+		if (!shift) {
+			shift.emplace(
+				-_inner->horizontalScrollBar()->value(),
+				-_inner->verticalScrollBar()->value());
+		}
+	};
 
 	const auto document = _inner->document();
-	const auto layout = document->documentLayout();
+	const auto documentLayout = document->documentLayout();
 	const auto collapsedCutoff = CollapsedQuoteCutoff(_st);
-	auto block = document->firstBlock();
 
+	auto textSpoilerIt = begin(_spoilerRangesText);
+	const auto textSpoilerEnd = end(_spoilerRangesText);
+	auto textSpoiler = (TextRange*)nullptr;
+	const auto textSpoilerAdjust = [&](int position, int till) {
+		if (position >= till) {
+			textSpoiler = nullptr;
+			return;
+		}
+		while (textSpoilerIt != textSpoilerEnd
+			&& textSpoilerIt->till <= position) {
+			++textSpoilerIt;
+		}
+		textSpoiler = (textSpoilerIt != textSpoilerEnd
+			&& textSpoilerIt->from < till)
+			? &*textSpoilerIt
+			: nullptr;
+	};
+
+	auto emojiSpoilerIt = begin(_spoilerRangesEmoji);
+	const auto emojiSpoilerEnd = end(_spoilerRangesEmoji);
+	auto emojiSpoiler = (TextRange*)nullptr;
+	const auto emojiSpoilerAdjust = [&](int position, int till) {
+		if (position >= till) {
+			emojiSpoiler = nullptr;
+			return;
+		}
+		while (emojiSpoilerIt != emojiSpoilerEnd
+			&& emojiSpoilerIt->till <= position) {
+			++emojiSpoilerIt;
+		}
+		emojiSpoiler = (emojiSpoilerIt != emojiSpoilerEnd
+			&& emojiSpoilerIt->from < till)
+			? &*emojiSpoilerIt
+			: nullptr;
+	};
+
+	const auto spoilersAdjust = [&](int position, int till) {
+		textSpoilerAdjust(position, till);
+		emojiSpoilerAdjust(position, till);
+	};
+
+	_spoilerRects.resize(0);
+	auto lineStart = 0;
+	const auto addSpoiler = [&](QRectF rect, bool blockquote) {
+		auto normal = rect.toRect();
+		if (lineStart < _spoilerRects.size()) {
+			auto &last = _spoilerRects.back();
+			if (last.geometry.intersects(normal)) {
+				Assert(last.blockquote == blockquote);
+				last.geometry = last.geometry.united(normal);
+				return;
+			}
+		}
+		_spoilerRects.push_back({ normal, blockquote });
+	};
+	const auto finishSpoilersLine = [&] {
+		if (lineStart == _spoilerRects.size()) {
+			return;
+		}
+		ranges::sort(
+			_spoilerRects.begin() + lineStart,
+			_spoilerRects.end(),
+			ranges::less(),
+			[](const SpoilerRect &r) { return r.geometry.x(); });
+		auto i = _spoilerRects.begin() + lineStart;
+		auto j = i + 1;
+		while (j != end(_spoilerRects)) {
+			if (i->geometry.x() + i->geometry.width() >= j->geometry.x()) {
+				i->geometry = i->geometry.united(j->geometry);
+				j = _spoilerRects.erase(j);
+			} else {
+				i = j++;
+			}
+		}
+		lineStart = int(_spoilerRects.size());
+	};
+
+	auto block = document->firstBlock();
 	while (block.isValid()) {
+		auto belowClip = false;
+		auto blockRect = std::optional<QRectF>();
+		const auto ensureBlockRect = [&] {
+			if (!blockRect) {
+				blockRect.emplace(documentLayout->blockBoundingRect(block));
+			}
+		};
+
+		const auto blockPosition = block.position();
 		const auto format = block.blockFormat();
 		const auto type = format.lineHeightType();
 		const auto id = format.property(kQuoteFormatId).toString();
+		const auto blockquote = (id == kTagBlockquote);
 		const auto collapsed = (id == kTagBlockquoteCollapsed);
 		const auto pre = !collapsed && IsTagPre(id);
+
+		spoilersAdjust(blockPosition, blockPosition + block.length());
+		if (const auto spoilers = textSpoiler || emojiSpoiler) {
+			ensureShift();
+			ensureBlockRect();
+			const auto fullShift = blockRect->topLeft() + *shift;
+			if (fullShift.y() >= clip.y() + clip.height()) {
+				belowClip = true;
+			} else if (fullShift.y() + blockRect->height() > clip.y()) {
+				const auto blockLayout = block.layout();
+				const auto lines = std::max(blockLayout->lineCount(), 0);
+				for (auto i = 0; i != lines; ++i) {
+					const auto line = blockLayout->lineAt(i);
+					const auto top = fullShift.y() + line.y();
+					const auto height = line.height();
+					if (top + height <= clip.y()) {
+						continue;
+					} else if (top >= clip.y() + clip.height()) {
+						belowClip = true;
+						break;
+					}
+					const auto lineFrom = blockPosition + line.textStart();
+					const auto lineTill = lineFrom + line.textLength();
+
+					textSpoilerAdjust(lineFrom, lineTill);
+					while (textSpoiler) {
+						const auto from = std::max(textSpoiler->from, lineFrom);
+						const auto runs = line.glyphRuns(
+							std::max(textSpoiler->from, lineFrom) - blockPosition,
+							std::min(textSpoiler->till, lineTill) - from);
+						for (const auto &run : runs) {
+							const auto runRect = run.boundingRect();
+							addSpoiler(
+								QRectF(
+									fullShift.x() + runRect.x(),
+									top,
+									runRect.width(),
+									height),
+								blockquote);
+						}
+						textSpoilerAdjust(textSpoiler->till, lineTill);
+					}
+
+					emojiSpoilerAdjust(lineFrom, lineTill);
+					while (emojiSpoiler) {
+						const auto from = std::max(emojiSpoiler->from, lineFrom);
+						const auto till = std::min(emojiSpoiler->till, lineTill);
+						const auto x = line.cursorToX(from - blockPosition);
+						const auto width = line.cursorToX(till - blockPosition) - x;
+						addSpoiler(
+							QRectF(
+								fullShift.x() + std::min(x, x + width),
+								top,
+								std::abs(width),
+								height),
+							blockquote);
+						emojiSpoilerAdjust(emojiSpoiler->till, lineTill);
+					}
+
+					finishSpoilersLine();
+				}
+			}
+		}
+
 		const auto st = pre
 			? &_st.style.pre
-			: (id == kTagBlockquote || collapsed)
+			: (blockquote || collapsed)
 			? &_st.style.blockquote
 			: nullptr;
 		if (st) {
@@ -1861,7 +2074,10 @@ void InputField::paintQuotes(QPaintEvent *e) {
 					-_inner->horizontalScrollBar()->value(),
 					-_inner->verticalScrollBar()->value());
 			}
-			const auto rect = layout->blockBoundingRect(block).toRect();
+			if (!blockRect) {
+				blockRect.emplace(documentLayout->blockBoundingRect(block));
+			}
+			const auto rect = blockRect->toRect();
 			const auto added = pre
 				? QMargins(0, 0, 0, st->verticalSkip)
 				: QMargins();
@@ -1882,6 +2098,9 @@ void InputField::paintQuotes(QPaintEvent *e) {
 					.expandIcon = collapsed,
 					.collapseIcon = collapsible,
 				});
+				if (!pre) {
+					_blockquoteBg = cache->bg;
+				}
 
 				if (st->header > 0) {
 					const auto font = _st.style.font->monospace();
@@ -1895,6 +2114,9 @@ void InputField::paintQuotes(QPaintEvent *e) {
 						format.property(kPreLanguage).toString());
 				}
 			}
+		}
+		if (belowClip) {
+			break;
 		}
 		block = block.next();
 	}
@@ -2568,6 +2790,13 @@ InputField::TextPart InputField::getTextPart(
 	}
 	const auto full = (start == 0 && end < 0);
 
+	auto textSpoilers = std::optional<RangeAccumulator>();
+	auto emojiSpoilers = std::optional<RangeAccumulator>();
+	if (full) {
+		textSpoilers.emplace(_spoilerRangesText);
+		emojiSpoilers.emplace(_spoilerRangesEmoji);
+	}
+
 	auto lastTag = QString();
 	TagAccumulator tagAccumulator(outTagsList);
 	MarkdownTagAccumulator markdownTagAccumulator(outMarkdownTags);
@@ -2612,9 +2841,8 @@ InputField::TextPart InputField::getTextPart(
 			const auto format = fragment.charFormat();
 			if (!full) {
 				if (fragmentPosition == end) {
-					tagAccumulator.feed(
-						FullTag(format, blockFormat),
-						result.size());
+					const auto tag = FullTag(format, blockFormat);
+					tagAccumulator.feed(tag, result.size());
 					break;
 				} else if (fragmentPosition > end) {
 					break;
@@ -2652,6 +2880,15 @@ InputField::TextPart InputField::getTextPart(
 			if (full || !text.isEmpty()) {
 				lastTag = FullTag(format, blockFormat);
 				tagAccumulator.feed(lastTag, result.size());
+				if (textSpoilers && HasSpoilerTag(lastTag)) {
+					const auto offset = fragment.position();
+					const auto length = fragment.length();
+					if (!emojiEntry.text.isEmpty()) {
+						emojiSpoilers->add(offset, length);
+					} else {
+						textSpoilers->add(offset, length);
+					}
+				}
 			}
 
 			auto begin = text.data();
@@ -3295,6 +3532,19 @@ void InputField::handleContentsChanged() {
 		_markdownEnabledState.disabled() ? nullptr : &_lastMarkdownTags);
 
 	//highlightMarkdown();
+	if (_spoilerRangesText.empty() && _spoilerRangesEmoji.empty()) {
+		_spoilerOverlay = nullptr;
+	} else if (_customObject) {
+		if (!_spoilerOverlay) {
+			_spoilerOverlay = _customObject->createSpoilerOverlay();
+			_spoilerOverlay->setGeometry(_inner->rect());
+		}
+		const auto cursor = textCursor();
+		_customObject->refreshSpoilerShown({
+			cursor.selectionStart(),
+			cursor.selectionEnd(),
+		});
+	}
 
 	_lastTextSizeWithoutSurrogatePairsCount = currentTextSize;
 	if (tagsChanged || (_lastTextWithTags.text != currentText)) {
@@ -3740,7 +3990,11 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 
 			// Also we insert a kSoftLine instead of a block, because we want
 			// newlines to belong to the same block by default (blockquotes).
-			cursor.insertText(QString(QChar(kSoftLine)));
+			if (!cursor.hasSelection() && !HasBlockTag(cursor.block())) {
+				cursor.insertText(QString(QChar(kHardLine)));
+			} else {
+				cursor.insertText(QString(QChar(kSoftLine)));
+			}
 			e->accept();
 		} else {
 			_inner->QTextEdit::keyPressEvent(e);
@@ -3774,7 +4028,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 						e->ignore();
 					}
 				} else {
-					setTextCursor(cursor);
+					setTextCursor(updatedCursor);
 				}
 			}
 		}
@@ -4833,6 +5087,9 @@ void InputField::resizeEvent(QResizeEvent *e) {
 	refreshPlaceholder(_placeholderFull.current());
 	_inner->setGeometry(rect().marginsRemoved(
 		_st.textMargins + _additionalMargins + _customFontMargins));
+	if (_spoilerOverlay) {
+		_spoilerOverlay->setGeometry(_inner->rect());
+	}
 	_borderAnimationStart = width() / 2;
 	RpWidget::resizeEvent(e);
 	checkContentHeight();

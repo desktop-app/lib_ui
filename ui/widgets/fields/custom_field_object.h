@@ -8,12 +8,15 @@
 
 #include <QtGui/QTextObjectInterface>
 
+#include "ui/effects/animations.h"
 #include "ui/text/text.h"
 #include "ui/text/text_custom_emoji.h"
 
 namespace Ui {
 
 class InputField;
+class RpWidget;
+struct InputFieldTextRange;
 
 class CustomFieldObject : public QObject, public QTextObjectInterface {
 public:
@@ -46,6 +49,9 @@ public:
 	void clearEmoji();
 	void clearQuotes();
 
+	[[nodiscard]] std::unique_ptr<RpWidget> createSpoilerOverlay();
+	void refreshSpoilerShown(InputFieldTextRange range);
+
 private:
 	struct Quote {
 		TextWithTags text;
@@ -66,6 +72,9 @@ private:
 	base::flat_map<int, Quote> _quotes;
 	crl::time _now = 0;
 	int _skip = 0;
+
+	Animations::Simple _spoilerOpacity;
+	bool _spoilerHidden = false;
 
 };
 

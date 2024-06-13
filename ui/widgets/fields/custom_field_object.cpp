@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/fields/custom_field_object.h"
 
+#include "ui/effects/spoiler_mess.h"
 #include "ui/text/text.h"
 #include "ui/text/text_renderer.h"
 #include "ui/text/text_utilities.h"
@@ -13,7 +14,92 @@
 #include "styles/style_basic.h"
 #include "styles/style_widgets.h"
 
+#include <QtWidgets/QTextEdit>
+#include <QtWidgets/QScrollBar>
+
 namespace Ui {
+namespace {
+
+constexpr auto kSpoilerHiddenOpacity = 0.5;
+
+using SpoilerRect = InputFieldSpoilerRect;
+
+} // namespace
+
+class FieldSpoilerOverlay final : public RpWidget {
+public:
+	FieldSpoilerOverlay(
+		not_null<InputField*> field,
+		Fn<float64()> shown,
+		Fn<bool()> paused);
+
+private:
+	void paintEvent(QPaintEvent *e) override;
+
+	const not_null<InputField*> _field;
+	const Fn<float64()> _shown;
+	const Fn<bool()> _paused;
+	SpoilerAnimation _animation;
+
+};
+
+FieldSpoilerOverlay::FieldSpoilerOverlay(
+	not_null<InputField*> field,
+	Fn<float64()> shown,
+	Fn<bool()> paused)
+: RpWidget(field->rawTextEdit())
+, _field(field)
+, _shown(std::move(shown))
+, _paused(std::move(paused))
+, _animation([=] { update(); }) {
+	setAttribute(Qt::WA_TransparentForMouseEvents);
+	show();
+}
+
+void FieldSpoilerOverlay::paintEvent(QPaintEvent *e) {
+	auto p = std::optional<QPainter>();
+	auto topShift = std::optional<int>();
+	auto frame = std::optional<SpoilerMessFrame>();
+	auto blockquoteBg = std::optional<QColor>();
+	const auto paused = _paused && _paused();
+	const auto clip = e->rect();
+
+	const auto shown = _shown();
+	const auto bgOpacity = shown;
+	const auto fgOpacity = 1. * shown + kSpoilerHiddenOpacity * (1. - shown);
+	for (const auto &rect : _field->_spoilerRects) {
+		const auto fill = rect.geometry.intersected(clip);
+		if (fill.isEmpty()) {
+			continue;
+		} else if (!p) {
+			p.emplace(this);
+			const auto paused = _paused && _paused();
+			frame.emplace(
+				Text::DefaultSpoilerCache()->lookup(
+					st::defaultTextPalette.spoilerFg->c)->frame(
+						_animation.index(crl::now(), paused)));
+			topShift = -_field->rawTextEdit()->verticalScrollBar()->value();
+		}
+		if (bgOpacity > 0.) {
+			p->setOpacity(bgOpacity);
+			if (rect.blockquote && !blockquoteBg) {
+				const auto bg = _field->_blockquoteBg;
+				blockquoteBg = (bg.alphaF() < 1.)
+					? anim::color(
+						_field->_st.textBg->c,
+						QColor(bg.red(), bg.green(), bg.blue()),
+						bg.alphaF())
+					: bg;
+			}
+			p->fillRect(
+				fill,
+				rect.blockquote ? *blockquoteBg : _field->_st.textBg->c);
+		}
+		p->setOpacity(fgOpacity);
+		const auto shift = QPoint(0, *topShift) - rect.geometry.topLeft();
+		FillSpoilerRect(*p, rect.geometry, *frame, shift);
+	}
+}
 
 CustomFieldObject::CustomFieldObject(
 	not_null<InputField*> field,
@@ -119,6 +205,67 @@ void CustomFieldObject::clearEmoji() {
 
 void CustomFieldObject::clearQuotes() {
 	_quotes.clear();
+}
+
+std::unique_ptr<RpWidget> CustomFieldObject::createSpoilerOverlay() {
+	return std::make_unique<FieldSpoilerOverlay>(
+		_field,
+		[=] { return _spoilerOpacity.value(_spoilerHidden ? 0. : 1.); },
+		_pausedSpoiler);
+}
+
+void CustomFieldObject::refreshSpoilerShown(InputFieldTextRange range) {
+	auto hidden = false;
+	using Range = InputFieldTextRange;
+	const auto intersects = [](Range a, Range b) {
+		return (a.from < b.till) && (b.from < a.till);
+	};
+	if (range.till > range.from) {
+		const auto check = [&](const std::vector<Range> &list) {
+			if (!hidden) {
+				for (const auto &spoiler : list) {
+					if (intersects(spoiler, range)) {
+						hidden = true;
+						break;
+					}
+				}
+			}
+		};
+		check(_field->_spoilerRangesText);
+		check(_field->_spoilerRangesEmoji);
+	} else {
+		auto touchesLeft = false;
+		auto touchesRight = false;
+		const auto cursor = range.from;
+		const auto check = [&](const std::vector<Range> &list) {
+			if (!touchesLeft || !touchesRight) {
+				for (const auto &spoiler : list) {
+					if (spoiler.from <= cursor && spoiler.till >= cursor) {
+						if (spoiler.from < cursor) {
+							touchesLeft = true;
+						}
+						if (spoiler.till > cursor) {
+							touchesRight = true;
+						}
+						if (touchesLeft && touchesRight) {
+							break;
+						}
+					}
+				}
+			}
+		};
+		check(_field->_spoilerRangesText);
+		check(_field->_spoilerRangesEmoji);
+		hidden = touchesLeft && touchesRight;
+	}
+	if (_spoilerHidden != hidden) {
+		_spoilerHidden = hidden;
+		_spoilerOpacity.start(
+			[=] { _field->update(); },
+			hidden ? 1. : 0.,
+			hidden ? 0. : 1.,
+			st::fadeWrapDuration);
+	}
 }
 
 void CustomFieldObject::setCollapsedText(int quoteId, TextWithTags text) {
