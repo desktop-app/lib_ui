@@ -373,24 +373,6 @@ void ClearUniversalChecked() {
 	}
 }
 
-[[nodiscard]] uint8 EmojiSurrogatePairs(const QString &e) {
-	if (e.size() > 1) {
-		auto count = uint8(0);
-		const auto begin = e.data();
-		auto ch = begin;
-		for (const auto end = begin + e.size(); ch != end; ++ch) {
-			if ((ch + 1 < end)
-				&& ch->isHighSurrogate()
-				&& (ch + 1)->isLowSurrogate()) {
-				count++;
-			}
-		}
-		return count;
-	} else {
-		return 0;
-	}
-}
-
 } // namespace
 
 namespace internal {
@@ -656,8 +638,7 @@ One::One(
 , _original(original)
 , _index(index)
 , _hasPostfix(hasPostfix)
-, _colorizable(colorizable)
-, _surrogatePairs(EmojiSurrogatePairs(text())) {
+, _colorizable(colorizable) {
 	Expects(!_colorizable || !colored());
 }
 

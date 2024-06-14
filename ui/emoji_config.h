@@ -104,17 +104,12 @@ public:
 		return "emoji://e." + QString::number(index());
 	}
 
-	[[nodiscard]] uint8 surrogatePairs() const {
-		return _surrogatePairs;
-	}
-
 private:
 	const QString _id;
 	const EmojiPtr _original = nullptr;
 	const uint32 _index = 0;
 	const bool _hasPostfix = false;
 	const bool _colorizable = false;
-	const uint8 _surrogatePairs;
 
 	friend void internal::Init();
 

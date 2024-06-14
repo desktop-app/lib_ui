@@ -2771,7 +2771,7 @@ bool InputField::hasText() const {
 	return (from.next() != till);
 }
 
-InputField::TextPart InputField::getTextPart(
+QString InputField::getTextPart(
 		int start,
 		int end,
 		TagList &outTagsList,
@@ -2782,7 +2782,7 @@ InputField::TextPart InputField::getTextPart(
 	if (end >= 0 && end <= start) {
 		outTagsChanged = !outTagsList.isEmpty();
 		outTagsList.clear();
-		return { QString(), 0 };
+		return {};
 	}
 
 	if (start < 0) {
@@ -2818,7 +2818,6 @@ InputField::TextPart InputField::getTextPart(
 	if (!full && end < 0) {
 		end = possibleLength;
 	}
-	auto textSizeWithoutSurrogatePairsCount = document->characterCount() - 1;
 
 	for (auto block = from; block != till;) {
 		// Only full blocks add block tags.
@@ -2851,19 +2850,14 @@ InputField::TextPart InputField::getTextPart(
 				}
 			}
 
-			struct EmojiEntry final {
-				QString text;
-				uint8 surrogatePairs = 0;
-			};
-
-			const auto emojiEntry = [&]() -> EmojiEntry {
+			const auto emojiText = [&] {
 				if (format.isImageFormat()) {
 					const auto imageName = format.toImageFormat().name();
 					if (const auto emoji = Emoji::FromUrl(imageName)) {
-						return { emoji->text(), emoji->surrogatePairs() };
+						return emoji->text();
 					}
 				}
-				return { format.property(kCustomEmojiText).toString(), 0 };
+				return format.property(kCustomEmojiText).toString();
 			}();
 			auto text = [&] {
 				const auto result = fragment.text();
@@ -2883,7 +2877,7 @@ InputField::TextPart InputField::getTextPart(
 				if (textSpoilers && HasSpoilerTag(lastTag)) {
 					const auto offset = fragment.position();
 					const auto length = fragment.length();
-					if (!emojiEntry.text.isEmpty()) {
+					if (!emojiText.isEmpty()) {
 						emojiSpoilers->add(offset, length);
 					} else {
 						textSpoilers->add(offset, length);
@@ -2924,12 +2918,9 @@ InputField::TextPart InputField::getTextPart(
 						}
 						result.append(collapsed.text);
 					} else {
-						const auto size = emojiEntry.text.size() - 1;
-						adjustedLength += size;
-						if (!emojiEntry.text.isEmpty()) {
-							result.append(emojiEntry.text);
-							textSizeWithoutSurrogatePairsCount += size
-								- emojiEntry.surrogatePairs;
+						adjustedLength += emojiText.size() - 1;
+						if (!emojiText.isEmpty()) {
+							result.append(emojiText);
 						}
 					}
 					begin = ch + 1;
@@ -2961,7 +2952,7 @@ InputField::TextPart InputField::getTextPart(
 	markdownTagAccumulator.finish();
 
 	outTagsChanged = tagAccumulator.changed();
-	return { result, textSizeWithoutSurrogatePairsCount };
+	return result;
 }
 
 bool InputField::isUndoAvailable() const {
@@ -3524,7 +3515,7 @@ void InputField::handleContentsChanged() {
 	setErrorShown(false);
 
 	auto tagsChanged = false;
-	const auto [currentText, currentTextSize] = getTextPart(
+	const auto currentText = getTextPart(
 		0,
 		-1,
 		_lastTextWithTags.tags,
@@ -3546,7 +3537,6 @@ void InputField::handleContentsChanged() {
 		});
 	}
 
-	_lastTextSizeWithoutSurrogatePairsCount = currentTextSize;
 	if (tagsChanged || (_lastTextWithTags.text != currentText)) {
 		_lastTextWithTags.text = currentText;
 		const auto weak = MakeWeak(this);
@@ -3726,7 +3716,7 @@ void InputField::setTextWithTags(
 TextWithTags InputField::getTextWithTagsPart(int start, int end) const {
 	auto changed = false;
 	auto result = TextWithTags();
-	result.text = getTextPart(start, end, result.tags, changed).text;
+	result.text = getTextPart(start, end, result.tags, changed);
 	return result;
 }
 
@@ -5199,9 +5189,14 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document) {
 	}
 }
 
-int FieldCharacterCount(not_null<InputField*> field) {
-	// This method counts emoji properly.
-	return field->lastTextSizeWithoutSurrogatePairsCount();
+int ComputeRealUnicodeCharactersCount(const QString &text) {
+	return text.size() - ranges::count(text, true, [](QChar ch) {
+		return ch.isHighSurrogate();
+	});
+}
+
+int ComputeFieldCharacterCount(not_null<InputField*> field) {
+	return ComputeRealUnicodeCharactersCount(field->getLastText());
 }
 
 void AddLengthLimitLabel(not_null<InputField*> field, int limit) {

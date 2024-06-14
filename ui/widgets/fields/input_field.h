@@ -260,11 +260,8 @@ public:
 	[[nodiscard]] static QString CustomEmojiLink(QStringView entityData);
 	[[nodiscard]] static QString CustomEmojiEntityData(QStringView link);
 
-	const QString &getLastText() const {
+	[[nodiscard]] const QString &getLastText() const {
 		return _lastTextWithTags.text;
-	}
-	[[nodiscard]] int lastTextSizeWithoutSurrogatePairsCount() const {
-		return _lastTextSizeWithoutSurrogatePairsCount;
 	}
 	void setPlaceholder(
 		rpl::producer<QString> placeholder,
@@ -430,11 +427,7 @@ private:
 
 	// "start" and "end" are in coordinates of text where emoji are replaced
 	// by ObjectReplacementCharacter. If "end" = -1 means get text till the end.
-	struct TextPart final {
-		QString text;
-		int textSizeWithoutSurrogatePairsCount = 0;
-	};
-	TextPart getTextPart(
+	[[nodiscard]] QString getTextPart(
 		int start,
 		int end,
 		TagList &outTagsList,
@@ -550,7 +543,6 @@ private:
 	TextWithTags _lastTextWithTags;
 	std::vector<MarkdownTag> _lastMarkdownTags;
 	QString _lastPreEditText;
-	int _lastTextSizeWithoutSurrogatePairsCount = 0;
 	std::optional<QString> _inputMethodCommit;
 	mutable std::vector<TextRange> _spoilerRangesText;
 	mutable std::vector<TextRange> _spoilerRangesEmoji;
@@ -649,7 +641,8 @@ private:
 
 void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 
-[[nodiscard]] int FieldCharacterCount(not_null<InputField*> field);
+[[nodiscard]] int ComputeRealUnicodeCharactersCount(const QString &text);
+[[nodiscard]] int ComputeFieldCharacterCount(not_null<InputField*> field);
 
 void AddLengthLimitLabel(not_null<InputField*> field, int limit);
 
