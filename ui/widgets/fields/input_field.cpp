@@ -30,8 +30,8 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
-#include <QtWidgets/QShortcut>
 #include <QtWidgets/QTextEdit>
+#include <QShortcut>
 
 namespace Ui {
 namespace {
@@ -3064,10 +3064,10 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 	if (_markdownEnabledState.disabled()) {
 		return false;
 	}
-	const auto modifiers = e->modifiers()
-		& ~(Qt::KeypadModifier | Qt::GroupSwitchModifier);
 	const auto matches = [&](const QKeySequence &sequence) {
-		const auto events = QKeySequence(modifiers | e->key());
+		const auto searchKey = (e->modifiers() | e->key())
+			& ~(Qt::KeypadModifier | Qt::GroupSwitchModifier);
+		const auto events = QKeySequence(searchKey);
 		return sequence.matches(events) == QKeySequence::ExactMatch;
 	};
 	for (const auto &action : MarkdownActions()) {
