@@ -30,6 +30,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
+#include <QtWidgets/QShortcut>
 #include <QtWidgets/QTextEdit>
 
 namespace Ui {
@@ -1211,60 +1212,6 @@ InputField::InputField(
 , _maxHeight(st.heightMax)
 , _inner(std::make_unique<Inner>(this))
 , _lastTextWithTags(value)
-, _boldShortcut(
-		QKeySequence::Bold,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _italicShortcut(
-		QKeySequence::Italic,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _underlineShortcut(
-		QKeySequence::Underline,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _strikeOutShortcut(
-		kStrikeOutSequence,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _monospaceShortcut(
-		kMonospaceSequence,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _blockquoteShortcut(
-		kBlockquoteSequence,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _spoilerShortcut(
-		kSpoilerSequence,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _clearFormatShortcut(
-		kClearFormatSequence,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
-, _editLinkShortcut(
-		kEditLinkSequence,
-		_inner.get(),
-		nullptr,
-		nullptr,
-		Qt::WidgetShortcut)
 , _placeholderFull(std::move(placeholder)) {
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
 	_inner->setAcceptRichText(false);
@@ -1384,91 +1331,8 @@ InputField::InputField(
 	) | rpl::start_with_next([] {
 		Integration::Instance().textActionsUpdated();
 	}, lifetime());
-	base::qt_signal_producer(
-		&_boldShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagBold);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagBold);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_italicShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagItalic);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagItalic);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_underlineShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagUnderline);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagUnderline);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_strikeOutShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagStrikeOut);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagStrikeOut);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_monospaceShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagCode)
-			&& _markdownEnabledState.enabledForTag(kTagPre);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagCode);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_blockquoteShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagBlockquote);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagBlockquote);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_spoilerShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _markdownEnabledState.enabledForTag(kTagSpoiler);
-	}) | rpl::start_with_next([=] {
-		toggleSelectionMarkdown(kTagSpoiler);
-	}, lifetime());
-	base::qt_signal_producer(
-		&_clearFormatShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled();
-	}) | rpl::start_with_next([=] {
-		clearSelectionMarkdown();
-	}, lifetime());
-	base::qt_signal_producer(
-		&_editLinkShortcut,
-		&QShortcut::activated
-	) | rpl::filter([=] {
-		return !_markdownEnabledState.disabled()
-			&& _editLinkCallback;
-	}) | rpl::start_with_next([=] {
-		const auto cursor = textCursor();
-		editMarkdownLink({
-			cursor.selectionStart(),
-			cursor.selectionEnd()
-		});
-	}, lifetime());
+
+	setupMarkdownShortcuts();
 
 	const auto bar = _inner->verticalScrollBar();
 	_scrollTop = bar->value();
@@ -1486,6 +1350,59 @@ InputField::InputField(
 	startBorderAnimation();
 	startPlaceholderAnimation();
 	finishAnimating();
+}
+
+std::vector<InputField::MarkdownAction> InputField::MarkdownActions() {
+	return {
+		{ QKeySequence::Bold, kTagBold },
+		{ QKeySequence::Italic, kTagItalic },
+		{ QKeySequence::Underline, kTagUnderline },
+		{ kStrikeOutSequence, kTagStrikeOut },
+		{ kMonospaceSequence, kTagCode },
+		{ kBlockquoteSequence, kTagBlockquote },
+		{ kSpoilerSequence, kTagSpoiler },
+		{ kClearFormatSequence, QString() },
+		{ kEditLinkSequence, QString(), MarkdownActionType::EditLink },
+	};
+}
+
+void InputField::setupMarkdownShortcuts() {
+	for (const auto &action : MarkdownActions()) {
+		auto shortcut = std::make_unique<QShortcut>(
+			action.sequence,
+			_inner.get(),
+			nullptr,
+			nullptr,
+			Qt::WidgetShortcut);
+		QObject::connect(shortcut.get(), &QShortcut::activated, [=] {
+			executeMarkdownAction(action);
+		});
+		_markdownShortcuts.push_back(std::move(shortcut));
+	}
+}
+
+bool InputField::executeMarkdownAction(MarkdownAction action) {
+	if (_markdownEnabledState.disabled()) {
+		return false;
+	} else if (action.type == MarkdownActionType::EditLink) {
+		if (!_editLinkCallback) {
+			return false;
+		}
+		const auto cursor = textCursor();
+		editMarkdownLink({
+			cursor.selectionStart(),
+			cursor.selectionEnd()
+		});
+	} else if (action.tag.isEmpty()) {
+		clearSelectionMarkdown();
+	} else if (!_markdownEnabledState.enabledForTag(action.tag)
+		|| (action.tag == kTagCode
+			&& !_markdownEnabledState.enabledForTag(kTagPre))) {
+		return false;
+	} else {
+		toggleSelectionMarkdown(action.tag);
+	}
+	return true;
 }
 
 const rpl::variable<int> &InputField::scrollTop() const {
@@ -3061,6 +2978,8 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		}
 	} else if (e->key() == Qt::Key_Search || e == QKeySequence::Find) {
 		e->ignore();
+	} else if (handleMarkdownKey(e)) {
+		e->accept();
 	} else if (_customUpDown && (e->key() == Qt::Key_Up || e->key() == Qt::Key_Down || e->key() == Qt::Key_PageUp || e->key() == Qt::Key_PageDown)) {
 		e->ignore();
 #ifdef Q_OS_MAC
@@ -3139,6 +3058,24 @@ TextWithTags InputField::getTextWithTagsSelected() const {
 	const auto start = cursor.selectionStart();
 	const auto end = cursor.selectionEnd();
 	return (end > start) ? getTextWithTagsPart(start, end) : TextWithTags();
+}
+
+bool InputField::handleMarkdownKey(QKeyEvent *e) {
+	if (_markdownEnabledState.disabled()) {
+		return false;
+	}
+	const auto modifiers = e->modifiers()
+		& ~(Qt::KeypadModifier | Qt::GroupSwitchModifier);
+	const auto matches = [&](const QKeySequence &sequence) {
+		const auto events = QKeySequence(modifiers | e->key());
+		return sequence.matches(events) == QKeySequence::ExactMatch;
+	};
+	for (const auto &action : MarkdownActions()) {
+		if (matches(action.sequence)) {
+			return executeMarkdownAction(action);
+		}
+	}
+	return false;
 }
 
 auto InputField::selectionEditLinkData(EditLinkSelection selection) const

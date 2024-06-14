@@ -15,11 +15,11 @@
 #include "ui/text/text_custom_emoji.h"
 
 #include <QtGui/QTextObjectInterface>
-#include <QShortcut>
 
 #include <rpl/variable.h>
 
 class QMenu;
+class QShortcut;
 class QTextEdit;
 class QTouchEvent;
 class QContextMenuEvent;
@@ -375,6 +375,15 @@ protected:
 private:
 	class Inner;
 	friend class Inner;
+	enum class MarkdownActionType {
+		ToggleTag,
+		EditLink,
+	};
+	struct MarkdownAction {
+		QKeySequence sequence;
+		QString tag;
+		MarkdownActionType type = MarkdownActionType::ToggleTag;
+	};
 
 	void handleContentsChanged();
 	bool viewportEventInner(QEvent *e);
@@ -383,6 +392,10 @@ private:
 	void updatePalette();
 	void refreshPlaceholder(const QString &text);
 	int placeholderSkipWidth() const;
+
+	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActions();
+	void setupMarkdownShortcuts();
+	bool executeMarkdownAction(MarkdownAction action);
 
 	bool heightAutoupdated();
 	void checkContentHeight();
@@ -442,6 +455,7 @@ private:
 	void addMarkdownMenuAction(
 		not_null<QMenu*> menu,
 		not_null<QAction*> action);
+	bool handleMarkdownKey(QKeyEvent *e);
 
 	// We don't want accidentally detach InstantReplaces map.
 	// So we access it only by const reference from this method.
@@ -550,15 +564,6 @@ private:
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
-	QShortcut _boldShortcut;
-	QShortcut _italicShortcut;
-	QShortcut _underlineShortcut;
-	QShortcut _strikeOutShortcut;
-	QShortcut _monospaceShortcut;
-	QShortcut _blockquoteShortcut;
-	QShortcut _spoilerShortcut;
-	QShortcut _clearFormatShortcut;
-	QShortcut _editLinkShortcut;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
 	bool _inDrop = false;
@@ -607,6 +612,8 @@ private:
 
 	rpl::event_stream<DocumentChangeInfo> _documentContentsChanges;
 	rpl::event_stream<MarkdownTag> _markdownTagApplies;
+
+	std::vector<std::unique_ptr<QShortcut>> _markdownShortcuts;
 
 	rpl::event_stream<bool> _focusedChanges;
 	rpl::event_stream<> _heightChanges;
