@@ -61,7 +61,6 @@ void FieldSpoilerOverlay::paintEvent(QPaintEvent *e) {
 	auto topShift = std::optional<int>();
 	auto frame = std::optional<SpoilerMessFrame>();
 	auto blockquoteBg = std::optional<QColor>();
-	const auto paused = _paused && _paused();
 	const auto clip = e->rect();
 
 	const auto shown = _shown();
@@ -153,7 +152,6 @@ void CustomFieldObject::drawObject(
 		int posInDocument,
 		const QTextFormat &format) {
 	if (format.objectType() == InputField::kCollapsedQuoteFormat) {
-		const auto &st = _field->_st.style.blockquote;
 		const auto left = 0;
 		const auto top = 0;
 		const auto id = format.property(InputField::kQuoteId).toInt();
