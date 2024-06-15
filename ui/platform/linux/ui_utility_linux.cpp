@@ -413,7 +413,7 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 }
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	static const auto wl_proxy_marshal_array = [] {
 		void (*result)(
@@ -459,7 +459,7 @@ void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 			wl_argument{ .i = point.y() },
 		}.data());
 }
-#endif // Qt >= 6.5.0
+#endif // wayland
 
 } // namespace
 
@@ -533,7 +533,7 @@ std::optional<bool> IsOverlapped(
 }
 
 bool WindowMarginsSupported() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	static const auto WaylandResult = [] {
 		using namespace QNativeInterface::Private;
 		QWindow window;
@@ -544,7 +544,7 @@ bool WindowMarginsSupported() {
 	if (WaylandResult) {
 		return true;
 	}
-#endif // Qt >= 6.5.0
+#endif // wayland
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
@@ -560,7 +560,7 @@ bool WindowMarginsSupported() {
 }
 
 void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	using namespace QNativeInterface::Private;
 	const auto window = not_null(widget->windowHandle());
 	const auto platformWindow = not_null(window->handle());
@@ -571,7 +571,7 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 				/ platformWindow->devicePixelRatio());
 		return;
 	}
-#endif // Qt >= 6.5.0
+#endif // wayland
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
@@ -582,14 +582,14 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 }
 
 void UnsetWindowMargins(not_null<QWidget*> widget) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	using namespace QNativeInterface::Private;
 	if (const auto native = not_null(widget->windowHandle())
 			->nativeInterface<QWaylandWindow>()) {
 		native->setCustomMargins(QMargins());
 		return;
 	}
-#endif // Qt >= 6.5.0
+#endif // wayland
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
@@ -600,12 +600,12 @@ void UnsetWindowMargins(not_null<QWidget*> widget) {
 }
 
 void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	if (::Platform::IsWayland()) {
 		ShowWaylandWindowMenu(widget, point);
 		return;
 	}
-#endif // Qt >= 6.5.0
+#endif // wayland
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
