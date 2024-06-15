@@ -225,7 +225,7 @@ std::optional<bool> XCBIsOverlapped(
 		not_null<QWidget*> widget,
 		const QRect &rect) {
 	const auto window = widget->winId();
-	Expects(window != XCB_WINDOW_NONE);
+	Expects(window != XCB_NONE);
 
 	const auto connection = base::Platform::XCB::GetConnectionFromQt();
 	if (!connection) {
