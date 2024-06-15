@@ -239,7 +239,7 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	} else {
 		--tag.length;
 		if (!stripped.isEmpty()) {
-			text.tags.push_back({ text.text.size() - 1, 1, stripped });
+			text.tags.push_back({ int(text.text.size()) - 1, 1, stripped });
 		}
 	}
 	return text;
@@ -4553,7 +4553,7 @@ auto InputField::addMarkdownTag(TextRange range, const QString &tag)
 		}
 	}
 	if (filled < current.text.size()) {
-		tags.push_back({ filled, current.text.size() - filled, tag });
+		tags.push_back({ filled, int(current.text.size()) - filled, tag });
 	}
 	current.tags = TextUtilities::SimplifyTags(std::move(tags));
 	const auto result = insertWithTags(range, std::move(current));
