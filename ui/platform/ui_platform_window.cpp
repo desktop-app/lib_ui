@@ -298,7 +298,6 @@ void DefaultWindowHelper::init() {
 		window()->setAttribute(Qt::WA_TranslucentBackground);
 	}
 
-	window()->createWinId();
 	_title->show();
 
 	rpl::combine(
@@ -359,7 +358,12 @@ void DefaultWindowHelper::init() {
 		window()->shownValue(),
 		_title->shownValue(),
 		_windowState.value()
-	) | rpl::start_with_next([=](
+	) | rpl::filter([=](
+			bool shown,
+			bool titleShown,
+			Qt::WindowStates windowState) {
+		return shown;
+	}) | rpl::start_with_next([=](
 			bool shown,
 			bool titleShown,
 			Qt::WindowStates windowState) {
