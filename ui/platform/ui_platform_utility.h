@@ -40,7 +40,6 @@ void DrainMainQueue(); // Needed only if UseMainQueueGeneric() is false.
 
 [[nodiscard]] bool WindowMarginsSupported();
 void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins);
-void UnsetWindowMargins(not_null<QWidget*> widget);
 void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);

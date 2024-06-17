@@ -52,8 +52,5 @@ inline bool WindowMarginsSupported() {
 inline void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 }
 
-inline void UnsetWindowMargins(not_null<QWidget*> widget) {
-}
-
 } // namespace Platform
 } // namespace Ui

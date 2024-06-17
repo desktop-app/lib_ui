@@ -575,25 +575,11 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
-		SetXCBFrameExtents(widget, margins);
-		return;
-	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-}
-
-void UnsetWindowMargins(not_null<QWidget*> widget) {
-#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
-	using namespace QNativeInterface::Private;
-	if (const auto native = not_null(widget->windowHandle())
-			->nativeInterface<QWaylandWindow>()) {
-		native->setCustomMargins(QMargins());
-		return;
-	}
-#endif // wayland
-
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-	if (::Platform::IsX11()) {
-		UnsetXCBFrameExtents(widget);
+		if (!margins.isNull()) {
+			SetXCBFrameExtents(widget, margins);
+		} else {
+			UnsetXCBFrameExtents(widget);
+		}
 		return;
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION

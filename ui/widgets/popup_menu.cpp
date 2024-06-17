@@ -323,11 +323,7 @@ void PopupMenu::validateCompositingSupport() {
 			std::max(_st.shadow.extend.bottom(), additional.bottom()));
 		_margins = _padding - (additional - _additionalMenuMargins);
 	}
-	if (_margins.isNull()) {
-		Platform::UnsetWindowMargins(this);
-	} else {
-		Platform::SetWindowMargins(this, _margins);
-	}
+	Platform::SetWindowMargins(this, _margins);
 	_scroll->moveToLeft(_padding.left(), _padding.top());
 	handleMenuResize();
 	updateRoundingOverlay();
