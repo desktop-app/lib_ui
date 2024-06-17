@@ -153,11 +153,9 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 	shownValue() | rpl::filter([=](bool shown) {
 		return shown;
 	}) | rpl::start_with_next([=] {
-		if (_useTransparency) {
-			Platform::SetWindowMargins(this, _padding);
-		} else {
-			Platform::UnsetWindowMargins(this);
-		}
+		Platform::SetWindowMargins(this, _useTransparency
+			? _padding
+			: QMargins());
 	}, lifetime());
 }
 

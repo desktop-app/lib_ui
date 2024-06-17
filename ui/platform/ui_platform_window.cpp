@@ -630,7 +630,7 @@ void DefaultWindowHelper::updateWindowMargins() {
 		SetWindowMargins(window(), resizeArea());
 		_marginsSet = true;
 	} else if (_marginsSet) {
-		UnsetWindowMargins(window());
+		SetWindowMargins(window(), {});
 		_marginsSet = false;
 	}
 }
