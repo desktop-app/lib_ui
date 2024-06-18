@@ -122,6 +122,11 @@ rpl::producer<bool> RpWidgetWrap::shownValue() const {
 		| rpl::distinct_until_changed();
 }
 
+rpl::producer<bool> RpWidgetWrap::windowActiveValue() const {
+	auto &stream = eventStreams().windowActive;
+	return stream.events_starting_with(rpWidget()->isActiveWindow());
+}
+
 rpl::producer<QRect> RpWidgetWrap::paintRequest() const {
 	return eventStreams().paint.events();
 }
@@ -130,21 +135,11 @@ rpl::producer<> RpWidgetWrap::alive() const {
 	return eventStreams().alive.events();
 }
 
-rpl::producer<> RpWidgetWrap::windowDeactivateEvents() const {
-	const auto window = rpWidget()->window()->windowHandle();
-	Assert(window != nullptr);
-
-	return base::qt_signal_producer(
-		window,
-		&QWindow::activeChanged
-	) | rpl::filter([=] {
-		return !window->isActive();
-	});
-}
-
 rpl::producer<> RpWidgetWrap::macWindowDeactivateEvents() const {
 #ifdef Q_OS_MAC
-	return windowDeactivateEvents();
+	return windowActiveValue()
+		| rpl::skip(1)
+		| rpl::filter(!rpl::mappers::_1);
 #else // Q_OS_MAC
 	return rpl::never<rpl::empty_value>();
 #endif // Q_OS_MAC
@@ -178,6 +173,19 @@ bool RpWidgetWrap::handleEvent(QEvent *event) {
 				that = rpWidget();
 			}
 			streams->shown.fire_copy(!rpWidget()->isHidden());
+			if (!that) {
+				return true;
+			}
+		}
+		break;
+
+	case QEvent::WindowActivate:
+	case QEvent::WindowDeactivate:
+		if (streams->windowActive.has_consumers()) {
+			if (!allAreObserved) {
+				that = rpWidget();
+			}
+			streams->windowActive.fire_copy(rpWidget()->isActiveWindow());
 			if (!that) {
 				return true;
 			}
