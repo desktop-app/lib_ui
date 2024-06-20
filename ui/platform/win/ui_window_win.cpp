@@ -196,7 +196,7 @@ public:
 	bool nativeEventFilter(
 		const QByteArray &eventType,
 		void *message,
-		long *result) override;
+		native_event_filter_result *result) override;
 
 private:
 	base::flat_map<HWND, not_null<WindowHelper*>> _windowByHandle;
@@ -216,7 +216,7 @@ void WindowHelper::NativeFilter::unregisterWindow(HWND handle) {
 bool WindowHelper::NativeFilter::nativeEventFilter(
 		const QByteArray &eventType,
 		void *message,
-		long *result) {
+		native_event_filter_result *result) {
 	auto filtered = false;
 	const auto msg = static_cast<MSG*>(message);
 	const auto i = _windowByHandle.find(msg->hwnd);

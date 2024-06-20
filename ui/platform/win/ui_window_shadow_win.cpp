@@ -12,8 +12,8 @@
 #include "styles/style_widgets.h"
 
 #include <QtGui/QPainter>
+#include <QtGui/QScreen>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QDesktopWidget>
 
 #include <windowsx.h>
 
@@ -169,7 +169,7 @@ void WindowShadow::init(QColor color) {
 		return;
 	}
 
-	const auto avail = QApplication::desktop()->availableGeometry();
+	const auto avail = QApplication::primaryScreen()->availableGeometry();
 	_widthMax = std::max(avail.width(), 1);
 	_heightMax = std::max(avail.height(), 1);
 

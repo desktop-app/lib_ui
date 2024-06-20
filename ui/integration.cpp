@@ -23,9 +23,9 @@ Integration *IntegrationInstance = nullptr;
 void Integration::Set(not_null<Integration*> instance) {
 	IntegrationInstance = instance;
 
-	if constexpr (Platform::IsWindows()) {
-		GL::ConfigureANGLE();
-	}
+#ifdef DESKTOP_APP_USE_ANGLE
+	GL::ConfigureANGLE();
+#endif
 }
 
 Integration &Integration::Instance() {

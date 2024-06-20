@@ -134,7 +134,7 @@ private:
 
 };
 
-#ifdef Q_OS_WIN
+#if defined Q_OS_WIN && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 inline constexpr auto kFormatRGBA = GL_BGRA_EXT;
 inline constexpr auto kSwizzleRedBlue = false;
 #else // Q_OS_WIN

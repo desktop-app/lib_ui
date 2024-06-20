@@ -99,7 +99,7 @@ public:
 	bool nativeEventFilter(
 			const QByteArray &eventType,
 			void *message,
-			base::NativeEventResult *result) {
+			native_event_filter_result *result) {
 		if (NSEvent *e = static_cast<NSEvent*>(message)) {
 			if ([e type] == NSEventTypeLeftMouseDown) {
 				_dragStarted = _checkStartDrag();

@@ -19,11 +19,11 @@
 #include <QtGui/QOpenGLFunctions>
 #include <QOpenGLWidget>
 
-#ifdef Q_OS_WIN
+#ifdef DESKTOP_APP_USE_ANGLE
 #include <QtGui/QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #include <EGL/egl.h>
-#endif // Q_OS_WIN
+#endif // DESKTOP_APP_USE_ANGLE
 
 #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
 
@@ -33,9 +33,22 @@ namespace {
 bool ForceDisabled/* = false*/;
 bool LastCheckCrashed/* = false*/;
 
-#ifdef Q_OS_WIN
+#ifdef DESKTOP_APP_USE_ANGLE
 ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
-#endif // Q_OS_WIN
+
+QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
+	const auto native = QGuiApplication::platformNativeInterface();
+	Assert(native != nullptr);
+
+	const auto display = static_cast<EGLDisplay>(
+		native->nativeResourceForContext(
+			QByteArrayLiteral("egldisplay"),
+			context));
+	return display
+		? QByteArray(eglQueryString(display, EGL_EXTENSIONS)).split(' ')
+		: QList<QByteArray>();
+}
+#endif // DESKTOP_APP_USE_ANGLE
 
 base::options::toggle AllowX11NvidiaOpenGL({
 	.id = kOptionAllowX11NvidiaOpenGL,
@@ -173,13 +186,13 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		}
 		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
 
-#ifdef Q_OS_WIN
+#ifdef DESKTOP_APP_USE_ANGLE
 		auto egllist = QStringList();
 		for (const auto &extension : EGLExtensions(context)) {
 			egllist.append(QString::fromLatin1(extension));
 		}
 		LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
-#endif // Q_OS_WIN
+#endif // DESKTOP_APP_USE_ANGLE
 
 		if (::Platform::IsX11()
 			&& version
@@ -246,8 +259,7 @@ void ForceDisable(bool disable) {
 	}
 }
 
-#ifdef Q_OS_WIN
-
+#ifdef DESKTOP_APP_USE_ANGLE
 void ConfigureANGLE() {
 	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
 	const auto path = Ui::Integration::Instance().angleBackendFilePath();
@@ -298,20 +310,6 @@ void ChangeANGLE(ANGLE backend) {
 ANGLE CurrentANGLE() {
 	return ResolvedANGLE;
 }
-
-QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
-	const auto native = QGuiApplication::platformNativeInterface();
-	Assert(native != nullptr);
-
-	const auto display = static_cast<EGLDisplay>(
-		native->nativeResourceForContext(
-			QByteArrayLiteral("egldisplay"),
-			context));
-	return display
-		? QByteArray(eglQueryString(display, EGL_EXTENSIONS)).split(' ')
-		: QList<QByteArray>();
-}
-
-#endif // Q_OS_WIN
+#endif // DESKTOP_APP_USE_ANGLE
 
 } // namespace Ui::GL

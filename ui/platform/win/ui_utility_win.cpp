@@ -149,7 +149,7 @@ void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
 		bool nativeEventFilter(
 				const QByteArray &eventType,
 				void *message,
-				long *result) override {
+				native_event_filter_result *result) override {
 			const auto msg = static_cast<MSG*>(message);
 			switch (msg->message) {
 			case WM_MOUSELEAVE: if (msg->hwnd == hwnd()) {
