@@ -3443,21 +3443,7 @@ void InputField::documentContentsChanged(
 	if (document->isEmpty()) {
 		textCursor().setBlockFormat(PrepareBlockFormat(_st));
 	}
-	auto format = _inner->document()->rootFrame()->frameFormat();
-	const auto needsTopMargin = StartsWithPre(document);
-	const auto hasTopMargin = format.hasProperty(
-		QTextFrameFormat::FrameTopMargin);
-	if (needsTopMargin != hasTopMargin) {
-		const auto preTopMargin = _st.style.pre.padding.top()
-			+ _st.style.pre.header
-			+ _st.style.pre.verticalSkip;
-		format.setProperty(
-			QTextFrameFormat::FrameTopMargin,
-			(StartsWithPre(document)
-				? QVariant::fromValue(1. * preTopMargin)
-				: QVariant()));
-		_inner->document()->rootFrame()->setFrameFormat(format);
-	}
+	updateRootFrameFormat();
 	_correcting = false;
 	QTextCursor(document).endEditBlock();
 
@@ -3470,6 +3456,25 @@ void InputField::documentContentsChanged(
 	const auto added = charsAdded - _emojiSurrogateAmount;
 	_documentContentsChanges.fire({ position, charsRemoved, added });
 	_emojiSurrogateAmount = 0;
+}
+
+void InputField::updateRootFrameFormat() {
+	const auto document = _inner->document();
+	auto format = document->rootFrame()->frameFormat();
+	const auto propertyId = QTextFrameFormat::FrameTopMargin;
+	const auto needsTopMargin = StartsWithPre(document);
+	const auto hasTopMargin = format.hasProperty(propertyId)
+		&& (format.property(propertyId).toInt() > 0);
+	if (needsTopMargin != hasTopMargin) {
+		const auto preTopMargin = _st.style.pre.padding.top()
+			+ _st.style.pre.header
+			+ _st.style.pre.verticalSkip;
+		const auto value = needsTopMargin
+			? QVariant::fromValue(1. * preTopMargin)
+			: QVariant();
+		format.setProperty(propertyId, value);
+		document->rootFrame()->setFrameFormat(format);
+	}
 }
 
 void InputField::chopByMaxLength(int insertPosition, int insertLength) {

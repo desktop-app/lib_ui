@@ -381,6 +381,7 @@ private:
 	};
 
 	void handleContentsChanged();
+	void updateRootFrameFormat();
 	bool viewportEventInner(QEvent *e);
 	void handleTouchEvent(QTouchEvent *e);
 
