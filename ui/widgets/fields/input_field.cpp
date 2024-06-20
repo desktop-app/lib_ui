@@ -1542,8 +1542,7 @@ InputField::InputField(
 		}
 	}
 
-	if (_st.textBg->c.alphaF() >= 1.
-		&& !_st.borderRadius) {
+	if (_st.textBg->c.alphaF() >= 1. && !_st.borderRadius) {
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
 

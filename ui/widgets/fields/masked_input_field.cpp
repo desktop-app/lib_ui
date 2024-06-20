@@ -80,7 +80,9 @@ MaskedInputField::MaskedInputField(
 	}, lifetime());
 	updatePalette();
 
-	setAttribute(Qt::WA_OpaquePaintEvent);
+	if (_st.textBg->c.alphaF() >= 1. && !_st.borderRadius) {
+		setAttribute(Qt::WA_OpaquePaintEvent);
+	}
 
 	connect(this, SIGNAL(textChanged(QString)), this, SLOT(onTextChange(QString)));
 	connect(this, SIGNAL(cursorPositionChanged(int,int)), this, SLOT(onCursorPositionChanged(int,int)));
