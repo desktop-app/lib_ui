@@ -242,7 +242,7 @@ void CustomFieldObject::refreshSpoilerShown(InputFieldTextRange range) {
 						if (spoiler.from < cursor) {
 							touchesLeft = true;
 						}
-						if (spoiler.till > cursor) {
+						if (spoiler.till >= cursor) {
 							touchesRight = true;
 						}
 						if (touchesLeft && touchesRight) {
