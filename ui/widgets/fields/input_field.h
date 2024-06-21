@@ -520,6 +520,7 @@ private:
 		int quoteId,
 		QStringView tag,
 		TextRange range);
+	void trippleEnterExitBlock(QTextCursor &cursor);
 
 	void touchUpdate(QPoint globalPosition);
 	void touchFinish();

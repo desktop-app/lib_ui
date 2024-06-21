@@ -2538,6 +2538,37 @@ void InputField::editPreLanguage(int quoteId, QStringView tag) {
 	_editLanguageCallback(tag.mid(kTagPre.size()).toString(), apply);
 }
 
+void InputField::trippleEnterExitBlock(QTextCursor &cursor) {
+	const auto block = cursor.block();
+	if (!HasBlockTag(block)) {
+		return;
+	}
+	const auto document = cursor.document();
+	const auto position = cursor.position();
+	const auto blockFrom = block.position();
+	const auto blockTill = blockFrom + block.length();
+	if (blockTill - blockFrom <= 3
+		|| (position != blockFrom + 3 && position != blockTill - 1)) {
+		return;
+	} else if (document->characterAt(position - 1) != kSoftLine
+		|| document->characterAt(position - 2) != kSoftLine
+		|| document->characterAt(position - 3) != kSoftLine) {
+		return;
+	}
+	const auto before = (position == blockFrom + 3);
+	cursor.setPosition(position - 3, QTextCursor::KeepAnchor);
+	cursor.insertText(
+		QString(QChar(kHardLine)),
+		before ? cursor.charFormat() : _defaultCharFormat);
+	if (before) {
+		cursor.setPosition(cursor.position() - 1);
+	}
+	cursor.setBlockFormat(PrepareBlockFormat(_st));
+	if (before) {
+		setTextCursor(cursor);
+	}
+}
+
 void InputField::toggleBlockquoteCollapsed(
 		int quoteId,
 		QStringView tag,
@@ -3984,6 +4015,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 				cursor.insertText(QString(QChar(kHardLine)));
 			} else {
 				cursor.insertText(QString(QChar(kSoftLine)));
+				trippleEnterExitBlock(cursor);
 			}
 			e->accept();
 		} else {
