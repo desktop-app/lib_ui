@@ -90,30 +90,24 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		return true;
 	}();
 
-	auto format = QSurfaceFormat();
-	if (widget) {
-		if (!widget->window()->windowHandle()) {
-			widget->window()->createWinId();
-		}
-		if (!widget->window()->windowHandle()) {
-			LOG(("OpenGL: Could not create window for widget."));
-			return {};
-		}
-		format = widget->window()->windowHandle()->format();
-		format.setAlphaBufferSize(8);
-		widget->window()->windowHandle()->setFormat(format);
-	} else {
-		format.setAlphaBufferSize(8);
-	}
-
 	CrashCheckStart();
+	const auto guard = gsl::finally([=] {
+		CrashCheckFinish();
+	});
+
 	auto tester = QOpenGLWidget(widget);
-	tester.setFormat(format);
-	tester.grabFramebuffer(); // Force initialize().
 	if (!tester.window()->windowHandle()) {
 		tester.window()->createWinId();
 	}
-	CrashCheckFinish();
+	if (!tester.window()->windowHandle()) {
+		LOG(("OpenGL: Could not create window for widget."));
+		return {};
+	}
+	auto format = tester.window()->windowHandle()->format();
+	format.setAlphaBufferSize(8);
+	tester.window()->windowHandle()->setFormat(format);
+	tester.setFormat(format);
+	tester.grabFramebuffer(); // Force initialize().
 
 	const auto context = tester.context();
 	if (!context
