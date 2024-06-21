@@ -139,7 +139,8 @@ rpl::producer<> RpWidgetWrap::macWindowDeactivateEvents() const {
 #ifdef Q_OS_MAC
 	return windowActiveValue()
 		| rpl::skip(1)
-		| rpl::filter(!rpl::mappers::_1);
+		| rpl::filter(!rpl::mappers::_1)
+		| rpl::to_empty;
 #else // Q_OS_MAC
 	return rpl::never<rpl::empty_value>();
 #endif // Q_OS_MAC
