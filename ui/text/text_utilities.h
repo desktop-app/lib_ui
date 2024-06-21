@@ -50,7 +50,9 @@ inline constexpr auto Upper = details::ToUpperType{};
 	return { text };
 }
 
-[[nodiscard]] TextWithEntities SingleCustomEmoji(QString data);
+[[nodiscard]] TextWithEntities SingleCustomEmoji(
+	QString data,
+	QString text = QString());
 
 [[nodiscard]] inline auto ToUpper() {
 	return rpl::map(Upper);
