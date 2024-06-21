@@ -119,8 +119,12 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	}
 
 	if (screen) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		setScreen(screen);
+#else // Qt >= 6.0.0
 		createWinId();
 		windowHandle()->setScreen(screen);
+#endif // Qt < 6.0.0
 	}
 
 	// adjust tooltip position
