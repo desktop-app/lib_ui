@@ -9,7 +9,6 @@
 #include "ui/gl/gl_shader.h"
 #include "ui/integration.h"
 #include "base/debug_log.h"
-#include "base/options.h"
 #include "base/platform/base_platform_info.h"
 
 #include <QtCore/QSet>
@@ -50,14 +49,6 @@ QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
 }
 #endif // DESKTOP_APP_USE_ANGLE
 
-base::options::toggle AllowX11NvidiaOpenGL({
-	.id = kOptionAllowX11NvidiaOpenGL,
-	.name = "Allow OpenGL on the NVIDIA drivers (X11)",
-	.description = "Qt+OpenGL have problems on X11 with NVIDIA drivers.",
-	.scope = Platform::IsX11,
-	.restartRequired = true,
-});
-
 void CrashCheckStart() {
 	auto f = QFile(Integration::Instance().openglCheckFilePath());
 	if (f.open(QIODevice::WriteOnly)) {
@@ -67,8 +58,6 @@ void CrashCheckStart() {
 }
 
 } // namespace
-
-const char kOptionAllowX11NvidiaOpenGL[] = "allow-linux-nvidia-opengl";
 
 Capabilities CheckCapabilities(QWidget *widget) {
 	if (!Platform::IsMac()) {
@@ -111,9 +100,8 @@ Capabilities CheckCapabilities(QWidget *widget) {
 
 	const auto context = tester.context();
 	if (!context
-		|| !context->isValid()/*
-		// This check doesn't work for a widget with WA_NativeWindow.
-		|| !context->makeCurrent(tester.window()->windowHandle())*/) {
+		|| !context->isValid()
+		|| !context->makeCurrent(tester.window()->windowHandle())) {
 		LOG_ONCE(("OpenGL: Could not create widget in a window."));
 		return {};
 	}
@@ -187,18 +175,6 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		}
 		LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
 #endif // DESKTOP_APP_USE_ANGLE
-
-		if (::Platform::IsX11()
-			&& version
-			&& QByteArray(version).contains("NVIDIA")) {
-			// https://github.com/telegramdesktop/tdesktop/issues/16830
-			if (AllowX11NvidiaOpenGL.value()) {
-				LOG_ONCE(("OpenGL: Allow on NVIDIA driver (experimental)."));
-			} else {
-				LOG_ONCE(("OpenGL: Disable on NVIDIA driver on X11."));
-				return false;
-			}
-		}
 
 		return true;
 	}();
