@@ -968,9 +968,17 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 	windowHandle()->removeEventFilter(this);
 	windowHandle()->installEventFilter(this);
 	if (_parent) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		setScreen(_parent->screen());
+#else // Qt >= 6.0.0
 		windowHandle()->setScreen(_parent->screen());
+#endif // Qt < 6.0.0
 	} else if (screen) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		setScreen(screen);
+#else // Qt >= 6.0.0
 		windowHandle()->setScreen(screen);
+#endif // Qt < 6.0.0
 	}
 	validateCompositingSupport();
 
@@ -1055,8 +1063,6 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 }
 
 void PopupMenu::showPrepared(TriggeredSource source) {
-	Expects(windowHandle() != nullptr);
-
 	_menu->setShowSource(source);
 
 	startShowAnimation();
