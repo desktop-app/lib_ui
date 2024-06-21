@@ -122,6 +122,11 @@ rpl::producer<bool> RpWidgetWrap::shownValue() const {
 		| rpl::distinct_until_changed();
 }
 
+rpl::producer<not_null<QScreen*>> RpWidgetWrap::screenValue() const {
+	auto &stream = eventStreams().screen;
+	return stream.events_starting_with(rpWidget()->screen());
+}
+
 rpl::producer<bool> RpWidgetWrap::windowActiveValue() const {
 	auto &stream = eventStreams().windowActive;
 	return stream.events_starting_with(rpWidget()->isActiveWindow());
@@ -200,6 +205,18 @@ bool RpWidgetWrap::handleEvent(QEvent *event) {
 				that = rpWidget();
 			}
 			streams->geometry.fire_copy(rpWidget()->geometry());
+			if (!that) {
+				return true;
+			}
+		}
+		break;
+
+	case QEvent::ScreenChangeInternal:
+		if (streams->screen.has_consumers()) {
+			if (!allAreObserved) {
+				that = rpWidget();
+			}
+			streams->screen.fire_copy(rpWidget()->screen());
 			if (!that) {
 				return true;
 			}

@@ -277,6 +277,7 @@ public:
 	rpl::producer<int> topValue() const;
 	virtual rpl::producer<int> desiredHeightValue() const;
 	rpl::producer<bool> shownValue() const;
+	rpl::producer<not_null<QScreen*>> screenValue() const;
 	rpl::producer<bool> windowActiveValue() const;
 	rpl::producer<QRect> paintRequest() const;
 	rpl::producer<> alive() const;
@@ -308,6 +309,7 @@ private:
 		rpl::event_stream<QRect> geometry;
 		rpl::event_stream<QRect> paint;
 		rpl::event_stream<bool> shown;
+		rpl::event_stream<not_null<QScreen*>> screen;
 		rpl::event_stream<bool> windowActive;
 		rpl::event_stream<> alive;
 	};
