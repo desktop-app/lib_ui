@@ -21,6 +21,10 @@ NumberInput::NumberInput(
 	}
 }
 
+void NumberInput::changeLimit(int limit) {
+	_limit = limit;
+}
+
 void NumberInput::correctValue(
 		const QString &was,
 		int wasCursor,

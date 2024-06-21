@@ -23,6 +23,8 @@ public:
 		const QString &value,
 		int limit);
 
+	void changeLimit(int limit);
+
 protected:
 	void correctValue(
 		const QString &was,
