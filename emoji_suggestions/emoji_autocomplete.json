@@ -9889,13 +9889,13 @@
     },
     "2622": {
         "output": "2622-fe0f",
-        "name": "radioactive",
+        "name": "radioactive hazard",
         "alpha_code": ":radioactive:",
         "aliases": ":radioactive_sign:"
     },
     "2623": {
         "output": "2623-fe0f",
-        "name": "biohazard",
+        "name": "biohazard hazard",
         "alpha_code": ":biohazard:",
         "aliases": ":biohazard_sign:"
     },
