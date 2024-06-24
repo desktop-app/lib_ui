@@ -74,11 +74,14 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		window->activateWindow();
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		if (::Platform::IsX11() && focusAncestor) {
-			xcb_set_input_focus(
-				base::Platform::XCB::GetConnectionFromQt(),
-				XCB_INPUT_FOCUS_PARENT,
-				window->winId(),
-				XCB_CURRENT_TIME);
+			const base::Platform::XCB::Connection connection;
+			if (connection && !xcb_connection_has_error(connection)) {
+				xcb_set_input_focus(
+					connection,
+					XCB_INPUT_FOCUS_PARENT,
+					window->winId(),
+					XCB_CURRENT_TIME);
+			}
 		}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 	});
