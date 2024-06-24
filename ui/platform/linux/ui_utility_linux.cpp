@@ -331,15 +331,18 @@ void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
 		uint(nativeExtents.bottom()),
 	};
 
-	xcb_change_property(
-		connection,
-		XCB_PROP_MODE_REPLACE,
-		widget->winId(),
-		frameExtentsAtom,
-		XCB_ATOM_CARDINAL,
-		32,
-		extentsVector.size(),
-		extentsVector.data());
+	free(
+		xcb_request_check(
+			connection,
+			xcb_change_property_checked(
+				connection,
+				XCB_PROP_MODE_REPLACE,
+				widget->winId(),
+				frameExtentsAtom,
+				XCB_ATOM_CARDINAL,
+				32,
+				extentsVector.size(),
+				extentsVector.data())));
 }
 
 void UnsetXCBFrameExtents(not_null<QWidget*> widget) {
@@ -356,10 +359,13 @@ void UnsetXCBFrameExtents(not_null<QWidget*> widget) {
 		return;
 	}
 
-	xcb_delete_property(
-		connection,
-		widget->winId(),
-		frameExtentsAtom);
+	free(
+		xcb_request_check(
+			connection,
+			xcb_delete_property_checked(
+				connection,
+				widget->winId(),
+				frameExtentsAtom)));
 }
 
 void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
@@ -402,14 +408,21 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	xev.data.data32[3] = 0;
 	xev.data.data32[4] = 0;
 
-	xcb_ungrab_pointer(connection, XCB_CURRENT_TIME);
-	xcb_send_event(
-		connection,
-		false,
-		root,
-		XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-			| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY,
-		reinterpret_cast<const char*>(&xev));
+	free(
+		xcb_request_check(
+			connection,
+			xcb_ungrab_pointer_checked(connection, XCB_CURRENT_TIME)));
+
+	free(
+		xcb_request_check(
+			connection,
+			xcb_send_event_checked(
+				connection,
+				false,
+				root,
+				XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+					| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY,
+				reinterpret_cast<const char*>(&xev))));
 }
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
@@ -517,10 +530,13 @@ void ClearTransientParent(not_null<QWidget*> widget) {
 			return;
 		}
 
-		xcb_delete_property(
-			connection,
-			widget->winId(),
-			XCB_ATOM_WM_TRANSIENT_FOR);
+		free(
+			xcb_request_check(
+				connection,
+				xcb_delete_property_checked(
+					connection,
+					widget->winId(),
+					XCB_ATOM_WM_TRANSIENT_FOR)));
 
 		return;
 	}

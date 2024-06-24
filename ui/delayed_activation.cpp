@@ -76,11 +76,14 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		if (::Platform::IsX11() && focusAncestor) {
 			const base::Platform::XCB::Connection connection;
 			if (connection && !xcb_connection_has_error(connection)) {
-				xcb_set_input_focus(
-					connection,
-					XCB_INPUT_FOCUS_PARENT,
-					window->winId(),
-					XCB_CURRENT_TIME);
+				free(
+					xcb_request_check(
+						connection,
+						xcb_set_input_focus_checked(
+							connection,
+							XCB_INPUT_FOCUS_PARENT,
+							window->winId(),
+							XCB_CURRENT_TIME)));
 			}
 		}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
