@@ -321,6 +321,17 @@ void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
 		return;
 	}
 
+	if (extents.isNull()) {
+		free(
+			xcb_request_check(
+				connection,
+				xcb_delete_property_checked(
+					connection,
+					widget->winId(),
+					frameExtentsAtom)));
+		return;
+	}
+
 	const auto nativeExtents = extents
 		* widget->windowHandle()->devicePixelRatio();
 
@@ -343,29 +354,6 @@ void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
 				32,
 				extentsVector.size(),
 				extentsVector.data())));
-}
-
-void UnsetXCBFrameExtents(not_null<QWidget*> widget) {
-	const base::Platform::XCB::Connection connection;
-	if (!connection || xcb_connection_has_error(connection)) {
-		return;
-	}
-
-	const auto frameExtentsAtom = base::Platform::XCB::GetAtom(
-		connection,
-		kXCBFrameExtentsAtomName);
-
-	if (!frameExtentsAtom) {
-		return;
-	}
-
-	free(
-		xcb_request_check(
-			connection,
-			xcb_delete_property_checked(
-				connection,
-				widget->winId(),
-				frameExtentsAtom)));
 }
 
 void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
@@ -598,11 +586,7 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
-		if (!margins.isNull()) {
-			SetXCBFrameExtents(widget, margins);
-		} else {
-			UnsetXCBFrameExtents(widget);
-		}
+		SetXCBFrameExtents(widget, margins);
 		return;
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
