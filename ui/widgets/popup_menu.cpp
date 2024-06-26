@@ -954,15 +954,13 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 		}
 	}
 
-	const auto usingScreenGeometry = !::Platform::IsWayland();
-	const auto screen = QGuiApplication::screenAt(p);
-	if ((usingScreenGeometry && !screen)
-		|| (!parent
+	if (!parent
 			&& ::Platform::IsMac()
-			&& !Platform::IsApplicationActive())) {
+			&& !Platform::IsApplicationActive()) {
 		return false;
 	}
 	_parent = parent;
+	const auto screen = QGuiApplication::screenAt(p);
 
 	createWinId();
 	windowHandle()->removeEventFilter(this);
@@ -1005,7 +1003,7 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 			_additionalMenuPadding.left() - _st.shadow.extend.left(),
 			0),
 		_padding.top() - _topShift);
-	auto r = usingScreenGeometry ? screen->availableGeometry() : QRect();
+	auto r = screen ? screen->availableGeometry() : QRect();
 	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {
 		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _margins.left();
