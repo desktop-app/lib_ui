@@ -11,7 +11,6 @@
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/labels.h"
 #include "base/invoke_queued.h"
-#include "base/platform/base_platform_info.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QScreen>
@@ -76,13 +75,6 @@ Tooltip::~Tooltip() {
 }
 
 void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *st) {
-	const auto usingScreenGeometry = !::Platform::IsWayland();
-	const auto screen = QGuiApplication::screenAt(m);
-	if (usingScreenGeometry && !screen) {
-		Hide();
-		return;
-	}
-
 	if (!_isEventFilter) {
 		_isEventFilter = true;
 		QCoreApplication::instance()->installEventFilter(this);
@@ -118,6 +110,7 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 		p.setX(m.x() - (s.width() / 2));
 	}
 
+	const auto screen = QGuiApplication::screenAt(m);
 	if (screen) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 		setScreen(screen);
@@ -125,10 +118,8 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 		createWinId();
 		windowHandle()->setScreen(screen);
 #endif // Qt < 6.0.0
-	}
 
-	// adjust tooltip position
-	if (usingScreenGeometry) {
+		// adjust tooltip position
 		const auto r = screen->availableGeometry();
 		if (r.x() + r.width() - _st->skip < p.x() + s.width() && p.x() + s.width() > m.x()) {
 			p.setX(qMax(r.x() + r.width() - int32(_st->skip) - s.width(), m.x() - s.width()));
