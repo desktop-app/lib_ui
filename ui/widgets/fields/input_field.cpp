@@ -1179,10 +1179,11 @@ int ProcessInsertedTags(
 		not_null<QTextDocument*> document,
 		int changedPosition,
 		int changedEnd,
-		int applyNoTagFrom,
 		const TextWithTags::Tags &tags,
+		bool tagsReplaceExisting,
 		Fn<QString(QStringView)> processor) {
-	int firstTagStart = changedEnd;
+	auto firstTagStart = changedEnd;
+	auto applyNoTagFrom = tagsReplaceExisting ? changedPosition : changedEnd;
 	for (const auto &tag : tags) {
 		int tagFrom = changedPosition + tag.offset;
 		int tagTo = tagFrom + tag.length;
@@ -1206,6 +1207,13 @@ int ProcessInsertedTags(
 			c.setPosition(tagTo, QTextCursor::KeepAnchor);
 			if (const auto block = FindBlockTag(tag.id); !block.isEmpty()) {
 				c.setBlockFormat(PrepareBlockFormat(st, block));
+			} else if (tagsReplaceExisting) {
+				const auto block = c.block();
+				const auto blockStart = block.position();
+				if (blockStart >= changedPosition
+					&& blockStart + block.length() - 1 <= changedEnd) {
+					c.setBlockFormat(PrepareBlockFormat(st));
+				}
 			}
 			c.mergeCharFormat(PrepareTagFormat(st, tagId));
 			applyNoTagFrom = tagTo;
@@ -3012,8 +3020,8 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 		document,
 		insertPosition,
 		insertEnd,
-		_insertedTagsReplace ? insertPosition : insertEnd,
 		_insertedTags,
+		_insertedTagsReplace,
 		insertedTagsProcessor);
 	using ActionType = FormattingAction::Type;
 	while (true) {
@@ -4693,7 +4701,7 @@ void InputField::finishMarkdownTagChange(
 	_insertedTags = textWithTags.tags;
 	_realInsertPosition = range.from;
 	_realCharsAdded = textWithTags.text.size();
-	cursor.insertText(textWithTags.text, _defaultCharFormat);
+	cursor.insertText(textWithTags.text);
 
 	cursor.setCharFormat(_defaultCharFormat);
 	cursor.endEditBlock();
