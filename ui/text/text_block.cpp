@@ -358,9 +358,11 @@ void BlockParser::parseWords(QFixed minResizeWidth, int blockFrom) {
 bool BlockParser::isLineBreak(
 		const QCharAttributes *attributes,
 		int index) const {
-	// Don't break after / in links.
+	// Don't break by '/' or '.' in the middle of the word.
+	// In case of a line break or white space it'll allow break anyway.
 	return attributes[index].lineBreak
-		&& (block.linkIndex() <= 0 || index <= 0 || text[index - 1] != '/');
+		&& (index <= 0
+			|| (text[index - 1] != '/' && text[index - 1] != '.'));
 }
 
 bool BlockParser::isSpaceBreak(
