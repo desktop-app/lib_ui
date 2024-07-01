@@ -450,14 +450,18 @@ void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 		return;
 	}
 
+	const auto pos = point
+		* window->devicePixelRatio()
+		/ window->handle()->devicePixelRatio();
+
 	wl_proxy_marshal_array(
 		reinterpret_cast<wl_proxy*>(toplevel),
 		4, // XDG_TOPLEVEL_SHOW_WINDOW_MENU
 		std::array{
 			wl_argument{ .o = reinterpret_cast<wl_object*>(seat) },
 			wl_argument{ .u = native->lastInputSerial() },
-			wl_argument{ .i = point.x() },
-			wl_argument{ .i = point.y() },
+			wl_argument{ .i = pos.x() },
+			wl_argument{ .i = pos.y() },
 		}.data());
 }
 #endif // wayland
