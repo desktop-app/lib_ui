@@ -8,10 +8,51 @@
 
 #include "base/integration.h"
 #include "base/platform/base_platform_info.h"
-#include "ui/rp_widget.h"
+#include "base/platform/win/base_windows_safe_library.h"
 #include "ui/platform/win/ui_window_win.h"
+#include "ui/widgets/elastic_scroll.h" // kPixelToAngleDelta
+#include "ui/rp_widget.h"
+
+#include <qpa/qwindowsysteminterface.h>
 
 namespace Ui::Platform {
+namespace {
+
+[[nodiscard]] Qt::KeyboardModifiers LookupModifiers() {
+	const auto check = [](int key) {
+		return (GetKeyState(key) & 0x8000) != 0;
+	};
+
+	auto result = Qt::KeyboardModifiers();
+	if (check(VK_SHIFT)) {
+		result |= Qt::ShiftModifier;
+	}
+	// NB AltGr key (i.e., VK_RMENU on some keyboard layout) is not handled.
+	if (check(VK_RMENU) || check(VK_MENU)) {
+		result |= Qt::AltModifier;
+	}
+	if (check(VK_CONTROL)) {
+		result |= Qt::ControlModifier;
+	}
+	if (check(VK_LWIN) || check(VK_RWIN)) {
+		result |= Qt::MetaModifier;
+	}
+	return result;
+}
+
+UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
+
+[[nodiscard]] bool GetDpiForWindowSupported() {
+	static const auto Result = [&] {
+#define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
+		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
+		return LOAD_SYMBOL(user32, GetDpiForWindow);
+#undef LOAD_SYMBOL
+	}();
+	return Result;
+}
+
+} // namespace
 
 class DirectManipulation::Handler
 	: public IDirectManipulationViewportEventHandler
@@ -41,6 +82,10 @@ public:
 	}
 	[[nodiscard]] rpl::producer<Event> events() const {
 		return _events.events();
+	}
+
+	[[nodiscard]] rpl::lifetime &lifetime() {
+		return _lifetime;
 	}
 
 private:
@@ -76,6 +121,8 @@ private:
 	int _height = 0;
 	rpl::variable<bool> _interacting = false;
 	rpl::event_stream<Event> _events;
+	rpl::lifetime _lifetime;
+
 	float _scale = 1.0f;
 	float _xOffset = 0.f;
 	float _yOffset = 0.f;
@@ -275,23 +322,42 @@ HRESULT DirectManipulation::Handler::OnInteraction(
 }
 
 DirectManipulation::DirectManipulation(not_null<RpWidget*> widget)
-: _handle(GetWindowHandle(widget))
+: NativeEventFilter(widget)
 , _interacting([=] { _updateManager->Update(nullptr); }) {
-	if (!init(widget)) {
+	widget->sizeValue() | rpl::start_with_next([=](QSize size) {
+		sizeUpdated(size * widget->devicePixelRatio());
+	}, _lifetime);
+
+	widget->winIdValue() | rpl::start_with_next([=](WId winId) {
 		destroy();
-	}
+
+		if (const auto hwnd = reinterpret_cast<HWND>(winId)) {
+			if (init(hwnd)) {
+				sizeUpdated(widget->size() * widget->devicePixelRatio());
+			} else {
+				destroy();
+			}
+		}
+	}, _lifetime);
 }
 
 DirectManipulation::~DirectManipulation() {
 	destroy();
 }
 
-bool DirectManipulation::valid() const {
-	return _manager != nullptr;
+void DirectManipulation::sizeUpdated(QSize nativeSize) {
+	if (const auto handler = _handler.get()) {
+		const auto r = QRect(QPoint(), nativeSize);
+		handler->setViewportSize(r.size());
+		if (const auto viewport = _viewport.get()) {
+			const auto rect = RECT{ r.x(), r.y(), r.right(), r.bottom() };
+			viewport->SetViewportRect(&rect);
+		}
+	}
 }
 
-bool DirectManipulation::init(not_null<RpWidget*> widget) {
-	if (!_handle || !::Platform::IsWindows10OrGreater()) {
+bool DirectManipulation::init(HWND hwnd) {
+	if (!hwnd || !::Platform::IsWindows10OrGreater()) {
 		return false;
 	}
 	_manager = base::WinRT::TryCreateInstance<IDirectManipulationManager>(
@@ -308,7 +374,7 @@ bool DirectManipulation::init(not_null<RpWidget*> widget) {
 
 	hr = _manager->CreateViewport(
 		nullptr,
-		_handle,
+		hwnd,
 		IID_PPV_ARGS(_viewport.put()));
 	if (!SUCCEEDED(hr) || !_viewport) {
 		return false;
@@ -341,16 +407,14 @@ bool DirectManipulation::init(not_null<RpWidget*> widget) {
 				_interacting.stop();
 			}
 		});
-	}, _lifetime);
+	}, _handler->lifetime());
+	_handler->events() | rpl::start_with_next([=](Event &&event) {
+		base::Integration::Instance().enterFromEventLoop([&] {
+			_events.fire(std::move(event));
+		});
+	}, _handler->lifetime());
 
-	widget->sizeValue() | rpl::start_with_next([=](QSize size) {
-		const auto r = QRect(QPoint(), size * widget->devicePixelRatio());
-		_handler->setViewportSize(r.size());
-		const auto rect = RECT{ r.left(), r.top(), r.right(), r.bottom() };
-		_viewport->SetViewportRect(&rect);
-	}, _lifetime);
-
-	hr = _viewport->AddEventHandler(_handle, _handler.get(), &_cookie);
+	hr = _viewport->AddEventHandler(hwnd, _handler.get(), &_cookie);
 	if (!SUCCEEDED(hr)) {
 		return false;
 	}
@@ -361,10 +425,11 @@ bool DirectManipulation::init(not_null<RpWidget*> widget) {
 		return false;
 	}
 
-	hr = _manager->Activate(_handle);
+	hr = _manager->Activate(hwnd);
 	if (!SUCCEEDED(hr)) {
 		return false;
 	}
+	_managerHandle = hwnd;
 
 	hr = _viewport->Enable();
 	if (!SUCCEEDED(hr)) {
@@ -375,33 +440,33 @@ bool DirectManipulation::init(not_null<RpWidget*> widget) {
 	if (!SUCCEEDED(hr)) {
 		return false;
 	}
-
 	return true;
 }
 
-auto DirectManipulation::events() const -> rpl::producer<Event> {
-	if (!_handler) {
-		return rpl::never<Event>();
+bool DirectManipulation::filterNativeEvent(
+		UINT msg,
+		WPARAM wParam,
+		LPARAM lParam,
+		LRESULT *result) {
+	switch (msg) {
+
+	case DM_POINTERHITTEST:
+		if (_viewport) {
+			const auto id = UINT32(GET_POINTERID_WPARAM(wParam));
+			auto type = POINTER_INPUT_TYPE();
+			if (::GetPointerType(id, &type) && type == PT_TOUCHPAD) {
+				_viewport->SetContact(id);
+			}
+			return true;
+		}
+		break;
+
 	}
-	return [events = _handler->events()](auto consumer) mutable {
-		auto result = rpl::lifetime();
-		std::move(
-			events
-		) | rpl::start_with_next([=](Event &&event) {
-			base::Integration::Instance().enterFromEventLoop([&] {
-				consumer.put_next(std::move(event));
-			});
-		}, result);
-		return result;
-	};
+	return false;
 }
 
-void DirectManipulation::handlePointerHitTest(WPARAM wParam) {
-	const auto id = UINT32(GET_POINTERID_WPARAM(wParam));
-	auto type = POINTER_INPUT_TYPE();
-	if (::GetPointerType(id, &type) && type == PT_TOUCHPAD) {
-		_viewport->SetContact(id);
-	}
+auto DirectManipulation::events() const -> rpl::producer<Event> {
+	return _events.events();
 }
 
 void DirectManipulation::destroy() {
@@ -426,9 +491,55 @@ void DirectManipulation::destroy() {
 	}
 
 	if (_manager) {
-		_manager->Deactivate(_handle);
+		if (_managerHandle) {
+			_manager->Deactivate(_managerHandle);
+		}
 		_manager = nullptr;
 	}
+}
+
+void ActivateDirectManipulation(not_null<RpWidget*> window) {
+	auto dm = std::make_unique<DirectManipulation>(window);
+
+	dm->events(
+	) | rpl::start_with_next([=](const DirectManipulationEvent &event) {
+		using Type = DirectManipulationEventType;
+		const auto send = [&](Qt::ScrollPhase phase) {
+			const auto windowHandle = window->windowHandle();
+			const auto hwnd = reinterpret_cast<HWND>(window->winId());
+			if (!windowHandle || !hwnd) {
+				return;
+			}
+			auto global = POINT();
+			::GetCursorPos(&global);
+			auto local = global;
+			::ScreenToClient(hwnd, &local);
+			const auto dpi = GetDpiForWindowSupported()
+				? GetDpiForWindow(hwnd)
+				: 0;
+			const auto scale = dpi ? (96. / dpi) : 1.;
+			const auto delta = QPointF(event.delta) * scale;
+			QWindowSystemInterface::handleWheelEvent(
+				windowHandle,
+				QPointF(local.x, local.y),
+				QPointF(global.x, global.y),
+				delta.toPoint(),
+				(delta * kPixelToAngleDelta).toPoint(),
+				LookupModifiers(),
+				phase,
+				Qt::MouseEventSynthesizedBySystem);
+		};
+		switch (event.type) {
+		case Type::ScrollStart: send(Qt::ScrollBegin); break;
+		case Type::Scroll: send(Qt::ScrollUpdate); break;
+		case Type::FlingStart:
+		case Type::Fling: send(Qt::ScrollMomentum); break;
+		case Type::ScrollStop: send(Qt::ScrollEnd); break;
+		case Type::FlingStop: send(Qt::ScrollEnd); break;
+		}
+	}, window->lifetime());
+
+	window->lifetime().add([owned = std::move(dm)] {});
 }
 
 }  // namespace Ui::Platform

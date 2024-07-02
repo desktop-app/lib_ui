@@ -158,6 +158,11 @@ rpl::producer<> RpWidgetWrap::macWindowDeactivateEvents() const {
 #endif // Q_OS_MAC
 }
 
+rpl::producer<WId> RpWidgetWrap::winIdValue() const {
+	auto &stream = eventStreams().winId;
+	return stream.events_starting_with(rpWidget()->internalWinId());
+}
+
 rpl::lifetime &RpWidgetWrap::lifetime() {
 	return _lifetime;
 }
@@ -243,6 +248,17 @@ bool RpWidgetWrap::handleEvent(QEvent *event) {
 			}
 		}
 		break;
+
+	case QEvent::WinIdChange:
+		if (streams->winId.has_consumers()) {
+			if (!allAreObserved) {
+				that = rpWidget();
+			}
+			streams->winId.fire_copy(rpWidget()->internalWinId());
+			if (!that) {
+				return true;
+			}
+		}
 	}
 
 	return eventHook(event);
