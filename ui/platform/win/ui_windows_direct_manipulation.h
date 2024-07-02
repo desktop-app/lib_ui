@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/platform/win/base_windows_winrt.h"
+#include "ui/platform/win/ui_windows_native_event_filter.h"
 #include "ui/effects/animations.h"
 
 #include <QtCore/QPoint>
@@ -35,14 +36,10 @@ struct DirectManipulationEvent {
 	QPoint delta;
 };
 
-class DirectManipulation final {
+class DirectManipulation final : public NativeEventFilter {
 public:
 	explicit DirectManipulation(not_null<RpWidget*> widget);
 	~DirectManipulation();
-
-	[[nodiscard]] bool valid() const;
-
-	void handlePointerHitTest(WPARAM wParam);
 
 	using Event = DirectManipulationEvent;
 	[[nodiscard]] rpl::producer<Event> events() const;
@@ -50,14 +47,21 @@ public:
 private:
 	class Handler;
 
-	bool init(not_null<RpWidget*> widget);
+	bool init(HWND hwnd);
+	void sizeUpdated(QSize nativeSize);
 	void destroy();
 
-	HWND _handle = nullptr;
+	bool filterNativeEvent(
+		UINT msg,
+		WPARAM wParam,
+		LPARAM lParam,
+		LRESULT *result) override;
+
 	winrt::com_ptr<IDirectManipulationManager> _manager;
 	winrt::com_ptr<IDirectManipulationUpdateManager> _updateManager;
 	winrt::com_ptr<IDirectManipulationViewport> _viewport;
 	winrt::com_ptr<Handler> _handler;
+	HWND _managerHandle = nullptr;
 	DWORD _cookie = 0;
 	//bool has_animation_observer_ = false;
 
@@ -67,5 +71,6 @@ private:
 
 };
 
+void ActivateDirectManipulation(not_null<RpWidget*> window);
 
 } // namespace Ui::Platform
