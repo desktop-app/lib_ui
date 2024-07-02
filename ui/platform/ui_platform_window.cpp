@@ -254,10 +254,13 @@ void BasicWindowHelper::setupBodyTitleAreaEvents() {
 			}
 		} else if (e->type() == QEvent::MouseButtonRelease) {
 			_mousePressed = false;
-		} else if (e->type() == QEvent::MouseButtonPress
-			&& (static_cast<QMouseEvent*>(e.get())->button()
-				== Qt::LeftButton)) {
-			_mousePressed = true;
+		} else if (e->type() == QEvent::MouseButtonPress) {
+			const auto ee = static_cast<QMouseEvent*>(e.get());
+			if (ee->button() == Qt::LeftButton) {
+				_mousePressed = true;
+			} else if (ee->button() == Qt::RightButton) {
+				ShowWindowMenu(window(), ee->windowPos().toPoint());
+			}
 		} else if (e->type() == QEvent::MouseMove) {
 			if (_mousePressed
 #ifndef Q_OS_WIN // We handle fullscreen startSystemMove() only on Windows.
