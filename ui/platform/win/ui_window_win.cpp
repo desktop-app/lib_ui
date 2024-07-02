@@ -491,14 +491,7 @@ void WindowHelper::init() {
 	initialShadowUpdate();
 	updateCornersRounding();
 
-	auto dm = std::make_unique<DirectManipulation>(window());
-	if (dm->valid()) {
-		_directManipulation = std::move(dm);
-		_directManipulation->events(
-		) | rpl::start_with_next([=](const DirectManipulationEvent &event) {
-			handleDirectManipulationEvent(event);
-		}, window()->lifetime());
-	}
+	ActivateDirectManipulation(window());
 
 	window()->shownValue() | rpl::filter([=](bool shown) {
 		return !shown;
@@ -521,38 +514,6 @@ void WindowHelper::init() {
 				return base::EventFilterResult::Continue;
 			});
 	}, window()->lifetime());
-}
-
-void WindowHelper::handleDirectManipulationEvent(
-		const DirectManipulationEvent &event) {
-	using Type = DirectManipulationEventType;
-	const auto send = [&](Qt::ScrollPhase phase) {
-		if (const auto windowHandle = window()->windowHandle()) {
-			auto global = POINT();
-			::GetCursorPos(&global);
-			auto local = global;
-			::ScreenToClient(_handle, &local);
-			const auto dpi = _dpi.current() ? double(_dpi.current()) : 96.;
-			const auto delta = QPointF(event.delta) / (dpi / 96.);
-			QWindowSystemInterface::handleWheelEvent(
-				windowHandle,
-				QPointF(local.x, local.y),
-				QPointF(global.x, global.y),
-				delta.toPoint(),
-				(delta * kPixelToAngleDelta).toPoint(),
-				LookupModifiers(),
-				phase,
-				Qt::MouseEventSynthesizedBySystem);
-		}
-	};
-	switch (event.type) {
-	case Type::ScrollStart: send(Qt::ScrollBegin); break;
-	case Type::Scroll: send(Qt::ScrollUpdate); break;
-	case Type::FlingStart:
-	case Type::Fling: send(Qt::ScrollMomentum); break;
-	case Type::ScrollStop: send(Qt::ScrollEnd); break;
-	case Type::FlingStop: send(Qt::ScrollEnd); break;
-	}
 }
 
 bool WindowHelper::handleNativeEvent(
@@ -783,13 +744,6 @@ bool WindowHelper::handleNativeEvent(
 		InvokeQueued(_title, [=] {
 			_title->refreshAdditionalPaddings(_handle);
 		});
-	} return false;
-
-	case DM_POINTERHITTEST: {
-		if (_directManipulation) {
-			_directManipulation->handlePointerHitTest(wParam);
-			return true;
-		}
 	} return false;
 
 	}

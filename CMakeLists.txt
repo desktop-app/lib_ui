@@ -128,6 +128,8 @@ PRIVATE
     ui/platform/win/ui_window_win.h
     ui/platform/win/ui_windows_direct_manipulation.cpp
     ui/platform/win/ui_windows_direct_manipulation.h
+    ui/platform/win/ui_windows_native_event_filter.cpp
+    ui/platform/win/ui_windows_native_event_filter.h
     ui/platform/win/ui_utility_win.cpp
     ui/platform/win/ui_utility_win.h
     ui/platform/ui_platform_window_title.cpp
