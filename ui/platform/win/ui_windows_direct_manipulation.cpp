@@ -99,11 +99,6 @@ void DirectManipulation::Handler::setViewportSize(QSize size) {
 STDMETHODIMP DirectManipulation::Handler::QueryInterface(
 		REFIID iid,
 		void **ppv) {
-	const IID IID_IDirectManipulationViewportEventHandler =
-		__uuidof(IDirectManipulationViewportEventHandler);
-	const IID IID_IDirectManipulationInteractionEventHandler =
-		__uuidof(IDirectManipulationInteractionEventHandler);
-
 	if ((IID_IUnknown == iid) ||
 		(IID_IDirectManipulationViewportEventHandler == iid)) {
 		*ppv = static_cast<IDirectManipulationViewportEventHandler*>(this);

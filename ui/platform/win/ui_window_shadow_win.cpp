@@ -564,7 +564,6 @@ LRESULT WindowShadow::windowCallback(
 		if (!_resizeEnabled) {
 			return HTNOWHERE;
 		}
-		const auto xPos = GET_X_LPARAM(lParam);
 		const auto yPos = GET_Y_LPARAM(lParam);
 		if (hwnd == _handles[0]) {
 			return HTTOP;
