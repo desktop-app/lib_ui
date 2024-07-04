@@ -281,6 +281,7 @@ public:
 	rpl::producer<bool> windowActiveValue() const;
 	rpl::producer<QRect> paintRequest() const;
 	rpl::producer<> alive() const;
+	rpl::producer<> death() const;
 	rpl::producer<> macWindowDeactivateEvents() const;
 
 	template <typename Error, typename Generator>

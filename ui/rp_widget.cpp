@@ -140,6 +140,10 @@ rpl::producer<> RpWidgetWrap::alive() const {
 	return eventStreams().alive.events();
 }
 
+rpl::producer<> RpWidgetWrap::death() const {
+	return alive() | rpl::then(rpl::single(rpl::empty));
+}
+
 rpl::producer<> RpWidgetWrap::macWindowDeactivateEvents() const {
 #ifdef Q_OS_MAC
 	return windowActiveValue()
