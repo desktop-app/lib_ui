@@ -3741,7 +3741,7 @@ void InputField::setTextWithTags(
 		cursor.beginEditBlock();
 	}
 	cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
-	cursor.insertText(prepared.text);
+	cursor.insertText(prepared.text, _defaultCharFormat);
 	cursor.movePosition(QTextCursor::End);
 	cursor.endEditBlock();
 	if (historyAction == HistoryAction::Clear) {
