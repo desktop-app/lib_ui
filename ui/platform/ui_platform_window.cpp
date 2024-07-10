@@ -301,6 +301,38 @@ void DefaultWindowHelper::init() {
 	_title->show();
 
 	rpl::combine(
+		window()->shownValue(),
+		_title->shownValue(),
+		_windowState.value()
+	) | rpl::filter([=](
+			bool shown,
+			bool titleShown,
+			Qt::WindowStates windowState) {
+		return shown;
+	}) | rpl::start_with_next([=](
+			bool shown,
+			bool titleShown,
+			Qt::WindowStates windowState) {
+		_lastGeometry = _body->mapToGlobal(_body->rect());
+		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
+		updateWindowMargins();
+		if (_fixedSize) {
+			setFixedSize(*_fixedSize);
+		} else if (_minimumSize) {
+			setMinimumSize(*_minimumSize);
+		}
+	}, window()->lifetime());
+
+	_title->shownValue(
+	) | rpl::filter([=] {
+		return !window()->isHidden()
+			&& !window()->isMaximized()
+			&& !window()->isFullScreen();
+	}) | rpl::start_with_next([=] {
+		setGeometry(_lastGeometry);
+	}, window()->lifetime());
+
+	rpl::combine(
 		window()->widthValue(),
 		_windowState.value(),
 		_title->shownValue(),
@@ -352,23 +384,6 @@ void DefaultWindowHelper::init() {
 	}) | rpl::start_with_next([=] {
 		Painter p(window());
 		paintBorders(p);
-	}, window()->lifetime());
-
-	rpl::combine(
-		window()->shownValue(),
-		_title->shownValue(),
-		_windowState.value()
-	) | rpl::filter([=](
-			bool shown,
-			bool titleShown,
-			Qt::WindowStates windowState) {
-		return shown;
-	}) | rpl::start_with_next([=](
-			bool shown,
-			bool titleShown,
-			Qt::WindowStates windowState) {
-		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
-		updateWindowMargins();
 	}, window()->lifetime());
 
 	window()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
@@ -563,13 +578,13 @@ void DefaultWindowHelper::setNativeFrame(bool enabled) {
 }
 
 void DefaultWindowHelper::setMinimumSize(QSize size) {
-	const auto sizeWithMargins = size.grownBy(bodyPadding());
-	window()->setMinimumSize(sizeWithMargins);
+	_minimumSize = size;
+	window()->setMinimumSize(size.grownBy(bodyPadding()));
 }
 
 void DefaultWindowHelper::setFixedSize(QSize size) {
-	const auto sizeWithMargins = size.grownBy(bodyPadding());
-	window()->setFixedSize(sizeWithMargins);
+	_fixedSize = size;
+	window()->setFixedSize(size.grownBy(bodyPadding()));
 	_title->setResizeEnabled(false);
 }
 
