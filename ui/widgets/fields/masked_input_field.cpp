@@ -496,6 +496,9 @@ void MaskedInputField::keyPressEvent(QKeyEvent *e) {
 
 	if (_customUpDown && (e->key() == Qt::Key_Up || e->key() == Qt::Key_Down || e->key() == Qt::Key_PageUp || e->key() == Qt::Key_PageDown)) {
 		e->ignore();
+	} else if (e == QKeySequence::DeleteStartOfWord && hasSelectedText()) {
+		e->accept();
+		backspace();
 	} else {
 		QLineEdit::keyPressEvent(e);
 	}
