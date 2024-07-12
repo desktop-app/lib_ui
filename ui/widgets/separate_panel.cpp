@@ -25,6 +25,7 @@
 #include "ui/rect.h"
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
+#include "base/invoke_queued.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"
@@ -404,6 +405,30 @@ void SeparatePanel::toggleSearch(bool shown) {
 		updateTitleGeometry(width());
 		_searchWrap->show(anim::type::normal);
 		updateBackToggled();
+
+		inner->shownValue(
+		) | rpl::filter([=](bool active) {
+			return active && (_searchField == field);
+		}) | rpl::take(1) | rpl::start_with_next([=] {
+			InvokeQueued(field, [=] {
+				if (_searchField == field && window()->isActiveWindow()) {
+					// In case focus is somewhat in a native child window,
+					// like a webview, Qt glitches here with field showing
+					// focused state, but not receiving any keyboard input:
+					//
+					// window()->windowHandle()->isActive() == false.
+					//
+					// Steps were: SeparatePanel with a WebView2 child,
+					// some interaction with mouse inside the WebView2,
+					// so that WebView2 gets focus and active window state,
+					// then we call setSearchAllowed() and after animation
+					// is finished try typing -> nothing happens.
+					//
+					// With this workaround it works fine.
+					activateWindow();
+				}
+			});
+		}, inner->lifetime());
 
 		_searchWrap->shownValue(
 		) | rpl::filter(
