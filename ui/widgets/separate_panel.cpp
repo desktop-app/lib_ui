@@ -6,13 +6,14 @@
 //
 #include "ui/widgets/separate_panel.h"
 
+#include "ui/widgets/fields/input_field.h"
+#include "ui/widgets/menu/menu_add_action_callback.h"
+#include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/widgets/popup_menu.h"
-#include "ui/widgets/menu/menu_add_action_callback.h"
-#include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/platform/ui_platform_utility.h"
@@ -246,7 +247,7 @@ void SeparatePanel::overrideTitleColor(std::optional<QColor> color) {
 }
 
 void SeparatePanel::updateTitleGeometry(int newWidth) const {
-	if (!_title) {
+	if (!_title && !_searchWrap) {
 		return;
 	}
 	const auto progress = _titleLeft.value(_back->toggled() ? 1. : 0.);
@@ -254,20 +255,41 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 		st::separatePanelTitleLeft,
 		_back->width() + st::separatePanelTitleSkip,
 		progress);
-	_title->resizeToWidth(newWidth
+	const auto available = newWidth
 		- rect::m::sum::h(_padding)
 		- left
-		- _close->width()
-		- (_menuToggle ? _menuToggle->width() : 0));
-	_title->moveToLeft(
-		_padding.left() + left,
-		_padding.top() + st::separatePanelTitleTop);
+		- _close->width();
+	if (_title) {
+		_title->resizeToWidth(available
+			- (_menuToggle ? _menuToggle->width() : 0)
+			- (_searchToggle ? _searchToggle->width() : 0));
+		_title->moveToLeft(
+			_padding.left() + left,
+			_padding.top() + st::separatePanelTitleTop);
+	}
+	if (_searchWrap) {
+		_searchWrap->entity()->resize(available, _close->height());
+		_searchWrap->move(_padding.left() + left, _padding.top());
+		if (_searchField) {
+			_searchField->resizeToWidth(available);
+			_searchField->move(
+				0,
+				(_close->height() - _searchField->height()) / 2);
+		}
+	}
 }
 
-rpl::producer<> SeparatePanel::backRequests() const {
+rpl::producer<> SeparatePanel::allBackRequests() const {
 	return rpl::merge(
 		_back->entity()->clicks() | rpl::to_empty,
 		_synteticBackRequests.events());
+}
+
+rpl::producer<> SeparatePanel::backRequests() const {
+	return allBackRequests(
+	) | rpl::filter([=] {
+		return !_searchField;
+	});
 }
 
 rpl::producer<> SeparatePanel::closeRequests() const {
@@ -281,8 +303,14 @@ rpl::producer<> SeparatePanel::closeEvents() const {
 }
 
 void SeparatePanel::setBackAllowed(bool allowed) {
-	if (allowed != _back->toggled()) {
-		_back->toggle(allowed, anim::type::normal);
+	_backAllowed = allowed;
+	updateBackToggled();
+}
+
+void SeparatePanel::updateBackToggled() {
+	const auto toggled = _backAllowed || (_searchField != nullptr);
+	if (_back->toggled() != toggled) {
+		_back->toggle(toggled, anim::type::normal);
 	}
 }
 
@@ -300,6 +328,101 @@ void SeparatePanel::setMenuAllowed(
 			_padding.top());
 	}, _menuToggle->lifetime());
 	updateTitleGeometry(width());
+}
+
+void SeparatePanel::setSearchAllowed(
+		rpl::producer<QString> placeholder,
+		Fn<void(std::optional<QString>)> queryChanged) {
+	_searchPlaceholder = std::move(placeholder);
+	_searchQueryChanged = std::move(queryChanged);
+	_searchToggle.create(
+		this,
+		object_ptr<IconButton>(this, st::separatePanelSearch));
+	const auto button = _searchToggle->entity();
+	updateTitleButtonColors(button);
+	_searchToggle->show(anim::type::instant);
+	button->setClickedCallback([=] { toggleSearch(true); });
+
+	widthValue(
+	) | rpl::start_with_next([=](int width) {
+		_searchToggle->moveToRight(
+			_padding.right() + _close->width(),
+			_padding.top());
+	}, _searchToggle->lifetime());
+	updateTitleGeometry(width());
+}
+
+bool SeparatePanel::closeSearch() {
+	if (!_searchField) {
+		return false;
+	}
+	toggleSearch(false);
+	return true;
+}
+
+void SeparatePanel::toggleSearch(bool shown) {
+	const auto weak = Ui::MakeWeak(this);
+	if (shown) {
+		if (_searchWrap && _searchWrap->toggled()) {
+			return;
+		}
+		_searchWrap.create(this, object_ptr<RpWidget>(this));
+		const auto inner = _searchWrap->entity();
+		inner->paintRequest() | rpl::start_with_next([=](QRect clip) {
+			QPainter(inner).fillRect(clip, st::windowBg);
+		}, inner->lifetime());
+		_searchField = CreateChild<InputField>(
+			inner,
+			st::defaultMultiSelectSearchField,
+			InputField::Mode::SingleLine,
+			_searchPlaceholder.value());
+		_searchField->show();
+		_searchField->setFocusFast();
+
+		const auto field = _searchField;
+		field->changes() | rpl::filter([=] {
+			return (_searchField == field);
+		}) | rpl::start_with_next([=] {
+			if (const auto onstack = _searchQueryChanged) {
+				onstack(field->getLastText());
+			}
+		}, field->lifetime());
+
+		allBackRequests() | rpl::filter([=] {
+			return (_searchField == field);
+		}) | rpl::start_with_next([=] {
+			toggleSearch(false);
+		}, field->lifetime());
+
+		if (const auto onstack = _searchQueryChanged) {
+			onstack(QString());
+			if (!weak) {
+				return;
+			}
+		}
+
+		updateTitleGeometry(width());
+		_searchWrap->show(anim::type::normal);
+		updateBackToggled();
+
+		_searchWrap->shownValue(
+		) | rpl::filter(
+			!rpl::mappers::_1
+		) | rpl::start_with_next([=] {
+			_searchWrap.destroy();
+		}, _searchWrap->lifetime());
+	} else if (_searchField) {
+		_searchField = nullptr;
+		if (const auto onstack = _searchQueryChanged) {
+			onstack(std::nullopt);
+			if (!weak) {
+				return;
+			}
+		}
+
+		_searchWrap->hide(anim::type::normal);
+		updateBackToggled();
+	}
 }
 
 void SeparatePanel::showMenu(Fn<void(const Menu::MenuCallback&)> fill) {
@@ -368,7 +491,13 @@ void SeparatePanel::showAndActivate() {
 void SeparatePanel::keyPressEvent(QKeyEvent *e) {
 	if (e->key() == Qt::Key_Escape) {
 		crl::on_main(this, [=] {
-			if (_back->toggled()) {
+			const auto searchQuery = _searchField
+				? _searchField->getLastText().trimmed()
+				: QString();
+			if (!searchQuery.isEmpty()) {
+				_searchField->clear();
+				_searchField->setFocus();
+			} else if (_back->toggled()) {
 				_synteticBackRequests.fire({});
 			} else {
 				_userCloseRequests.fire({});

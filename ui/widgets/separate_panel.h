@@ -13,6 +13,8 @@
 #include "ui/layers/layer_widget.h"
 #include "ui/text/text_entity.h"
 
+#include <rpl/variable.h>
+
 class Painter;
 
 namespace style {
@@ -37,8 +39,11 @@ class PopupMenu;
 class LayerStackWidget;
 class LayerWidget;
 class FlatLabel;
+class InputField;
 template <typename Widget>
 class FadeWrapScaled;
+template <typename Widget>
+class FadeWrap;
 
 struct SeparatePanelArgs {
 	QWidget *parent = nullptr;
@@ -77,7 +82,13 @@ public:
 	[[nodiscard]] rpl::producer<> closeEvents() const;
 	void setBackAllowed(bool allowed);
 
+	void updateBackToggled();
+
 	void setMenuAllowed(Fn<void(const Menu::MenuCallback&)> fill);
+	void setSearchAllowed(
+		rpl::producer<QString> placeholder,
+		Fn<void(std::optional<QString>)> queryChanged);
+	bool closeSearch();
 
 	void overrideTitleColor(std::optional<QColor> color);
 
@@ -131,8 +142,16 @@ private:
 	void updateTitleButtonColors(not_null<IconButton*> button);
 	void updateTitleColors();
 
+	void toggleSearch(bool shown);
+	[[nodiscard]] rpl::producer<> allBackRequests() const;
+
 	object_ptr<IconButton> _close;
 	object_ptr<IconButton> _menuToggle = { nullptr };
+	object_ptr<FadeWrapScaled<IconButton>> _searchToggle = { nullptr };
+	rpl::variable<QString> _searchPlaceholder;
+	Fn<void(std::optional<QString>)> _searchQueryChanged;
+	object_ptr<FadeWrap<RpWidget>> _searchWrap = { nullptr };
+	InputField *_searchField = nullptr;
 	object_ptr<FlatLabel> _title = { nullptr };
 	object_ptr<FadeWrapScaled<IconButton>> _back;
 	object_ptr<RpWidget> _body;
@@ -146,6 +165,7 @@ private:
 	int _titleHeight = 0;
 	bool _hideOnDeactivate = false;
 	bool _useTransparency = true;
+	bool _backAllowed = false;
 	style::margins _padding;
 
 	bool _dragging = false;
