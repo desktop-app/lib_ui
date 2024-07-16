@@ -293,10 +293,17 @@ rpl::producer<> SeparatePanel::backRequests() const {
 	});
 }
 
-rpl::producer<> SeparatePanel::closeRequests() const {
+rpl::producer<> SeparatePanel::allCloseRequests() const {
 	return rpl::merge(
 		_close->clicks() | rpl::to_empty,
 		_userCloseRequests.events());
+}
+
+rpl::producer<> SeparatePanel::closeRequests() const {
+	return allCloseRequests(
+	) | rpl::filter([=] {
+		return !_searchField;
+	});
 }
 
 rpl::producer<> SeparatePanel::closeEvents() const {
@@ -389,7 +396,10 @@ void SeparatePanel::toggleSearch(bool shown) {
 			}
 		}, field->lifetime());
 
-		allBackRequests() | rpl::filter([=] {
+		rpl::merge(
+			allBackRequests(),
+			allCloseRequests()
+		) | rpl::filter([=] {
 			return (_searchField == field);
 		}) | rpl::start_with_next([=] {
 			toggleSearch(false);

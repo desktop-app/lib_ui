@@ -144,6 +144,7 @@ private:
 
 	void toggleSearch(bool shown);
 	[[nodiscard]] rpl::producer<> allBackRequests() const;
+	[[nodiscard]] rpl::producer<> allCloseRequests() const;
 
 	object_ptr<IconButton> _close;
 	object_ptr<IconButton> _menuToggle = { nullptr };
