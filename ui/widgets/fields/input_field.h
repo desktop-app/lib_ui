@@ -238,6 +238,7 @@ public:
 		std::shared_ptr<QContextMenuEvent> event;
 	};
 
+	void setDocumentMargin(float64 margin);
 	void setAdditionalMargin(int margin);
 	void setAdditionalMargins(QMargins margins);
 
@@ -555,10 +556,12 @@ private:
 	QMargins _additionalMargins;
 	QMargins _customFontMargins;
 	int _placeholderCustomFontSkip = 0;
+	int _requestedDocumentTopMargin = 0;
 
 	bool _forcePlaceholderHidden = false;
 	bool _reverseMarkdownReplacement = false;
 	bool _customEmojiRepaintScheduled = false;
+	bool _settingDocumentMargin = false;
 
 	// Tags list which we should apply while setText() call or insert from mime data.
 	TagList _insertedTags;
