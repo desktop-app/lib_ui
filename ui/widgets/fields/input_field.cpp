@@ -5096,7 +5096,9 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 		const auto tagsMime = TextUtilities::TagsMimeType();
 		if (!source->hasFormat(textMime) || !source->hasFormat(tagsMime)) {
 			_insertedTags.clear();
-			return source->text();
+
+			auto result = source->text();
+			return result.replace(u"\r\n"_q, u"\n"_q);
 		}
 		auto result = QString::fromUtf8(source->data(textMime));
 		_insertedTags = TextUtilities::DeserializeTags(
