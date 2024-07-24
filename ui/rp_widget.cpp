@@ -11,6 +11,7 @@
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
 #include <QtGui/QColorSpace>
+#include <QtWidgets/QApplication>
 
 TWidget::TWidget(QWidget *parent)
 : TWidgetHelper<QWidget>(parent) {
@@ -129,7 +130,9 @@ rpl::producer<not_null<QScreen*>> RpWidgetWrap::screenValue() const {
 
 rpl::producer<bool> RpWidgetWrap::windowActiveValue() const {
 	auto &stream = eventStreams().windowActive;
-	return stream.events_starting_with(rpWidget()->isActiveWindow());
+	return stream.events_starting_with(
+		QApplication::activeWindow() == rpWidget()->window()
+	) | rpl::distinct_until_changed();
 }
 
 rpl::producer<QRect> RpWidgetWrap::paintRequest() const {
@@ -195,7 +198,8 @@ bool RpWidgetWrap::handleEvent(QEvent *event) {
 			if (!allAreObserved) {
 				that = rpWidget();
 			}
-			streams->windowActive.fire_copy(rpWidget()->isActiveWindow());
+			streams->windowActive.fire_copy(
+				QApplication::activeWindow() == rpWidget()->window());
 			if (!that) {
 				return true;
 			}
