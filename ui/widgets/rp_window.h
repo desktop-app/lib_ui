@@ -24,8 +24,9 @@ enum class HitTestResult;
 enum class WindowTitleHitTestFlag {
 	None       = 0x00,
 	Move       = 0x01,
-	Maximize   = 0x02,
-	FullScreen = 0x04,
+	Menu       = 0x02,
+	Maximize   = 0x04,
+	FullScreen = 0x08,
 };
 inline constexpr bool is_flag_type(WindowTitleHitTestFlag) {
 	return true;
