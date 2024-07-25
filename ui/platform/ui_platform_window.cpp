@@ -259,7 +259,9 @@ void BasicWindowHelper::setupBodyTitleAreaEvents() {
 			if (ee->button() == Qt::LeftButton) {
 				_mousePressed = true;
 			} else if (ee->button() == Qt::RightButton) {
-				ShowWindowMenu(window(), ee->windowPos().toPoint());
+				if (hitTest() & WindowTitleHitTestFlag::Menu) {
+					ShowWindowMenu(window(), ee->windowPos().toPoint());
+				}
 			}
 		} else if (e->type() == QEvent::MouseMove) {
 			if (_mousePressed
