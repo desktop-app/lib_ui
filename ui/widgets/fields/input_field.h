@@ -649,6 +649,9 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 [[nodiscard]] int ComputeRealUnicodeCharactersCount(const QString &text);
 [[nodiscard]] int ComputeFieldCharacterCount(not_null<InputField*> field);
 
-void AddLengthLimitLabel(not_null<InputField*> field, int limit);
+void AddLengthLimitLabel(
+	not_null<InputField*> field,
+	int limit,
+	std::optional<uint> customThreshold = std::nullopt);
 
 } // namespace Ui

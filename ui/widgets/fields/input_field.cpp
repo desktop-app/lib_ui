@@ -5245,10 +5245,14 @@ int ComputeFieldCharacterCount(not_null<InputField*> field) {
 	return ComputeRealUnicodeCharactersCount(field->getLastText());
 }
 
-void AddLengthLimitLabel(not_null<InputField*> field, int limit) {
+void AddLengthLimitLabel(
+		not_null<InputField*> field,
+		int limit,
+		std::optional<uint> customThreshold) {
 	struct State {
 		rpl::variable<int> length;
 	};
+	constexpr auto kMinus = QChar(0x2212);
 	const auto state = field->lifetime().make_state<State>();
 	state->length = rpl::single(
 		rpl::empty
@@ -5257,10 +5261,16 @@ void AddLengthLimitLabel(not_null<InputField*> field, int limit) {
 	});
 	const auto allowExceed = std::max(limit / 2, 9);
 	field->setMaxLength(limit + allowExceed);
-	const auto threshold = std::min(limit / 2, 9);
+	const auto threshold = !customThreshold
+		? std::min(limit / 2, 9)
+		: int(*customThreshold);
 	auto warningText = state->length.value() | rpl::map([=](int count) {
 		const auto left = limit - count;
-		return (left < threshold) ? QString::number(left) : QString();
+		return (left >= threshold)
+			? QString()
+			: (left < 0)
+			? (kMinus + QString::number(std::abs(left)))
+			: QString::number(left);
 	});
 	const auto warning = CreateChild<FlatLabel>(
 		field.get(),
@@ -5268,7 +5278,7 @@ void AddLengthLimitLabel(not_null<InputField*> field, int limit) {
 		st::defaultInputFieldLimit);
 
 	const auto maxSize = st::defaultInputFieldLimit.style.font->width(
-		QString::number(-allowExceed));
+		kMinus + QString::number(allowExceed));
 	const auto add = std::max(maxSize - field->st().textMargins.right(), 0);
 	if (add) {
 		field->setAdditionalMargins({ 0, 0, add, 0 });
