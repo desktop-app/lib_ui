@@ -1026,7 +1026,7 @@ void String::enumerateLines(
 			TextBlocks::const_iterator i,
 			int16 paragraphIndex) {
 		if (qindex != paragraphIndex) {
-			top += qpadding.bottom();
+			//top += qpadding.bottom(); // This was done before callback().
 			qindex = paragraphIndex;
 			quote = quoteByIndex(qindex);
 			qpadding = quotePadding(quote);
