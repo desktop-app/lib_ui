@@ -58,19 +58,23 @@ QString UrlClickHandler::EncodeForOpening(const QString &originalUrl) {
 		return originalUrl;
 	}
 
+	static const auto TonExp = QRegularExpression(u"^[^/@:]+\\.ton($|/)"_q);
+	if (TonExp.match(originalUrl.toLower()).hasMatch()) {
+		return u"tonsite://"_q + originalUrl;
+	}
+
 	const auto u = QUrl(originalUrl);
 	const auto good = QUrl(u.isValid() ? u.toEncoded() : QString());
 	const auto result = good.isValid()
 		? QString::fromUtf8(good.toEncoded())
 		: originalUrl;
 
-	static const auto RegExp = QRegularExpression(
-		QStringLiteral("^[a-zA-Z]+:"));
+	static const auto RegExp = QRegularExpression(u"^[a-zA-Z]+:"_q);
 
 	if (!result.isEmpty()
 		&& !RegExp.match(result).hasMatch()) {
 		// No protocol.
-		return QStringLiteral("https://") + result;
+		return u"https://"_q + result;
 	}
 	return result;
 }
