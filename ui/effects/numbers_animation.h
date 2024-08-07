@@ -53,6 +53,7 @@ private:
 
 	int _fromWidth = 0;
 	int _toWidth = 0;
+	int _bothWidth = 0;
 
 	Ui::Animations::Simple _a_ready;
 	QString _delayedText;

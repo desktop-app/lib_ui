@@ -69,28 +69,35 @@ void NumbersAnimation::realSetText(QString text, int value) {
 	while (_digits.size() > newSize && !_digits.front().to.unicode()) {
 		_digits.pop_front();
 	}
-	auto oldSize = _digits.size();
 	auto animating = false;
+	auto toFullWidth = 0;
+	auto bothFullWidth = 0;
 	for (auto i = 0, size = int(_digits.size()); i != size; ++i) {
 		auto &digit = _digits[i];
-		digit.from = digit.to;
+		const auto from = digit.from = digit.to;
 		digit.fromWidth = digit.toWidth;
-		digit.to = (newSize + i < size) ? QChar(0) : text[newSize + i - size];
-		digit.toWidth = digit.to.unicode() ? _font->width(digit.to) : 0;
-		if (digit.from != digit.to) {
+		const auto to = digit.to = (newSize + i < size)
+			? QChar(0)
+			: text[newSize + i - size];
+		digit.toWidth = to.unicode() ? _font->width(to) : 0;
+		if (from != to) {
 			animating = true;
 		}
-		if (!digit.from.unicode()) {
-			--oldSize;
+		const auto toCharWidth = (!_disabledMonospace || to.isDigit())
+			? _digitWidth
+			: digit.toWidth;
+		const auto fromCharWidth = (!_disabledMonospace || from.isDigit())
+			? _digitWidth
+			: digit.fromWidth;
+		const auto charWidth = std::max(toCharWidth, fromCharWidth);
+		bothFullWidth += charWidth;
+		if (to.unicode()) {
+			toFullWidth += charWidth;
 		}
 	}
-	if (_disabledMonospace) {
-		_fromWidth = _toWidth;
-		_toWidth = _font->width(text);
-	} else {
-		_fromWidth = oldSize * _digitWidth;
-		_toWidth = newSize * _digitWidth;
-	}
+	_fromWidth = _toWidth;
+	_toWidth = toFullWidth;
+	_bothWidth = bothFullWidth;
 	if (animating) {
 		_a_ready.start(
 			[this] { animationCallback(); },
@@ -131,8 +138,7 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 
 	QString singleChar('0');
 	if (style::RightToLeft()) x = outerWidth - x - width;
-	x += width
-		- (_disabledMonospace ? _toWidth : _digits.size() * _digitWidth);
+	x += width - _bothWidth;
 	auto fromTop = anim::interpolate(0, _font->height, progress) * (_growing ? 1 : -1);
 	auto toTop = anim::interpolate(_font->height, 0, progress) * (_growing ? -1 : 1);
 	for (auto i = 0; i != digitsCount; ++i) {
@@ -141,10 +147,10 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 		auto to = digit.to;
 		const auto toCharWidth = (!_disabledMonospace || to.isDigit())
 			? _digitWidth
-			: _font->width(to);
+			: digit.toWidth;
 		const auto fromCharWidth = (!_disabledMonospace || from.isDigit())
 			? _digitWidth
-			: _font->width(from);
+			: digit.fromWidth;
 		if (from == to) {
 			p.setOpacity(1.);
 			singleChar[0] = from;
