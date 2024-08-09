@@ -6,12 +6,13 @@
 //
 #pragma once
 
+#include "base/object_ptr.h"
+#include "base/weak_ptr.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
 #include "ui/click_handler.h"
 #include "ui/rect_part.h"
 #include "ui/rp_widget.h"
-#include "base/weak_ptr.h"
 
 namespace style {
 struct Toast;
@@ -21,8 +22,7 @@ namespace st {
 extern const style::Toast &defaultMultilineToast;
 } // namespace st
 
-namespace Ui {
-namespace Toast {
+namespace Ui::Toast {
 
 namespace internal {
 class Manager;
@@ -33,17 +33,27 @@ using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 
 inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
+	// Default way of composing the content, a FlatLabel.
 	QString title;
 	TextWithEntities text;
-	not_null<const style::Toast*> st = &st::defaultMultilineToast;
-	crl::time duration = kDefaultDuration;
-	int maxLines = 16;
-	bool adaptive = false;
-	bool multiline = true;
-	bool dark = false;
-	RectPart slideSide = RectPart::None;
-	ClickHandlerFilter filter;
 	Fn<std::any(not_null<QWidget*>)> textContext;
+	ClickHandlerFilter filter;
+	int maxlines = 16;
+	bool singleline = false;
+
+	// Custom way of composing any content.
+	object_ptr<RpWidget> content = { nullptr };
+
+	rpl::producer<QMargins> padding = nullptr;
+
+	not_null<const style::Toast*> st = &st::defaultMultilineToast;
+	RectPart attach = RectPart::None;
+	bool dark = false;
+	bool adaptive = false;
+	bool acceptinput = false;
+
+	crl::time duration = kDefaultDuration;
+	bool infinite = false; // Just ignore the duration.
 };
 
 void SetDefaultParent(not_null<QWidget*> parent);
@@ -54,8 +64,8 @@ class Instance final : public base::has_weak_ptr {
 
 public:
 	Instance(
-		const Config &config,
 		not_null<QWidget*> widgetParent,
+		Config &&config,
 		const Private &);
 	Instance(const Instance &other) = delete;
 	Instance &operator=(const Instance &other) = delete;
@@ -63,7 +73,6 @@ public:
 	void hideAnimated();
 	void hide();
 
-	void setInputUsed(bool used);
 	[[nodiscard]] not_null<RpWidget*> widget() const;
 
 private:
@@ -80,19 +89,18 @@ private:
 	friend class internal::Manager;
 	friend base::weak_ptr<Instance> Show(
 		not_null<QWidget*> parent,
-		const Config &config);
+		Config &&config);
 	std::unique_ptr<internal::Widget> _widget;
 
 };
 
 base::weak_ptr<Instance> Show(
 	not_null<QWidget*> parent,
-	const Config &config);
-base::weak_ptr<Instance>  Show(const Config &config);
-base::weak_ptr<Instance>  Show(
+	Config &&config);
+base::weak_ptr<Instance> Show(Config &&config);
+base::weak_ptr<Instance> Show(
 	not_null<QWidget*> parent,
 	const QString &text);
-base::weak_ptr<Instance>  Show(const QString &text);
+base::weak_ptr<Instance> Show(const QString &text);
 
-} // namespace Toast
-} // namespace Ui
+} // namespace Ui::Toast

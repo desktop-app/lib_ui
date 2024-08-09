@@ -19,15 +19,18 @@ QPointer<QWidget> DefaultParent;
 } // namespace
 
 Instance::Instance(
-	const Config &config,
 	not_null<QWidget*> widgetParent,
+	Config &&config,
 	const Private &)
 : _st(config.st)
-, _hideAt(config.duration < 0
+, _hideAt(config.infinite
 	? 0
 	: (crl::now() + (config.duration ? config.duration : kDefaultDuration)))
-, _sliding(config.slideSide != RectPart::None)
-, _widget(std::make_unique<internal::Widget>(widgetParent, config)) {
+, _sliding(config.attach != RectPart::None)
+, _widget(
+	std::make_unique<internal::Widget>(
+		widgetParent,
+		std::move(config))) {
 	_shownAnimation.start(
 		[=] { shownAnimationCallback(); },
 		0.,
@@ -41,17 +44,17 @@ void SetDefaultParent(not_null<QWidget*> parent) {
 
 base::weak_ptr<Instance> Show(
 		not_null<QWidget*> parent,
-		const Config &config) {
+		Config &&config) {
 	const auto manager = internal::Manager::instance(parent);
 	return manager->addToast(std::make_unique<Instance>(
-		config,
 		parent,
+		std::move(config),
 		Instance::Private()));
 }
 
-base::weak_ptr<Instance> Show(const Config &config) {
+base::weak_ptr<Instance> Show(Config &&config) {
 	if (const auto parent = DefaultParent.data()) {
-		return Show(parent, config);
+		return Show(parent, std::move(config));
 	}
 	return nullptr;
 }
@@ -59,11 +62,11 @@ base::weak_ptr<Instance> Show(const Config &config) {
 base::weak_ptr<Instance> Show(
 		not_null<QWidget*> parent,
 		const QString &text) {
-	return Show(parent, Config{ .text = { text }, .st = &st::defaultToast });
+	return Show(parent, { .text = { text }, .st = &st::defaultToast });
 }
 
 base::weak_ptr<Instance> Show(const QString &text) {
-	return Show(Config{ .text = { text }, .st = &st::defaultToast });
+	return Show({ .text = { text }, .st = &st::defaultToast });
 }
 
 void Instance::shownAnimationCallback() {
@@ -87,10 +90,6 @@ void Instance::hideAnimated() {
 void Instance::hide() {
 	_widget->hide();
 	_widget->deleteLater();
-}
-
-void Instance::setInputUsed(bool used) {
-	_widget->setInputUsed(used);
 }
 
 not_null<RpWidget*> Instance::widget() const {

@@ -11,53 +11,37 @@
 #include "ui/rp_widget.h"
 #include "ui/round_rect.h"
 
-namespace Ui {
-namespace Toast {
-namespace internal {
+namespace Ui::Toast::internal {
 
 class Widget final : public RpWidget {
 public:
-	Widget(QWidget *parent, const Config &config);
+	Widget(QWidget *parent, Config &&config);
 
 	// shownLevel=1 completely visible, shownLevel=0 completely invisible
 	void setShownLevel(float64 shownLevel);
-	void setInputUsed(bool used);
 
-	void onParentResized();
-
-protected:
-	void paintEvent(QPaintEvent *e) override;
-
-	void leaveEventHook(QEvent *e) override;
-	void mouseMoveEvent(QMouseEvent *e) override;
-	void mousePressEvent(QMouseEvent *e) override;
-	void mouseReleaseEvent(QMouseEvent *e) override;
+	void parentResized();
 
 private:
-	[[nodiscard]] int widthWithoutPadding(int w) const;
+	void paintEvent(QPaintEvent *e) override;
+
 	void updateGeometry();
+	void paintToProxy();
+	void disableChildrenPaintOnce();
 
 	const not_null<const style::Toast*> _st;
 	RoundRect _roundRect;
-	RectPart _slideSide = RectPart::None;
+	RectPart _attach = RectPart::None;
 
 	float64 _shownLevel = 0;
-	bool _multiline = false;
-	bool _dark = false;
-	bool _processMouse = false;
-	bool _adaptive = false;
+	QImage _shownProxy;
 
-	int _maxTextWidth = 0;
-	int _maxTextHeight = 0;
-	int _textWidth = 0;
-	int _textHeight = 0;
-	int _textTop = 0;
-	Text::String _text;
+	object_ptr<RpWidget> _content;
+	rpl::variable<QMargins> _padding;
+	Fn<void(float64)> _updateShownGeometry;
 
-	ClickHandlerFilter _clickHandlerFilter;
+	bool _adaptive : 1 = false;
 
 };
 
-} // namespace internal
-} // namespace Toast
-} // namespace Ui
+} // namespace Ui::Toast::internal

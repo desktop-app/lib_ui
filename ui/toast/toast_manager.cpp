@@ -26,7 +26,7 @@ bool Manager::eventFilter(QObject *o, QEvent *e) {
 	if (e->type() == QEvent::Resize) {
 		for (auto i = _toastByWidget.cbegin(), e = _toastByWidget.cend(); i != e; ++i) {
 			if (i->first->parentWidget() == o) {
-				i->first->onParentResized();
+				i->first->parentResized();
 			}
 		}
 	}

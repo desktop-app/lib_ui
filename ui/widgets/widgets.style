@@ -1392,12 +1392,13 @@ defaultSideBarButton: SideBarButton {
 	}
 }
 
+defaultToastPalette: TextPalette(defaultTextPalette) {
+	linkFg: mediaviewTextLinkFg;
+	monoFg: mediaviewCaptionFg;
+}
 defaultToast: Toast {
 	style: defaultTextStyle;
-	palette: TextPalette(defaultTextPalette) {
-		linkFg: mediaviewTextLinkFg;
-		monoFg: mediaviewCaptionFg;
-	}
+	palette: defaultToastPalette;
 	padding: margins(19px, 13px, 19px, 12px);
 	margin: margins(13px, 13px, 13px, 13px);
 	maxWidth: 480px;
