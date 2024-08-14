@@ -63,7 +63,7 @@ namespace {
 	raw->setClickHandlerFilter(std::move(config.filter));
 	raw->show();
 
-	return std::move(result);
+	return result;
 }
 
 [[nodiscard]] bool HasLinksOrSpoilers(const TextWithEntities &text) {
