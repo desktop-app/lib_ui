@@ -88,7 +88,7 @@ Widget::Widget(QWidget *parent, Config &&config)
 , _content(MakeContent(this, config))
 , _padding(config.padding
 	? std::move(config.padding) | rpl::map(rpl::mappers::_1 + _st->padding)
-	: rpl::single(_st->padding))
+	: rpl::single(_st->padding) | rpl::type_erased())
 , _adaptive(config.adaptive) {
 	if (HasLinksOrSpoilers(config.text) || config.acceptinput) {
 		setMouseTracking(true);
