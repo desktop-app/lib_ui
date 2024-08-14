@@ -9,6 +9,7 @@
 #include "base/unique_qptr.h"
 
 namespace Ui {
+class DropdownMenu;
 class PopupMenu;
 } // namespace Ui
 
@@ -18,6 +19,8 @@ struct MenuCallback;
 
 [[nodiscard]] MenuCallback CreateAddActionCallback(
 	not_null<Ui::PopupMenu*> menu);
+[[nodiscard]] MenuCallback CreateAddActionCallback(
+	not_null<Ui::DropdownMenu*> menu);
 [[nodiscard]] MenuCallback CreateAddActionCallback(
 	const base::unique_qptr<Ui::PopupMenu> &menu);
 
