@@ -176,13 +176,9 @@ bool TitleWidget::additionalPaddingRequired() const {
 void TitleWidget::refreshAdditionalPaddings() {
 	if (!additionalPaddingRequired()) {
 		return;
+	} else if (const auto handle = GetCurrentHandle(this)) {
+		refreshAdditionalPaddings(handle);
 	}
-	const auto handle = GetWindowHandle(this);
-	if (!handle) {
-		LOG(("System Error: GetWindowHandle failed."));
-		return;
-	}
-	refreshAdditionalPaddings(handle);
 }
 
 void TitleWidget::refreshAdditionalPaddings(HWND handle) {

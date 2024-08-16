@@ -8,6 +8,7 @@
 
 #include "ui/platform/ui_platform_window.h"
 #include "ui/platform/win/ui_window_shadow_win.h"
+#include "ui/platform/win/ui_windows_native_event_filter.h"
 
 namespace Ui {
 namespace Platform {
@@ -16,7 +17,7 @@ class TitleWidget;
 struct HitTestRequest;
 enum class HitTestResult;
 
-class WindowHelper final : public BasicWindowHelper {
+class WindowHelper final : public BasicWindowHelper, public NativeEventFilter {
 public:
 	explicit WindowHelper(not_null<RpWidget*> window);
 	~WindowHelper();
@@ -45,22 +46,20 @@ public:
 	void overrideSystemButtonDown(HitTestResult button) override;
 
 private:
-	class NativeFilter;
-	friend class NativeFilter;
-
 	void init();
 	void updateMargins();
 	void updateCloaking();
+	void enableCloakingForHidden();
 	void updateWindowFrameColors();
 	void updateWindowFrameColors(bool active);
 	void initialShadowUpdate();
 	void updateCornersRounding();
 	void fixMaximizedWindow();
-	[[nodiscard]] bool handleNativeEvent(
+	[[nodiscard]] bool filterNativeEvent(
 		UINT msg,
 		WPARAM wParam,
 		LPARAM lParam,
-		LRESULT *result);
+		LRESULT *result) override;
 	[[nodiscard]] bool handleSystemButtonEvent(
 		UINT msg,
 		WPARAM wParam,
@@ -71,9 +70,7 @@ private:
 	[[nodiscard]] HitTestResult systemButtonHitTest(int result) const;
 
 	[[nodiscard]] int titleHeight() const;
-	static not_null<NativeFilter*> GetNativeFilter();
 
-	const HWND _handle = nullptr;
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;
 	rpl::event_stream<not_null<HitTestRequest*>> _hitTestRequests;
@@ -82,14 +79,15 @@ private:
 	std::optional<WindowShadow> _shadow;
 	rpl::variable<uint> _dpi;
 	QMargins _marginsDelta;
+	HWND _handle = nullptr;
 	bool _updatingMargins = false;
 	bool _isFullScreen = false;
 	bool _isMaximizedAndTranslucent = false;
 
 };
 
-[[nodiscard]] HWND GetWindowHandle(not_null<QWidget*> widget);
-[[nodiscard]] HWND GetWindowHandle(not_null<QWindow*> window);
+[[nodiscard]] HWND GetCurrentHandle(not_null<QWidget*> widget);
+[[nodiscard]] HWND GetCurrentHandle(not_null<QWindow*> window);
 
 void SendWMPaintForce(not_null<QWidget*> widget);
 void SendWMPaintForce(not_null<QWindow*> window);
