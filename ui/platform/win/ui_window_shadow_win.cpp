@@ -42,9 +42,15 @@ base::flat_map<HWND, not_null<WindowShadow*>> ShadowByHandle;
 } // namespace
 
 WindowShadow::WindowShadow(not_null<RpWidget*> window, QColor color)
-: _window(window)
-, _handle(GetWindowHandle(window)) {
-	init(color);
+: _window(window) {
+	setColor(color);
+
+	window->winIdValue(
+	) | rpl::start_with_next([=](WId id) {
+		destroy();
+		_handle = reinterpret_cast<HWND>(id);
+		create();
+	}, window->lifetime());
 }
 
 WindowShadow::~WindowShadow() {
@@ -55,10 +61,12 @@ void WindowShadow::setColor(QColor value) {
 	_r = value.red();
 	_g = value.green();
 	_b = value.blue();
-	if (!working()) {
-		return;
+	if (working()) {
+		updateColor();
 	}
+}
 
+void WindowShadow::updateColor() {
 	auto brush = getBrush(_alphas[0]);
 	for (auto i = 0; i != 4; ++i) {
 		auto graphics = Gdiplus::Graphics(_contexts[i]);
@@ -101,7 +109,7 @@ void WindowShadow::destroy() {
 	}
 }
 
-void WindowShadow::init(QColor color) {
+void WindowShadow::create() {
 	if (!_handle) {
 		return;
 	}
@@ -231,7 +239,7 @@ void WindowShadow::init(QColor color) {
 
 		SelectObject(_contexts[i], _bitmaps[i]);
 	}
-	setColor(color);
+	updateColor();
 }
 
 void WindowShadow::initCorners(Directions directions) {
