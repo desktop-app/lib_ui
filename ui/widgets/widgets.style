@@ -464,6 +464,8 @@ CallButton {
 	outerRadius: pixels;
 	outerBg: color;
 	label: FlatLabel;
+	cornerButtonPosition: point;
+	cornerButtonBorder: pixels;
 }
 
 InnerDropdown {

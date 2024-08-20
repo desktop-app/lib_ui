@@ -35,7 +35,11 @@ public:
 		const style::CallButton &stFrom,
 		const style::CallButton *stTo = nullptr);
 
-protected:
+	[[nodiscard]] not_null<CallButton*> addCornerButton(
+		const style::CallButton &stFrom,
+		const style::CallButton *stTo = nullptr);
+
+private:
 	void paintEvent(QPaintEvent *e) override;
 
 	void onStateChanged(State was, StateChangeSource source) override;
@@ -43,13 +47,13 @@ protected:
 	QImage prepareRippleMask() const override;
 	QPoint prepareRippleStartPosition() const override;
 
-private:
 	void init();
 	QPoint iconPosition(not_null<const style::CallButton*> st) const;
 	void mixIconMasks();
 
 	not_null<const style::CallButton*> _stFrom;
 	const style::CallButton *_stTo = nullptr;
+	CallButton *_corner = nullptr;
 	float64 _progress = 0.;
 
 	object_ptr<FlatLabel> _label = { nullptr };

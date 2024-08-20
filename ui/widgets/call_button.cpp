@@ -32,7 +32,18 @@ CallButton::CallButton(
 void CallButton::init() {
 	resize(_stFrom->button.width, _stFrom->button.height);
 
-	_bgMask = RippleAnimation::EllipseMask(QSize(_stFrom->bgSize, _stFrom->bgSize));
+	const auto size = QSize(_stFrom->bgSize, _stFrom->bgSize);
+	_bgMask = RippleAnimation::MaskByDrawer(size, false, [&](QPainter &p) {
+		p.drawEllipse(0, 0, size.width(), size.height());
+		if (_corner) {
+			auto position = _corner->pos() - _stFrom->bgPosition;
+			p.setCompositionMode(QPainter::CompositionMode_Source);
+			p.setBrush(st::transparent);
+			const auto border = _stFrom->cornerButtonBorder;
+			p.drawEllipse(QRect(position, _corner->size()).marginsAdded(
+				{ border, border, border, border }));
+		}
+	});
 	_bgFrom = Ui::PixmapFromImage(style::colorizeImage(_bgMask, _stFrom->bg));
 	if (_stTo) {
 		Assert(_stFrom->button.width == _stTo->button.width);
@@ -101,6 +112,9 @@ void CallButton::setText(rpl::producer<QString> text) {
 
 void CallButton::setProgress(float64 progress) {
 	_progress = progress;
+	if (_corner) {
+		_corner->setProgress(progress);
+	}
 	update();
 }
 
@@ -131,6 +145,8 @@ void CallButton::paintEvent(QPaintEvent *e) {
 	}
 
 	if (_bgOverride) {
+		Assert(!_corner); // Didn't support this case yet.
+
 		const auto &s = _stFrom->bgSize;
 		p.setPen(Qt::NoPen);
 		p.setBrush(*_bgOverride);
@@ -237,12 +253,27 @@ void CallButton::setStyle(
 	update();
 }
 
+not_null<CallButton*> CallButton::addCornerButton(
+		const style::CallButton &stFrom,
+		const style::CallButton *stTo) {
+	Expects(!_corner);
+
+	_corner = CreateChild<CallButton>(this, stFrom, stTo);
+	_corner->move(_stFrom->cornerButtonPosition);
+	_corner->setProgress(_progress);
+	_corner->show();
+	init();
+	update();
+
+	return _corner;
+}
+
 QPoint CallButton::prepareRippleStartPosition() const {
 	return mapFromGlobal(QCursor::pos()) - _stFrom->button.rippleAreaPosition;
 }
 
 QImage CallButton::prepareRippleMask() const {
-	return RippleAnimation::EllipseMask(QSize(_stFrom->button.rippleAreaSize, _stFrom->button.rippleAreaSize));
+	return _bgMask;
 }
 
 } // namespace Ui
