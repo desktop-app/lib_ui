@@ -515,7 +515,7 @@ Checkbox::Checkbox(
 		_st.style,
 		QString(),
 		_checkboxOptions,
-		countTextMinWidth()) {
+		_st.style.font->elidew) {
 	_check->setUpdateCallback([=] { update(); });
 	resizeToText();
 	setCursor(style::cur_pointer);
