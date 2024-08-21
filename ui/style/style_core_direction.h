@@ -61,3 +61,13 @@ inline QRectF rtlrect(const QRectF &r, int outerw) {
 }
 
 } // namespace style
+
+namespace st {
+
+[[nodiscard]] inline bool rtl() {
+	return style::RightToLeft();
+}
+
+[[nodiscard]] QString wrap_rtl(const QString &text);
+
+} // namespace st

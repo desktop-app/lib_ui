@@ -22,3 +22,12 @@ void SetRightToLeft(bool rtl) {
 }
 
 } // namespace style
+
+namespace st {
+
+QString wrap_rtl(const QString &text) {
+	const auto wrapper = QChar(rtl() ? 0x200F : 0x200E);
+	return wrapper + text + wrapper;
+}
+
+} // namespace st
