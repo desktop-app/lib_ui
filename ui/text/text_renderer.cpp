@@ -1463,13 +1463,17 @@ void Renderer::elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock,
 }
 
 void Renderer::setElideBidi(int32 elideStart, int32 elideLen) {
-	int32 newParLength = elideStart + elideLen - _paragraphStart;
+	const auto newParLength = elideStart + elideLen - _paragraphStart;
 	if (newParLength > _paragraphAnalysis.size()) {
 		_paragraphAnalysis.resize(newParLength);
 	}
+	const auto bidiLevel = (newParLength > elideLen)
+		? _paragraphAnalysis[newParLength - elideLen - 1].bidiLevel
+		: (_paragraphDirection == Qt::RightToLeft)
+		? 1
+		: 0;
 	for (int32 i = elideLen; i > 0; --i) {
-		_paragraphAnalysis[newParLength - i].bidiLevel
-			= (_paragraphDirection == Qt::RightToLeft) ? 1 : 0;
+		_paragraphAnalysis[newParLength - i].bidiLevel = bidiLevel;
 	}
 }
 
