@@ -62,6 +62,8 @@ inline QRectF rtlrect(const QRectF &r, int outerw) {
 
 } // namespace style
 
+struct TextWithEntities;
+
 namespace st {
 
 [[nodiscard]] inline bool rtl() {
@@ -69,5 +71,6 @@ namespace st {
 }
 
 [[nodiscard]] QString wrap_rtl(const QString &text);
+[[nodiscard]] TextWithEntities wrap_rtl(const TextWithEntities &text);
 
 } // namespace st

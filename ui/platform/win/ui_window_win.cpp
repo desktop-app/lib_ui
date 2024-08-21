@@ -276,7 +276,11 @@ rpl::producer<int> WindowHelper::additionalContentPaddingValue() const {
 
 void WindowHelper::setTitle(const QString &title) {
 	_title->setText(title);
-	window()->setWindowTitle(title);
+
+	// Windows shows them as FSI and PDI in squares(!)
+	window()->setWindowTitle(QString(title)
+		.replace(QChar(0x2068), QString())
+		.replace(QChar(0x2069), QString()));
 }
 
 void WindowHelper::setTitleStyle(const style::WindowTitle &st) {

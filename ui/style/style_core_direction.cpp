@@ -6,6 +6,8 @@
 //
 #include "ui/style/style_core_direction.h"
 
+#include "ui/text/text_entity.h"
+
 namespace style {
 namespace {
 
@@ -27,7 +29,28 @@ namespace st {
 
 QString wrap_rtl(const QString &text) {
 	const auto wrapper = QChar(rtl() ? 0x200F : 0x200E);
-	return wrapper + text + wrapper;
+
+	auto result = QString();
+	result.reserve(text.size() + 3);
+	result
+		.append(wrapper) // Don't override phrase direction by first symbol.
+		.append(QChar(0x2068)) // Isolate tag content.
+		.append(text)
+		.append(QChar(0x2069)); // End of isolation.
+	return result;
+}
+
+TextWithEntities wrap_rtl(const TextWithEntities &text) {
+	const auto wrapper = QChar(rtl() ? 0x200F : 0x200E);
+
+	auto result = TextWithEntities();
+	result.reserve(text.text.size() + 3, text.entities.size());
+	result
+		.append(wrapper) // Don't override phrase direction by first symbol.
+		.append(QChar(0x2068)) // Isolate tag content.
+		.append(text)
+		.append(QChar(0x2069)); // End of isolation.
+	return result;
 }
 
 } // namespace st
