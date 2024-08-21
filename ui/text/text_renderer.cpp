@@ -7,6 +7,7 @@
 #include "ui/text/text_renderer.h"
 
 #include "ui/text/text_extended_data.h"
+#include "ui/text/text_bidi_algorithm.h"
 #include "styles/style_basic.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -613,47 +614,20 @@ void Renderer::initParagraphBidi() {
 		return;
 	}
 
-	String::TextBlocks::const_iterator i = _paragraphStartBlock, e = _t->_blocks.cend(), n = i + 1;
-
-	bool ignore = false;
 	bool rtl = (_paragraphDirection == Qt::RightToLeft);
-	if (!ignore && !rtl) {
-		ignore = true;
-		const ushort *start = reinterpret_cast<const ushort*>(_str) + _paragraphStart;
-		const ushort *curr = start;
-		const ushort *end = start + _paragraphLength;
-		while (curr < end) {
-			while (n != e && (*n)->position() <= _paragraphStart + (curr - start)) {
-				i = n;
-				++n;
-			}
-			const auto type = (*i)->type();
-			if (type != TextBlockType::Emoji
-				&& type != TextBlockType::CustomEmoji
-				&& *curr >= 0x590) {
-				ignore = false;
-				break;
-			}
-			++curr;
-		}
-	}
 
 	_paragraphAnalysis.resize(_paragraphLength);
 	QScriptAnalysis *analysis = _paragraphAnalysis.data();
 
-	BidiControl control(rtl);
-
-	_paragraphHasBidi = false;
-	if (ignore) {
-		memset(analysis, 0, _paragraphLength * sizeof(QScriptAnalysis));
-		if (rtl) {
-			for (int i = 0; i < _paragraphLength; ++i)
-				analysis[i].bidiLevel = 1;
-			_paragraphHasBidi = true;
-		}
-	} else {
-		_paragraphHasBidi = eBidiItemize(analysis, control);
-	}
+	BidiAlgorithm bidi(
+		_str + _paragraphStart,
+		analysis,
+		_paragraphLength,
+		rtl,
+		_paragraphStartBlock,
+		_t->_blocks.cend(),
+		_paragraphStart);
+	_paragraphHasBidi = bidi.process();
 }
 
 bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterator &_endBlockIter, const String::TextBlocks::const_iterator &_end) {

@@ -473,6 +473,7 @@ private:
 
 	friend class Parser;
 	friend class Renderer;
+	friend class BidiAlgorithm;
 
 };
 
