@@ -228,8 +228,8 @@ struct PaintContext {
 	bool pausedEmoji = false;
 	bool pausedSpoiler = false;
 
-	TextSelection selection;
 	bool fullWidthSelection = true;
+	TextSelection selection;
 
 	HighlightInfoRequest *highlight = nullptr;
 
@@ -237,6 +237,7 @@ struct PaintContext {
 	int elisionLines = 0;
 	int elisionRemoveFromEnd = 0;
 	bool elisionBreakEverywhere = false;
+	bool useFullWidth = false; // !(width = min(availableWidth, maxWidth()))
 };
 
 class String {

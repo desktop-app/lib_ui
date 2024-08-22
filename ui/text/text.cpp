@@ -1218,8 +1218,8 @@ void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align
 			: QRect()),
 		.palette = &p.textPalette(),
 		.paused = p.inactive(),
-		.selection = selection,
 		.fullWidthSelection = fullWidthSelection,
+		.selection = selection,
 	});
 }
 
