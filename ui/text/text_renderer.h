@@ -114,23 +114,9 @@ private:
 	void fillParagraphBg(int paddingBottom);
 
 	// COPIED FROM qtextengine.cpp AND MODIFIED
-	static void eAppendItems(
-		QScriptAnalysis *analysis,
-		int &start,
-		int &stop,
-		const BidiControl &control,
-		QChar::Direction dir);
 	void eShapeLine(const QScriptLine &line);
 	void eSetFont(const AbstractBlock *block);
 	void eItemize();
-	QChar::Direction eSkipBoundryNeutrals(
-		QScriptAnalysis *analysis,
-		const ushort *unicode,
-		int &sor, int &eor, BidiControl &control,
-		String::TextBlocks::const_iterator i);
-
-	// creates the next QScript items.
-	bool eBidiItemize(QScriptAnalysis *analysis, BidiControl &control);
 
 	void applyBlockProperties(const AbstractBlock *block);
 	[[nodiscard]] ClickHandlerPtr lookupLink(

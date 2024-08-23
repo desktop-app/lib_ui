@@ -193,29 +193,13 @@ BlockParser::BlockParser(
 	parseWords(minResizeWidth, blockFrom);
 }
 
-bool BlockParser::isLineBreak(
-		const QCharAttributes *attributes,
-		int index) const {
-	// Don't break by '/' or '.' in the middle of the word.
-	// In case of a line break or white space it'll allow break anyway.
-	return attributes[index].lineBreak
-		&& (index <= 0
-			|| (text[index - 1] != '/' && text[index - 1] != '.'));
-}
-
-bool BlockParser::isSpaceBreak(
-		const QCharAttributes *attributes,
-		int index) const {
-	// Don't break on &nbsp;
-	return attributes[index].whiteSpace && (text[index] != QChar::Nbsp);
-}
-
 WordParser::WordParser(not_null<String*> string)
 : _t(string)
 , _tText(_t->_text)
 , _tBlocks(_t->_blocks)
 , _tWords(_t->_words)
-, _engine(_tText, _t->_st->font->f) {
+, _analysis(_tText.size())
+, _engine(_t, _analysis) {
 	parse();
 }
 
@@ -223,30 +207,20 @@ void WordParser::parse() {
 	if (!_tText.isEmpty()) {
 		return;
 	}
-	QStackTextEngine engine(_tText, _t->_st->font->f);
+
+	_engine.itemize();
+	auto &e = _engine.wrapped();
 
 	LineBreakHelper lbh;
 
-	// Helper for debugging crashes in text processing.
-	//
-	//		auto debugChars = QString();
-	//		debugChars.reserve(str.size() * 7);
-	//		for (const auto ch : str) {
-	//			debugChars.append(
-	//				"0x").append(
-	//				QString::number(ch.unicode(), 16).toUpper()).append(
-	//				' ');
-	//		}
-	//		LOG(("Text: %1, chars: %2").arg(str).arg(debugChars));
-
 	int item = -1;
-	int newItem = engine.findItem(0);
+	int newItem = e.findItem(0);
 
-	const QCharAttributes *attributes = engine.attributes();
+	const QCharAttributes *attributes = e.attributes();
 	if (!attributes)
 		return;
 	int end = 0;
-	lbh.logClusters = engine.layoutData->logClustersPtr;
+	lbh.logClusters = e.layoutData->logClustersPtr;
 
 	_tWords.clear();
 
@@ -256,27 +230,64 @@ void WordParser::parse() {
 	int lastGraphemeBoundaryPosition = -1;
 	ScriptLine lastGraphemeBoundaryLine;
 
-	while (newItem < engine.layoutData->items.size()) {
+//void WordParser::pushNewlineWord(int length) {
+//	Expects(length == 1);
+//
+//	const auto position = _blockStart;
+//	const auto width = 0;
+//	const auto newline = true;
+//	const auto continuation = false;
+//	const auto rbearing = 0;
+//	auto rpadding = 0;
+//	for (auto i = length; i != 0;) {
+//		auto ch = _tText[position + (--i)];
+//		if (ch.unicode() == QChar::Space) {
+//			rpadding += _t->_st->font->spacew;
+//		} else {
+//			break;
+//		}
+//	}
+//	pushWord(position, newline, continuation, width, rbearing, rpadding);
+//}
+
+	while (newItem < e.layoutData->items.size()) {
 		if (newItem != item) {
 			item = newItem;
-			const QScriptItem &current = engine.layoutData->items[item];
-			if (!current.num_glyphs) {
-				engine.shape(item);
-				attributes = engine.attributes();
+			auto &si = e.layoutData->items[item];
+			if (!si.num_glyphs) {
+				const auto block = _engine.shapeGetBlock(item);
+				attributes = e.attributes();
 				if (!attributes)
 					return;
-				lbh.logClusters = engine.layoutData->logClustersPtr;
+				lbh.logClusters = e.layoutData->logClustersPtr;
+
+				const auto type = block->type();
+				if (si.analysis.flags == QScriptAnalysis::Object) {
+					if (type == TextBlockType::Emoji) {
+						si.width = st::emojiSize + 2 * st::emojiPadding;
+					} else if (type == TextBlockType::CustomEmoji) {
+						si.width = static_cast<const CustomEmojiBlock*>(
+							block.get())->custom()->width();
+					} else if (type == TextBlockType::Skip) {
+						si.width = static_cast<const SkipBlock*>(
+							block.get())->width();
+						//si.width = currentBlock->f_width()
+						//	+ (nextBlock == _endBlock && (!nextBlock || nextBlock->position() >= trimmedLineEnd)
+						//		? 0
+						//		: currentBlock->f_rpadding());
+					}
+				}
+
 			}
-			lbh.currentPosition = current.position;
-			end = current.position + engine.length(item);
-			lbh.glyphs = engine.shapedGlyphs(&current);
-			QFontEngine *fontEngine = engine.fontEngine(current);
+			lbh.currentPosition = si.position;
+			end = si.position + e.length(item);
+			lbh.glyphs = e.shapedGlyphs(&si);
+			QFontEngine *fontEngine = e.fontEngine(si);
 			if (lbh.fontEngine != fontEngine) {
 				lbh.fontEngine = fontEngine;
 			}
 		}
-		const QScriptItem &current = engine.layoutData->items[item];
-
+		const QScriptItem &current = e.layoutData->items[item];
 		const auto atSpaceBreak = [&] {
 			for (auto index = lbh.currentPosition; index < end; ++index) {
 				if (!attributes[index].whiteSpace) {
@@ -299,14 +310,16 @@ void WordParser::parse() {
 					lbh.logClusters,
 					lbh.glyphs);
 
-			if (block._words.isEmpty()) {
-				block._words.push_back(Word(
-					wordStart + blockFrom,
+			if (_tWords.empty()) {
+				pushWord(
+					wordStart,
+					false, // newline
+					false, // continuation
 					lbh.tmpData.textWidth,
-					-lbh.negativeRightBearing()));
+					-lbh.negativeRightBearing(),
+					0); // rpadding
 			}
-			block._words.back().add_rpadding(lbh.spaceData.textWidth);
-			block._width += lbh.spaceData.textWidth;
+			_tWords.back().add_rpadding(lbh.spaceData.textWidth);
 			lbh.spaceData.length = 0;
 			lbh.spaceData.textWidth = 0;
 
@@ -326,28 +339,32 @@ void WordParser::parse() {
 					lbh.logClusters,
 					lbh.glyphs);
 
-				if (lbh.currentPosition >= engine.layoutData->string.length()
+				if (lbh.currentPosition >= e.layoutData->string.length()
 					|| isSpaceBreak(attributes, lbh.currentPosition)
 					|| isLineBreak(attributes, lbh.currentPosition)) {
 					lbh.calculateRightBearing();
-					block._words.push_back(Word(
-						wordStart + blockFrom,
+					pushWord(
+						wordStart,
+						false, // newline
+						false, // continuation
 						lbh.tmpData.textWidth,
-						-lbh.negativeRightBearing()));
-					block._width += lbh.tmpData.textWidth;
+						-lbh.negativeRightBearing(),
+						0); // rpadding
 					lbh.tmpData.textWidth = 0;
 					lbh.tmpData.length = 0;
 					wordStart = lbh.currentPosition;
 					break;
 				} else if (attributes[lbh.currentPosition].graphemeBoundary) {
-					if (!addingEachGrapheme && lbh.tmpData.textWidth > minResizeWidth) {
+					if (!addingEachGrapheme && lbh.tmpData.textWidth > _t->_minResizeWidth) {
 						if (lastGraphemeBoundaryPosition >= 0) {
 							lbh.calculateRightBearingForPreviousGlyph();
-							block._words.push_back(Word(
-								wordStart + blockFrom,
-								-lastGraphemeBoundaryLine.textWidth,
-								-lbh.negativeRightBearing()));
-							block._width += lastGraphemeBoundaryLine.textWidth;
+							pushWord(
+								wordStart,
+								false, // newline
+								true, // continuation
+								lastGraphemeBoundaryLine.textWidth,
+								-lbh.negativeRightBearing(),
+								0); // rpadding
 							lbh.tmpData.textWidth -= lastGraphemeBoundaryLine.textWidth;
 							lbh.tmpData.length -= lastGraphemeBoundaryLine.length;
 							wordStart = lastGraphemeBoundaryPosition;
@@ -356,11 +373,13 @@ void WordParser::parse() {
 					}
 					if (addingEachGrapheme) {
 						lbh.calculateRightBearing();
-						block._words.push_back(Word(
-							wordStart + blockFrom,
-							-lbh.tmpData.textWidth,
-							-lbh.negativeRightBearing()));
-						block._width += lbh.tmpData.textWidth;
+						pushWord(
+							wordStart,
+							false, // newline
+							true, // continuation
+							lbh.tmpData.textWidth,
+							-lbh.negativeRightBearing(),
+							0); // rpadding
 						lbh.tmpData.textWidth = 0;
 						lbh.tmpData.length = 0;
 						wordStart = lbh.currentPosition;
@@ -375,63 +394,37 @@ void WordParser::parse() {
 		if (lbh.currentPosition == end)
 			newItem = item + 1;
 	}
-	if (!block._words.isEmpty()) {
-		block._rpadding = block._words.back().f_rpadding();
-		block._width -= block._rpadding;
-		block._words.squeeze();
+	if (!_tWords.empty()) {
+		_tWords.shrink_to_fit();
 	}
 }
 
 void WordParser::pushWord(
 		uint16 position,
-		bool newline,
 		bool continuation,
+		bool newline,
 		QFixed width,
 		QFixed rbearing,
 		QFixed rpadding) {
 	_tWords.push_back(
-		Word(position, newline, continuation, width, rbearing, rpadding));
+		Word(position, continuation, newline, width, rbearing, rpadding));
 }
 
-void WordParser::pushEmojiWord(int length, CustomEmoji *custom) {
-	const auto position = _blockStart;
-	const auto width = custom
-		? custom->width()
-		: (st::emojiSize + 2 * st::emojiPadding);
-	const auto newline = false;
-	const auto continuation = false;
-	const auto rbearing = 0;
-	auto rpadding = 0;
-	for (auto i = length; i != 0;) {
-		auto ch = _tText[position + (--i)];
-		if (ch.unicode() == QChar::Space) {
-			rpadding += _t->_st->font->spacew;
-		} else {
-			break;
-		}
-	}
-	pushWord(position, newline, continuation, width, rbearing, rpadding);
+bool WordParser::isLineBreak(
+		const QCharAttributes *attributes,
+		int index) const {
+	// Don't break by '/' or '.' in the middle of the word.
+	// In case of a line break or white space it'll allow break anyway.
+	return attributes[index].lineBreak
+		&& (index <= 0
+			|| (_tText[index - 1] != '/' && _tText[index - 1] != '.'));
 }
 
-void WordParser::pushNewlineWord(int length) {
-	Expects(length == 1);
-
-	const auto position = _blockStart;
-	const auto width = 0;
-	const auto newline = true;
-	const auto continuation = false;
-	const auto rbearing = 0;
-	auto rpadding = 0;
-	for (auto i = length; i != 0;) {
-		auto ch = _tText[position + (--i)];
-		if (ch.unicode() == QChar::Space) {
-			rpadding += _t->_st->font->spacew;
-		} else {
-			break;
-		}
-	}
-	pushWord(position, newline, continuation, width, rbearing, rpadding);
+bool WordParser::isSpaceBreak(
+		const QCharAttributes *attributes,
+		int index) const {
+	// Don't break on &nbsp;
+	return attributes[index].whiteSpace && (_tText[index] != QChar::Nbsp);
 }
-
 
 } // namespace Ui::Text

@@ -141,11 +141,13 @@ private:
 
 class SkipBlock final : public AbstractBlock {
 public:
-	SkipBlock(BlockDescriptor descriptor, int height);
+	SkipBlock(BlockDescriptor descriptor, int width, int height);
 
+	[[nodiscard]] int width() const;
 	[[nodiscard]] int height() const;
 
 private:
+	int _width = 0;
 	int _height = 0;
 
 };
@@ -170,6 +172,7 @@ public:
 
 	[[nodiscard]] static Block Skip(
 		BlockDescriptor descriptor,
+		int width,
 		int height);
 
 	template <typename FinalBlock>

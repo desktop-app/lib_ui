@@ -8,9 +8,8 @@
 
 #include "ui/text/text.h"
 #include "ui/text/text_block.h"
+#include "ui/text/text_stack_engine.h"
 #include "ui/text/text_word.h"
-
-#include <private/qfontengine_p.h>
 
 namespace Ui::Text {
 
@@ -23,19 +22,25 @@ private:
 
 	void pushWord(
 		uint16 position,
-		bool newline,
 		bool continuation,
+		bool newline,
 		QFixed width,
 		QFixed rbearing,
 		QFixed rpadding);
-	void pushEmojiWord(int length, CustomEmoji *custom = nullptr);
-	void pushNewlineWord(int length);
+
+	[[nodiscard]] bool isLineBreak(
+		const QCharAttributes *attributes,
+		int index) const;
+	[[nodiscard]] bool isSpaceBreak(
+		const QCharAttributes *attributes,
+		int index) const;
 
 	const not_null<String*> _t;
 	QString &_tText;
 	std::vector<Block> &_tBlocks;
 	std::vector<Word> &_tWords;
-	QStackTextEngine _engine;
+	QVarLengthArray<QScriptAnalysis, 4096> _analysis;
+	StackEngine _engine;
 
 };
 

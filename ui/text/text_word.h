@@ -17,16 +17,16 @@ public:
 	Word() = default;
 	Word(
 		uint16 position,
-		bool newline,
 		bool continuation,
+		bool newline,
 		QFixed width,
 		QFixed rbearing,
 		QFixed rpadding = 0)
 	: _position(position)
 	, _rbearing_modulus(std::min(std::abs(rbearing.value()), 0x7FFF))
 	, _rbearing_positive(rbearing.value() > 0 ? 1 : 0)
-	, _newline(newline ? 1 : 0)
 	, _continuation(continuation ? 1 : 0)
+	, _newline(newline ? 1 : 0)
 	, _width(width)
 	, _rpadding(rpadding) {
 	}

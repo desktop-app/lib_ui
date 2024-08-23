@@ -173,6 +173,8 @@ PRIVATE
     ui/text/text_isolated_emoji.h
     ui/text/text_renderer.cpp
     ui/text/text_renderer.h
+    ui/text/text_stack_engine.cpp
+    ui/text/text_stack_engine.h
     ui/text/text_utilities.cpp
     ui/text/text_utilities.h
     ui/text/text_variant.cpp

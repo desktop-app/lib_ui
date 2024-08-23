@@ -110,9 +110,14 @@ NewlineBlock::NewlineBlock(BlockDescriptor descriptor, uint16 quoteIndex)
 , _quoteIndex(quoteIndex) {
 }
 
-SkipBlock::SkipBlock(BlockDescriptor descriptor, int height)
+SkipBlock::SkipBlock(BlockDescriptor descriptor, int width, int height)
 : AbstractBlock(TextBlockType::Skip, descriptor)
+, _width(width)
 , _height(height) {
+}
+
+int SkipBlock::width() const {
+	return _width;
 }
 
 int SkipBlock::height() const {
@@ -196,8 +201,8 @@ Block Block::CustomEmoji(
 	return New<CustomEmojiBlock>(descriptor, std::move(custom));
 }
 
-Block Block::Skip(BlockDescriptor descriptor, int height) {
-	return New<SkipBlock>(descriptor, height);
+Block Block::Skip(BlockDescriptor descriptor, int width, int height) {
+	return New<SkipBlock>(descriptor, width, height);
 }
 
 AbstractBlock *Block::get() {

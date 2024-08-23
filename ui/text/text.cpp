@@ -805,36 +805,41 @@ bool String::hasSkipBlock() const {
 bool String::updateSkipBlock(int width, int height) {
 	if (!_blocks.empty() && _blocks.back()->type() == TextBlockType::Skip) {
 		const auto block = static_cast<SkipBlock*>(_blocks.back().get());
-		if (block->f_width().toInt() == width && block->height() == height) {
+		if (block->width() == width && block->height() == height) {
 			return false;
 		}
 		const auto size = block->position();
 		_text.resize(size);
 		_blocks.pop_back();
+		_words.pop_back();
 		removeModificationsAfter(size);
 	} else if (_endsWithQuote) {
 		insertModifications(_text.size(), 1);
 		_text.push_back(QChar::LineFeed);
-		_blocks.push_back(Block::Newline(
-			_st->font,
-			_text,
-			_text.size() - 1,
-			1,
-			0,
-			0,
-			0));
+		_blocks.push_back(Block::Newline({
+			.position = uint16(_text.size() - 1),
+		}, 0));
+		_words.push_back(Word(
+			_blocks.back()->position(),
+			false, // continuation
+			true, // newline
+			0, // width
+			0, // rbearing
+			0)); // rpadding
 		_skipBlockAddedNewline = true;
 	}
 	insertModifications(_text.size(), 1);
 	_text.push_back('_');
-	_blocks.push_back(Block::Skip(
-		_st->font,
-		_text,
-		_text.size() - 1,
-		width,
-		height,
-		0,
-		0));
+	_blocks.push_back(Block::Skip({
+		.position = uint16(_text.size() - 1),
+	}, width, height));
+	_words.push_back(Word(
+		_blocks.back()->position(),
+		false, // continuation
+		false, // newline
+		width, // width
+		0, // rbearing
+		0)); // rpadding
 	recountNaturalSize(false);
 	return true;
 }
@@ -847,12 +852,15 @@ bool String::removeSkipBlock() {
 		_text.resize(size);
 		_blocks.pop_back();
 		_blocks.pop_back();
+		_words.pop_back();
+		_words.pop_back();
 		_skipBlockAddedNewline = false;
 		removeModificationsAfter(size);
 	} else {
 		const auto size = _blocks.back()->position();
 		_text.resize(size);
 		_blocks.pop_back();
+		_words.pop_back();
 		removeModificationsAfter(size);
 	}
 	recountNaturalSize(false);
@@ -1381,6 +1389,30 @@ not_null<QuotesData*> String::ensureQuotes() {
 	return extended->quotes.get();
 }
 
+uint16 String::blockPosition(std::vector<Block>::const_iterator i) const {
+	return countPosition(i, end(_blocks));
+}
+
+uint16 String::blockEnd(std::vector<Block>::const_iterator i) const {
+	return countEnd(i, end(_blocks));
+}
+
+uint16 String::blockLength(std::vector<Block>::const_iterator i) const {
+	return countLength(i, end(_blocks));
+}
+
+uint16 String::wordPosition(std::vector<Word>::const_iterator i) const {
+	return countPosition(i, end(_words));
+}
+
+uint16 String::wordEnd(std::vector<Word>::const_iterator i) const {
+	return countEnd(i, end(_words));
+}
+
+uint16 String::wordLength(std::vector<Word>::const_iterator i) const {
+	return countLength(i, end(_words));
+}
+
 QuoteDetails *String::quoteByIndex(int index) const {
 	Expects(!index
 		|| (_extended
@@ -1561,7 +1593,7 @@ void String::enumerateText(
 			uint16(blockPosition + countBlockLength(i, e)));
 		if (rangeTo > rangeFrom) {
 			const auto customEmojiData = (blockType == TextBlockType::CustomEmoji)
-				? static_cast<const CustomEmojiBlock*>(i->get())->_custom->entityData()
+				? static_cast<const CustomEmojiBlock*>(i->get())->custom()->entityData()
 				: QString();
 			appendPartCallback(
 				base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom),
@@ -1579,7 +1611,7 @@ void String::unloadPersistentAnimation() {
 		for (const auto &block : _blocks) {
 			const auto raw = block.get();
 			if (raw->type() == TextBlockType::CustomEmoji) {
-				static_cast<const CustomEmojiBlock*>(raw)->_custom->unload();
+				static_cast<const CustomEmojiBlock*>(raw)->custom()->unload();
 			}
 		}
 	}
@@ -1600,7 +1632,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
 		if (raw->type() == TextBlockType::CustomEmoji) {
 			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
 			result.lines.back().push_back({
-				.entityData = custom->_custom->entityData(),
+				.entityData = custom->custom()->entityData(),
 			});
 		} else if (raw->type() == TextBlockType::Newline) {
 			result.lines.emplace_back();
@@ -1821,10 +1853,10 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 		if (block->linkIndex()) {
 			return {};
 		} else if (type == TextBlockType::Emoji) {
-			result.items[index++] = block.unsafe<EmojiBlock>()._emoji;
+			result.items[index++] = block.unsafe<EmojiBlock>().emoji();
 		} else if (type == TextBlockType::CustomEmoji) {
 			result.items[index++]
-				= block.unsafe<CustomEmojiBlock>()._custom->entityData();
+				= block.unsafe<CustomEmojiBlock>().custom()->entityData();
 		} else if (type != TextBlockType::Skip) {
 			return {};
 		}
