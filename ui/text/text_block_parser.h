@@ -13,9 +13,9 @@ namespace Ui::Text {
 
 struct QuoteDetails;
 
-class Parser {
+class BlockParser {
 public:
-	Parser(
+	BlockParser(
 		not_null<String*> string,
 		const TextWithEntities &textWithEntities,
 		const TextParseOptions &options,
@@ -49,7 +49,7 @@ private:
 
 	};
 
-	Parser(
+	BlockParser(
 		not_null<String*> string,
 		TextWithEntities &&source,
 		const TextParseOptions &options,
@@ -57,8 +57,7 @@ private:
 		ReadyToken);
 
 	void trimSourceRange();
-	void blockCreated();
-	void createBlock(int32 skipBack = 0);
+	void createBlock(int skipBack = 0);
 	void createNewlineBlock(bool fromOriginalText);
 	void ensureAtNewline(QuoteDetails quote);
 
@@ -83,9 +82,9 @@ private:
 		QString *outLinkText,
 		EntityLinkShown *outShown);
 
-	void updateModifications(int index, int delta);
-
 	const not_null<String*> _t;
+	QString &_tText;
+	std::vector<Block> &_tBlocks;
 	const TextWithEntities _source;
 	const std::any &_context;
 	const QChar * const _start = nullptr;
@@ -96,7 +95,6 @@ private:
 	QString _customEmojiData;
 	const bool _multiline = false;
 
-	const QFixed _stopAfterWidth; // summary width of all added words
 	const bool _checkTilde = false; // do we need a special text block for tilde symbol
 
 	std::vector<uint16> _linksIndexes;
@@ -118,15 +116,14 @@ private:
 	uint16 _quoteIndex = 0;
 	int _quoteStartPosition = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
-	int32 _blockStart = 0; // offset in result, from which current parsed block is started
-	int32 _diacritics = 0; // diacritic chars skipped without good char
-	QFixed _sumWidth;
-	bool _sumFinished = false;
+	int _blockStart = 0; // offset in result, from which current parsed block is started
+	int _wordsStart = 0; // offset in result, from which words were not added yet
+	int _diacritics = 0; // diacritic chars skipped without good char
 	bool _newlineAwaited = false;
 
 	// current char data
 	QChar _ch; // current char (low surrogate, if current char is surrogate pair)
-	int32 _emojiLookback = 0; // how far behind the current ptr to look for current emoji
+	int _emojiLookback = 0; // how far behind the current ptr to look for current emoji
 	bool _allowDiacritic = false; // did we add last char to the current block
 
 };
