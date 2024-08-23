@@ -616,16 +616,12 @@ void Renderer::initParagraphBidi() {
 		return;
 	}
 
-	bool rtl = (_paragraphDirection == Qt::RightToLeft);
-
 	_paragraphAnalysis.resize(_paragraphLength);
-	QScriptAnalysis *analysis = _paragraphAnalysis.data();
-
 	BidiAlgorithm bidi(
 		_str + _paragraphStart,
-		analysis,
+		_paragraphAnalysis.data(),
 		_paragraphLength,
-		rtl,
+		(_paragraphDirection == Qt::RightToLeft),
 		_paragraphStartBlock,
 		_t->_blocks.cend(),
 		_paragraphStart);

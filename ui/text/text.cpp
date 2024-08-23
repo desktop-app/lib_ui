@@ -7,10 +7,11 @@
 #include "ui/text/text.h"
 
 #include "ui/effects/spoiler_mess.h"
+#include "ui/text/text_block_parser.h"
 #include "ui/text/text_extended_data.h"
 #include "ui/text/text_isolated_emoji.h"
-#include "ui/text/text_parser.h"
 #include "ui/text/text_renderer.h"
+#include "ui/text/text_word_parser.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/integration.h"
 #include "ui/painter.h"
@@ -531,12 +532,7 @@ String &String::operator=(String &&other) = default;
 String::~String() = default;
 
 void String::setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options) {
-	_st = &st;
-	clear();
-	{
-		Parser parser(this, { text }, options, {});
-	}
-	recountNaturalSize(true, options.dir);
+	setMarkedText(st, { text }, options);
 }
 
 void String::recountNaturalSize(
@@ -549,8 +545,7 @@ void String::recountNaturalSize(
 			? optionsDirection
 			: StringDirection(_text, lastNewlineStart, paragraphEnd);
 		if (lastNewline) {
-			lastNewline->_paragraphLTR = (direction == Qt::LeftToRight);
-			lastNewline->_paragraphRTL = (direction == Qt::RightToLeft);
+			lastNewline->setParagraphDirection(direction);
 		} else {
 			_startParagraphLTR = (direction == Qt::LeftToRight);
 			_startParagraphRTL = (direction == Qt::RightToLeft);
@@ -704,9 +699,10 @@ void String::setMarkedText(const style::TextStyle &st, const TextWithEntities &t
 //			}
 //		}
 //		newText.append("},\n\n").append(text);
-//		Parser parser(this, { newText, EntitiesInText() }, options, context);
+//		BlockParser block(this, { newText, EntitiesInText() }, options, context);
 
-		Parser parser(this, textWithEntities, options, context);
+		BlockParser block(this, textWithEntities, options, context);
+		WordParser word(this);
 	}
 	recountNaturalSize(true, options.dir);
 }
@@ -1383,18 +1379,6 @@ not_null<QuotesData*> String::ensureQuotes() {
 		extended->quotes = std::make_unique<QuotesData>();
 	}
 	return extended->quotes.get();
-}
-
-uint16 String::countBlockEnd(
-		const TextBlocks::const_iterator &i,
-		const TextBlocks::const_iterator &e) const {
-	return (i + 1 == e) ? _text.size() : (*(i + 1))->position();
-}
-
-uint16 String::countBlockLength(
-		const TextBlocks::const_iterator &i,
-		const TextBlocks::const_iterator &e) const {
-	return countBlockEnd(i, e) - (*i)->position();
 }
 
 QuoteDetails *String::quoteByIndex(int index) const {

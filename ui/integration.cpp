@@ -8,7 +8,6 @@
 
 #include "ui/gl/gl_detection.h"
 #include "ui/text/text_entity.h"
-#include "ui/text/text_block.h"
 #include "ui/toast/toast.h"
 #include "ui/basic_click_handlers.h"
 #include "base/platform/base_platform_info.h"

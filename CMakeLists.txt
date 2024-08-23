@@ -162,6 +162,8 @@ PRIVATE
     ui/text/text_bidi_algorithm.h
     ui/text/text_block.cpp
     ui/text/text_block.h
+    ui/text/text_block_parser.cpp
+    ui/text/text_block_parser.h
     ui/text/text_custom_emoji.cpp
     ui/text/text_custom_emoji.h
     ui/text/text_entity.cpp
@@ -169,14 +171,15 @@ PRIVATE
     ui/text/text_extended_data.cpp
     ui/text/text_extended_data.h
     ui/text/text_isolated_emoji.h
-    ui/text/text_parser.cpp
-    ui/text/text_parser.h
     ui/text/text_renderer.cpp
     ui/text/text_renderer.h
     ui/text/text_utilities.cpp
     ui/text/text_utilities.h
     ui/text/text_variant.cpp
     ui/text/text_variant.h
+    ui/text/text_word.h
+    ui/text/text_word_parser.cpp
+    ui/text/text_word_parser.h
     ui/toast/toast.cpp
     ui/toast/toast.h
     ui/toast/toast_manager.cpp

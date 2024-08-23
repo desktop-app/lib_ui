@@ -76,8 +76,9 @@ static constexpr TextSelection AllTextSelection = { 0, 0xFFFF };
 
 namespace Ui::Text {
 
-class Block;
 class AbstractBlock;
+class Block;
+class Word;
 struct IsolatedEmoji;
 struct OnlyCustomEmoji;
 struct SpoilerData;
@@ -376,8 +377,6 @@ public:
 	void clear();
 
 private:
-	using TextBlocks = std::vector<Block>;
-
 	class ExtendedWrap : public std::unique_ptr<ExtendedData> {
 	public:
 		ExtendedWrap() noexcept;
@@ -398,12 +397,15 @@ private:
 	[[nodiscard]] not_null<ExtendedData*> ensureExtended();
 	[[nodiscard]] not_null<QuotesData*> ensureQuotes();
 
-	[[nodiscard]] uint16 countBlockEnd(
-		const TextBlocks::const_iterator &i,
-		const TextBlocks::const_iterator &e) const;
-	[[nodiscard]] uint16 countBlockLength(
-		const TextBlocks::const_iterator &i,
-		const TextBlocks::const_iterator &e) const;
+	template <typename Iterator>
+	[[nodiscard]] uint16 countEnd(Iterator i, Iterator end) const {
+		return (i + 1 != end) ? CountPosition(i + 1) : uint16(_text.size());
+	}
+	template <typename Iterator>
+	[[nodiscard]] uint16 CountLength(Iterator i, Iterator end) const {
+		return countEnd(i, end) - CountPosition(i);
+	}
+
 	[[nodiscard]] QuoteDetails *quoteByIndex(int index) const;
 	[[nodiscard]] const style::QuoteStyle &quoteStyle(
 		not_null<QuoteDetails*> quote) const;
@@ -456,7 +458,8 @@ private:
 
 	const style::TextStyle *_st = nullptr;
 	QString _text;
-	TextBlocks _blocks;
+	std::vector<Block> _blocks;
+	std::vector<Word> _words;
 	ExtendedWrap _extended;
 
 	int _minResizeWidth = 0;
@@ -472,7 +475,8 @@ private:
 	bool _skipBlockAddedNewline : 1 = false;
 	bool _endsWithQuote : 1 = false;
 
-	friend class Parser;
+	friend class BlockParser;
+	friend class WordParser;
 	friend class Renderer;
 	friend class BidiAlgorithm;
 
