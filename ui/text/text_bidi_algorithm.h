@@ -998,7 +998,11 @@ public:
 			};
 		}
 		return {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 			.properties = QUnicodeTables::properties(char16_t(object
+#else // Qt >= 6
+			.properties = QUnicodeTables::properties(ushort(object
+#endif // Qt >= 6
 				? QChar::ObjectReplacementCharacter
 				: uc)),
 			.surrogate = false,
