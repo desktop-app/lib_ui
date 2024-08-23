@@ -57,15 +57,14 @@ private:
 
 	[[nodiscard]] crl::time now() const;
 	void initNextParagraph(
-		String::TextBlocks::const_iterator i,
+		Blocks::const_iterator i,
 		int16 paragraphIndex,
 		Qt::LayoutDirection direction);
 	void initNextLine();
 	void initParagraphBidi();
 	bool drawLine(
 		uint16 _lineEnd,
-		const String::TextBlocks::const_iterator &_endBlockIter,
-		const String::TextBlocks::const_iterator &_end);
+		Blocks::const_iterator _endBlockIter);
 	[[nodiscard]] FixedRange findSelectEmojiRange(
 		const QScriptItem &si,
 		const Ui::Text::AbstractBlock *currentBlock,
@@ -161,7 +160,7 @@ private:
 	int _indexOfElidedBlock = -1; // For spoilers.
 
 	// current paragraph data
-	String::TextBlocks::const_iterator _paragraphStartBlock;
+	Blocks::const_iterator _paragraphStartBlock;
 	Qt::LayoutDirection _paragraphDirection = Qt::LayoutDirectionAuto;
 	int _paragraphStart = 0;
 	int _paragraphLength = 0;

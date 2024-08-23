@@ -15,24 +15,28 @@ namespace Ui::Text {
 class Word final {
 public:
 	Word() = default;
-	Word(
+	Word( // !newline
 		uint16 position,
 		bool continuation,
-		bool newline,
 		QFixed width,
-		QFixed rbearing,
-		QFixed rpadding = 0)
+		QFixed rbearing)
 	: _position(position)
 	, _rbearing_modulus(std::min(std::abs(rbearing.value()), 0x7FFF))
 	, _rbearing_positive(rbearing.value() > 0 ? 1 : 0)
 	, _continuation(continuation ? 1 : 0)
-	, _newline(newline ? 1 : 0)
-	, _width(width)
-	, _rpadding(rpadding) {
+	, _width(width) {
+	}
+	Word(uint16 position, int newlineBlockIndex)
+	: _position(position)
+	, _newline(1)
+	, _newlineBlockIndex(newlineBlockIndex) {
 	}
 
 	[[nodiscard]] bool newline() const {
 		return _newline != 0;
+	}
+	[[nodiscard]] int newlineBlockIndex() const {
+		return _newline ? _newlineBlockIndex : 0;
 	}
 	[[nodiscard]] bool continuation() const {
 		return _continuation != 0;
@@ -46,7 +50,7 @@ public:
 			int(_rbearing_modulus) * (_rbearing_positive ? 1 : -1));
 	}
 	[[nodiscard]] QFixed f_width() const {
-		return _width;
+		return _newline ? 0 : _width;
 	}
 	[[nodiscard]] QFixed f_rpadding() const {
 		return _rpadding;
@@ -62,7 +66,6 @@ private:
 	uint16 _rbearing_positive : 1 = 0;
 	uint16 _continuation : 1 = 0;
 	uint16 _newline : 1 = 0;
-	QFixed _width;
 
 	// Right padding: spaces after the last content of the block (like a word).
 	// This holds spaces after the end of the block, for example a text ending
@@ -70,6 +73,11 @@ private:
 	// (for example a text block after a link block) it is prepended with an empty
 	// word that holds those spaces as a right padding.
 	QFixed _rpadding;
+
+	union {
+		QFixed _width;
+		int _newlineBlockIndex;
+	};
 
 };
 

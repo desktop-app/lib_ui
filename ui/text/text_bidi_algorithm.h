@@ -22,8 +22,8 @@ public:
 	template<typename T> using Vector = QVarLengthArray<T, 64>;
 
 	BidiAlgorithm(const QChar *text, QScriptAnalysis *analysis, int length, bool baseDirectionIsRtl,
-		String::TextBlocks::const_iterator startInBlocks,
-		String::TextBlocks::const_iterator endInBlocks,
+		Blocks::const_iterator startInBlocks,
+		Blocks::const_iterator endInBlocks,
 		int offsetInBlocks)
 		: text(text),
 		  analysis(analysis),
@@ -959,9 +959,9 @@ public:
 	int length;
 	char baseLevel;
 
-	String::TextBlocks::const_iterator _startInBlocks;
-	String::TextBlocks::const_iterator _endInBlocks;
-	mutable String::TextBlocks::const_iterator _currentBlock;
+	Blocks::const_iterator _startInBlocks;
+	Blocks::const_iterator _endInBlocks;
+	mutable Blocks::const_iterator _currentBlock;
 	int _offsetInBlocks;
 
 	struct Info {

@@ -157,42 +157,6 @@ void addNextCluster(
 
 } // anonymous namespace
 
-class BlockParser {
-public:
-	BlockParser(
-		TextBlock &block,
-		QTextEngine &engine,
-		QFixed minResizeWidth,
-		int blockPosition,
-		const QString &text);
-
-private:
-	void parseWords(QFixed minResizeWidth, int blockFrom);
-	[[nodiscard]] bool isLineBreak(
-		const QCharAttributes *attributes,
-		int index) const;
-	[[nodiscard]] bool isSpaceBreak(
-		const QCharAttributes *attributes,
-		int index) const;
-
-	TextBlock &block;
-	QTextEngine &engine;
-	const QString &text;
-
-};
-
-BlockParser::BlockParser(
-	TextBlock &block,
-	QTextEngine &engine,
-	QFixed minResizeWidth,
-	int blockFrom,
-	const QString &text)
-: block(block)
-, engine(engine)
-, text(text) {
-	parseWords(minResizeWidth, blockFrom);
-}
-
 WordParser::WordParser(not_null<String*> string)
 : _t(string)
 , _tText(_t->_text)
@@ -204,7 +168,7 @@ WordParser::WordParser(not_null<String*> string)
 }
 
 void WordParser::parse() {
-	if (!_tText.isEmpty()) {
+	if (_tText.isEmpty()) {
 		return;
 	}
 
@@ -313,11 +277,8 @@ void WordParser::parse() {
 			if (_tWords.empty()) {
 				pushWord(
 					wordStart,
-					false, // newline
-					false, // continuation
 					lbh.tmpData.textWidth,
-					-lbh.negativeRightBearing(),
-					0); // rpadding
+					-lbh.negativeRightBearing());
 			}
 			_tWords.back().add_rpadding(lbh.spaceData.textWidth);
 			lbh.spaceData.length = 0;
@@ -345,11 +306,8 @@ void WordParser::parse() {
 					lbh.calculateRightBearing();
 					pushWord(
 						wordStart,
-						false, // newline
-						false, // continuation
 						lbh.tmpData.textWidth,
-						-lbh.negativeRightBearing(),
-						0); // rpadding
+						-lbh.negativeRightBearing());
 					lbh.tmpData.textWidth = 0;
 					lbh.tmpData.length = 0;
 					wordStart = lbh.currentPosition;
@@ -358,13 +316,10 @@ void WordParser::parse() {
 					if (!addingEachGrapheme && lbh.tmpData.textWidth > _t->_minResizeWidth) {
 						if (lastGraphemeBoundaryPosition >= 0) {
 							lbh.calculateRightBearingForPreviousGlyph();
-							pushWord(
+							pushContinuation(
 								wordStart,
-								false, // newline
-								true, // continuation
 								lastGraphemeBoundaryLine.textWidth,
-								-lbh.negativeRightBearing(),
-								0); // rpadding
+								-lbh.negativeRightBearing());
 							lbh.tmpData.textWidth -= lastGraphemeBoundaryLine.textWidth;
 							lbh.tmpData.length -= lastGraphemeBoundaryLine.length;
 							wordStart = lastGraphemeBoundaryPosition;
@@ -373,13 +328,10 @@ void WordParser::parse() {
 					}
 					if (addingEachGrapheme) {
 						lbh.calculateRightBearing();
-						pushWord(
+						pushContinuation(
 							wordStart,
-							false, // newline
-							true, // continuation
 							lbh.tmpData.textWidth,
-							-lbh.negativeRightBearing(),
-							0); // rpadding
+							-lbh.negativeRightBearing());
 						lbh.tmpData.textWidth = 0;
 						lbh.tmpData.length = 0;
 						wordStart = lbh.currentPosition;
@@ -401,13 +353,22 @@ void WordParser::parse() {
 
 void WordParser::pushWord(
 		uint16 position,
-		bool continuation,
-		bool newline,
 		QFixed width,
-		QFixed rbearing,
-		QFixed rpadding) {
-	_tWords.push_back(
-		Word(position, continuation, newline, width, rbearing, rpadding));
+		QFixed rbearing) {
+	const auto continuation = false;
+	_tWords.push_back(Word(position, continuation, width, rbearing));
+}
+
+void WordParser::pushContinuation(
+		uint16 position,
+		QFixed width,
+		QFixed rbearing) {
+	const auto continuation = true;
+	_tWords.push_back(Word(position, continuation, width, rbearing));
+}
+
+void WordParser::pushNewline(uint16 position, int newlineBlockIndex) {
+	_tWords.push_back(Word(position, newlineBlockIndex));
 }
 
 bool WordParser::isLineBreak(

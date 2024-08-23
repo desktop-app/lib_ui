@@ -374,6 +374,8 @@ public:
 		return _st;
 	}
 
+	[[nodiscard]] int lineHeight() const;
+
 	void clear();
 
 private:

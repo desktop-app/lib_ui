@@ -7,6 +7,7 @@
 #include "ui/integration.h"
 
 #include "ui/gl/gl_detection.h"
+#include "ui/text/text_custom_emoji.h"
 #include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
 #include "ui/basic_click_handlers.h"

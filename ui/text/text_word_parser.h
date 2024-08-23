@@ -20,13 +20,9 @@ public:
 private:
 	void parse();
 
-	void pushWord(
-		uint16 position,
-		bool continuation,
-		bool newline,
-		QFixed width,
-		QFixed rbearing,
-		QFixed rpadding);
+	void pushWord(uint16 position, QFixed width, QFixed rbearing);
+	void pushContinuation(uint16 position, QFixed width, QFixed rbearing);
+	void pushNewline(uint16 position, int newlineBlockIndex);
 
 	[[nodiscard]] bool isLineBreak(
 		const QCharAttributes *attributes,
