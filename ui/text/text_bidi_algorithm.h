@@ -22,8 +22,8 @@ public:
 	template<typename T> using Vector = QVarLengthArray<T, 64>;
 
 	BidiAlgorithm(const QChar *text, QScriptAnalysis *analysis, int length, bool baseDirectionIsRtl,
-		String::TextBlocks::const_iterator startInBlocks,
-		String::TextBlocks::const_iterator endInBlocks,
+		Blocks::const_iterator startInBlocks,
+		Blocks::const_iterator endInBlocks,
 		int offsetInBlocks)
 		: text(text),
 		  analysis(analysis),
@@ -959,9 +959,9 @@ public:
 	int length;
 	char baseLevel;
 
-	String::TextBlocks::const_iterator _startInBlocks;
-	String::TextBlocks::const_iterator _endInBlocks;
-	mutable String::TextBlocks::const_iterator _currentBlock;
+	Blocks::const_iterator _startInBlocks;
+	Blocks::const_iterator _endInBlocks;
+	mutable Blocks::const_iterator _currentBlock;
 	int _offsetInBlocks;
 
 	struct Info {
@@ -983,26 +983,24 @@ public:
 		const auto object = (type == TextBlockType::Emoji)
 			|| (type == TextBlockType::CustomEmoji)
 			|| (type == TextBlockType::Skip);
-		if (object) {
-			[[maybe_unused]] int a = 0;
-		}
 
-		char32_t uc = text[i].unicode();
+		constexpr auto kQt5 = (QT_VERSION < QT_VERSION_CHECK(6, 0, 0));
+		using wide = std::conditional_t<kQt5, uint, char32_t>;
+		using narrow = std::conditional_t<kQt5, ushort, char16_t>;
+
+		auto uc = wide(text[i].unicode());
 		if (QChar::isHighSurrogate(uc) && i < length - 1 && text[i + 1].isLowSurrogate()) {
 			uc = QChar::surrogateToUcs4(ushort(uc), text[i + 1].unicode());
+
 			return {
 				.properties = QUnicodeTables::properties(object
-					? char32_t(QChar::ObjectReplacementCharacter)
+					? wide(QChar::ObjectReplacementCharacter)
 					: uc),
 				.surrogate = true,
 			};
 		}
 		return {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-			.properties = QUnicodeTables::properties(char16_t(object
-#else // Qt >= 6
-			.properties = QUnicodeTables::properties(ushort(object
-#endif // Qt >= 6
+			.properties = QUnicodeTables::properties(narrow(object
 				? QChar::ObjectReplacementCharacter
 				: uc)),
 			.surrogate = false,

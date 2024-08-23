@@ -57,21 +57,18 @@ private:
 
 	[[nodiscard]] crl::time now() const;
 	void initNextParagraph(
-		String::TextBlocks::const_iterator i,
+		Blocks::const_iterator i,
 		int16 paragraphIndex,
 		Qt::LayoutDirection direction);
 	void initNextLine();
 	void initParagraphBidi();
 	bool drawLine(
 		uint16 _lineEnd,
-		const String::TextBlocks::const_iterator &_endBlockIter,
-		const String::TextBlocks::const_iterator &_end);
+		Blocks::const_iterator _endBlockIter);
 	[[nodiscard]] FixedRange findSelectEmojiRange(
 		const QScriptItem &si,
-		const Ui::Text::AbstractBlock *currentBlock,
-		const Ui::Text::AbstractBlock *nextBlock,
+		std::vector<Block>::const_iterator blockIt,
 		QFixed x,
-		QFixed glyphX,
 		TextSelection selection) const;
 	[[nodiscard]] FixedRange findSelectTextRange(
 		const QScriptItem &si,
@@ -113,26 +110,9 @@ private:
 
 	void fillParagraphBg(int paddingBottom);
 
-	// COPIED FROM qtextengine.cpp AND MODIFIED
-	static void eAppendItems(
-		QScriptAnalysis *analysis,
-		int &start,
-		int &stop,
-		const BidiControl &control,
-		QChar::Direction dir);
-	void eShapeLine(const QScriptLine &line);
-	void eSetFont(const AbstractBlock *block);
-	void eItemize();
-	QChar::Direction eSkipBoundryNeutrals(
-		QScriptAnalysis *analysis,
-		const ushort *unicode,
-		int &sor, int &eor, BidiControl &control,
-		String::TextBlocks::const_iterator i);
-
-	// creates the next QScript items.
-	bool eBidiItemize(QScriptAnalysis *analysis, BidiControl &control);
-
-	void applyBlockProperties(const AbstractBlock *block);
+	void applyBlockProperties(
+		QTextEngine &e,
+		not_null<const AbstractBlock*> block);
 	[[nodiscard]] ClickHandlerPtr lookupLink(
 		const AbstractBlock *block) const;
 
@@ -175,7 +155,7 @@ private:
 	int _indexOfElidedBlock = -1; // For spoilers.
 
 	// current paragraph data
-	String::TextBlocks::const_iterator _paragraphStartBlock;
+	Blocks::const_iterator _paragraphStartBlock;
 	Qt::LayoutDirection _paragraphDirection = Qt::LayoutDirectionAuto;
 	int _paragraphStart = 0;
 	int _paragraphLength = 0;
@@ -200,7 +180,6 @@ private:
 	bool _quoteExpandLinkLookup = false;
 
 	// current line data
-	QTextEngine *_e = nullptr;
 	style::font _f;
 	int _startLeft = 0;
 	int _startTop = 0;

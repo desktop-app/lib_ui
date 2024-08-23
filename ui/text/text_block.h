@@ -53,31 +53,25 @@ using TextBlockFlags = base::flags<TextBlockFlag>;
 	bool ltr,
 	bool rtl);
 
+struct BlockDescriptor {
+	uint16 position = 0;
+	TextBlockFlags flags;
+	uint16 linkIndex = 0;
+	uint16 colorIndex = 0;
+};
+
 class AbstractBlock {
 public:
 	[[nodiscard]] uint16 position() const;
 	[[nodiscard]] TextBlockType type() const;
 	[[nodiscard]] TextBlockFlags flags() const;
+	[[nodiscard]] int objectWidth() const;
 	[[nodiscard]] uint16 colorIndex() const;
 	[[nodiscard]] uint16 linkIndex() const;
 	void setLinkIndex(uint16 index);
 
-	[[nodiscard]] QFixed f_width() const;
-	[[nodiscard]] QFixed f_rpadding() const;
-
-	// Should be virtual, but optimized throught type() call.
-	[[nodiscard]] QFixed f_rbearing() const;
-
 protected:
-	AbstractBlock(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockType type,
-		uint16 flags,
-		uint16 linkIndex,
-		uint16 colorIndex);
+	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
 
 	uint16 _position = 0;
 	uint16 _type : 4 = 0;
@@ -85,30 +79,21 @@ protected:
 	uint16 _linkIndex = 0;
 	uint16 _colorIndex = 0;
 
-	QFixed _width = 0;
-
-	// Right padding: spaces after the last content of the block (like a word).
-	// This holds spaces after the end of the block, for example a text ending
-	// with a space before a link has started. If text block has a leading spaces
-	// (for example a text block after a link block) it is prepended with an empty
-	// word that holds those spaces as a right padding.
-	QFixed _rpadding = 0;
-
 };
 
 class NewlineBlock final : public AbstractBlock {
 public:
-	NewlineBlock(
-		const style::font &font,
-		const QString &str,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex);
+	NewlineBlock(BlockDescriptor descriptor, uint16 quoteIndex);
 
+	void setQuoteIndex(uint16 index) {
+		_quoteIndex = index;
+	}
 	[[nodiscard]] uint16 quoteIndex() const {
 		return _quoteIndex;
+	}
+	void setParagraphDirection(Qt::LayoutDirection direction) {
+		_paragraphLTR = (direction == Qt::LeftToRight);
+		_paragraphRTL = (direction == Qt::RightToLeft);
 	}
 	[[nodiscard]] Qt::LayoutDirection paragraphDirection() const {
 		return UnpackParagraphDirection(_paragraphLTR, _paragraphRTL);
@@ -119,122 +104,52 @@ private:
 	bool _paragraphLTR : 1 = false;
 	bool _paragraphRTL : 1 = false;
 
-	friend class String;
-	friend class Parser;
-	friend class Renderer;
-
-};
-
-class TextWord final {
-public:
-	TextWord() = default;
-	TextWord(
-		uint16 position,
-		QFixed width,
-		QFixed rbearing,
-		QFixed rpadding = 0);
-
-	[[nodiscard]] uint16 position() const;
-	[[nodiscard]] QFixed f_rbearing() const;
-	[[nodiscard]] QFixed f_width() const;
-	[[nodiscard]] QFixed f_rpadding() const;
-
-	void add_rpadding(QFixed padding);
-
-private:
-	uint16 _position = 0;
-	int16 _rbearing = 0;
-	QFixed _width;
-	QFixed _rpadding;
-
 };
 
 class TextBlock final : public AbstractBlock {
 public:
-	TextBlock(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex,
-		QFixed minResizeWidth);
-
-private:
-	[[nodiscard]] QFixed real_f_rbearing() const;
-
-	QVector<TextWord> _words;
-
-	friend class String;
-	friend class Parser;
-	friend class Renderer;
-	friend class BlockParser;
-	friend class AbstractBlock;
+	explicit TextBlock(BlockDescriptor descriptor);
 
 };
 
 class EmojiBlock final : public AbstractBlock {
 public:
-	EmojiBlock(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex,
-		EmojiPtr emoji);
+	EmojiBlock(BlockDescriptor descriptor, EmojiPtr emoji);
+
+	[[nodiscard]] EmojiPtr emoji() const {
+		return _emoji;
+	}
 
 private:
 	EmojiPtr _emoji = nullptr;
-
-	friend class String;
-	friend class Parser;
-	friend class Renderer;
 
 };
 
 class CustomEmojiBlock final : public AbstractBlock {
 public:
 	CustomEmojiBlock(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex,
+		BlockDescriptor descriptor,
 		std::unique_ptr<CustomEmoji> custom);
+
+	[[nodiscard]] not_null<CustomEmoji*> custom() const {
+		return _custom.get();
+	}
 
 private:
 	std::unique_ptr<CustomEmoji> _custom;
-
-	friend class String;
-	friend class Parser;
-	friend class Renderer;
 
 };
 
 class SkipBlock final : public AbstractBlock {
 public:
-	SkipBlock(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		int32 width,
-		int32 height,
-		uint16 linkIndex,
-		uint16 colorIndex);
+	SkipBlock(BlockDescriptor descriptor, int width, int height);
 
+	[[nodiscard]] int width() const;
 	[[nodiscard]] int height() const;
 
 private:
+	int _width = 0;
 	int _height = 0;
-
-	friend class String;
-	friend class Parser;
-	friend class Renderer;
 
 };
 
@@ -246,52 +161,20 @@ public:
 	~Block();
 
 	[[nodiscard]] static Block Newline(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex);
-
-	[[nodiscard]] static Block Text(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex,
-		QFixed minResizeWidth);
-
+		BlockDescriptor descriptor,
+		uint16 quoteIndex);
+	[[nodiscard]] static Block Text(BlockDescriptor descriptor);
 	[[nodiscard]] static Block Emoji(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex,
+		BlockDescriptor descriptor,
 		EmojiPtr emoji);
-
 	[[nodiscard]] static Block CustomEmoji(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		uint16 length,
-		TextBlockFlags flags,
-		uint16 linkIndex,
-		uint16 colorIndex,
+		BlockDescriptor descriptor,
 		std::unique_ptr<CustomEmoji> custom);
 
 	[[nodiscard]] static Block Skip(
-		const style::font &font,
-		const QString &text,
-		uint16 position,
-		int32 width,
-		int32 height,
-		uint16 linkIndex,
-		uint16 colorIndex);
+		BlockDescriptor descriptor,
+		int width,
+		int height);
 
 	template <typename FinalBlock>
 	[[nodiscard]] FinalBlock &unsafe() {
@@ -333,18 +216,24 @@ private:
 
 	void destroy();
 
-	static_assert(sizeof(NewlineBlock) <= sizeof(TextBlock));
+	static_assert(sizeof(NewlineBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(NewlineBlock) <= alignof(void*));
-	static_assert(sizeof(EmojiBlock) <= sizeof(TextBlock));
+	static_assert(sizeof(EmojiBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(EmojiBlock) <= alignof(void*));
-	static_assert(sizeof(CustomEmojiBlock) <= sizeof(TextBlock));
+	static_assert(sizeof(TextBlock) <= sizeof(SkipBlock));
+	static_assert(alignof(TextBlock) <= alignof(void*));
+	static_assert(sizeof(CustomEmojiBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(CustomEmojiBlock) <= alignof(void*));
-	static_assert(sizeof(SkipBlock) <= sizeof(TextBlock));
-	static_assert(alignof(SkipBlock) <= alignof(void*));
 
-	std::aligned_storage_t<sizeof(TextBlock), alignof(void*)> _data;
+	std::aligned_storage_t<sizeof(SkipBlock), alignof(void*)> _data;
 
 };
+
+using Blocks = std::vector<Block>;
+
+[[nodiscard]] inline uint16 CountPosition(Blocks::const_iterator i) {
+	return (*i)->position();
+}
 
 [[nodiscard]] int CountBlockHeight(
 	const AbstractBlock *block,
