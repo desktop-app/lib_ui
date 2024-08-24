@@ -58,7 +58,7 @@ public:
 
 	void setTitle(rpl::producer<QString> title);
 	void setTitleHeight(int height);
-	void setInnerSize(QSize size);
+	void setInnerSize(QSize size, bool fixed = true);
 	[[nodiscard]] QRect innerGeometry() const;
 
 	void setHideOnDeactivate(bool hideOnDeactivate);
@@ -118,8 +118,8 @@ protected:
 private:
 	void initControls();
 	void initLayout(const SeparatePanelArgs &args);
-	void initGeometry(QSize size);
-	void updateGeometry(QSize size);
+	void initGeometry(QSize size, bool fixed = true);
+	void updateGeometry(QSize size, bool fixed = true);
 	void showControls();
 	void updateControlsGeometry();
 	void validateBorderImage();
