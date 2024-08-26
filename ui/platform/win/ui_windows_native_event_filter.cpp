@@ -10,6 +10,7 @@
 #include "ui/rp_widget.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
+#include <QtCore/QCoreApplication>
 
 namespace Ui::Platform {
 
