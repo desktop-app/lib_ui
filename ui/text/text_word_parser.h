@@ -20,8 +20,8 @@ public:
 private:
 	void parse();
 
-	void pushWord(uint16 position, QFixed width, QFixed rbearing);
-	void pushContinuation(uint16 position, QFixed width, QFixed rbearing);
+	void pushFinishedWord(uint16 position, QFixed width, QFixed rbearing);
+	void pushUnfinishedWord(uint16 position, QFixed width, QFixed rbearing);
 	void pushNewline(uint16 position, int newlineBlockIndex);
 
 	[[nodiscard]] bool isLineBreak(

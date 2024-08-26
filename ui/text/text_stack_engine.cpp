@@ -42,11 +42,11 @@ StackEngine::StackEngine(
 }
 
 std::vector<Block>::const_iterator StackEngine::adjustBlock(int offset) const {
-	if (_t->blockPosition(_bCached) > _offset) {
+	if (_t->blockPosition(_bCached) > offset) {
 		_bCached = begin(_tBlocks);
 	}
 	Assert(_bCached != end(_tBlocks));
-	for (auto i = _bCached + 1; _t->blockPosition(i) <= _offset; ++i) {
+	for (auto i = _bCached + 1; _t->blockPosition(i) <= offset; ++i) {
 		_bCached = i;
 	}
 	return _bCached;

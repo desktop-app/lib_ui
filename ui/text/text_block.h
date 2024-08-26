@@ -215,16 +215,16 @@ private:
 
 	void destroy();
 
-	static_assert(sizeof(NewlineBlock) <= sizeof(CustomEmojiBlock));
+	static_assert(sizeof(NewlineBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(NewlineBlock) <= alignof(void*));
-	static_assert(sizeof(EmojiBlock) <= sizeof(CustomEmojiBlock));
+	static_assert(sizeof(EmojiBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(EmojiBlock) <= alignof(void*));
-	static_assert(sizeof(TextBlock) <= sizeof(CustomEmojiBlock));
+	static_assert(sizeof(TextBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(TextBlock) <= alignof(void*));
-	static_assert(sizeof(SkipBlock) <= sizeof(CustomEmojiBlock));
-	static_assert(alignof(SkipBlock) <= alignof(void*));
+	static_assert(sizeof(CustomEmojiBlock) <= sizeof(SkipBlock));
+	static_assert(alignof(CustomEmojiBlock) <= alignof(void*));
 
-	std::aligned_storage_t<sizeof(CustomEmojiBlock), alignof(void*)> _data;
+	std::aligned_storage_t<sizeof(SkipBlock), alignof(void*)> _data;
 
 };
 

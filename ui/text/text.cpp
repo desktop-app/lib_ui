@@ -829,11 +829,11 @@ bool String::updateSkipBlock(int width, int height) {
 		_skipBlockAddedNewline = true;
 	}
 	insertModifications(_text.size(), 1);
-	const auto continuation = false;
+	const auto unfinished = false;
 	const auto rbearing = 0;
 	_words.push_back(Word(
 		uint16(_text.size()),
-		continuation,
+		unfinished,
 		width,
 		rbearing));
 	_blocks.push_back(Block::Skip({
@@ -1080,7 +1080,7 @@ void String::enumerateLines(
 		} else if (!qlinesleft) {
 			continue;
 		}
-		const auto wordEndsHere = !w->continuation();
+		const auto wordEndsHere = !w->unfinished();
 
 		auto w__f_width = w->f_width();
 		const auto w__f_rbearing = w->f_rbearing();

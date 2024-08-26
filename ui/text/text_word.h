@@ -17,13 +17,13 @@ public:
 	Word() = default;
 	Word( // !newline
 		uint16 position,
-		bool continuation,
+		bool unfinished,
 		QFixed width,
 		QFixed rbearing)
 	: _position(position)
 	, _rbearing_modulus(std::min(std::abs(rbearing.value()), 0x7FFF))
 	, _rbearing_positive(rbearing.value() > 0 ? 1 : 0)
-	, _continuation(continuation ? 1 : 0)
+	, _unfinished(unfinished ? 1 : 0)
 	, _width(width) {
 	}
 	Word(uint16 position, int newlineBlockIndex)
@@ -38,8 +38,8 @@ public:
 	[[nodiscard]] int newlineBlockIndex() const {
 		return _newline ? _newlineBlockIndex : 0;
 	}
-	[[nodiscard]] bool continuation() const {
-		return _continuation != 0;
+	[[nodiscard]] bool unfinished() const {
+		return _unfinished != 0;
 	}
 
 	[[nodiscard]] uint16 position() const {
@@ -64,7 +64,7 @@ private:
 	uint16 _position = 0;
 	uint16 _rbearing_modulus : 13 = 0;
 	uint16 _rbearing_positive : 1 = 0;
-	uint16 _continuation : 1 = 0;
+	uint16 _unfinished : 1 = 0;
 	uint16 _newline : 1 = 0;
 
 	// Right padding: spaces after the last content of the block (like a word).

@@ -245,7 +245,7 @@ void Renderer::enumerate() {
 				_t->_startParagraphRTL));
 	}
 
-	_lineHeight = 0;
+	_lineHeight = _t->lineHeight();
 	_fontHeight = _t->_st->font->height;
 	auto last_rBearing = QFixed(0);
 	_last_rPadding = QFixed(0);
@@ -294,7 +294,7 @@ void Renderer::enumerate() {
 		} else if (!_quoteLinesLeft) {
 			continue;
 		}
-		const auto wordEndsHere = !w->continuation();
+		const auto wordEndsHere = !w->unfinished();
 
 		auto w__f_width = w->f_width();
 		const auto w__f_rbearing = w->f_rbearing();
