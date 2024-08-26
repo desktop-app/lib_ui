@@ -724,29 +724,19 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 			currentBlock = nextBlock;
 			nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
 		}
-		auto _type = currentBlock->type();
-		if (_type == TextBlockType::Skip) {
+		const auto type = currentBlock->type();
+		if (type == TextBlockType::Skip) {
 			levels[i] = si.analysis.bidiLevel = 0;
 			skipIndex = i;
 		} else {
 			levels[i] = si.analysis.bidiLevel;
 		}
 		if (si.analysis.flags == QScriptAnalysis::Object) {
-			if (_type == TextBlockType::Emoji) {
-				si.width = (st::emojiSize + 2 * st::emojiPadding);
+			si.width = currentBlock->objectWidth();
 				AssertIsDebug();
 					//+ (nextBlock == _endBlock && (!nextBlock || nextBlock->position() >= trimmedLineEnd)
 					//	? 0
 					//	: currentBlock->f_rpadding());
-			} else if (_type == TextBlockType::CustomEmoji) {
-				si.width = static_cast<const CustomEmojiBlock*>(currentBlock)->custom()->width();
-				AssertIsDebug();
-					//+ (nextBlock == _endBlock && (!nextBlock || nextBlock->position() >= trimmedLineEnd)
-					//	? 0
-					//	: currentBlock->f_rpadding());
-			} else if (_type == TextBlockType::Skip) {
-				si.width = static_cast<const SkipBlock*>(currentBlock)->width();
-			}
 		}
 	}
 	QTextEngine::bidiReorder(nItems, levels.data(), visualOrder.data());
@@ -1427,18 +1417,10 @@ void Renderer::prepareElidedLine(
 			currentBlock = nextBlock;
 			nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
 		}
-		TextBlockType _type = currentBlock->type();
 		if (si.analysis.flags == QScriptAnalysis::Object) {
-			if (_type == TextBlockType::Emoji) {
-				AssertIsDebug();
-				si.width = (st::emojiSize + 2 * st::emojiPadding);
-			} else if (_type == TextBlockType::CustomEmoji) {
-				AssertIsDebug();
-				si.width = static_cast<const CustomEmojiBlock*>(currentBlock)->custom()->width();
-			} else if (_type == TextBlockType::Skip) {
-				si.width = static_cast<const SkipBlock*>(currentBlock)->width();
-			}
+			si.width = currentBlock->objectWidth();
 		}
+		const auto _type = currentBlock->type();
 		if (_type == TextBlockType::Emoji
 			|| _type == TextBlockType::CustomEmoji
 			|| _type == TextBlockType::Skip

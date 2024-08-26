@@ -65,6 +65,7 @@ public:
 	[[nodiscard]] uint16 position() const;
 	[[nodiscard]] TextBlockType type() const;
 	[[nodiscard]] TextBlockFlags flags() const;
+	[[nodiscard]] int objectWidth() const;
 	[[nodiscard]] uint16 colorIndex() const;
 	[[nodiscard]] uint16 linkIndex() const;
 	void setLinkIndex(uint16 index);

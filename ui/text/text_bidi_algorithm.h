@@ -983,22 +983,24 @@ public:
 		const auto object = (type == TextBlockType::Emoji)
 			|| (type == TextBlockType::CustomEmoji)
 			|| (type == TextBlockType::Skip);
-		if (object) {
-			[[maybe_unused]] int a = 0;
-		}
 
-		char32_t uc = text[i].unicode();
+		constexpr auto kQt5 = (QT_VERSION < QT_VERSION_CHECK(6, 0, 0));
+		using wide = std::conditional_t<kQt5, uint, char32_t>;
+		using narrow = std::conditional_t<kQt5, ushort, char16_t>;
+
+		auto uc = wide(text[i].unicode());
 		if (QChar::isHighSurrogate(uc) && i < length - 1 && text[i + 1].isLowSurrogate()) {
 			uc = QChar::surrogateToUcs4(ushort(uc), text[i + 1].unicode());
+
 			return {
 				.properties = QUnicodeTables::properties(object
-					? char32_t(QChar::ObjectReplacementCharacter)
+					? wide(QChar::ObjectReplacementCharacter)
 					: uc),
 				.surrogate = true,
 			};
 		}
 		return {
-			.properties = QUnicodeTables::properties(char16_t(object
+			.properties = QUnicodeTables::properties(narrow(object
 				? QChar::ObjectReplacementCharacter
 				: uc)),
 			.surrogate = false,

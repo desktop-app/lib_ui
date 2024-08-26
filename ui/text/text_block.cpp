@@ -77,6 +77,17 @@ TextBlockFlags AbstractBlock::flags() const {
 	return TextBlockFlags::from_raw(_flags);
 }
 
+int AbstractBlock::objectWidth() const {
+	switch (type()) {
+	case TextBlockType::Emoji: return st::emojiSize + 2 * st::emojiPadding;
+	case TextBlockType::CustomEmoji:
+		return static_cast<const CustomEmojiBlock*>(this)->custom()->width();
+	case TextBlockType::Skip:
+		return static_cast<const SkipBlock*>(this)->width();
+	}
+	Unexpected("Type in AbstractBlock::objectWidth.");
+}
+
 uint16 AbstractBlock::linkIndex() const {
 	return _linkIndex;
 }

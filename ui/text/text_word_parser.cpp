@@ -208,23 +208,9 @@ void WordParser::parse() {
 					return;
 				lbh.logClusters = e.layoutData->logClustersPtr;
 
-				const auto type = block->type();
 				if (si.analysis.flags == QScriptAnalysis::Object) {
-					if (type == TextBlockType::Emoji) {
-						si.width = st::emojiSize + 2 * st::emojiPadding;
-					} else if (type == TextBlockType::CustomEmoji) {
-						si.width = static_cast<const CustomEmojiBlock*>(
-							block.get())->custom()->width();
-					} else if (type == TextBlockType::Skip) {
-						si.width = static_cast<const SkipBlock*>(
-							block.get())->width();
-						//si.width = currentBlock->f_width()
-						//	+ (nextBlock == _endBlock && (!nextBlock || nextBlock->position() >= trimmedLineEnd)
-						//		? 0
-						//		: currentBlock->f_rpadding());
-					}
+					si.width = block->objectWidth();
 				}
-
 			}
 			lbh.currentPosition = si.position;
 			end = si.position + e.length(item);

@@ -9,6 +9,10 @@
 #include "ui/text/text_block.h"
 #include "styles/style_basic.h"
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <private/qharfbuzz_p.h>
+#endif // Qt < 6.0.0
+
 namespace Ui::Text {
 namespace {
 
@@ -58,12 +62,13 @@ void StackEngine::itemize() {
 		return;
 	}
 
-	int length = layoutData->string.length();
+	const auto length = layoutData->string.length();
 	if (!length) {
 		return;
 	}
 
 	_bStart = adjustBlock(_offset);
+	const auto chars = _engine.layoutData->string.constData();
 
 	{
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -77,7 +82,7 @@ void StackEngine::itemize() {
 		}
 #else // Qt >= 6.0.0
 		QVarLengthArray<uchar> scripts(length);
-		QUnicodeTools::initScripts(string, length, scripts.data());
+		QUnicodeTools::initScripts(reinterpret_cast<const ushort*>(chars), length, scripts.data());
 		for (int i = 0; i < length; ++i)
 			_analysis[i].script = scripts.at(i);
 #endif // Qt < 6.0.0
@@ -85,7 +90,6 @@ void StackEngine::itemize() {
 
 	// Override script and flags for emoji and custom emoji blocks.
 	const auto end = _offset + length;
-	const auto chars = _engine.layoutData->string.constData();
 	for (auto block = _bStart; _t->blockPosition(block) < end; ++block) {
 		const auto type = (*block)->type();
 		const auto from = std::max(_offset, int(_t->blockPosition(block)));
@@ -94,10 +98,6 @@ void StackEngine::itemize() {
 			if (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji
 				|| type == TextBlockType::Skip) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-				AssertIsDebug();
-				Assert(hbscript_to_script(script_to_hbscript(QChar::Script_Common)) == QChar::Script_Common);
-#endif // Qt < 6.0.0
 				for (auto i = from - _offset, count = till - _offset; i != count; ++i) {
 					_analysis[i].script = QChar::Script_Common;
 					_analysis[i].flags = QScriptAnalysis::Object;
