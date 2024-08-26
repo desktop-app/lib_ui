@@ -27,6 +27,7 @@ public:
 
 	void itemize();
 	not_null<const AbstractBlock*> shapeGetBlock(int item);
+	[[nodiscard]] int blockIndex(int position) const;
 
 private:
 	void updateFont(not_null<const AbstractBlock*> block);

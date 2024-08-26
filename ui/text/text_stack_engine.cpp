@@ -85,6 +85,7 @@ void StackEngine::itemize() {
 
 	// Override script and flags for emoji and custom emoji blocks.
 	const auto end = _offset + length;
+	const auto chars = _engine.layoutData->string.constData();
 	for (auto block = _bStart; _t->blockPosition(block) < end; ++block) {
 		const auto type = (*block)->type();
 		const auto from = std::max(_offset, int(_t->blockPosition(block)));
@@ -106,7 +107,11 @@ void StackEngine::itemize() {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 					_analysis[i].script = hbscript_to_script(script_to_hbscript(_analysis[i].script)); // retain the old behavior
 #endif // Qt < 6.0.0
-					_analysis[i].flags = QScriptAnalysis::None;
+					if (chars[i] == QChar::LineFeed) {
+						_analysis[i].flags = QScriptAnalysis::LineOrParagraphSeparator;
+					} else {
+						_analysis[i].flags = QScriptAnalysis::None;
+					}
 				}
 			}
 		}
@@ -169,6 +174,10 @@ not_null<const AbstractBlock*> StackEngine::shapeGetBlock(int item) {
 	updateFont(block);
 	_engine.shape(item);
 	return block;
+}
+
+int StackEngine::blockIndex(int position) const {
+	return int(adjustBlock(_offset + position) - begin(_tBlocks));
 }
 
 } // namespace Ui::Text

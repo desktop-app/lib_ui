@@ -197,26 +197,6 @@ void WordParser::parse() {
 	int lastGraphemeBoundaryPosition = -1;
 	ScriptLine lastGraphemeBoundaryLine;
 
-//void WordParser::pushNewlineWord(int length) {
-//	Expects(length == 1);
-//
-//	const auto position = _blockStart;
-//	const auto width = 0;
-//	const auto newline = true;
-//	const auto unfinished = false;
-//	const auto rbearing = 0;
-//	auto rpadding = 0;
-//	for (auto i = length; i != 0;) {
-//		auto ch = _tText[position + (--i)];
-//		if (ch.unicode() == QChar::Space) {
-//			rpadding += _t->_st->font->spacew;
-//		} else {
-//			break;
-//		}
-//	}
-//	pushWord(position, newline, unfinished, width, rbearing, rpadding);
-//}
-
 	while (newItem < e.layoutData->items.size()) {
 		if (newItem != item) {
 			item = newItem;
@@ -265,7 +245,37 @@ void WordParser::parse() {
 			}
 			return false;
 		}();
-		if (current.analysis.flags == QScriptAnalysis::Object) {
+		if (current.analysis.flags == QScriptAnalysis::LineOrParagraphSeparator) {
+			if (wordStart < lbh.currentPosition) {
+				lbh.calculateRightBearing();
+				pushFinishedWord(
+					wordStart,
+					lbh.tmpData.textWidth,
+					-lbh.negativeRightBearing());
+				lbh.tmpData.textWidth = 0;
+				lbh.tmpData.length = 0;
+				wordStart = lbh.currentPosition;
+
+				addingEachGrapheme = false;
+				lastGraphemeBoundaryPosition = -1;
+				lastGraphemeBoundaryLine = ScriptLine();
+			}
+
+			lbh.whiteSpaceOrObject = true;
+			lbh.tmpData.length++;
+
+			newItem = item + 1;
+			++lbh.glyphCount;
+
+			pushNewline(wordStart, _engine.blockIndex(wordStart));
+			lbh.tmpData.textWidth = 0;
+			lbh.tmpData.length = 0;
+			wordStart = end;
+
+			addingEachGrapheme = false;
+			lastGraphemeBoundaryPosition = -1;
+			lastGraphemeBoundaryLine = ScriptLine();
+		} else if (current.analysis.flags == QScriptAnalysis::Object) {
 			if (wordStart < lbh.currentPosition) {
 				lbh.calculateRightBearing();
 				pushFinishedWord(
