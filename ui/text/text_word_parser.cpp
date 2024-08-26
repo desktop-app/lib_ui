@@ -171,6 +171,8 @@ WordParser::WordParser(not_null<String*> string)
 }
 
 void WordParser::parse() {
+	_tWords.clear();
+
 	if (_tText.isEmpty()) {
 		return;
 	}
@@ -188,8 +190,6 @@ void WordParser::parse() {
 		return;
 	int end = 0;
 	lbh.logClusters = e.layoutData->logClustersPtr;
-
-	_tWords.clear();
 
 	int wordStart = lbh.currentPosition;
 

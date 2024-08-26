@@ -807,6 +807,9 @@ bool String::hasSkipBlock() const {
 }
 
 bool String::updateSkipBlock(int width, int height) {
+	if (!width || !height) {
+		return removeSkipBlock();
+	}
 	if (!_blocks.empty() && _blocks.back()->type() == TextBlockType::Skip) {
 		const auto &block = _blocks.back().unsafe<SkipBlock>();
 		if (block.width() == width && block.height() == height) {
