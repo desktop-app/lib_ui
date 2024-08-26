@@ -733,10 +733,6 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		}
 		if (si.analysis.flags == QScriptAnalysis::Object) {
 			si.width = currentBlock->objectWidth();
-				AssertIsDebug();
-					//+ (nextBlock == _endBlock && (!nextBlock || nextBlock->position() >= trimmedLineEnd)
-					//	? 0
-					//	: currentBlock->f_rpadding());
 		}
 	}
 	QTextEngine::bidiReorder(nItems, levels.data(), visualOrder.data());
@@ -799,26 +795,10 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					// Emoji with spaces after symbol lookup
 					auto chFrom = _str + currentBlock->position();
 					auto chTo = chFrom + ((nextBlock ? nextBlock->position() : _t->_text.size()) - currentBlock->position());
-					auto spacesWidth = 0;AssertIsDebug()// (si.width - currentBlock->f_width());
-					auto spacesCount = 0;
 					while (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space) {
-						++spacesCount;
 						--chTo;
 					}
-					if (spacesCount > 0) { // Check if we're over a space.
-						if (rtl) {
-							if (_lookupX < x + spacesWidth) {
-								_lookupResult.symbol = (chTo - _str); // up to a space, included, rtl
-								_lookupResult.afterSymbol = (_lookupX < x + (spacesWidth / 2)) ? true : false;
-								return false;
-							}
-						} else if (_lookupX >= x + si.width - spacesWidth) {
-							_lookupResult.symbol = (chTo - _str); // up to a space, inclided, ltr
-							_lookupResult.afterSymbol = (_lookupX >= x + si.width - spacesWidth + (spacesWidth / 2)) ? true : false;
-							return false;
-						}
-					}AssertIsDebug()
-					if (_lookupX < x + (rtl ? /*(si.width - currentBlock->f_width())*/0 : 0) + /*(currentBlock->f_width() / 2)*/0) {
+					if (_lookupX < x + (currentBlock->objectWidth() / 2)) {
 						_lookupResult.symbol = ((rtl && chTo > chFrom) ? (chTo - 1) : chFrom) - _str;
 						_lookupResult.afterSymbol = (rtl && chTo > chFrom) ? true : false;
 					} else {
@@ -830,11 +810,6 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 			} else if (_p
 				&& (_type == TextBlockType::Emoji
 					|| _type == TextBlockType::CustomEmoji)) {
-				auto glyphX = x; AssertIsDebug()
-				auto spacesWidth = 0;// (si.width - currentBlock->f_width());
-				if (rtl) {
-					glyphX += spacesWidth;
-				}
 				const auto fillSelect = _background.selectActiveBlock
 					? FixedRange{ x, x + si.width }
 					: findSelectEmojiRange(
@@ -842,7 +817,6 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 						currentBlock,
 						nextBlock,
 						x,
-						glyphX,
 						_selection);
 				fillSelectRange(fillSelect);
 				if (_highlight) {
@@ -851,7 +825,6 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 						currentBlock,
 						nextBlock,
 						x,
-						glyphX,
 						_highlight->range));
 				}
 
@@ -865,19 +838,19 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					if (hasSpoiler) {
 						_p->setOpacity(opacity * (1. - _spoilerOpacity));
 					}
-					const auto x = (glyphX + st::emojiPadding).toInt();
-					const auto y = _y + _yDelta + emojiY;
+					const auto ex = (x + st::emojiPadding).toInt();
+					const auto ey = _y + _yDelta + emojiY;
 					if (_type == TextBlockType::Emoji) {
 						Emoji::Draw(
 							*_p,
 							static_cast<const EmojiBlock*>(currentBlock)->emoji(),
 							Emoji::GetSizeNormal(),
-							x,
-							y);
+							ex,
+							ey);
 					} else {
 						const auto custom = static_cast<const CustomEmojiBlock*>(currentBlock)->custom();
-						const auto selected = (fillSelect.from <= glyphX)
-							&& (fillSelect.till > glyphX);
+						const auto selected = (fillSelect.from <= x)
+							&& (fillSelect.till > x);
 						const auto color = (selected
 							? _currentPenSelected
 							: _currentPen)->color();
@@ -893,8 +866,8 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 							_customEmojiContext->textColor = color;
 						}
 						_customEmojiContext->position = {
-							x + _customEmojiSkip,
-							y + _customEmojiSkip,
+							ex + _customEmojiSkip,
+							ey + _customEmojiSkip,
 						};
 						custom->paint(*_p, *_customEmojiContext);
 					}
@@ -1126,26 +1099,18 @@ FixedRange Renderer::findSelectEmojiRange(
 		const Ui::Text::AbstractBlock *currentBlock,
 		const Ui::Text::AbstractBlock *nextBlock,
 		QFixed x,
-		QFixed glyphX,
 		TextSelection selection) const {
 	if (_localFrom + si.position >= selection.to) {
 		return {};
 	}
 	auto chFrom = _str + currentBlock->position();
 	auto chTo = chFrom + ((nextBlock ? nextBlock->position() : _t->_text.size()) - currentBlock->position());
-	if (_localFrom + si.position >= selection.from) { // could be without space
-		if (chTo == chFrom || (chTo - 1)->unicode() != QChar::Space || selection.to >= (chTo - _str)) {
-			return { x, x + si.width };
-		} else { // or with space
-			return { glyphX, glyphX/* + currentBlock->f_width()*/ };AssertIsDebug()
-		}
-	} else if (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space && (chTo - 1 - _str) >= selection.from) {
-		const auto rtl = (si.analysis.bidiLevel % 2);
-		if (rtl) { // rtl space only
-			return { x, glyphX };
-		} else { // ltr space only
-			return { x/* + currentBlock->f_width()*/, x + si.width }; AssertIsDebug();
-		}
+	while (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space) {
+		--chTo;
+	}
+
+	if (_localFrom + si.position >= selection.from) {
+		return { x, x + si.width };
 	}
 	return {};
 }
@@ -1609,7 +1574,9 @@ void Renderer::eItemize() {
 			|| _type == TextBlockType::CustomEmoji
 			|| _type == TextBlockType::Skip) {
 			analysis->script = QChar::Script_Common;
-			analysis->flags = QScriptAnalysis::Object;
+			analysis->flags = (*start == QChar::Space)
+				? QScriptAnalysis::None
+				: QScriptAnalysis::Object;
 		} else {
 			analysis->flags = QScriptAnalysis::None;
 		}

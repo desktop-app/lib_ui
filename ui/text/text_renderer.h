@@ -70,7 +70,6 @@ private:
 		const Ui::Text::AbstractBlock *currentBlock,
 		const Ui::Text::AbstractBlock *nextBlock,
 		QFixed x,
-		QFixed glyphX,
 		TextSelection selection) const;
 	[[nodiscard]] FixedRange findSelectTextRange(
 		const QScriptItem &si,

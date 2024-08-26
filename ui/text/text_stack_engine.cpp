@@ -100,7 +100,9 @@ void StackEngine::itemize() {
 				|| type == TextBlockType::Skip) {
 				for (auto i = from - _offset, count = till - _offset; i != count; ++i) {
 					_analysis[i].script = QChar::Script_Common;
-					_analysis[i].flags = QScriptAnalysis::Object;
+					_analysis[i].flags = (chars[i] == QChar::Space)
+						? QScriptAnalysis::None
+						: QScriptAnalysis::Object;
 				}
 			} else {
 				for (auto i = from - _offset, count = till - _offset; i != count; ++i) {
