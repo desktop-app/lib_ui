@@ -679,6 +679,7 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 
 	int32 textY = _y + _yDelta + _t->_st->font->ascent, emojiY = (_t->_st->font->height - st::emojiSize) / 2;
 
+	_f = style::font();
 	for (int i = 0; i < nItems; ++i) {
 		const auto item = firstItem + visualOrder[i];
 		const auto blockIt = blocks[item - firstItem];
@@ -1399,11 +1400,12 @@ void Renderer::applyBlockProperties(
 		return _t->_st->font;
 	}();
 	const auto newFont = WithFlags(usedFont, flags);
-	if (newFont != _f) {
-		_f = (newFont->family() == _t->_st->font->family())
-			? WithFlags(_t->_st->font, flags, newFont->flags())
-			: newFont;
-		e.fnt = _f->f;
+	if (_f != newFont) {
+		_f = newFont;
+		const auto use = (_f->family() == _t->_st->font->family())
+			? WithFlags(_t->_st->font, flags, _f->flags())
+			: _f;
+		e.fnt = use->f;
 		e.resetFontEngineCache();
 	}
 	if (_p) {
