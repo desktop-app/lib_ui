@@ -131,7 +131,7 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_geometry = context.geometry.layout
 		? context.geometry
 		: SimpleGeometry(
-			((context.useFullWidth || (context.align & Qt::AlignHCenter))
+			((context.useFullWidth || !(context.align & Qt::AlignLeft))
 				? context.availableWidth
 				: std::min(context.availableWidth, _t->maxWidth())),
 			(context.elisionLines
