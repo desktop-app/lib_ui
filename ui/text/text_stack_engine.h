@@ -15,10 +15,16 @@ namespace Ui::Text {
 class StackEngine final {
 public:
 	explicit StackEngine(
-		not_null<String*> t,
+		not_null<const String*> t,
 		gsl::span<QScriptAnalysis> analysis,
 		int from = 0,
 		int till = -1,
+		int blockIndexHint = 0);
+	explicit StackEngine(
+		not_null<const String*> t,
+		int offset,
+		const QString &text,
+		gsl::span<QScriptAnalysis> analysis,
 		int blockIndexHint = 0);
 
 	[[nodiscard]] QTextEngine &wrapped() {
@@ -26,16 +32,18 @@ public:
 	}
 
 	void itemize();
-	not_null<const AbstractBlock*> shapeGetBlock(int item);
+	std::vector<Block>::const_iterator shapeGetBlock(int item);
 	[[nodiscard]] int blockIndex(int position) const;
 
 private:
 	void updateFont(not_null<const AbstractBlock*> block);
 	std::vector<Block>::const_iterator adjustBlock(int offset) const;
 
-	const not_null<String*> _t;
+	const not_null<const String*> _t;
+	const QString &_text;
 	QScriptAnalysis *_analysis = nullptr;
 	const int _offset = 0;
+	const int _positionEnd = 0;
 	style::font _font;
 	QStackTextEngine _engine;
 

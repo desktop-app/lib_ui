@@ -67,8 +67,7 @@ private:
 		Blocks::const_iterator _endBlockIter);
 	[[nodiscard]] FixedRange findSelectEmojiRange(
 		const QScriptItem &si,
-		const Ui::Text::AbstractBlock *currentBlock,
-		const Ui::Text::AbstractBlock *nextBlock,
+		std::vector<Block>::const_iterator blockIt,
 		QFixed x,
 		TextSelection selection) const;
 	[[nodiscard]] FixedRange findSelectTextRange(
@@ -111,12 +110,9 @@ private:
 
 	void fillParagraphBg(int paddingBottom);
 
-	// COPIED FROM qtextengine.cpp AND MODIFIED
-	void eShapeLine(const QScriptLine &line);
-	void eSetFont(const AbstractBlock *block);
-	void eItemize();
-
-	void applyBlockProperties(const AbstractBlock *block);
+	void applyBlockProperties(
+		QTextEngine &e,
+		not_null<const AbstractBlock*> block);
 	[[nodiscard]] ClickHandlerPtr lookupLink(
 		const AbstractBlock *block) const;
 
@@ -184,7 +180,6 @@ private:
 	bool _quoteExpandLinkLookup = false;
 
 	// current line data
-	QTextEngine *_e = nullptr;
 	style::font _f;
 	int _startLeft = 0;
 	int _startTop = 0;

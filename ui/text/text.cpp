@@ -1332,28 +1332,36 @@ not_null<QuotesData*> String::ensureQuotes() {
 	return extended->quotes.get();
 }
 
-uint16 String::blockPosition(std::vector<Block>::const_iterator i) const {
-	return countPosition(i, end(_blocks));
+uint16 String::blockPosition(
+		std::vector<Block>::const_iterator i,
+		int fullLengthOverride) const {
+	return (i != end(_blocks))
+		? CountPosition(i)
+		: (fullLengthOverride >= 0)
+		? uint16(fullLengthOverride)
+		: uint16(_text.size());
 }
 
-uint16 String::blockEnd(std::vector<Block>::const_iterator i) const {
-	return countEnd(i, end(_blocks));
+uint16 String::blockEnd(
+		std::vector<Block>::const_iterator i,
+		int fullLengthOverride) const {
+	return (i != end(_blocks) && i + 1 != end(_blocks))
+		? CountPosition(i + 1)
+		: (fullLengthOverride >= 0)
+		? uint16(fullLengthOverride)
+		: uint16(_text.size());
 }
 
-uint16 String::blockLength(std::vector<Block>::const_iterator i) const {
-	return countLength(i, end(_blocks));
-}
-
-uint16 String::wordPosition(std::vector<Word>::const_iterator i) const {
-	return countPosition(i, end(_words));
-}
-
-uint16 String::wordEnd(std::vector<Word>::const_iterator i) const {
-	return countEnd(i, end(_words));
-}
-
-uint16 String::wordLength(std::vector<Word>::const_iterator i) const {
-	return countLength(i, end(_words));
+uint16 String::blockLength(
+		std::vector<Block>::const_iterator i,
+		int fullLengthOverride) const {
+	return (i == end(_blocks))
+		? 0
+		: (i + 1 != end(_blocks))
+		? (CountPosition(i + 1) - CountPosition(i))
+		: (fullLengthOverride >= 0)
+		? (fullLengthOverride - CountPosition(i))
+		: (int(_text.size()) - CountPosition(i));
 }
 
 QuoteDetails *String::quoteByIndex(int index) const {

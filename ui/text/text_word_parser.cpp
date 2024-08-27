@@ -172,12 +172,9 @@ WordParser::WordParser(not_null<String*> string)
 
 void WordParser::parse() {
 	_tWords.clear();
-
 	if (_tText.isEmpty()) {
 		return;
 	}
-
-	_engine.itemize();
 	auto &e = _engine.wrapped();
 
 	LineBreakHelper lbh;
@@ -207,10 +204,6 @@ void WordParser::parse() {
 				if (!attributes)
 					return;
 				lbh.logClusters = e.layoutData->logClustersPtr;
-
-				if (si.analysis.flags == QScriptAnalysis::Object) {
-					si.width = block->objectWidth();
-				}
 			}
 			lbh.currentPosition = si.position;
 			end = si.position + e.length(item);

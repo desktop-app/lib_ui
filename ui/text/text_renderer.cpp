@@ -9,6 +9,7 @@
 #include "ui/text/text_bidi_algorithm.h"
 #include "ui/text/text_block.h"
 #include "ui/text/text_extended_data.h"
+#include "ui/text/text_stack_engine.h"
 #include "ui/text/text_word.h"
 #include "styles/style_basic.h"
 
@@ -20,8 +21,6 @@ namespace Ui::Text {
 namespace {
 
 constexpr auto kMaxItemLength = 4096;
-
-// COPIED FROM qtextengine.cpp AND MODIFIED
 
 void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
 	// explicitly initialize flags so that initFontAttributes can be called
@@ -266,7 +265,9 @@ void Renderer::enumerate() {
 		}
 		const auto lineEnd = !_elidedLine
 			? w->position()
-			: _t->wordEnd(w);
+			: (w + 1 != end(_t->_words))
+			? (w + 1)->position()
+			: int(_t->_text.size());
 		if (_quoteLinesLeft) {
 			--_quoteLinesLeft;
 		}
@@ -541,19 +542,19 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		}
 	}
 
-	auto blockIndex = _lineStartBlock;
-	auto currentBlock = _t->_blocks[blockIndex].get();
-	auto nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
+	const auto startBlock = _t->_blocks[_lineStartBlock].get();
 
-	const auto extendLeft = (currentBlock->position() < _lineStart)
-		? qMin(_lineStart - currentBlock->position(), 2)
+	const auto extendLeft = (startBlock->position() < _lineStart)
+		? qMin(_lineStart - startBlock->position(), 2)
 		: 0;
 	_localFrom = _lineStart - extendLeft;
 	const auto extendedLineEnd = (_endBlock && _endBlock->position() < trimmedLineEnd && !_elidedLine)
 		? qMin(uint16(trimmedLineEnd + 2), _t->blockEnd(_endBlockIter))
 		: trimmedLineEnd;
 
-	auto lineText = _t->_text.mid(_localFrom, extendedLineEnd - _localFrom);
+	auto lineText = QString::fromRawData(
+		_t->_text.constData() + _localFrom,
+		extendedLineEnd - _localFrom);
 	auto lineStart = extendLeft;
 	auto lineLength = trimmedLineEnd - _lineStart;
 
@@ -639,18 +640,15 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 	}
 
 	_f = _t->_st->font;
-	QStackTextEngine engine(lineText, _f->f);
-	engine.option.setTextDirection(_paragraphDirection);
-	_e = &engine;
+	auto engine = StackEngine(
+		_t,
+		_localFrom,
+		lineText,
+		gsl::span(_paragraphAnalysis).subspan(_localFrom - _paragraphStart),
+		_lineStartBlock);
+	auto &e = engine.wrapped();
 
-	eItemize();
-
-	QScriptLine line;
-	line.from = lineStart;
-	line.length = lineLength;
-	eShapeLine(line);
-
-	int firstItem = engine.findItem(line.from), lastItem = engine.findItem(line.from + line.length - 1);
+	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
 	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0;
 	if (!nItems) {
 		return !_elidedLine;
@@ -659,21 +657,15 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 	int skipIndex = -1;
 	QVarLengthArray<int> visualOrder(nItems);
 	QVarLengthArray<uchar> levels(nItems);
+	QVarLengthArray<std::vector<Block>::const_iterator> blocks(nItems);
 	for (int i = 0; i < nItems; ++i) {
-		auto &si = engine.layoutData->items[firstItem + i];
-		while (nextBlock && nextBlock->position() <= _localFrom + si.position) {
-			currentBlock = nextBlock;
-			nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-		}
-		const auto type = currentBlock->type();
-		if (type == TextBlockType::Skip) {
+		const auto blockIt = blocks[i] = engine.shapeGetBlock(firstItem + i);
+		auto &si = e.layoutData->items[firstItem + i];
+		if ((*blockIt)->type() == TextBlockType::Skip) {
 			levels[i] = si.analysis.bidiLevel = 0;
 			skipIndex = i;
 		} else {
 			levels[i] = si.analysis.bidiLevel;
-		}
-		if (si.analysis.flags == QScriptAnalysis::Object) {
-			si.width = currentBlock->objectWidth();
 		}
 	}
 	QTextEngine::bidiReorder(nItems, levels.data(), visualOrder.data());
@@ -685,35 +677,23 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		visualOrder[0] = skipIndex;
 	}
 
-	blockIndex = _lineStartBlock;
-	currentBlock = _t->_blocks[blockIndex].get();
-	nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-
 	int32 textY = _y + _yDelta + _t->_st->font->ascent, emojiY = (_t->_st->font->height - st::emojiSize) / 2;
 
-	applyBlockProperties(currentBlock);
 	for (int i = 0; i < nItems; ++i) {
 		const auto item = firstItem + visualOrder[i];
+		const auto blockIt = blocks[item - firstItem];
+		const auto block = blockIt->get();
 		const auto isLastItem = (item == lastItem);
-		const auto &si = engine.layoutData->items.at(item);
+		const auto &si = e.layoutData->items.at(item);
 		const auto rtl = (si.analysis.bidiLevel % 2);
 
-		while (blockIndex > _lineStartBlock + 1 && _t->_blocks[blockIndex - 1]->position() > _localFrom + si.position) {
-			nextBlock = currentBlock;
-			currentBlock = _t->_blocks[--blockIndex - 1].get();
-			applyBlockProperties(currentBlock);
-		}
-		while (nextBlock && nextBlock->position() <= _localFrom + si.position) {
-			currentBlock = nextBlock;
-			nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-			applyBlockProperties(currentBlock);
-		}
+		applyBlockProperties(e, block);
 		if (si.analysis.flags >= QScriptAnalysis::TabOrObject) {
-			TextBlockType _type = currentBlock->type();
+			const auto _type = block->type();
 			if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
 				if (_lookupLink) {
 					if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
-						if (const auto link = lookupLink(currentBlock)) {
+						if (const auto link = lookupLink(block)) {
 							_lookupResult.link = link;
 						}
 					}
@@ -734,12 +714,12 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					}
 
 					// Emoji with spaces after symbol lookup
-					auto chFrom = _str + currentBlock->position();
-					auto chTo = chFrom + ((nextBlock ? nextBlock->position() : _t->_text.size()) - currentBlock->position());
+					auto chFrom = _str + _t->blockPosition(blockIt);
+					auto chTo = _str + _t->blockEnd(blockIt);
 					while (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space) {
 						--chTo;
 					}
-					if (_lookupX < x + (currentBlock->objectWidth() / 2)) {
+					if (_lookupX < x + (block->objectWidth() / 2)) {
 						_lookupResult.symbol = ((rtl && chTo > chFrom) ? (chTo - 1) : chFrom) - _str;
 						_lookupResult.afterSymbol = (rtl && chTo > chFrom) ? true : false;
 					} else {
@@ -755,16 +735,14 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					? FixedRange{ x, x + si.width }
 					: findSelectEmojiRange(
 						si,
-						currentBlock,
-						nextBlock,
+						blockIt,
 						x,
 						_selection);
 				fillSelectRange(fillSelect);
 				if (_highlight) {
 					pushHighlightRange(findSelectEmojiRange(
 						si,
-						currentBlock,
-						nextBlock,
+						blockIt,
 						x,
 						_highlight->range));
 				}
@@ -784,12 +762,12 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					if (_type == TextBlockType::Emoji) {
 						Emoji::Draw(
 							*_p,
-							static_cast<const EmojiBlock*>(currentBlock)->emoji(),
+							static_cast<const EmojiBlock*>(block)->emoji(),
 							Emoji::GetSizeNormal(),
 							ex,
 							ey);
 					} else {
-						const auto custom = static_cast<const CustomEmojiBlock*>(currentBlock)->custom();
+						const auto custom = static_cast<const CustomEmojiBlock*>(block)->custom();
 						const auto selected = (fillSelect.from <= x)
 							&& (fillSelect.till > x);
 						const auto color = (selected
@@ -829,14 +807,14 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 			continue;
 		}
 
-		unsigned short *logClusters = engine.logClusters(&si);
-		QGlyphLayout glyphs = engine.shapedGlyphs(&si);
+		unsigned short *logClusters = e.logClusters(&si);
+		QGlyphLayout glyphs = e.shapedGlyphs(&si);
 
-		int itemStart = qMax(line.from, si.position), itemEnd;
-		int itemLength = engine.length(item);
+		int itemStart = qMax(lineStart, si.position), itemEnd;
+		int itemLength = e.length(item);
 		int glyphsStart = logClusters[itemStart - si.position], glyphsEnd;
-		if (line.from + line.length < si.position + itemLength) {
-			itemEnd = line.from + line.length;
+		if (lineStart + lineLength < si.position + itemLength) {
+			itemEnd = lineStart + lineLength;
 			glyphsEnd = logClusters[itemEnd - si.position];
 		} else {
 			itemEnd = si.position + itemLength;
@@ -850,7 +828,7 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		if (!_p && _lookupX >= x && _lookupX < x + itemWidth) { // _lookupRequest
 			if (_lookupLink) {
 				if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
-					if (const auto link = lookupLink(currentBlock)) {
+					if (const auto link = lookupLink(block)) {
 						_lookupResult.link = link;
 					}
 				}
@@ -899,10 +877,10 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		} else if (_p) {
 			QTextItemInt gf;
 			gf.glyphs = glyphs.mid(glyphsStart, glyphsEnd - glyphsStart);
-			gf.f = &_e->fnt;
-			gf.chars = engine.layoutData->string.unicode() + itemStart;
+			gf.f = &e.fnt;
+			gf.chars = e.layoutData->string.unicode() + itemStart;
 			gf.num_chars = itemEnd - itemStart;
-			gf.fontEngine = engine.fontEngine(si);
+			gf.fontEngine = e.fontEngine(si);
 			gf.logClusters = logClusters + itemStart - si.position;
 			gf.width = itemWidth;
 			gf.justified = false;
@@ -945,8 +923,9 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 			const auto hasSpoiler = _background.spoiler
 				&& (_spoilerOpacity > 0.);
 			const auto opacity = _p->opacity();
-			const auto isElidedItem = (_indexOfElidedBlock == blockIndex)
-				&& isLastItem;
+			const auto isElidedBlock = _indexOfElidedBlock
+				== int(blockIt - begin(_t->_blocks));
+			const auto isElidedItem = isElidedBlock && isLastItem;
 			const auto complexClipping = hasSpoiler
 				&& isElidedItem
 				&& (_spoilerOpacity == 1.);
@@ -957,9 +936,7 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					? _p->clipRegion()
 					: QRegion();
 				if (complexClipping) {
-					const auto elided = (_indexOfElidedBlock == blockIndex)
-						? _f->elidew
-						: 0;
+					const auto elided = isElidedBlock ? _f->elidew : 0;
 					_p->setClipRect(
 						QRect(
 							(x + itemWidth).toInt() - elided,
@@ -1037,15 +1014,14 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 
 FixedRange Renderer::findSelectEmojiRange(
 		const QScriptItem &si,
-		const Ui::Text::AbstractBlock *currentBlock,
-		const Ui::Text::AbstractBlock *nextBlock,
+		std::vector<Block>::const_iterator blockIt,
 		QFixed x,
 		TextSelection selection) const {
 	if (_localFrom + si.position >= selection.to) {
 		return {};
 	}
-	auto chFrom = _str + currentBlock->position();
-	auto chTo = chFrom + ((nextBlock ? nextBlock->position() : _t->_text.size()) - currentBlock->position());
+	auto chFrom = _str + _t->blockPosition(blockIt);
+	auto chTo = _str + _t->blockEnd(blockIt);
 	while (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space) {
 		--chTo;
 	}
@@ -1293,20 +1269,13 @@ void Renderer::prepareElidedLine(
 		const AbstractBlock *&_endBlock,
 		int repeat) {
 	_f = _t->_st->font;
-	QStackTextEngine engine(lineText, _f->f);
-	engine.option.setTextDirection(_paragraphDirection);
-	_e = &engine;
-
-	eItemize();
-
-	auto blockIndex = _lineStartBlock;
-	auto currentBlock = _t->_blocks[blockIndex].get();
-	auto nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-
-	QScriptLine line;
-	line.from = lineStart;
-	line.length = lineLength;
-	eShapeLine(line);
+	auto engine = StackEngine(
+		_t,
+		_localFrom,
+		lineText,
+		gsl::span(_paragraphAnalysis).subspan(_localFrom - _paragraphStart),
+		_lineStartBlock);
+	auto &e = engine.wrapped();
 
 	auto elideWidth = _f->elidew;
 	_wLeft = _lineWidth
@@ -1314,42 +1283,41 @@ void Renderer::prepareElidedLine(
 		- _quotePadding.right()
 		- elideWidth;
 
-	int firstItem = engine.findItem(line.from), lastItem = engine.findItem(line.from + line.length - 1);
+	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
 	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0, i;
 
 	for (i = 0; i < nItems; ++i) {
-		QScriptItem &si(engine.layoutData->items[firstItem + i]);
-		while (nextBlock && nextBlock->position() <= _localFrom + si.position) {
-			currentBlock = nextBlock;
-			nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-		}
-		if (si.analysis.flags == QScriptAnalysis::Object) {
-			si.width = currentBlock->objectWidth();
-		}
-		const auto _type = currentBlock->type();
+		const auto blockIt = engine.shapeGetBlock(firstItem + i);
+		const auto block = blockIt->get();
+		const auto blockIndex = int(blockIt - begin(_t->_blocks));
+		const auto nextBlock = (blockIndex + 1 < _blocksSize)
+			? _t->_blocks[blockIndex + 1].get()
+			: nullptr;
+		auto &si = e.layoutData->items[firstItem + i];
+		const auto _type = block->type();
 		if (_type == TextBlockType::Emoji
 			|| _type == TextBlockType::CustomEmoji
 			|| _type == TextBlockType::Skip
 			|| _type == TextBlockType::Newline) {
 			if (_wLeft < si.width) {
-				lineText = lineText.mid(0, currentBlock->position() - _localFrom) + kQEllipsis;
-				lineLength = currentBlock->position() + kQEllipsis.size() - _lineStart;
-				_selection.to = qMin(_selection.to, currentBlock->position());
+				lineText = lineText.mid(0, block->position() - _localFrom) + kQEllipsis;
+				lineLength = block->position() + kQEllipsis.size() - _lineStart;
+				_selection.to = qMin(_selection.to, block->position());
 				_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
-				setElideBidi(currentBlock->position(), kQEllipsis.size());
-				elideSaveBlock(blockIndex - 1, _endBlock, currentBlock->position(), elideWidth);
+				setElideBidi(block->position(), kQEllipsis.size());
+				elideSaveBlock(blockIndex, _endBlock, block->position(), elideWidth);
 				return;
 			}
 			_wLeft -= si.width;
 		} else if (_type == TextBlockType::Text) {
-			unsigned short *logClusters = engine.logClusters(&si);
-			QGlyphLayout glyphs = engine.shapedGlyphs(&si);
+			unsigned short *logClusters = e.logClusters(&si);
+			QGlyphLayout glyphs = e.shapedGlyphs(&si);
 
-			int itemStart = qMax(line.from, si.position), itemEnd;
-			int itemLength = engine.length(firstItem + i);
+			int itemStart = qMax(lineStart, si.position), itemEnd;
+			int itemLength = e.length(firstItem + i);
 			int glyphsStart = logClusters[itemStart - si.position], glyphsEnd;
-			if (line.from + line.length < si.position + itemLength) {
-				itemEnd = line.from + line.length;
+			if (lineStart + lineLength < si.position + itemLength) {
+				itemEnd = lineStart + lineLength;
 				glyphsEnd = logClusters[itemEnd - si.position];
 			} else {
 				itemEnd = si.position + itemLength;
@@ -1389,7 +1357,8 @@ void Renderer::prepareElidedLine(
 
 	int32 elideStart = _localFrom + lineText.size();
 	_selection.to = qMin(_selection.to, uint16(elideStart));
-	_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
+	auto blockIndex = engine.blockIndex(lineText.size() - 1);
+	_indexOfElidedBlock = blockIndex;
 	setElideBidi(elideStart, kQEllipsis.size());
 
 	lineText += kQEllipsis;
@@ -1410,33 +1379,9 @@ void Renderer::restoreAfterElided() {
 	}
 }
 
-void Renderer::eShapeLine(const QScriptLine &line) {
-	int item = _e->findItem(line.from);
-	if (item == -1) {
-		return;
-	}
-
-	auto end = _e->findItem(line.from + line.length - 1, item);
-	auto blockIndex = _lineStartBlock;
-	auto currentBlock = _t->_blocks[blockIndex].get();
-	auto nextBlock = (++blockIndex < _blocksSize)
-		? _t->_blocks[blockIndex].get()
-		: nullptr;
-	eSetFont(currentBlock);
-	for (; item <= end; ++item) {
-		QScriptItem &si = _e->layoutData->items[item];
-		while (nextBlock && nextBlock->position() <= _localFrom + si.position) {
-			currentBlock = nextBlock;
-			nextBlock = (++blockIndex < _blocksSize)
-				? _t->_blocks[blockIndex].get()
-				: nullptr;
-			eSetFont(currentBlock);
-		}
-		_e->shape(item);
-	}
-}
-
-void Renderer::eSetFont(const AbstractBlock *block) {
+void Renderer::applyBlockProperties(
+		QTextEngine &e,
+		not_null<const AbstractBlock*> block) {
 	const auto flags = block->flags();
 	const auto usedFont = [&] {
 		if (const auto index = block->linkIndex()) {
@@ -1458,124 +1403,9 @@ void Renderer::eSetFont(const AbstractBlock *block) {
 		_f = (newFont->family() == _t->_st->font->family())
 			? WithFlags(_t->_st->font, flags, newFont->flags())
 			: newFont;
-		_e->fnt = _f->f;
-		_e->resetFontEngineCache();
+		e.fnt = _f->f;
+		e.resetFontEngineCache();
 	}
-}
-
-void Renderer::eItemize() {
-	_e->validate();
-	if (_e->layoutData->items.size())
-		return;
-
-	int length = _e->layoutData->string.length();
-	if (!length)
-		return;
-
-	const ushort *string = reinterpret_cast<const ushort*>(_e->layoutData->string.unicode());
-
-	auto blockIndex = _lineStartBlock;
-	auto currentBlock = _t->_blocks[blockIndex].get();
-	auto nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-
-	_e->layoutData->hasBidi = _paragraphHasBidi;
-	auto analysis = _paragraphAnalysis.data() + (_localFrom - _paragraphStart);
-
-	{
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-		QUnicodeTools::ScriptItemArray scriptItems;
-		QUnicodeTools::initScripts(_e->layoutData->string, &scriptItems);
-		for (int i = 0; i < scriptItems.length(); ++i) {
-			const auto &item = scriptItems.at(i);
-			int end = i < scriptItems.length() - 1 ? scriptItems.at(i + 1).position : length;
-			for (int j = item.position; j < end; ++j)
-				analysis[j].script = item.script;
-		}
-#else // Qt >= 6.0.0
-		QVarLengthArray<uchar> scripts(length);
-		QUnicodeTools::initScripts(string, length, scripts.data());
-		for (int i = 0; i < length; ++i)
-			analysis[i].script = scripts.at(i);
-#endif // Qt < 6.0.0
-	}
-
-	blockIndex = _lineStartBlock;
-	currentBlock = _t->_blocks[blockIndex].get();
-	nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-
-	auto start = string;
-	auto end = start + length;
-	while (start < end) {
-		while (nextBlock && nextBlock->position() <= _localFrom + (start - string)) {
-			currentBlock = nextBlock;
-			nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-		}
-		auto _type = currentBlock->type();
-		if (_type == TextBlockType::Emoji
-			|| _type == TextBlockType::CustomEmoji
-			|| _type == TextBlockType::Skip) {
-			analysis->script = QChar::Script_Common;
-			analysis->flags = (*start == QChar::Space)
-				? QScriptAnalysis::None
-				: QScriptAnalysis::Object;
-		} else {
-			analysis->flags = QScriptAnalysis::None;
-		}
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-		analysis->script = hbscript_to_script(script_to_hbscript(analysis->script)); // retain the old behavior
-#endif // Qt < 6.0.0
-		++start;
-		++analysis;
-	}
-
-	{
-		auto i_string = &_e->layoutData->string;
-		auto i_analysis = _paragraphAnalysis.data() + (_localFrom - _paragraphStart);
-		auto i_items = &_e->layoutData->items;
-
-		blockIndex = _lineStartBlock;
-		currentBlock = _t->_blocks[blockIndex].get();
-		nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-		auto startBlock = currentBlock;
-
-		if (!length) {
-			return;
-		}
-		auto start = 0;
-		auto end = start + length;
-		for (int i = start + 1; i < end; ++i) {
-			while (nextBlock && nextBlock->position() <= _localFrom + i) {
-				currentBlock = nextBlock;
-				nextBlock = (++blockIndex < _blocksSize) ? _t->_blocks[blockIndex].get() : nullptr;
-			}
-			// According to the unicode spec we should be treating characters in the Common script
-			// (punctuation, spaces, etc) as being the same script as the surrounding text for the
-			// purpose of splitting up text. This is important because, for example, a fullstop
-			// (0x2E) can be used to indicate an abbreviation and so must be treated as part of a
-			// word.  Thus it must be passed along with the word in languages that have to calculate
-			// word breaks. For example the thai word "[lookup-in-git]." has no word breaks
-			// but the word "[lookup-too]" does.
-			// Unfortuntely because we split up the strings for both wordwrapping and for setting
-			// the font and because Japanese and Chinese are also aliases of the script "Common",
-			// doing this would break too many things.  So instead we only pass the full stop
-			// along, and nothing else.
-			if (currentBlock == startBlock
-				&& i_analysis[i].bidiLevel == i_analysis[start].bidiLevel
-				&& i_analysis[i].flags == i_analysis[start].flags
-				&& (i_analysis[i].script == i_analysis[start].script || i_string->at(i) == QLatin1Char('.'))
-				//					&& i_analysis[i].flags < QScriptAnalysis::SpaceTabOrObject // only emojis are objects here, no tabs
-				&& i - start < kMaxItemLength)
-				continue;
-			i_items->append(QScriptItem(start, i_analysis[start]));
-			start = i;
-			startBlock = currentBlock;
-		}
-		i_items->append(QScriptItem(start, i_analysis[start]));
-	}
-}
-
-void Renderer::applyBlockProperties(const AbstractBlock *block) {
-	eSetFont(block);
 	if (_p) {
 		const auto flags = block->flags();
 		const auto isMono = IsMono(flags);

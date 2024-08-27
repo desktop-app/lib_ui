@@ -399,38 +399,15 @@ private:
 	[[nodiscard]] not_null<ExtendedData*> ensureExtended();
 	[[nodiscard]] not_null<QuotesData*> ensureQuotes();
 
-	template <typename Iterator>
-	[[nodiscard]] uint16 countPosition(Iterator i, Iterator end) const {
-		return (i != end) ? CountPosition(i) : uint16(_text.size());
-	}
-	template <typename Iterator>
-	[[nodiscard]] uint16 countEnd(Iterator i, Iterator end) const {
-		return (i != end && i + 1 != end)
-			? CountPosition(i + 1)
-			: uint16(_text.size());
-	}
-	template <typename Iterator>
-	[[nodiscard]] uint16 countLength(Iterator i, Iterator end) const {
-		return (i == end)
-			? 0
-			: (i + 1 == end)
-			? (int(_text.size()) - CountPosition(i))
-			: (CountPosition(i + 1) - CountPosition(i));
-	}
-
 	[[nodiscard]] uint16 blockPosition(
-		std::vector<Block>::const_iterator i) const;
+		std::vector<Block>::const_iterator i,
+		int fullLengthOverride = -1) const;
 	[[nodiscard]] uint16 blockEnd(
-		std::vector<Block>::const_iterator i) const;
+		std::vector<Block>::const_iterator i,
+		int fullLengthOverride = -1) const;
 	[[nodiscard]] uint16 blockLength(
-		std::vector<Block>::const_iterator i) const;
-
-	[[nodiscard]] uint16 wordPosition(
-		std::vector<Word>::const_iterator i) const;
-	[[nodiscard]] uint16 wordEnd(
-		std::vector<Word>::const_iterator i) const;
-	[[nodiscard]] uint16 wordLength(
-		std::vector<Word>::const_iterator i) const;
+		std::vector<Block>::const_iterator i,
+		int fullLengthOverride = -1) const;
 
 	[[nodiscard]] QuoteDetails *quoteByIndex(int index) const;
 	[[nodiscard]] const style::QuoteStyle &quoteStyle(
