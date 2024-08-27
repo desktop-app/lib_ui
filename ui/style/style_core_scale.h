@@ -63,4 +63,9 @@ template <typename T>
 	return QSize(ConvertScale(size.width()), ConvertScale(size.height()));
 }
 
+[[nodiscard]] inline float64 ConvertFloatScale(float64 value) {
+	constexpr auto kPrecision = 1000000.;
+	return ConvertScale(value * kPrecision) / kPrecision;
+}
+
 } // namespace style
