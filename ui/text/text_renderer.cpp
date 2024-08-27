@@ -19,23 +19,9 @@
 namespace Ui::Text {
 namespace {
 
+constexpr auto kMaxItemLength = 4096;
+
 // COPIED FROM qtextengine.cpp AND MODIFIED
-
-struct BidiStatus {
-	BidiStatus() {
-		eor = QChar::DirON;
-		lastStrong = QChar::DirON;
-		last = QChar::DirON;
-		dir = QChar::DirON;
-	}
-	QChar::Direction eor;
-	QChar::Direction lastStrong;
-	QChar::Direction last;
-	QChar::Direction dir;
-};
-
-enum { _MaxBidiLevel = 61 };
-enum { _MaxItemLength = 4096 };
 
 void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
 	// explicitly initialize flags so that initFontAttributes can be called
@@ -88,51 +74,6 @@ void AppendRange(
 }
 
 } // namespace
-
-struct Renderer::BidiControl {
-	inline BidiControl(bool rtl)
-		: base(rtl ? 1 : 0), level(rtl ? 1 : 0) {}
-
-	inline void embed(bool rtl, bool o = false) {
-		unsigned int toAdd = 1;
-		if ((level % 2 != 0) == rtl) {
-			++toAdd;
-		}
-		if (level + toAdd <= _MaxBidiLevel) {
-			ctx[cCtx].level = level;
-			ctx[cCtx].override = override;
-			cCtx++;
-			override = o;
-			level += toAdd;
-		}
-	}
-	inline bool canPop() const { return cCtx != 0; }
-	inline void pdf() {
-		Q_ASSERT(cCtx);
-		--cCtx;
-		level = ctx[cCtx].level;
-		override = ctx[cCtx].override;
-	}
-
-	inline QChar::Direction basicDirection() const {
-		return (base ? QChar::DirR : QChar::DirL);
-	}
-	inline unsigned int baseLevel() const {
-		return base;
-	}
-	inline QChar::Direction direction() const {
-		return ((level % 2) ? QChar::DirR : QChar::DirL);
-	}
-
-	struct {
-		unsigned int level = 0;
-		bool override = false;
-	} ctx[_MaxBidiLevel];
-	unsigned int cCtx = 0;
-	const unsigned int base;
-	unsigned int level;
-	bool override = false;
-};
 
 FixedRange Intersected(FixedRange a, FixedRange b) {
 	return {
@@ -1623,7 +1564,7 @@ void Renderer::eItemize() {
 				&& i_analysis[i].flags == i_analysis[start].flags
 				&& (i_analysis[i].script == i_analysis[start].script || i_string->at(i) == QLatin1Char('.'))
 				//					&& i_analysis[i].flags < QScriptAnalysis::SpaceTabOrObject // only emojis are objects here, no tabs
-				&& i - start < _MaxItemLength)
+				&& i - start < kMaxItemLength)
 				continue;
 			i_items->append(QScriptItem(start, i_analysis[start]));
 			start = i;
