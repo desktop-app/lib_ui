@@ -21,47 +21,47 @@ namespace Ui::GL {
 
 class Renderer {
 public:
-    virtual void init(
-        not_null<QOpenGLWidget*> widget,
-        QOpenGLFunctions &f) {
-    }
+	virtual void init(
+		not_null<QOpenGLWidget*> widget,
+		QOpenGLFunctions &f) {
+	}
 
-    virtual void deinit(
-        not_null<QOpenGLWidget*> widget,
-        QOpenGLFunctions *f) {
-    }
+	virtual void deinit(
+		not_null<QOpenGLWidget*> widget,
+		QOpenGLFunctions *f) {
+	}
 
-    virtual void resize(
-        not_null<QOpenGLWidget*> widget,
-        QOpenGLFunctions &f,
-        int w,
-        int h) {
-    }
+	virtual void resize(
+		not_null<QOpenGLWidget*> widget,
+		QOpenGLFunctions &f,
+		int w,
+		int h) {
+	}
 
-    virtual void paint(
-        not_null<QOpenGLWidget*> widget,
-        QOpenGLFunctions &f);
+	virtual void paint(
+		not_null<QOpenGLWidget*> widget,
+		QOpenGLFunctions &f);
 
 	[[nodiscard]] virtual std::optional<QColor> clearColor() {
 		return std::nullopt;
 	}
 
-    virtual void paintFallback(
-        Painter &&p,
-        const QRegion &clip,
-        Backend backend) {
-    }
+	virtual void paintFallback(
+		Painter &&p,
+		const QRegion &clip,
+		Backend backend) {
+	}
 
-    virtual ~Renderer() = default;
+	virtual ~Renderer() = default;
 };
 
 struct ChosenRenderer {
-    std::unique_ptr<Renderer> renderer;
-    Backend backend = Backend::Raster;
+	std::unique_ptr<Renderer> renderer;
+	Backend backend = Backend::Raster;
 };
 
 [[nodiscard]] std::unique_ptr<RpWidgetWrap> CreateSurface(
-    Fn<ChosenRenderer(Capabilities)> chooseRenderer);
+	Fn<ChosenRenderer(Capabilities)> chooseRenderer);
 
 [[nodiscard]] std::unique_ptr<RpWidgetWrap> CreateSurface(
 	QWidget *parent,

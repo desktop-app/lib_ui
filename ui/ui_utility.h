@@ -199,8 +199,8 @@ QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
 [[nodiscard]] QPixmap PixmapFromImage(QImage &&image);
 
 [[nodiscard]] bool IsContentVisible(
-    not_null<QWidget*> widget,
-    const QRect &rect = QRect());
+	not_null<QWidget*> widget,
+	const QRect &rect = QRect());
 
 int WheelDirection(not_null<QWheelEvent*> e);
 
