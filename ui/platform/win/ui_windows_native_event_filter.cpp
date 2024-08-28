@@ -7,6 +7,7 @@
 #include "ui/platform/win/ui_windows_native_event_filter.h"
 
 #include "base/integration.h"
+#include "ui/qt_object_factory.h"
 #include "ui/rp_widget.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
