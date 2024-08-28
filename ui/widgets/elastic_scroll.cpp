@@ -8,6 +8,7 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
+#include "ui/qt_weak_factory.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_widgets.h"

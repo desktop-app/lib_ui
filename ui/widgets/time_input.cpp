@@ -7,6 +7,7 @@
 #include "ui/widgets/time_input.h"
 
 #include "ui/widgets/fields/time_part_input.h"
+#include "ui/qt_weak_factory.h"
 #include "base/qt/qt_string_view.h"
 #include "base/invoke_queued.h"
 

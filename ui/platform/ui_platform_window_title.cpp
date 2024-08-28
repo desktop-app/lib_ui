@@ -7,6 +7,7 @@
 #include "ui/platform/ui_platform_window_title.h"
 
 #include "ui/platform/ui_platform_utility.h"
+#include "ui/qt_weak_factory.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
 #include "ui/ui_utility.h"

@@ -14,6 +14,7 @@
 #include "ui/text/text_utilities.h"
 #include "ui/rect_part.h"
 #include "ui/painter.h"
+#include "ui/qt_weak_factory.h"
 #include "base/timer.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"

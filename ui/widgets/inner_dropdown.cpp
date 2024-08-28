@@ -10,6 +10,7 @@
 #include "ui/widgets/shadow.h"
 #include "ui/effects/panel_animation.h"
 #include "ui/image/image_prepare.h"
+#include "ui/qt_weak_factory.h"
 #include "ui/ui_utility.h"
 
 namespace Ui {

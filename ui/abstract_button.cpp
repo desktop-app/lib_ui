@@ -7,6 +7,7 @@
 #include "ui/abstract_button.h"
 
 #include "ui/ui_utility.h"
+#include "ui/qt_weak_factory.h"
 #include "ui/integration.h"
 
 #include <QtGui/QtEvents>

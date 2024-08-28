@@ -124,26 +124,6 @@ inline void SendSynteticMouseEvent(
 	return SendSynteticMouseEvent(widget, type, button, QCursor::pos());
 }
 
-template <typename Widget>
-QPointer<Widget> MakeWeak(Widget *object) {
-	return QPointer<Widget>(object);
-}
-
-template <typename Widget>
-QPointer<const Widget> MakeWeak(const Widget *object) {
-	return QPointer<const Widget>(object);
-}
-
-template <typename Widget>
-QPointer<Widget> MakeWeak(not_null<Widget*> object) {
-	return QPointer<Widget>(object.get());
-}
-
-template <typename Widget>
-QPointer<const Widget> MakeWeak(not_null<const Widget*> object) {
-	return QPointer<const Widget>(object.get());
-}
-
 [[nodiscard]] QPixmap PixmapFromImage(QImage &&image);
 
 [[nodiscard]] bool IsContentVisible(

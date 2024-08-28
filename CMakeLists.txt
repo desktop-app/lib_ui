@@ -296,6 +296,7 @@ PRIVATE
     ui/ph.cpp
     ui/ph.h
     ui/qt_object_factory.h
+    ui/qt_weak_factory.h
     ui/rect.h
     ui/rect_part.h
     ui/round_rect.cpp
