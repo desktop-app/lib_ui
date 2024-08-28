@@ -800,7 +800,11 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					// Elided item should be a text item
 					// with '...' at the end, so this should not be it.
 					const auto isElidedItem = false;
-					pushSpoilerRange(fillSpoiler, fillSelect, isElidedItem);
+					pushSpoilerRange(
+						fillSpoiler,
+						fillSelect,
+						isElidedItem,
+						rtl);
 				}
 			//} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
 			//	_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
@@ -941,7 +945,9 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 					const auto elided = isElidedBlock ? _f->elidew : 0;
 					_p->setClipRect(
 						QRect(
-							(x + itemWidth).toInt() - elided,
+							(rtl
+								? x.toInt()
+								: (x + itemWidth).toInt() - elided),
 							_y - _lineHeight,
 							elided,
 							_y + 2 * _lineHeight),
@@ -1004,7 +1010,11 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 			}
 
 			if (hasSpoiler) {
-				pushSpoilerRange(itemRange, fillSelect, isElidedItem);
+				pushSpoilerRange(
+					itemRange,
+					fillSelect,
+					isElidedItem,
+					rtl);
 			}
 		}
 
@@ -1112,12 +1122,18 @@ void Renderer::pushHighlightRange(FixedRange range) {
 void Renderer::pushSpoilerRange(
 		FixedRange range,
 		FixedRange selected,
-		bool isElidedItem) {
+		bool isElidedItem,
+		bool rtl) {
 	if (!_background.spoiler || !_spoiler) {
 		return;
+	} else if (isElidedItem) {
+		const auto elided = _f->elidew;
+		if (rtl) {
+			range.from += elided;
+		} else {
+			range.till -= elided;
+		}
 	}
-	const auto elided = isElidedItem ? _f->elidew : 0;
-	range.till -= elided;
 	if (range.empty()) {
 		return;
 	} else if (selected.empty() || !Intersects(range, selected)) {
@@ -1363,18 +1379,19 @@ void Renderer::prepareElidedLine(
 
 	int32 elideStart = _localFrom + lineText.size();
 	_selection.to = qMin(_selection.to, uint16(elideStart));
-	auto blockIndex = engine.blockIndex(lineText.size() - 1);
 	setElideBidi(elideStart, kQEllipsis.size());
+
+	auto blockIndex = engine.blockIndex(lineText.size() - 1);
+	for (; blockIndex + 1 < _blocksSize && _t->_blocks[blockIndex]->position() < elideStart; ++blockIndex) {
+	}
 
 	lineText += kQEllipsis;
 	lineLength += kQEllipsis.size();
 
-	if (!repeat) {
-		for (; blockIndex < _blocksSize && _t->_blocks[blockIndex]->position() < elideStart; ++blockIndex) {
-		}
-		if (blockIndex < _blocksSize) {
-			elideSaveBlock(blockIndex, _endBlock, elideStart, elideWidth);
-		}
+	if (repeat) {
+		_indexOfElidedBlock = blockIndex;
+	} else {
+		elideSaveBlock(blockIndex, _endBlock, elideStart, elideWidth);
 	}
 }
 
