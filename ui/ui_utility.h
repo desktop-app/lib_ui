@@ -7,7 +7,6 @@
 #pragma once
 
 #include "base/unique_qptr.h"
-#include "ui/rect_part.h"
 #include "ui/integration.h"
 
 #include <crl/crl.h>
@@ -17,9 +16,6 @@
 class QPixmap;
 class QImage;
 class QWheelEvent;
-
-enum class RectPart;
-using RectParts = base::flags<RectPart>;
 
 template <typename Object>
 class object_ptr;
