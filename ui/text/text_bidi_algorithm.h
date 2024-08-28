@@ -1000,9 +1000,9 @@ public:
 			};
 		}
 		return {
-			.properties = QUnicodeTables::properties(narrow(object
-				? QChar::ObjectReplacementCharacter
-				: uc)),
+			.properties = QUnicodeTables::properties(object
+				? narrow(QChar::ObjectReplacementCharacter)
+				: narrow(uc)),
 			.surrogate = false,
 		};
 	}

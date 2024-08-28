@@ -199,7 +199,7 @@ void WordParser::parse() {
 			item = newItem;
 			auto &si = e.layoutData->items[item];
 			if (!si.num_glyphs) {
-				const auto block = _engine.shapeGetBlock(item);
+				_engine.shapeGetBlock(item);
 				attributes = e.attributes();
 				if (!attributes)
 					return;
