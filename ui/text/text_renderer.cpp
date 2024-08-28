@@ -222,12 +222,14 @@ void Renderer::enumerate() {
 			}
 
 			last_rBearing = 0;
-			_last_rPadding = 0;
+			_last_rPadding = w->f_rpadding();
 
 			initNextParagraph(
 				begin(_t->_blocks) + blockIndex + 1,
 				qindex,
 				static_cast<const NewlineBlock*>(_t->_blocks[blockIndex].get())->paragraphDirection());
+
+			_lineStartPadding = _last_rPadding;
 
 			longWordLine = true;
 			continue;
@@ -484,6 +486,7 @@ void Renderer::initNextLine() {
 	_lineWidth = _startLineWidth
 		- _quotePadding.left()
 		- _quotePadding.right();
+	_lineStartPadding = 0;
 	_wLeft = _lineWidth;
 	_elidedLine = line.elided;
 }
@@ -1297,6 +1300,7 @@ void Renderer::prepareElidedLine(
 		_blocksSize);
 	auto &e = engine.wrapped();
 	_wLeft = _lineWidth
+		- _lineStartPadding
 		- _quotePadding.left()
 		- _quotePadding.right();
 

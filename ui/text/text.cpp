@@ -614,7 +614,7 @@ void String::recountNaturalSize(
 				_minHeight += lineHeight;
 			}
 			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
-			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
+			last_rPadding = word.f_rpadding();
 
 			width = qminwidth;
 			// + (b->f_width() - last_rBearing); (0 for newline)
@@ -1073,7 +1073,7 @@ void String::enumerateLines(
 			}
 
 			last_rBearing = 0;// b->f_rbearing(); (0 for newline)
-			last_rPadding = 0;// b->f_rpadding(); (0 for newline)
+			last_rPadding = w->f_rpadding();
 
 			initNextParagraph(index);
 			longWordLine = true;

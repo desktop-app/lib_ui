@@ -202,6 +202,7 @@ private:
 	int _lineStart = 0;
 	int _localFrom = 0;
 	int _lineStartBlock = 0;
+	QFixed _lineStartPadding = 0;
 	QFixed _lineWidth = 0;
 
 	// link and symbol resolve
