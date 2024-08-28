@@ -14,6 +14,7 @@
 #include "ui/emoji_config.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
+#include "ui/qt_object_factory.h"
 #include "base/invoke_queued.h"
 #include "base/random.h"
 #include "base/platform/base_platform_info.h"

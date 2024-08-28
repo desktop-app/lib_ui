@@ -25,64 +25,12 @@ template <typename Object>
 class object_ptr;
 
 namespace Ui {
-namespace details {
-
-template <typename Value>
-class AttachmentOwner : public QObject {
-public:
-	template <typename ...Args>
-	AttachmentOwner(QObject *parent, Args &&...args)
-	: QObject(parent)
-	, _value(std::forward<Args>(args)...) {
-	}
-
-	not_null<Value*> value() {
-		return &_value;
-	}
-
-private:
-	Value _value;
-
-};
-
-} // namespace details
 
 template <typename Widget, typename ...Args>
 inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
 	return base::make_unique_q<Widget>(
 		nullptr,
 		std::forward<Args>(args)...);
-}
-
-template <typename Value, typename Parent, typename ...Args>
-inline Value *CreateChild(
-		Parent parent,
-		Args &&...args) {
-	if constexpr (std::is_pointer_v<Parent>) {
-		Expects(parent != nullptr);
-
-		if constexpr (std::is_base_of_v<QObject, Value>) {
-			return new Value(parent, std::forward<Args>(args)...);
-		} else {
-			return CreateChild<details::AttachmentOwner<Value>>(
-				parent,
-				std::forward<Args>(args)...)->value();
-		}
-	} else if constexpr (requires(const Parent & t) { t.get(); }) {
-		return new Value(parent.get(), std::forward<Args>(args)...);
-	} else {
-		static_assert(requires(const Parent &t) { t.data(); });
-		return new Value(parent.data(), std::forward<Args>(args)...);
-	}
-}
-
-template <typename Value>
-inline not_null<details::AttachmentOwner<std::decay_t<Value>>*> WrapAsQObject(
-		not_null<QObject*> parent,
-		Value &&value) {
-	return CreateChild<details::AttachmentOwner<std::decay_t<Value>>>(
-		parent.get(),
-		std::forward<Value>(value));
 }
 
 inline void DestroyChild(QWidget *child) {

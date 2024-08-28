@@ -11,6 +11,7 @@
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/shadow.h"
 #include "ui/painter.h"
+#include "ui/qt_object_factory.h"
 #include "styles/style_widgets.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"

@@ -295,6 +295,7 @@ PRIVATE
     ui/painter.h
     ui/ph.cpp
     ui/ph.h
+    ui/qt_object_factory.h
     ui/rect.h
     ui/rect_part.h
     ui/round_rect.cpp

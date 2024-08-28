@@ -7,6 +7,7 @@
 #include "ui/toast/toast_manager.h"
 
 #include "ui/toast/toast_widget.h"
+#include "ui/qt_object_factory.h"
 
 namespace Ui {
 namespace Toast {

@@ -12,6 +12,7 @@
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/elastic_scroll.h"
+#include "ui/qt_object_factory.h"
 #include "base/platform/win/base_windows_safe_library.h"
 #include "base/platform/base_platform_info.h"
 #include "base/event_filter.h"

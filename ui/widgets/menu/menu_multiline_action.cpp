@@ -7,6 +7,7 @@
 #include "ui/widgets/menu/menu_multiline_action.h"
 
 #include "ui/widgets/labels.h"
+#include "ui/qt_object_factory.h"
 
 namespace Ui::Menu {
 

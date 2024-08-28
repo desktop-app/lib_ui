@@ -9,6 +9,7 @@
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 #include "ui/widgets/labels.h"
+#include "ui/qt_object_factory.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 
