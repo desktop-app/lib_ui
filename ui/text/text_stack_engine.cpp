@@ -43,7 +43,8 @@ StackEngine::StackEngine(
 	int offset,
 	const QString &text,
 	gsl::span<QScriptAnalysis> analysis,
-	int blockIndexHint)
+	int blockIndexHint,
+	int blockIndexLimit)
 : _t(t)
 , _text(text)
 , _analysis(analysis.data())
@@ -53,6 +54,9 @@ StackEngine::StackEngine(
 , _engine(_text, _font->f)
 , _tBlocks(_t->_blocks)
 , _bStart(begin(_tBlocks) + blockIndexHint)
+, _bEnd((blockIndexLimit >= 0)
+	? (begin(_tBlocks) + blockIndexLimit)
+	: end(_tBlocks))
 , _bCached(_bStart) {
 	Expects(analysis.size() >= _text.size());
 
@@ -60,19 +64,26 @@ StackEngine::StackEngine(
 	itemize();
 }
 
-std::vector<Block>::const_iterator StackEngine::adjustBlock(int offset) const {
+std::vector<Block>::const_iterator StackEngine::adjustBlock(
+		int offset) const {
 	Expects(offset < _positionEnd);
 
-	if (_t->blockPosition(_bCached, _positionEnd) > offset) {
+	if (blockPosition(_bCached) > offset) {
 		_bCached = begin(_tBlocks);
 	}
 	Assert(_bCached != end(_tBlocks));
-	for (auto i = _bCached + 1
-		; _t->blockPosition(i, _positionEnd) <= offset
-		; ++i) {
+	for (auto i = _bCached + 1; blockPosition(i) <= offset; ++i) {
 		_bCached = i;
 	}
 	return _bCached;
+}
+
+int StackEngine::blockPosition(std::vector<Block>::const_iterator i) const {
+	return (i == _bEnd) ? _positionEnd : (*i)->position();
+}
+
+int StackEngine::blockEnd(std::vector<Block>::const_iterator i) const {
+	return (i == _bEnd) ? _positionEnd : blockPosition(i + 1);
 }
 
 void StackEngine::itemize() {
@@ -109,16 +120,10 @@ void StackEngine::itemize() {
 
 	// Override script and flags for emoji and custom emoji blocks.
 	const auto end = _offset + length;
-	for (auto block = _bStart
-		; _t->blockPosition(block, _positionEnd) < end
-		; ++block) {
+	for (auto block = _bStart; blockPosition(block) < end; ++block) {
 		const auto type = (*block)->type();
-		const auto from = std::max(
-			_offset,
-			int(_t->blockPosition(block, _positionEnd)));
-		const auto till = std::min(
-			end,
-			int(_t->blockEnd(block, _positionEnd)));
+		const auto from = std::max(_offset, int(blockPosition(block)));
+		const auto till = std::min(end, int(blockEnd(block)));
 		if (till > from) {
 			if (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji
@@ -154,7 +159,7 @@ void StackEngine::itemize() {
 		auto nextBlock = startBlock + 1;
 		for (int i = 1; i != length; ++i) {
 			auto currentBlock = startBlock;
-			while (_t->blockPosition(nextBlock, _positionEnd) <= _offset + i) {
+			while (blockPosition(nextBlock) <= _offset + i) {
 				currentBlock = nextBlock++;
 			}
 			// According to the unicode spec we should be treating characters in the Common script

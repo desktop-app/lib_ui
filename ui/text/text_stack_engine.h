@@ -25,7 +25,8 @@ public:
 		int offset,
 		const QString &text,
 		gsl::span<QScriptAnalysis> analysis,
-		int blockIndexHint = 0);
+		int blockIndexHint = 0,
+		int blockIndexLimit = -1);
 
 	[[nodiscard]] QTextEngine &wrapped() {
 		return _engine;
@@ -37,7 +38,11 @@ public:
 
 private:
 	void updateFont(not_null<const AbstractBlock*> block);
-	std::vector<Block>::const_iterator adjustBlock(int offset) const;
+	[[nodiscard]] std::vector<Block>::const_iterator adjustBlock(
+		int offset) const;
+	[[nodiscard]] int blockPosition(
+		std::vector<Block>::const_iterator i) const;
+	[[nodiscard]] int blockEnd(std::vector<Block>::const_iterator i) const;
 
 	const not_null<const String*> _t;
 	const QString &_text;
@@ -49,6 +54,7 @@ private:
 
 	const std::vector<Block> &_tBlocks;
 	std::vector<Block>::const_iterator _bStart;
+	std::vector<Block>::const_iterator _bEnd;
 	mutable std::vector<Block>::const_iterator _bCached;
 
 };

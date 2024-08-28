@@ -645,7 +645,8 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		_localFrom,
 		lineText,
 		gsl::span(_paragraphAnalysis).subspan(_localFrom - _paragraphStart),
-		_lineStartBlock);
+		_lineStartBlock,
+		_blocksSize);
 	auto &e = engine.wrapped();
 
 	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
@@ -1242,6 +1243,7 @@ void Renderer::elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock,
 		.linkIndex = (*_elideSavedBlock)->linkIndex(),
 		.colorIndex = (*_elideSavedBlock)->colorIndex(),
 	});
+	_indexOfElidedBlock = blockIndex;
 	_blocksSize = blockIndex + 1;
 	_endBlock = (blockIndex + 1 < _t->_blocks.size())
 		? _t->_blocks[blockIndex + 1].get()
@@ -1275,18 +1277,17 @@ void Renderer::prepareElidedLine(
 		_localFrom,
 		lineText,
 		gsl::span(_paragraphAnalysis).subspan(_localFrom - _paragraphStart),
-		_lineStartBlock);
+		_lineStartBlock,
+		_blocksSize);
 	auto &e = engine.wrapped();
-
-	auto elideWidth = _f->elidew;
 	_wLeft = _lineWidth
 		- _quotePadding.left()
-		- _quotePadding.right()
-		- elideWidth;
+		- _quotePadding.right();
 
 	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
 	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0, i;
 
+	auto elideWidth = _t->_st->font->elidew;
 	for (i = 0; i < nItems; ++i) {
 		const auto blockIt = engine.shapeGetBlock(firstItem + i);
 		const auto block = blockIt->get();
@@ -1294,17 +1295,19 @@ void Renderer::prepareElidedLine(
 		const auto nextBlock = (blockIndex + 1 < _blocksSize)
 			? _t->_blocks[blockIndex + 1].get()
 			: nullptr;
+		const auto font = WithFlags(_t->_st->font, block->flags());
+		elideWidth = font->elidew;
 		auto &si = e.layoutData->items[firstItem + i];
 		const auto _type = block->type();
 		if (_type == TextBlockType::Emoji
 			|| _type == TextBlockType::CustomEmoji
 			|| _type == TextBlockType::Skip
 			|| _type == TextBlockType::Newline) {
-			if (_wLeft < si.width) {
+			if (_wLeft < elideWidth + si.width) {
+				_wLeft -= elideWidth;
 				lineText = lineText.mid(0, block->position() - _localFrom) + kQEllipsis;
 				lineLength = block->position() + kQEllipsis.size() - _lineStart;
 				_selection.to = qMin(_selection.to, block->position());
-				_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
 				setElideBidi(block->position(), kQEllipsis.size());
 				elideSaveBlock(blockIndex, _endBlock, block->position(), elideWidth);
 				return;
@@ -1327,7 +1330,9 @@ void Renderer::prepareElidedLine(
 
 			for (auto g = glyphsStart; g < glyphsEnd; ++g) {
 				auto adv = glyphs.effectiveAdvance(g);
-				if (_wLeft < adv) {
+				if (_wLeft < elideWidth + adv) {
+					_wLeft -= elideWidth;
+
 					auto pos = itemStart;
 					while (pos < itemEnd && logClusters[pos - si.position] < g) {
 						++pos;
@@ -1337,14 +1342,12 @@ void Renderer::prepareElidedLine(
 						lineText += kQEllipsis;
 						lineLength = _localFrom + pos + kQEllipsis.size() - _lineStart;
 						_selection.to = qMin(_selection.to, uint16(_localFrom + pos));
-						_indexOfElidedBlock = blockIndex + (nextBlock ? 1 : 0);
 						setElideBidi(_localFrom + pos, kQEllipsis.size());
-						_blocksSize = blockIndex;
-						_endBlock = nextBlock;
+						elideSaveBlock(blockIndex, _endBlock, _localFrom + pos, elideWidth);
 					} else {
 						lineText = lineText.mid(0, pos);
 						lineLength = _localFrom + pos - _lineStart;
-						_blocksSize = blockIndex;
+						_blocksSize = blockIndex + 1;
 						_endBlock = nextBlock;
 						prepareElidedLine(lineText, lineStart, lineLength, _endBlock, repeat + 1);
 					}
@@ -1356,17 +1359,18 @@ void Renderer::prepareElidedLine(
 		}
 	}
 
+	_wLeft -= elideWidth;
+
 	int32 elideStart = _localFrom + lineText.size();
 	_selection.to = qMin(_selection.to, uint16(elideStart));
 	auto blockIndex = engine.blockIndex(lineText.size() - 1);
-	_indexOfElidedBlock = blockIndex;
 	setElideBidi(elideStart, kQEllipsis.size());
 
 	lineText += kQEllipsis;
 	lineLength += kQEllipsis.size();
 
 	if (!repeat) {
-		for (; blockIndex < _blocksSize && _t->_blocks[blockIndex].get() != _endBlock && _t->_blocks[blockIndex]->position() < elideStart; ++blockIndex) {
+		for (; blockIndex < _blocksSize && _t->_blocks[blockIndex]->position() < elideStart; ++blockIndex) {
 		}
 		if (blockIndex < _blocksSize) {
 			elideSaveBlock(blockIndex, _endBlock, elideStart, elideWidth);
