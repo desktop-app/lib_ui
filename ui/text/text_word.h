@@ -24,7 +24,7 @@ public:
 	, _rbearing_modulus(std::min(std::abs(rbearing.value()), 0x7FFF))
 	, _rbearing_positive(rbearing.value() > 0 ? 1 : 0)
 	, _unfinished(unfinished ? 1 : 0)
-	, _width(width) {
+	, _qfixedwidth(width.value()) {
 	}
 	Word(uint16 position, int newlineBlockIndex)
 	: _position(position)
@@ -50,7 +50,7 @@ public:
 			int(_rbearing_modulus) * (_rbearing_positive ? 1 : -1));
 	}
 	[[nodiscard]] QFixed f_width() const {
-		return _newline ? 0 : _width;
+		return _newline ? 0 : QFixed::fromFixed(_qfixedwidth);
 	}
 	[[nodiscard]] QFixed f_rpadding() const {
 		return _rpadding;
@@ -75,7 +75,7 @@ private:
 	QFixed _rpadding;
 
 	union {
-		QFixed _width;
+		int _qfixedwidth;
 		int _newlineBlockIndex;
 	};
 

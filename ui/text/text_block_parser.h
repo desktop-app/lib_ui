@@ -117,7 +117,6 @@ private:
 	int _quoteStartPosition = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
 	int _blockStart = 0; // offset in result, from which current parsed block is started
-	int _wordsStart = 0; // offset in result, from which words were not added yet
 	int _diacritics = 0; // diacritic chars skipped without good char
 	bool _newlineAwaited = false;
 
