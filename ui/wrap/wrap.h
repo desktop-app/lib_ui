@@ -7,7 +7,6 @@
 #pragma once
 
 #include "ui/rp_widget.h"
-#include "ui/ui_utility.h"
 #include "base/object_ptr.h"
 
 namespace Ui {
@@ -115,7 +114,8 @@ Wrap<Widget, RpWidget>::Wrap(
 		) | rpl::start_with_next([this](const QSize &value) {
 			wrappedSizeUpdated(value);
 		}, lifetime());
-		AttachParentChild(this, _wrapped);
+		_wrapped->setParent(this);
+		_wrapped->show();
 		_wrapped->move(0, 0);
 		_wrapped->alive(
 		) | rpl::start_with_done([this] {

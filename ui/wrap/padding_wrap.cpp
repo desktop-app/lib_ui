@@ -6,6 +6,8 @@
 //
 #include "ui/wrap/padding_wrap.h"
 
+#include "ui/ui_utility.h"
+
 namespace Ui {
 
 PaddingWrap<RpWidget>::PaddingWrap(

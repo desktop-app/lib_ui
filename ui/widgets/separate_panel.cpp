@@ -25,6 +25,7 @@
 #include "ui/rect.h"
 #include "ui/qt_object_factory.h"
 #include "ui/qt_weak_factory.h"
+#include "ui/ui_utility.h"
 #include "base/platform/base_platform_info.h"
 #include "base/debug_log.h"
 #include "base/invoke_queued.h"

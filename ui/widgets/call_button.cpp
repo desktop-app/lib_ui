@@ -10,6 +10,7 @@
 #include "ui/painter.h"
 #include "ui/widgets/labels.h"
 #include "ui/qt_object_factory.h"
+#include "ui/ui_utility.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 

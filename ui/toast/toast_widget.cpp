@@ -11,6 +11,7 @@
 #include "ui/widgets/labels.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/painter.h"
+#include "ui/ui_utility.h"
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
 

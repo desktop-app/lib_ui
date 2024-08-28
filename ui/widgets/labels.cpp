@@ -16,6 +16,7 @@
 #include "ui/painter.h"
 #include "ui/qt_weak_factory.h"
 #include "ui/integration.h"
+#include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"
