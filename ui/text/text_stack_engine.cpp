@@ -123,7 +123,7 @@ void StackEngine::itemize() {
 	for (auto block = _bStart; blockPosition(block) < end; ++block) {
 		const auto type = (*block)->type();
 		const auto from = std::max(_offset, int(blockPosition(block)));
-		const auto till = std::min(end, int(blockEnd(block)));
+		const auto till = std::min(int(end), int(blockEnd(block)));
 		if (till > from) {
 			if (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji
