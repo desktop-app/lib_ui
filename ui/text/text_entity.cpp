@@ -13,6 +13,7 @@
 #include "ui/widgets/fields/input_field.h"
 #include "ui/emoji_config.h"
 #include "ui/basic_click_handlers.h"
+#include "ui/integration.h"
 #include "base/qt/qt_common_adapters.h"
 
 #include <QtCore/QStack>

@@ -7,6 +7,7 @@
 #include "ui/layers/layer_manager.h"
 
 #include "ui/layers/show.h"
+#include "ui/ui_utility.h"
 
 namespace Ui {
 

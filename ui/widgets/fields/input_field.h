@@ -18,6 +18,8 @@
 
 #include <QtGui/QTextCursor>
 
+#include <any>
+
 class QMenu;
 class QShortcut;
 class QTextEdit;

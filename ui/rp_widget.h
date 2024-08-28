@@ -8,7 +8,6 @@
 
 #include "base/unique_qptr.h"
 #include "ui/style/style_core_direction.h"
-#include "ui/ui_utility.h"
 
 #include <rpl/event_stream.h>
 #include <rpl/map.h>

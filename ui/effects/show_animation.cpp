@@ -7,8 +7,9 @@
 #include "ui/effects/show_animation.h"
 
 #include "ui/effects/animations.h"
-#include "ui/rp_widget.h"
 #include "ui/qt_weak_factory.h"
+#include "ui/rp_widget.h"
+#include "ui/ui_utility.h"
 #include "styles/style_widgets.h"
 
 namespace Ui::Animations {

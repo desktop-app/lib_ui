@@ -14,6 +14,8 @@
 #include "ui/rect_part.h"
 #include "ui/rp_widget.h"
 
+#include <any>
+
 namespace style {
 struct Toast;
 } // namespace style

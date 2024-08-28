@@ -11,6 +11,7 @@
 #include "ui/text/text_renderer.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/fields/input_field.h"
+#include "ui/integration.h"
 #include "styles/style_basic.h"
 #include "styles/style_widgets.h"
 

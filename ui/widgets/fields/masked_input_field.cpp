@@ -10,6 +10,7 @@
 #include "ui/painter.h"
 #include "ui/qt_weak_factory.h"
 #include "ui/widgets/popup_menu.h"
+#include "ui/integration.h"
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
 
