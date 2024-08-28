@@ -15,6 +15,7 @@
 #include "ui/inactive_press.h"
 #include "ui/painter.h"
 #include "ui/qt_weak_factory.h"
+#include "ui/integration.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_layers.h"
 #include "styles/palette.h"

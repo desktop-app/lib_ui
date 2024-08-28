@@ -7,7 +7,6 @@
 #pragma once
 
 #include "base/unique_qptr.h"
-#include "ui/integration.h"
 
 #include <crl/crl.h>
 #include <QtCore/QEvent>
@@ -46,17 +45,7 @@ inline not_null<std::decay_t<Value>*> AttachAsChild(
 }
 
 [[nodiscard]] bool AppInFocus();
-
-[[nodiscard]] inline bool InFocusChain(not_null<const QWidget*> widget) {
-	if (const auto top = widget->window()) {
-		if (auto focused = top->focusWidget()) {
-			return !widget->isHidden()
-				&& (focused == widget
-					|| widget->isAncestorOf(focused));
-		}
-	}
-	return false;
-}
+[[nodiscard]] bool InFocusChain(not_null<const QWidget*> widget);
 
 template <typename ChildWidget>
 inline ChildWidget *AttachParentChild(

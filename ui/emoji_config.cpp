@@ -12,6 +12,7 @@
 #include "base/parse_helper.h"
 #include "base/debug_log.h"
 #include "ui/style/style_core.h"
+#include "ui/integration.h"
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "styles/style_basic.h"

@@ -16,6 +16,7 @@
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
 #include "ui/qt_weak_factory.h"
+#include "ui/integration.h"
 #include "base/invoke_queued.h"
 #include "base/random.h"
 #include "base/platform/base_platform_info.h"

@@ -15,6 +15,7 @@
 #include "ui/ui_utility.h"
 #include "ui/delayed_activation.h"
 #include "ui/painter.h"
+#include "ui/integration.h"
 #include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
 
