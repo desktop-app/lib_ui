@@ -355,14 +355,16 @@ void WindowHelper::init() {
 
 	window()->winIdValue() | rpl::start_with_next([=](WId winId) {
 		_handle = reinterpret_cast<HWND>(winId);
-		if (!::Platform::IsWindows8OrGreater()) {
-			const auto native = _title->isHidden();
-			window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !native);
-			if (_handle && !native) {
-				FixAeroSnap(_handle);
-			}
-		}
 		if (_handle) {
+			if (!::Platform::IsWindows8OrGreater()) {
+				const auto native = _title->isHidden();
+				window()->windowHandle()->setFlag(
+					Qt::FramelessWindowHint,
+					!native);
+				if (!native) {
+					FixAeroSnap(_handle);
+				}
+			}
 			_dpi = GetDpiForWindowSupported()
 				? GetDpiForWindow(_handle)
 				: 0;
