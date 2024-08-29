@@ -63,8 +63,8 @@ private:
 	void initNextLine();
 	void initParagraphBidi();
 	bool drawLine(
-		uint16 _lineEnd,
-		Blocks::const_iterator _endBlockIter);
+		uint16 lineEnd,
+		Blocks::const_iterator blocksEnd);
 	[[nodiscard]] FixedRange findSelectEmojiRange(
 		const QScriptItem &si,
 		std::vector<Block>::const_iterator blockIt,
@@ -95,18 +95,15 @@ private:
 		const style::color &color,
 		int index);
 	void composeHighlightPath();
-	void elideSaveBlock(
-		int32 blockIndex,
-		const AbstractBlock *&_endBlock,
-		int32 elideStart,
-		int32 elideWidth);
-	void setElideBidi(int32 elideStart, int32 elideLen);
+	[[nodiscard]] const AbstractBlock *markBlockForElisionGetEnd(
+		int blockIndex);
+	void setElideBidi(int elideStart, int elideLength);
 	void prepareElidedLine(
 		QString &lineText,
-		int32 lineStart,
-		int32 &lineLength,
-		const AbstractBlock *&_endBlock,
-		int repeat = 0);
+		int lineStart,
+		int &lineLength,
+		const AbstractBlock *&endBlock,
+		int recursed = 0);
 	void restoreAfterElided();
 
 	void fillParagraphBg(int paddingBottom);
@@ -160,7 +157,6 @@ private:
 	Qt::LayoutDirection _paragraphDirection = Qt::LayoutDirectionAuto;
 	int _paragraphStart = 0;
 	int _paragraphLength = 0;
-	bool _paragraphHasBidi = false;
 	QVarLengthArray<QScriptAnalysis, 4096> _paragraphAnalysis;
 
 	// current quote data

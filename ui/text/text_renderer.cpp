@@ -505,18 +505,18 @@ void Renderer::initParagraphBidi() {
 		_paragraphStartBlock,
 		_t->_blocks.cend(),
 		_paragraphStart);
-	_paragraphHasBidi = bidi.process();
+	bidi.process();
 }
 
-bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
+bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	_yDelta = (_lineHeight - _fontHeight) / 2;
 	if (_yTo >= 0 && (_y + _yDelta >= _yTo || _y >= _yTo)) {
 		return false;
 	}
 	if (_y + _yDelta + _fontHeight <= _yFrom) {
 		if (_lookupSymbol) {
-			_lookupResult.symbol = (_lineEnd > _lineStart) ? (_lineEnd - 1) : _lineStart;
-			_lookupResult.afterSymbol = (_lineEnd > _lineStart) ? true : false;
+			_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
+			_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
 		}
 		return !_elidedLine;
 	}
@@ -524,7 +524,7 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 	// Trimming pending spaces, because they sometimes don't fit on the line.
 	// They also are not counted in the line width, they're in the right padding.
 	// Line width is a sum of block / word widths and paddings between them, without trailing one.
-	auto trimmedLineEnd = _lineEnd;
+	auto trimmedLineEnd = lineEnd;
 	for (; trimmedLineEnd > _lineStart; --trimmedLineEnd) {
 		auto ch = _t->_text[trimmedLineEnd - 1];
 		if (ch != QChar::Space && ch != QChar::LineFeed) {
@@ -532,15 +532,15 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		}
 	}
 
-	auto _endBlock = (_endBlockIter == end(_t->_blocks)) ? nullptr : _endBlockIter->get();
+	auto endBlock = (blocksEnd == end(_t->_blocks)) ? nullptr : blocksEnd->get();
 	if (_elidedLine) {
 		// If we decided to draw the last line elided only because of the skip block
 		// that did not fit on this line, we just draw the line till the very end.
 		// Skip block is ignored in the elided lines, instead "removeFromEnd" is used.
-		if (_endBlock && _endBlock->type() == TextBlockType::Skip) {
-			_endBlock = nullptr;
+		if (endBlock && endBlock->type() == TextBlockType::Skip) {
+			endBlock = nullptr;
 		}
-		if (!_endBlock) {
+		if (!endBlock) {
 			_elidedLine = false;
 		}
 	}
@@ -551,8 +551,8 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		? qMin(_lineStart - startBlock->position(), 2)
 		: 0;
 	_localFrom = _lineStart - extendLeft;
-	const auto extendedLineEnd = (_endBlock && _endBlock->position() < trimmedLineEnd && !_elidedLine)
-		? qMin(uint16(trimmedLineEnd + 2), _t->blockEnd(_endBlockIter))
+	const auto extendedLineEnd = (endBlock && endBlock->position() < trimmedLineEnd && !_elidedLine)
+		? qMin(uint16(trimmedLineEnd + 2), _t->blockEnd(blocksEnd))
 		: trimmedLineEnd;
 
 	auto lineText = QString::fromRawData(
@@ -563,7 +563,7 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 
 	if (_elidedLine) {
 		initParagraphBidi();
-		prepareElidedLine(lineText, lineStart, lineLength, _endBlock);
+		prepareElidedLine(lineText, lineStart, lineLength, endBlock);
 	}
 
 	auto x = _x;
@@ -580,9 +580,9 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		if (_lookupX < x) {
 			if (_lookupSymbol) {
 				if (_paragraphDirection == Qt::RightToLeft) {
-					_lookupResult.symbol = (_lineEnd > _lineStart) ? (_lineEnd - 1) : _lineStart;
-					_lookupResult.afterSymbol = (_lineEnd > _lineStart) ? true : false;
-					//_lookupResult.uponSymbol = ((_lookupX >= _x) && (_lineEnd < _t->_text.size()) && (!_endBlock || _endBlock->type() != TextBlockType::Skip)) ? true : false;
+					_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
+					_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
+					//_lookupResult.uponSymbol = ((_lookupX >= _x) && (lineEnd < _t->_text.size()) && (!endBlock || endBlock->type() != TextBlockType::Skip)) ? true : false;
 				} else {
 					_lookupResult.symbol = _lineStart;
 					_lookupResult.afterSymbol = false;
@@ -600,9 +600,9 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 				_lookupResult.afterSymbol = false;
 				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (_lineStart > 0)) ? true : false;
 			} else {
-				_lookupResult.symbol = (_lineEnd > _lineStart) ? (_lineEnd - 1) : _lineStart;
-				_lookupResult.afterSymbol = (_lineEnd > _lineStart) ? true : false;
-				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (_lineEnd < _t->_text.size()) && (!_endBlock || _endBlock->type() != TextBlockType::Skip)) ? true : false;
+				_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
+				_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
+				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (lineEnd < _t->_text.size()) && (!endBlock || endBlock->type() != TextBlockType::Skip)) ? true : false;
 			}
 			if (_lookupLink) {
 				_lookupResult.link = nullptr;
@@ -619,7 +619,7 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 		const auto selectTillEnd = (_selection.to > trimmedLineEnd)
 			&& (trimmedLineEnd < _t->_text.size())
 			&& (_selection.from <= trimmedLineEnd)
-			&& (!_endBlock || _endBlock->type() != TextBlockType::Skip);
+			&& (!endBlock || endBlock->type() != TextBlockType::Skip);
 
 		if ((selectFromStart && _paragraphDirection == Qt::LeftToRight)
 			|| (selectTillEnd && _paragraphDirection == Qt::RightToLeft)) {
@@ -674,14 +674,15 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
 	}
 	QTextEngine::bidiReorder(nItems, levels.data(), visualOrder.data());
 	if (style::RightToLeft() && skipIndex == nItems - 1) {
-		for (int32 i = nItems; i > 1;) {
+		for (auto i = nItems; i > 1;) {
 			--i;
 			visualOrder[i] = visualOrder[i - 1];
 		}
 		visualOrder[0] = skipIndex;
 	}
 
-	int32 textY = _y + _yDelta + _t->_st->font->ascent, emojiY = (_t->_st->font->height - st::emojiSize) / 2;
+	auto textY = _y + _yDelta + _t->_st->font->ascent;
+	auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
 
 	_f = style::font();
 	for (int i = 0; i < nItems; ++i) {
@@ -1248,48 +1249,49 @@ void Renderer::composeHighlightPath() {
 	}
 }
 
-void Renderer::elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock, int32 elideStart, int32 elideWidth) {
+const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
 	if (_elideSavedBlock) {
 		restoreAfterElided();
 	}
-
-	_elideSavedIndex = blockIndex;
-	auto mutableText = const_cast<String*>(_t);
-	_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
-	mutableText->_blocks[blockIndex] = Block::Text({
-		.position = uint16(elideStart),
-		.flags = (*_elideSavedBlock)->flags(),
-		.linkIndex = (*_elideSavedBlock)->linkIndex(),
-		.colorIndex = (*_elideSavedBlock)->colorIndex(),
-	});
+	if (_t->_blocks[blockIndex]->type() != TextBlockType::Text) {
+		_elideSavedIndex = blockIndex;
+		auto mutableText = const_cast<String*>(_t);
+		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
+		mutableText->_blocks[blockIndex] = Block::Text({
+			.position = (*_elideSavedBlock)->position(),
+			.flags = (*_elideSavedBlock)->flags(),
+			.linkIndex = (*_elideSavedBlock)->linkIndex(),
+			.colorIndex = (*_elideSavedBlock)->colorIndex(),
+		});
+	}
 	_indexOfElidedBlock = blockIndex;
 	_blocksSize = blockIndex + 1;
-	_endBlock = (blockIndex + 1 < _t->_blocks.size())
+	return (blockIndex + 1 < _t->_blocks.size())
 		? _t->_blocks[blockIndex + 1].get()
 		: nullptr;
 }
 
-void Renderer::setElideBidi(int32 elideStart, int32 elideLen) {
-	const auto newParLength = elideStart + elideLen - _paragraphStart;
+void Renderer::setElideBidi(int elideStart, int elideLength) {
+	const auto newParLength = elideStart + elideLength - _paragraphStart;
 	if (newParLength > _paragraphAnalysis.size()) {
 		_paragraphAnalysis.resize(newParLength);
 	}
-	const auto bidiLevel = (newParLength > elideLen)
-		? _paragraphAnalysis[newParLength - elideLen - 1].bidiLevel
+	const auto bidiLevel = (newParLength > elideLength)
+		? _paragraphAnalysis[newParLength - elideLength - 1].bidiLevel
 		: (_paragraphDirection == Qt::RightToLeft)
 		? 1
 		: 0;
-	for (int32 i = elideLen; i > 0; --i) {
+	for (auto i = elideLength; i > 0; --i) {
 		_paragraphAnalysis[newParLength - i].bidiLevel = bidiLevel;
 	}
 }
 
 void Renderer::prepareElidedLine(
 		QString &lineText,
-		int32 lineStart,
-		int32 &lineLength,
-		const AbstractBlock *&_endBlock,
-		int repeat) {
+		int lineStart,
+		int &lineLength,
+		const AbstractBlock *&endBlock,
+		int recursed) {
 	_f = _t->_st->font;
 	auto engine = StackEngine(
 		_t,
@@ -1304,11 +1306,13 @@ void Renderer::prepareElidedLine(
 		- _quotePadding.left()
 		- _quotePadding.right();
 
-	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
-	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0, i;
-
-	auto elideWidth = _t->_st->font->elidew;
-	for (i = 0; i < nItems; ++i) {
+	const auto firstItem = e.findItem(lineStart);
+	const auto lastItem = e.findItem(lineStart + lineLength - 1);
+	const auto nItems = (firstItem >= 0 && lastItem >= firstItem)
+		? (lastItem - firstItem + 1)
+		: 0;
+	auto elisionWidth = _t->_st->font->elidew;
+	for (auto i = 0; i < nItems; ++i) {
 		const auto blockIt = engine.shapeGetBlock(firstItem + i);
 		const auto block = blockIt->get();
 		const auto blockIndex = int(blockIt - begin(_t->_blocks));
@@ -1316,20 +1320,20 @@ void Renderer::prepareElidedLine(
 			? _t->_blocks[blockIndex + 1].get()
 			: nullptr;
 		const auto font = WithFlags(_t->_st->font, block->flags());
-		elideWidth = font->elidew;
+		elisionWidth = font->elidew;
 		auto &si = e.layoutData->items[firstItem + i];
 		const auto _type = block->type();
 		if (_type == TextBlockType::Emoji
 			|| _type == TextBlockType::CustomEmoji
 			|| _type == TextBlockType::Skip
 			|| _type == TextBlockType::Newline) {
-			if (_wLeft < elideWidth + si.width) {
-				_wLeft -= elideWidth;
+			if (_wLeft < elisionWidth + si.width) {
+				_wLeft -= elisionWidth;
 				lineText = lineText.mid(0, block->position() - _localFrom) + kQEllipsis;
 				lineLength = block->position() + kQEllipsis.size() - _lineStart;
 				_selection.to = qMin(_selection.to, block->position());
 				setElideBidi(block->position(), kQEllipsis.size());
-				elideSaveBlock(blockIndex, _endBlock, block->position(), elideWidth);
+				endBlock = markBlockForElisionGetEnd(blockIndex);
 				return;
 			}
 			_wLeft -= si.width;
@@ -1350,26 +1354,26 @@ void Renderer::prepareElidedLine(
 
 			for (auto g = glyphsStart; g < glyphsEnd; ++g) {
 				auto adv = glyphs.effectiveAdvance(g);
-				if (_wLeft < elideWidth + adv) {
-					_wLeft -= elideWidth;
+				if (_wLeft < elisionWidth + adv) {
+					_wLeft -= elisionWidth;
 
 					auto pos = itemStart;
 					while (pos < itemEnd && logClusters[pos - si.position] < g) {
 						++pos;
 					}
 
-					if (lineText.size() <= pos || repeat > 3) {
+					if (lineText.size() <= pos || recursed > 3) {
 						lineText += kQEllipsis;
 						lineLength = _localFrom + pos + kQEllipsis.size() - _lineStart;
 						_selection.to = qMin(_selection.to, uint16(_localFrom + pos));
 						setElideBidi(_localFrom + pos, kQEllipsis.size());
-						elideSaveBlock(blockIndex, _endBlock, _localFrom + pos, elideWidth);
+						endBlock = markBlockForElisionGetEnd(blockIndex);
 					} else {
 						lineText = lineText.mid(0, pos);
 						lineLength = _localFrom + pos - _lineStart;
 						_blocksSize = blockIndex + 1;
-						_endBlock = nextBlock;
-						prepareElidedLine(lineText, lineStart, lineLength, _endBlock, repeat + 1);
+						endBlock = nextBlock;
+						prepareElidedLine(lineText, lineStart, lineLength, endBlock, recursed + 1);
 					}
 					return;
 				} else {
@@ -1379,9 +1383,9 @@ void Renderer::prepareElidedLine(
 		}
 	}
 
-	_wLeft -= elideWidth;
+	_wLeft -= elisionWidth;
 
-	int32 elideStart = _localFrom + lineText.size();
+	const auto elideStart = _localFrom + lineText.size();
 	_selection.to = qMin(_selection.to, uint16(elideStart));
 	setElideBidi(elideStart, kQEllipsis.size());
 
@@ -1392,10 +1396,10 @@ void Renderer::prepareElidedLine(
 	lineText += kQEllipsis;
 	lineLength += kQEllipsis.size();
 
-	if (repeat) {
+	if (recursed) {
 		_indexOfElidedBlock = blockIndex;
 	} else {
-		elideSaveBlock(blockIndex, _endBlock, elideStart, elideWidth);
+		endBlock = markBlockForElisionGetEnd(blockIndex);
 	}
 }
 

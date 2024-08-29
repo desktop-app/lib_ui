@@ -18,6 +18,12 @@ public:
 	explicit WordParser(not_null<String*> string);
 
 private:
+	struct BidiInitedAnalysis {
+		explicit BidiInitedAnalysis(not_null<String*> text);
+
+		QVarLengthArray<QScriptAnalysis, 4096> list;
+	};
+
 	void parse();
 
 	void pushFinishedWord(uint16 position, QFixed width, QFixed rbearing);
@@ -35,7 +41,7 @@ private:
 	QString &_tText;
 	std::vector<Block> &_tBlocks;
 	std::vector<Word> &_tWords;
-	QVarLengthArray<QScriptAnalysis, 4096> _analysis;
+	BidiInitedAnalysis _analysis;
 	StackEngine _engine;
 
 };

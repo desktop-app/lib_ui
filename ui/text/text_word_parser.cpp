@@ -6,6 +6,7 @@
 //
 #include "ui/text/text_word_parser.h"
 
+#include "ui/text/text_bidi_algorithm.h"
 #include "styles/style_basic.h"
 
 // COPIED FROM qtextlayout.cpp AND MODIFIED
@@ -160,13 +161,26 @@ void addNextCluster(
 
 } // anonymous namespace
 
+WordParser::BidiInitedAnalysis::BidiInitedAnalysis(not_null<String*> text)
+: list(text->_text.size()) {
+	BidiAlgorithm bidi(
+		text->_text.constData(),
+		list.data(),
+		text->_text.size(),
+		false, // baseDirectionIsRtl
+		begin(text->_blocks),
+		end(text->_blocks),
+		0); // offsetInBlocks
+	bidi.process();
+}
+
 WordParser::WordParser(not_null<String*> string)
 : _t(string)
 , _tText(_t->_text)
 , _tBlocks(_t->_blocks)
 , _tWords(_t->_words)
-, _analysis(_tText.size())
-, _engine(_t, _analysis) {
+, _analysis(_t)
+, _engine(_t, _analysis.list) {
 	parse();
 }
 

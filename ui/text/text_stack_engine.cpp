@@ -156,9 +156,9 @@ void StackEngine::itemize() {
 
 		auto start = 0;
 		auto startBlock = _bStart;
-		auto nextBlock = startBlock + 1;
+		auto currentBlock = startBlock;
+		auto nextBlock = currentBlock + 1;
 		for (int i = 1; i != length; ++i) {
-			auto currentBlock = startBlock;
 			while (blockPosition(nextBlock) <= _offset + i) {
 				currentBlock = nextBlock++;
 			}
@@ -173,13 +173,18 @@ void StackEngine::itemize() {
 			// the font and because Japanese and Chinese are also aliases of the script "Common",
 			// doing this would break too many things.  So instead we only pass the full stop
 			// along, and nothing else.
-			if (currentBlock == startBlock
-				&& m_analysis[i].bidiLevel == m_analysis[start].bidiLevel
+			if (currentBlock != startBlock) {
+			} else if ((*startBlock)->type() != TextBlockType::Text) {
+				// Only text blocks may have more than one item.
+				Assert(i - start < kMaxItemLength);
+				continue;
+			} else if (m_analysis[i].bidiLevel == m_analysis[start].bidiLevel
 				&& m_analysis[i].flags == m_analysis[start].flags
 				&& (m_analysis[i].script == m_analysis[start].script || m_string[i] == u'.')
 				//&& m_analysis[i].flags < QScriptAnalysis::SpaceTabOrObject // only emojis are objects here, no tabs
-				&& i - start < kMaxItemLength)
+				&& i - start < kMaxItemLength) {
 				continue;
+			}
 			m_items.append(QScriptItem(start, m_analysis[start]));
 			start = i;
 			startBlock = currentBlock;
