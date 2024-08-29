@@ -61,9 +61,8 @@ private:
 		LPARAM lParam);
 	[[nodiscard]] bool working() const;
 	void destroy();
-	void create();
+	void init(QColor color);
 	void initBlend();
-	void updateColor();
 	void initCorners(Directions directions = Direction::All);
 	void verCorners(int h, Gdiplus::Graphics *pgraphics1, Gdiplus::Graphics *pgraphics3);
 	void horCorners(int w, Gdiplus::Graphics *pgraphics0, Gdiplus::Graphics *pgraphics2);
@@ -72,7 +71,7 @@ private:
 	[[nodiscard]] Gdiplus::Pen getPen(uchar alpha) const;
 
 	const not_null<RpWidget*> _window;
-	HWND _handle = nullptr;
+	const HWND _handle;
 
 	int _x = 0;
 	int _y = 0;
