@@ -97,13 +97,17 @@ private:
 	void composeHighlightPath();
 	[[nodiscard]] const AbstractBlock *markBlockForElisionGetEnd(
 		int blockIndex);
-	void setElideBidi(int elideStart, int elideLength);
+	void setElideBidi(int elideStart);
 	void prepareElidedLine(
 		QString &lineText,
 		int lineStart,
 		int &lineLength,
 		const AbstractBlock *&endBlock,
 		int recursed = 0);
+	void prepareElisionAt(
+		QString &lineText,
+		int &lineLength,
+		uint16 position);
 	void restoreAfterElided();
 
 	void fillParagraphBg(int paddingBottom);
