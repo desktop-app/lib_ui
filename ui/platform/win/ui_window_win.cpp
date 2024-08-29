@@ -183,6 +183,9 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 , NativeEventFilter(window)
 , _title(Ui::CreateChild<TitleWidget>(window.get()))
 , _body(Ui::CreateChild<RpWidget>(window.get())) {
+	if (!::Platform::IsWindows8OrGreater()) {
+		window->setWindowFlag(Qt::FramelessWindowHint);
+	}
 	init();
 }
 
@@ -230,9 +233,9 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
 void WindowHelper::setNativeFrame(bool enabled) {
-	if (!::Platform::IsWindows8OrGreater()) {
+	if (_handle && !::Platform::IsWindows8OrGreater()) {
 		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
-		if (_handle && !enabled) {
+		if (!enabled) {
 			FixAeroSnap(_handle);
 		}
 	}
@@ -355,13 +358,15 @@ void WindowHelper::init() {
 
 	window()->winIdValue() | rpl::start_with_next([=](WId winId) {
 		_handle = reinterpret_cast<HWND>(winId);
+
 		if (!::Platform::IsWindows8OrGreater()) {
 			const auto native = _title->isHidden();
-			window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !native);
+			window()->setWindowFlag(Qt::FramelessWindowHint, !native);
 			if (_handle && !native) {
 				FixAeroSnap(_handle);
 			}
 		}
+
 		if (_handle) {
 			_dpi = GetDpiForWindowSupported()
 				? GetDpiForWindow(_handle)
