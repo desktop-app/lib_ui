@@ -173,9 +173,15 @@ void StackEngine::itemize() {
 			// the font and because Japanese and Chinese are also aliases of the script "Common",
 			// doing this would break too many things.  So instead we only pass the full stop
 			// along, and nothing else.
-			if (currentBlock != startBlock) {
-			} else if ((*startBlock)->type() != TextBlockType::Text) {
-				// Only text blocks may have more than one item.
+			if (currentBlock != startBlock
+				|| m_analysis[i].flags != m_analysis[start].flags) {
+				// In emoji blocks we can have one item or two items.
+				// First item is the emoji itself,
+				// while the second item are the spaces after the emoji,
+				// which fall in the same block, but have different flags.
+			} else if ((*startBlock)->type() != TextBlockType::Text
+				&& m_analysis[i].flags == m_analysis[start].flags) {
+				// Otherwise, only text blocks may have arbitrary items.
 				Assert(i - start < kMaxItemLength);
 				continue;
 			} else if (m_analysis[i].bidiLevel == m_analysis[start].bidiLevel
