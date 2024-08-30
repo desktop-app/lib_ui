@@ -11,67 +11,15 @@
 
 // COPIED FROM qtextlayout.cpp AND MODIFIED
 namespace Ui::Text {
-namespace {
 
-struct ScriptLine {
-	int length = 0;
-	QFixed textWidth;
-};
-
-// All members finished with "_" are internal.
-struct LineBreakHelper {
-	ScriptLine tmpData;
-	ScriptLine spaceData;
-
-	QGlyphLayout glyphs;
-
-	int glyphCount = 0;
-	int maxGlyphs = INT_MAX;
-	int currentPosition = 0;
-
-	glyph_t previousGlyph = 0;
-	QExplicitlySharedDataPointer<QFontEngine> previousGlyphFontEngine;
-
-	QFixed rightBearing;
-
-	QExplicitlySharedDataPointer<QFontEngine> fontEngine;
-	const unsigned short *logClusters = nullptr;
-
-	bool whiteSpaceOrObject = true;
-
-	glyph_t currentGlyph() const;
-	void saveCurrentGlyph();
-	void calculateRightBearing(QFontEngine *engine, glyph_t glyph);
-	void calculateRightBearing();
-	void calculateRightBearingForPreviousGlyph();
-
-	// We always calculate the right bearing right before it is needed.
-	// So we don't need caching / optimizations referred to
-	// delayed right bearing calculations.
-
-	//static const QFixed RightBearingNotCalculated;
-
-	//inline void resetRightBearing()
-	//{
-	//	rightBearing = RightBearingNotCalculated;
-	//}
-
-	// We express the negative right bearing as an absolute number
-	// so that it can be applied to the width using addition.
-	QFixed negativeRightBearing() const;
-
-};
-
-//const QFixed LineBreakHelper::RightBearingNotCalculated = QFixed(1);
-
-glyph_t LineBreakHelper::currentGlyph() const {
+glyph_t WordParser::LineBreakHelper::currentGlyph() const {
 	Q_ASSERT(currentPosition > 0);
 	Q_ASSERT(logClusters[currentPosition - 1] < glyphs.numGlyphs);
 
 	return glyphs.glyphs[logClusters[currentPosition - 1]];
 }
 
-void LineBreakHelper::saveCurrentGlyph() {
+void WordParser::LineBreakHelper::saveCurrentGlyph() {
 	if (currentPosition > 0
 		&& logClusters[currentPosition - 1] < glyphs.numGlyphs) {
 		// needed to calculate right bearing later
@@ -83,7 +31,7 @@ void LineBreakHelper::saveCurrentGlyph() {
 	}
 }
 
-void LineBreakHelper::calculateRightBearing(
+void WordParser::LineBreakHelper::calculateRightBearing(
 		QFontEngine *engine,
 		glyph_t glyph) {
 	qreal rb;
@@ -96,7 +44,7 @@ void LineBreakHelper::calculateRightBearing(
 	rightBearing = qMin(QFixed::fromReal(rb), QFixed(0));
 }
 
-void LineBreakHelper::calculateRightBearing() {
+void WordParser::LineBreakHelper::calculateRightBearing() {
 	if (currentPosition > 0
 		&& logClusters[currentPosition - 1] < glyphs.numGlyphs
 		&& !whiteSpaceOrObject) {
@@ -106,7 +54,7 @@ void LineBreakHelper::calculateRightBearing() {
 	}
 }
 
-void LineBreakHelper::calculateRightBearingForPreviousGlyph() {
+void WordParser::LineBreakHelper::calculateRightBearingForPreviousGlyph() {
 	if (previousGlyph > 0) {
 		calculateRightBearing(previousGlyphFontEngine.data(), previousGlyph);
 	} else {
@@ -119,21 +67,21 @@ void LineBreakHelper::calculateRightBearingForPreviousGlyph() {
 
 //static const QFixed RightBearingNotCalculated;
 
-//inline void resetRightBearing()
+//inline void WordParser::LineBreakHelper::resetRightBearing()
 //{
 //	rightBearing = RightBearingNotCalculated;
 //}
 
 // We express the negative right bearing as an absolute number
 // so that it can be applied to the width using addition.
-QFixed LineBreakHelper::negativeRightBearing() const {
+QFixed WordParser::LineBreakHelper::negativeRightBearing() const {
 	//if (rightBearing == RightBearingNotCalculated)
 	//	return QFixed(0);
 
 	return qAbs(rightBearing);
 }
 
-void addNextCluster(
+void WordParser::addNextCluster(
 		int &pos,
 		int end,
 		ScriptLine &line,
@@ -159,8 +107,6 @@ void addNextCluster(
 	++glyphCount;
 }
 
-} // anonymous namespace
-
 WordParser::BidiInitedAnalysis::BidiInitedAnalysis(not_null<String*> text)
 : list(text->_text.size()) {
 	BidiAlgorithm bidi(
@@ -180,7 +126,8 @@ WordParser::WordParser(not_null<String*> string)
 , _tBlocks(_t->_blocks)
 , _tWords(_t->_words)
 , _analysis(_t)
-, _engine(_t, _analysis.list) {
+, _engine(_t, _analysis.list)
+, _e(_engine.wrapped()) {
 	parse();
 }
 
@@ -189,213 +136,197 @@ void WordParser::parse() {
 	if (_tText.isEmpty()) {
 		return;
 	}
-	auto &e = _engine.wrapped();
-
-	LineBreakHelper lbh;
-
-	int item = -1;
-	int newItem = e.findItem(0);
-
-	const QCharAttributes *attributes = e.attributes();
-	if (!attributes)
+	_newItem = _e.findItem(0);
+	_attributes = _e.attributes();
+	if (!_attributes) {
 		return;
-	int end = 0;
-	lbh.logClusters = e.layoutData->logClustersPtr;
+	}
+	_lbh.logClusters = _e.layoutData->logClustersPtr;
 
-	int wordStart = lbh.currentPosition;
-
-	bool addingEachGrapheme = false;
-	int lastGraphemeBoundaryPosition = -1;
-	ScriptLine lastGraphemeBoundaryLine;
-
-	while (newItem < e.layoutData->items.size()) {
-		if (newItem != item) {
-			item = newItem;
-			auto &si = e.layoutData->items[item];
-			if (!si.num_glyphs) {
-				_engine.shapeGetBlock(item);
-				attributes = e.attributes();
-				if (!attributes)
-					return;
-				lbh.logClusters = e.layoutData->logClustersPtr;
-			}
-			lbh.currentPosition = si.position;
-			end = si.position + e.length(item);
-			lbh.glyphs = e.shapedGlyphs(&si);
-			QFontEngine *fontEngine = e.fontEngine(si);
-			if (lbh.fontEngine != fontEngine) {
-				lbh.fontEngine = fontEngine;
+	while (_newItem < _e.layoutData->items.size()) {
+		if (_newItem != _item) {
+			_attributes = moveToNewItemGetAttributes();
+			if (!_attributes) {
+				return;
 			}
 		}
-		const QScriptItem &current = e.layoutData->items[item];
+		const auto &current = _e.layoutData->items[_item];
 		const auto atSpaceBreak = [&] {
-			for (auto index = lbh.currentPosition; index < end; ++index) {
-				if (!attributes[index].whiteSpace) {
+			for (auto index = _lbh.currentPosition; index < _itemEnd; ++index) {
+				if (!_attributes[index].whiteSpace) {
 					return false;
-				} else if (isSpaceBreak(attributes, index)) {
+				} else if (isSpaceBreak(_attributes, index)) {
 					return true;
 				}
 			}
 			return false;
 		}();
 		if (current.analysis.flags == QScriptAnalysis::LineOrParagraphSeparator) {
-			if (wordStart < lbh.currentPosition) {
-				lbh.calculateRightBearing();
-				pushFinishedWord(
-					wordStart,
-					lbh.tmpData.textWidth,
-					-lbh.negativeRightBearing());
-				lbh.tmpData.textWidth = 0;
-				lbh.tmpData.length = 0;
-				wordStart = lbh.currentPosition;
-
-				addingEachGrapheme = false;
-				lastGraphemeBoundaryPosition = -1;
-				lastGraphemeBoundaryLine = ScriptLine();
-			}
-
-			lbh.whiteSpaceOrObject = true;
-			lbh.tmpData.length++;
-
-			newItem = item + 1;
-			++lbh.glyphCount;
-
-			pushNewline(wordStart, _engine.blockIndex(wordStart));
-			lbh.tmpData.textWidth = 0;
-			lbh.tmpData.length = 0;
-			wordStart = end;
-
-			addingEachGrapheme = false;
-			lastGraphemeBoundaryPosition = -1;
-			lastGraphemeBoundaryLine = ScriptLine();
+			pushAccumulatedWord();
+			processSingleGlyphItem();
+			pushNewline(_wordStart, _engine.blockIndex(_wordStart));
+			wordProcessed(_itemEnd);
 		} else if (current.analysis.flags == QScriptAnalysis::Object) {
-			if (wordStart < lbh.currentPosition) {
-				lbh.calculateRightBearing();
-				pushFinishedWord(
-					wordStart,
-					lbh.tmpData.textWidth,
-					-lbh.negativeRightBearing());
-				lbh.tmpData.textWidth = 0;
-				lbh.tmpData.length = 0;
-				wordStart = lbh.currentPosition;
-
-				addingEachGrapheme = false;
-				lastGraphemeBoundaryPosition = -1;
-				lastGraphemeBoundaryLine = ScriptLine();
-			}
-
-			lbh.whiteSpaceOrObject = true;
-			lbh.tmpData.length++;
-			lbh.tmpData.textWidth += current.width;
-
-			newItem = item + 1;
-			++lbh.glyphCount;
-
-			lbh.calculateRightBearing();
+			pushAccumulatedWord();
+			processSingleGlyphItem(current.width);
+			_lbh.calculateRightBearing();
 			pushFinishedWord(
-				wordStart,
-				lbh.tmpData.textWidth,
-				-lbh.negativeRightBearing());
-			lbh.tmpData.textWidth = 0;
-			lbh.tmpData.length = 0;
-			wordStart = end;
-
-			addingEachGrapheme = false;
-			lastGraphemeBoundaryPosition = -1;
-			lastGraphemeBoundaryLine = ScriptLine();
+				_wordStart,
+				_lbh.tmpData.textWidth,
+				-_lbh.negativeRightBearing());
+			wordProcessed(_itemEnd);
 		} else if (atSpaceBreak) {
-			lbh.whiteSpaceOrObject = true;
-			while (lbh.currentPosition < end
-				&& attributes[lbh.currentPosition].whiteSpace)
-				addNextCluster(
-					lbh.currentPosition,
-					end,
-					lbh.spaceData,
-					lbh.glyphCount,
-					current,
-					lbh.logClusters,
-					lbh.glyphs);
-
-			if (_tWords.empty()) {
-				lbh.calculateRightBearing();
-				pushFinishedWord(
-					wordStart,
-					lbh.tmpData.textWidth,
-					-lbh.negativeRightBearing());
-			}
-			_tWords.back().add_rpadding(lbh.spaceData.textWidth);
-			lbh.spaceData.length = 0;
-			lbh.spaceData.textWidth = 0;
-
-			wordStart = lbh.currentPosition;
-
-			addingEachGrapheme = false;
-			lastGraphemeBoundaryPosition = -1;
-			lastGraphemeBoundaryLine = ScriptLine();
+			accumulateWhitespaces();
+			ensureWordForRightPadding();
+			_tWords.back().add_rpadding(_lbh.spaceData.textWidth);
+			wordProcessed(_lbh.currentPosition, true);
 		} else {
-			lbh.whiteSpaceOrObject = false;
+			_lbh.whiteSpaceOrObject = false;
 			do {
 				addNextCluster(
-					lbh.currentPosition,
-					end,
-					lbh.tmpData,
-					lbh.glyphCount,
+					_lbh.currentPosition,
+					_itemEnd,
+					_lbh.tmpData,
+					_lbh.glyphCount,
 					current,
-					lbh.logClusters,
-					lbh.glyphs);
+					_lbh.logClusters,
+					_lbh.glyphs);
 
-				if (lbh.currentPosition >= e.layoutData->string.length()
-					|| isSpaceBreak(attributes, lbh.currentPosition)
-					|| isLineBreak(attributes, lbh.currentPosition)) {
-					lbh.calculateRightBearing();
+				if (_lbh.currentPosition >= _e.layoutData->string.length()
+					|| isSpaceBreak(_attributes, _lbh.currentPosition)
+					|| isLineBreak(_attributes, _lbh.currentPosition)) {
+					maybeStartUnfinishedWord();
+					_lbh.calculateRightBearing();
 					pushFinishedWord(
-						wordStart,
-						lbh.tmpData.textWidth,
-						-lbh.negativeRightBearing());
-					lbh.tmpData.textWidth = 0;
-					lbh.tmpData.length = 0;
-					wordStart = lbh.currentPosition;
-
-					addingEachGrapheme = false;
-					lastGraphemeBoundaryPosition = -1;
-					lastGraphemeBoundaryLine = ScriptLine();
+						_wordStart,
+						_lbh.tmpData.textWidth,
+						-_lbh.negativeRightBearing());
+					wordProcessed(_lbh.currentPosition);
 					break;
-				} else if (attributes[lbh.currentPosition].graphemeBoundary) {
-					if (!addingEachGrapheme && lbh.tmpData.textWidth > _t->_minResizeWidth) {
-						if (lastGraphemeBoundaryPosition >= 0) {
-							lbh.calculateRightBearingForPreviousGlyph();
-							pushUnfinishedWord(
-								wordStart,
-								lastGraphemeBoundaryLine.textWidth,
-								-lbh.negativeRightBearing());
-							lbh.tmpData.textWidth -= lastGraphemeBoundaryLine.textWidth;
-							lbh.tmpData.length -= lastGraphemeBoundaryLine.length;
-							wordStart = lastGraphemeBoundaryPosition;
-						}
-						addingEachGrapheme = true;
-					}
-					if (addingEachGrapheme) {
-						lbh.calculateRightBearing();
+				} else if (_attributes[_lbh.currentPosition].graphemeBoundary) {
+					maybeStartUnfinishedWord();
+					if (_addingEachGrapheme) {
+						_lbh.calculateRightBearing();
 						pushUnfinishedWord(
-							wordStart,
-							lbh.tmpData.textWidth,
-							-lbh.negativeRightBearing());
-						lbh.tmpData.textWidth = 0;
-						lbh.tmpData.length = 0;
-						wordStart = lbh.currentPosition;
+							_wordStart,
+							_lbh.tmpData.textWidth,
+							-_lbh.negativeRightBearing());
+						wordContinued(_lbh.currentPosition);
 					} else {
-						lastGraphemeBoundaryPosition = lbh.currentPosition;
-						lastGraphemeBoundaryLine = lbh.tmpData;
-						lbh.saveCurrentGlyph();
+						_lastGraphemeBoundaryPosition = _lbh.currentPosition;
+						_lastGraphemeBoundaryLine = _lbh.tmpData;
+						_lbh.saveCurrentGlyph();
 					}
 				}
-			} while (lbh.currentPosition < end);
+			} while (_lbh.currentPosition < _itemEnd);
 		}
-		if (lbh.currentPosition == end)
-			newItem = item + 1;
+		if (_lbh.currentPosition == _itemEnd)
+			_newItem = _item + 1;
 	}
 	if (!_tWords.empty()) {
 		_tWords.shrink_to_fit();
+	}
+}
+
+const QCharAttributes *WordParser::moveToNewItemGetAttributes() {
+	_item = _newItem;
+	auto &si = _e.layoutData->items[_item];
+	auto result = _e.attributes();
+	if (!si.num_glyphs) {
+		_engine.shapeGetBlock(_item);
+		result = _e.attributes();
+		if (!result) {
+			return nullptr;
+		}
+		_lbh.logClusters = _e.layoutData->logClustersPtr;
+	}
+	_lbh.currentPosition = si.position;
+	_itemEnd = si.position + _e.length(_item);
+	_lbh.glyphs = _e.shapedGlyphs(&si);
+	const auto fontEngine = _e.fontEngine(si);
+	if (_lbh.fontEngine != fontEngine) {
+		_lbh.fontEngine = fontEngine;
+	}
+	return result;
+}
+
+void WordParser::pushAccumulatedWord() {
+	if (_wordStart < _lbh.currentPosition) {
+		_lbh.calculateRightBearing();
+		pushFinishedWord(
+			_wordStart,
+			_lbh.tmpData.textWidth,
+			-_lbh.negativeRightBearing());
+		wordProcessed(_lbh.currentPosition);
+	}
+}
+
+void WordParser::processSingleGlyphItem(QFixed added) {
+	_lbh.whiteSpaceOrObject = true;
+	++_lbh.tmpData.length;
+	_lbh.tmpData.textWidth += added;
+
+	_newItem = _item + 1;
+	++_lbh.glyphCount;
+}
+
+void WordParser::wordProcessed(int nextWordStart, bool spaces) {
+	wordContinued(nextWordStart, spaces);
+	_addingEachGrapheme = false;
+	_lastGraphemeBoundaryPosition = -1;
+	_lastGraphemeBoundaryLine = ScriptLine();
+}
+
+void WordParser::wordContinued(int nextPartStart, bool spaces) {
+	if (spaces) {
+		_lbh.spaceData.textWidth = 0;
+		_lbh.spaceData.length = 0;
+	} else {
+		_lbh.tmpData.textWidth = 0;
+		_lbh.tmpData.length = 0;
+	}
+	_wordStart = nextPartStart;
+}
+
+void WordParser::accumulateWhitespaces() {
+	const auto &current = _e.layoutData->items[_item];
+
+	_lbh.whiteSpaceOrObject = true;
+	while (_lbh.currentPosition < _itemEnd
+		&& _attributes[_lbh.currentPosition].whiteSpace)
+		addNextCluster(
+			_lbh.currentPosition,
+			_itemEnd,
+			_lbh.spaceData,
+			_lbh.glyphCount,
+			current,
+			_lbh.logClusters,
+			_lbh.glyphs);
+}
+
+void WordParser::ensureWordForRightPadding() {
+	if (_tWords.empty()) {
+		_lbh.calculateRightBearing();
+		pushFinishedWord(
+			_wordStart,
+			_lbh.tmpData.textWidth,
+			-_lbh.negativeRightBearing());
+	}
+}
+
+void WordParser::maybeStartUnfinishedWord() {
+	if (!_addingEachGrapheme && _lbh.tmpData.textWidth > _t->_minResizeWidth) {
+		if (_lastGraphemeBoundaryPosition >= 0) {
+			_lbh.calculateRightBearingForPreviousGlyph();
+			pushUnfinishedWord(
+				_wordStart,
+				_lastGraphemeBoundaryLine.textWidth,
+				-_lbh.negativeRightBearing());
+			_lbh.tmpData.textWidth -= _lastGraphemeBoundaryLine.textWidth;
+			_lbh.tmpData.length -= _lastGraphemeBoundaryLine.length;
+			_wordStart = _lastGraphemeBoundaryPosition;
+		}
+		_addingEachGrapheme = true;
 	}
 }
 

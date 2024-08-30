@@ -232,6 +232,8 @@ void Renderer::enumerate() {
 			_lineStartPadding = _last_rPadding;
 
 			longWordLine = true;
+			lastWordStart = w + 1;
+			lastWordStart_wLeft = _wLeft;
 			continue;
 		} else if (!_quoteLinesLeft) {
 			continue;
@@ -243,7 +245,7 @@ void Renderer::enumerate() {
 		const auto newWidthLeft = _wLeft
 			- last_rBearing
 			- (_last_rPadding + w__f_width - w__f_rbearing);
-		if (newWidthLeft >= 0) {
+		if (newWidthLeft >= 0 || w->position() == _lineStart) {
 			last_rBearing = w__f_rbearing;
 			_last_rPadding = w->f_rpadding();
 			_wLeft = newWidthLeft;
