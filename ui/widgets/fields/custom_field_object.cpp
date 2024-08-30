@@ -169,6 +169,7 @@ void CustomFieldObject::drawObject(
 				.pausedSpoiler = _pausedSpoiler(),
 
 				.elisionLines = Text::kQuoteCollapsedLines,
+				.useFullWidth = true,
 			});
 		}
 		return;
