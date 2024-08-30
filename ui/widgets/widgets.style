@@ -97,7 +97,7 @@ RoundButton {
 	iconOver: icon;
 	iconPosition: point;
 
-	font: font;
+	style: TextStyle;
 
 	ripple: RippleAnimation;
 }
@@ -685,7 +685,7 @@ defaultActiveButton: RoundButton {
 
 	iconPosition: point(0px, 0px);
 
-	font: semiboldFont;
+	style: semiboldTextStyle;
 
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: activeButtonBgRipple;

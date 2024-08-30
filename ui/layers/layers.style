@@ -36,11 +36,14 @@ boxDuration: 200;
 boxRadius: 8px;
 
 boxButtonFont: font(boxFontSize semibold);
+defaultBoxButtonTextStyle: TextStyle(semiboldTextStyle) {
+	font: font(14px semibold);
+}
 defaultBoxButton: RoundButton(defaultLightButton) {
 	width: -30px;
 	height: 34px;
 	textTop: 7px;
-	font: font(14px semibold);
+	style: defaultBoxButtonTextStyle;
 }
 
 boxLabelStyle: TextStyle(boxTextStyle) {
@@ -222,6 +225,6 @@ webviewDialogSubmit: RoundButton(defaultActiveButton) {
 	width: -48px;
 	height: 34px;
 	textTop: 7px;
-	font: font(14px semibold);
+	style: defaultBoxButtonTextStyle;
 }
 webviewDialogPadding: margins(8px, 12px, 15px, 12px);

@@ -282,7 +282,8 @@ void RoundButton::setNumbersText(const QString &numbersText, int numbers) {
 		_numbers.reset();
 	} else {
 		if (!_numbers) {
-			_numbers = std::make_unique<NumbersAnimation>(_st.font, [this] {
+			const auto &font = _st.style.font;
+			_numbers = std::make_unique<NumbersAnimation>(font, [this] {
 				numbersAnimationCallback();
 			});
 		}
@@ -293,7 +294,8 @@ void RoundButton::setNumbersText(const QString &numbersText, int numbers) {
 
 void RoundButton::setWidthChangedCallback(Fn<void()> callback) {
 	if (!_numbers) {
-		_numbers = std::make_unique<NumbersAnimation>(_st.font, [this] {
+		const auto &font = _st.style.font;
+		_numbers = std::make_unique<NumbersAnimation>(font, [this] {
 			numbersAnimationCallback();
 		});
 	}
@@ -331,36 +333,36 @@ void RoundButton::setFullRadius(bool enabled) {
 }
 
 void RoundButton::resizeToText(const QString &text) {
-	_text = (_transform == TextTransform::ToUpper) ? text.toUpper() : text;
-	_textWidth = _st.font->width(_text);
-
-	int innerWidth = contentWidth();
+	_text.setText(
+		_st.style,
+		(_transform == TextTransform::ToUpper) ? text.toUpper() : text);
+	int innerWidth = _text.maxWidth() + addedWidth();
 	if (_fullWidthOverride > 0) {
 		const auto padding = _fullRadius
 			? (_st.padding.left() + _st.padding.right())
 			: 0;
-		if (_fullWidthOverride < innerWidth + (_st.height - _st.font->height)) {
-			_text = _st.font->elided(text, qMax(_fullWidthOverride - (_st.height - _st.font->height) - padding, 1));
-			_textWidth = _st.font->width(_text);
-		}
-		resize(_fullWidthOverride + padding, _st.height + _st.padding.top() + _st.padding.bottom());
+		resize(
+			_fullWidthOverride + padding,
+			_st.height + _st.padding.top() + _st.padding.bottom());
 	} else if (_fullWidthOverride < 0) {
-		resize(innerWidth - _fullWidthOverride, _st.height + _st.padding.top() + _st.padding.bottom());
+		resize(
+			innerWidth - _fullWidthOverride,
+			_st.height + _st.padding.top() + _st.padding.bottom());
 	} else if (_st.width <= 0) {
-		resize(innerWidth - _st.width + _st.padding.left() + _st.padding.right(), _st.height + _st.padding.top() + _st.padding.bottom());
+		resize(
+			innerWidth - _st.width + _st.padding.left() + _st.padding.right(),
+			_st.height + _st.padding.top() + _st.padding.bottom());
 	} else {
-		if (_st.width < innerWidth + (_st.height - _st.font->height)) {
-			_text = _st.font->elided(_text, qMax(_st.width - (_st.height - _st.font->height), 1));
-			_textWidth = _st.font->width(_text);
-		}
-		resize(_st.width + _st.padding.left() + _st.padding.right(), _st.height + _st.padding.top() + _st.padding.bottom());
+		resize(
+			_st.width + _st.padding.left() + _st.padding.right(),
+			_st.height + _st.padding.top() + _st.padding.bottom());
 	}
 
 	update();
 }
 
-int RoundButton::contentWidth() const {
-	auto result = _textWidth;
+int RoundButton::addedWidth() const {
+	auto result = 0;
 	if (_numbers) {
 		result += (result ? _st.numbersSkip : 0) + _numbers->countWidth();
 	}
@@ -368,6 +370,24 @@ int RoundButton::contentWidth() const {
 		result += _st.icon.width() - _st.iconPosition.x();
 	}
 	return result;
+}
+
+int RoundButton::contentWidth() const {
+	auto result = _text.maxWidth() + addedWidth();
+	if (_fullWidthOverride < 0) {
+		return result;
+	} else if (_fullWidthOverride > 0) {
+		const auto padding = _fullRadius
+			? (_st.padding.left() + _st.padding.right())
+			: 0;
+		const auto delta = _st.height - _st.style.font->height;
+		if (_fullWidthOverride < result + delta) {
+			return std::max(_fullWidthOverride - delta - padding, 1);
+		}
+	}
+	return std::min(
+		result,
+		width() - _st.padding.left() - _st.padding.right());
 }
 
 void RoundButton::paintEvent(QPaintEvent *e) {
@@ -411,7 +431,6 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		paintRipple(p, rounded.topLeft());
 	}
 
-	p.setFont(_st.font);
 	const auto textTop = _st.padding.top() + _st.textTop;
 	auto textLeft = _st.padding.left()
 		+ ((width()
@@ -430,12 +449,18 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 	const auto iconTop = (_st.iconPosition.y() >= 0)
 		? _st.iconPosition.y()
 		: (textTop + _st.iconPosition.y());
+	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
 	if (!_text.isEmpty()) {
 		p.setPen((over || down) ? _st.textFgOver : _st.textFg);
-		p.drawTextLeft(textLeft, textTop, width(), _text);
+		_text.draw(p, {
+			.position = { textLeft, textTop },
+			.availableWidth = widthForText,
+			.elisionLines = 1,
+		});
 	}
 	if (_numbers) {
-		textLeft += _textWidth + (_textWidth ? _st.numbersSkip : 0);
+		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
+		p.setFont(_st.style.font);
 		p.setPen((over || down) ? _st.numbersTextFgOver : _st.numbersTextFg);
 		_numbers->paint(p, textLeft, textTop, width());
 	}
