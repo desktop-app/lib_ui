@@ -245,7 +245,8 @@ void Renderer::enumerate() {
 		const auto newWidthLeft = _wLeft
 			- last_rBearing
 			- (_last_rPadding + w__f_width - w__f_rbearing);
-		if (newWidthLeft >= 0 || w->position() == _lineStart) {
+		if (newWidthLeft >= 0
+			|| (w->position() == _lineStart && !_elidedLine)) {
 			last_rBearing = w__f_rbearing;
 			_last_rPadding = w->f_rpadding();
 			_wLeft = newWidthLeft;
