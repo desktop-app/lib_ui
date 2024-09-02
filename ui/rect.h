@@ -87,6 +87,21 @@ namespace pos {
 	return w->y() + w->height();
 }
 
+/*
+	rect::center(mywidget);
+*/
+[[nodiscard]] inline QPoint center(const QRect &r) {
+	return { r.left() + r.width() / 2, r.top() + r.height() / 2 };
+}
+
+[[nodiscard]] inline QPointF center(const QRectF &r) {
+	return { r.left() + r.width() / 2, r.top() + r.height() / 2 };
+}
+
+[[nodiscard]] inline QPoint center(not_null<const QWidget*> w) {
+	return { w->x() + w->width() / 2, w->y() + w->height() / 2 };
+}
+
 } // namespace rect
 
 /*
