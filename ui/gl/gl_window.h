@@ -29,13 +29,9 @@ public:
 private:
 	[[nodiscard]] std::unique_ptr<RpWindow> createWindow(
 		const Fn<Backend(Capabilities)> &chooseBackend);
-	[[nodiscard]] std::unique_ptr<RpWidget> createNativeBodyWrap(
-		const Fn<Backend(Capabilities)> &chooseBackend);
 
 	Backend _backend = Backend();
 	const std::unique_ptr<RpWindow> _window;
-	const std::unique_ptr<RpWidget> _bodyNativeWrap;
-	const not_null<RpWidget*> _body;
 
 };
 

@@ -958,19 +958,6 @@ HWND GetCurrentHandle(not_null<QWindow*> window) {
 	return reinterpret_cast<HWND>(window->winId());
 }
 
-void SendWMPaintForce(not_null<QWidget*> widget) {
-	const auto toplevel = widget->window();
-	if (const auto window = toplevel->windowHandle()) {
-		SendWMPaintForce(window);
-	}
-}
-
-void SendWMPaintForce(not_null<QWindow*> window) {
-	if (const auto handle = GetCurrentHandle(window)) {
-		::InvalidateRect(handle, nullptr, FALSE);
-	}
-}
-
 std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 		not_null<RpWidget*> window) {
 	return std::make_unique<WindowHelper>(window);

@@ -90,8 +90,5 @@ private:
 [[nodiscard]] HWND GetCurrentHandle(not_null<QWidget*> widget);
 [[nodiscard]] HWND GetCurrentHandle(not_null<QWindow*> window);
 
-void SendWMPaintForce(not_null<QWidget*> widget);
-void SendWMPaintForce(not_null<QWindow*> window);
-
 } // namespace Platform
 } // namespace Ui
