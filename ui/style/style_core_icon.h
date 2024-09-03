@@ -56,11 +56,22 @@ public:
 	void paint(QPainter &p, const QPoint &pos, int outerw) const;
 	void fill(QPainter &p, const QRect &rect) const;
 
-	void paint(QPainter &p, const QPoint &pos, int outerw, QColor colorOverride) const;
+	void paint(
+		QPainter &p,
+		const QPoint &pos,
+		int outerw,
+		QColor colorOverride) const;
 	void fill(QPainter &p, const QRect &rect, QColor colorOverride) const;
 
-	void paint(QPainter &p, const QPoint &pos, int outerw, const style::palette &paletteOverride) const;
-	void fill(QPainter &p, const QRect &rect, const style::palette &paletteOverride) const;
+	void paint(
+		QPainter &p,
+		const QPoint &pos,
+		int outerw,
+		const style::palette &paletteOverride) const;
+	void fill(
+		QPainter &p,
+		const QRect &rect,
+		const style::palette &paletteOverride) const;
 
 	[[nodiscard]] QImage instance(
 		QColor colorOverride,
@@ -112,19 +123,30 @@ public:
 	}
 	void fill(QPainter &p, const QRect &rect) const;
 
-	void paint(QPainter &p, const QPoint &pos, int outerw, QColor colorOverride) const {
+	void paint(
+			QPainter &p,
+			const QPoint &pos,
+			int outerw,
+			QColor colorOverride) const {
 		for (const auto &part : _parts) {
 			part.paint(p, pos, outerw, colorOverride);
 		}
 	}
 	void fill(QPainter &p, const QRect &rect, QColor colorOverride) const;
 
-	void paint(QPainter &p, const QPoint &pos, int outerw, const style::palette &paletteOverride) const {
+	void paint(
+			QPainter &p,
+			const QPoint &pos,
+			int outerw,
+			const style::palette &paletteOverride) const {
 		for (const auto &part : _parts) {
 			part.paint(p, pos, outerw, paletteOverride);
 		}
 	}
-	void fill(QPainter &p, const QRect &rect, const style::palette &paletteOverride) const;
+	void fill(
+		QPainter &p,
+		const QRect &rect,
+		const style::palette &paletteOverride) const;
 
 	[[nodiscard]] QImage instance(
 		QColor colorOverride,
@@ -205,20 +227,43 @@ public:
 		return _data->paint(p, QPoint(x, y), outerw);
 	}
 	void paintInCenter(QPainter &p, const QRect &outer) const {
-		return _data->paint(p, QPoint(outer.x() + (outer.width() - width()) / 2, outer.y() + (outer.height() - height()) / 2), outer.x() * 2 + outer.width());
+		return _data->paint(
+			p,
+			QPoint(
+				outer.x() + (outer.width() - width()) / 2,
+				outer.y() + (outer.height() - height()) / 2),
+			outer.x() * 2 + outer.width());
 	}
 	void fill(QPainter &p, const QRect &rect) const {
 		return _data->fill(p, rect);
 	}
 
-	void paint(QPainter &p, const QPoint &pos, int outerw, QColor colorOverride) const {
+	void paint(
+			QPainter &p,
+			const QPoint &pos,
+			int outerw,
+			QColor colorOverride) const {
 		return _data->paint(p, pos, outerw, colorOverride);
 	}
-	void paint(QPainter &p, int x, int y, int outerw, QColor colorOverride) const {
+	void paint(
+			QPainter &p,
+			int x,
+			int y,
+			int outerw,
+			QColor colorOverride) const {
 		return _data->paint(p, QPoint(x, y), outerw, colorOverride);
 	}
-	void paintInCenter(QPainter &p, const QRect &outer, QColor colorOverride) const {
-		return _data->paint(p, QPoint(outer.x() + (outer.width() - width()) / 2, outer.y() + (outer.height() - height()) / 2), outer.x() * 2 + outer.width(), colorOverride);
+	void paintInCenter(
+			QPainter &p,
+			const QRect &outer,
+			QColor colorOverride) const {
+		return _data->paint(
+			p,
+			QPoint(
+				outer.x() + (outer.width() - width()) / 2,
+				outer.y() + (outer.height() - height()) / 2),
+			outer.x() * 2 + outer.width(),
+			colorOverride);
 	}
 	void fill(QPainter &p, const QRect &rect, QColor colorOverride) const {
 		return _data->fill(p, rect, colorOverride);
@@ -233,7 +278,9 @@ public:
 
 	class Proxy {
 	public:
-		Proxy(const Icon &icon, const style::palette &palette) : _icon(icon), _palette(palette) {
+		Proxy(const Icon &icon, const style::palette &palette)
+		: _icon(icon)
+		, _palette(palette) {
 		}
 		Proxy(const Proxy &other) = default;
 
@@ -277,16 +324,37 @@ public:
 private:
 	friend class Proxy;
 
-	void paintWithPalette(QPainter &p, const QPoint &pos, int outerw, const style::palette &paletteOverride) const {
+	void paintWithPalette(
+			QPainter &p,
+			const QPoint &pos,
+			int outerw,
+			const style::palette &paletteOverride) const {
 		return _data->paint(p, pos, outerw, paletteOverride);
 	}
-	void paintWithPalette(QPainter &p, int x, int y, int outerw, const style::palette &paletteOverride) const {
+	void paintWithPalette(
+			QPainter &p,
+			int x,
+			int y,
+			int outerw,
+			const style::palette &paletteOverride) const {
 		return _data->paint(p, QPoint(x, y), outerw, paletteOverride);
 	}
-	void paintInCenterWithPalette(QPainter &p, const QRect &outer, const style::palette &paletteOverride) const {
-		return _data->paint(p, QPoint(outer.x() + (outer.width() - width()) / 2, outer.y() + (outer.height() - height()) / 2), outer.x() * 2 + outer.width(), paletteOverride);
+	void paintInCenterWithPalette(
+			QPainter &p,
+			const QRect &outer,
+			const style::palette &paletteOverride) const {
+		return _data->paint(
+			p,
+			QPoint(
+				outer.x() + (outer.width() - width()) / 2,
+				outer.y() + (outer.height() - height()) / 2),
+			outer.x() * 2 + outer.width(),
+			paletteOverride);
 	}
-	void fillWithPalette(QPainter &p, const QRect &rect, const style::palette &paletteOverride) const {
+	void fillWithPalette(
+			QPainter &p,
+			const QRect &rect,
+			const style::palette &paletteOverride) const {
 		return _data->fill(p, rect, paletteOverride);
 	}
 
