@@ -234,6 +234,7 @@ public:
 				outer.y() + (outer.height() - height()) / 2),
 			outer.x() * 2 + outer.width());
 	}
+	void paintInCenter(QPainter &p, const QRectF &outer) const;
 	void fill(QPainter &p, const QRect &rect) const {
 		return _data->fill(p, rect);
 	}
@@ -265,6 +266,10 @@ public:
 			outer.x() * 2 + outer.width(),
 			colorOverride);
 	}
+	void paintInCenter(
+		QPainter &p,
+		const QRectF &outer,
+		QColor override) const;
 	void fill(QPainter &p, const QRect &rect, QColor colorOverride) const {
 		return _data->fill(p, rect, colorOverride);
 	}

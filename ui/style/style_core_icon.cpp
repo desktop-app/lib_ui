@@ -393,6 +393,25 @@ Icon Icon::withPalette(const style::palette &palette) const {
 	return result;
 }
 
+void Icon::paintInCenter(QPainter &p, const QRectF &outer) const {
+	const auto dx = outer.x() + (outer.width() - width()) / 2.;
+	const auto dy = outer.y() + (outer.height() - height()) / 2.;
+	p.translate(dx, dy);
+	_data->paint(p, QPoint(), outer.x() * 2. + outer.width());
+	p.translate(-dx, -dy);
+}
+
+void Icon::paintInCenter(
+		QPainter &p,
+		const QRectF &outer,
+		QColor override) const {
+	const auto dx = outer.x() + (outer.width() - width()) / 2;
+	const auto dy = outer.y() + (outer.height() - height()) / 2;
+	p.translate(dx, dy);
+	_data->paint(p, QPoint(), outer.x() * 2 + outer.width(), override);
+	p.translate(-dx, -dy);
+}
+
 void ResetIcons() {
 	iconPixmaps.clear();
 	for (const auto data : iconData) {
