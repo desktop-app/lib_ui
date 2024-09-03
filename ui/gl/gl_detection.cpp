@@ -88,9 +88,15 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	auto format = tester.format();
 	format.setAlphaBufferSize(8);
 	tester.setFormat(format);
-	if (!tester.window()->windowHandle()) {
-		tester.window()->createWinId();
-	}
+	const auto guard2 = [&]() -> std::optional<gsl::final_action<Fn<void()>>> {
+		if (!tester.window()->windowHandle()) {
+			tester.window()->createWinId();
+			return gsl::finally(Fn<void()>([&] {
+				tester.window()->windowHandle()->destroy();
+			}));
+		}
+		return std::nullopt;
+	}();
 	tester.grabFramebuffer(); // Force initialize().
 
 	const auto context = tester.context();
