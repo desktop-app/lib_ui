@@ -116,6 +116,17 @@ namespace pos {
 }
 
 /*
+	Rect(x, y, mysize);
+*/
+[[nodiscard]] inline QRect Rect(int x, int y, const QSize &s) {
+	return QRect(QPoint(x, y), s);
+}
+
+[[nodiscard]] inline QRectF Rect(float64 x, float64 y, const QSizeF &s) {
+	return QRectF(QPointF(x, y), s);
+}
+
+/*
 	Size(myside);
 */
 [[nodiscard]] inline QSize Size(int side) {
