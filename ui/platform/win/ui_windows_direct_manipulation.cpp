@@ -14,6 +14,7 @@
 #include "ui/rp_widget.h"
 
 #include <qpa/qwindowsysteminterface.h>
+#include <qpa/qwindowsysteminterface_p.h>
 
 namespace Ui::Platform {
 namespace {
@@ -519,15 +520,18 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
 				: 0;
 			const auto scale = dpi ? (96. / dpi) : 1.;
 			const auto delta = QPointF(event.delta) * scale;
+			const auto inverted = true;
 			QWindowSystemInterface::handleWheelEvent(
 				windowHandle,
+				QWindowSystemInterfacePrivate::eventTime.elapsed(),
 				QPointF(local.x, local.y),
 				QPointF(global.x, global.y),
 				delta.toPoint(),
 				(delta * kPixelToAngleDelta).toPoint(),
 				LookupModifiers(),
 				phase,
-				Qt::MouseEventSynthesizedBySystem);
+				Qt::MouseEventSynthesizedBySystem,
+				inverted);
 		};
 		switch (event.type) {
 		case Type::ScrollStart: send(Qt::ScrollBegin); break;
