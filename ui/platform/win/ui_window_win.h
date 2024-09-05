@@ -52,7 +52,7 @@ private:
 	void enableCloakingForHidden();
 	void updateWindowFrameColors();
 	void updateWindowFrameColors(bool active);
-	void initialShadowUpdate();
+	void updateShadow();
 	void updateCornersRounding();
 	void fixMaximizedWindow();
 	[[nodiscard]] bool filterNativeEvent(
@@ -70,6 +70,7 @@ private:
 	[[nodiscard]] HitTestResult systemButtonHitTest(int result) const;
 
 	[[nodiscard]] int titleHeight() const;
+	[[nodiscard]] bool nativeResize() const;
 
 	const not_null<TitleWidget*> _title;
 	const not_null<RpWidget*> _body;

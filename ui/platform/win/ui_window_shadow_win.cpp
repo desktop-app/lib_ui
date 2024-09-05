@@ -324,7 +324,7 @@ void WindowShadow::horCorners(int w, Gdiplus::Graphics *pgraphics0, Gdiplus::Gra
 }
 
 Gdiplus::Color WindowShadow::getColor(uchar alpha) const {
-	return Gdiplus::Color(BYTE(alpha), _r, _g, _b);
+	return Gdiplus::Color(BYTE(::Platform::IsWindows11OrGreater() ? 1 : alpha), _r, _g, _b);
 }
 
 Gdiplus::SolidBrush WindowShadow::getBrush(uchar alpha) const {

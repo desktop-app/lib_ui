@@ -267,12 +267,7 @@ HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
 			{ 0, padding, 0, 0 }
 		).contains(point);
 	};
-	if (::Platform::IsWindows11OrGreater()
-		&& !_maximizedState
-		&& (point.y() < style::ConvertScale(
-			window()->windowHandle()->devicePixelRatio()))) {
-		return HitTestResult::Top;
-	} else if (test(_minimize)) {
+	if (test(_minimize)) {
 		return HitTestResult::Minimize;
 	} else if (test(_maximizeRestore)) {
 		return HitTestResult::MaximizeRestore;
