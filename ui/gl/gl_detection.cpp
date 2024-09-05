@@ -85,17 +85,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	});
 
 	auto tester = QOpenGLWidget(widget);
+	auto format = tester.format();
+	format.setAlphaBufferSize(8);
+	tester.setFormat(format);
 	if (!tester.window()->windowHandle()) {
 		tester.window()->createWinId();
 	}
-	if (!tester.window()->windowHandle()) {
-		LOG(("OpenGL: Could not create window for widget."));
-		return {};
-	}
-	auto format = tester.window()->windowHandle()->format();
-	format.setAlphaBufferSize(8);
-	tester.window()->windowHandle()->setFormat(format);
-	tester.setFormat(format);
 	tester.grabFramebuffer(); // Force initialize().
 
 	const auto context = tester.context();
