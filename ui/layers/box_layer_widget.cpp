@@ -111,11 +111,11 @@ QRect BoxLayerWidget::loadingRect() const {
 void BoxLayerWidget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
-	const auto custom = _content->customCornersFilling();
 	const auto clip = e->rect();
-	const auto paintTopRounded = !(custom & RectPart::FullTop)
+	const auto paintTopRounded = !(_customCornersFilling & RectPart::FullTop)
 		&& clip.intersects(QRect(0, 0, width(), st::boxRadius));
-	const auto paintBottomRounded = !(custom & RectPart::FullBottom)
+	const auto paintBottomRounded = !(_customCornersFilling
+		& RectPart::FullBottom)
 		&& clip.intersects(
 			QRect(0, height() - st::boxRadius, width(), st::boxRadius));
 	if (paintTopRounded || paintBottomRounded) {
@@ -257,6 +257,11 @@ void BoxLayerWidget::updateTitlePosition() {
 			width() - _titleLeft * 2 - topButtonSkip);
 		_title->moveToLeft(_titleLeft, _titleTop);
 	}
+}
+
+void BoxLayerWidget::setCustomCornersFilling(RectParts corners) {
+	_customCornersFilling = corners;
+	update();
 }
 
 void BoxLayerWidget::clearButtons() {

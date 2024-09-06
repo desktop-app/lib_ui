@@ -52,6 +52,7 @@ public:
 		_content->showFinished();
 	}
 
+	void setCustomCornersFilling(RectParts corners) override;
 	void clearButtons() override;
 	void addButton(object_ptr<AbstractButton> button) override;
 	void addLeftButton(object_ptr<AbstractButton> button) override;
@@ -127,6 +128,7 @@ private:
 	object_ptr<FlatLabel> _title = { nullptr };
 	Fn<TextWithEntities()> _titleFactory;
 	rpl::variable<QString> _additionalTitle;
+	RectParts _customCornersFilling;
 	int _titleLeft = 0;
 	int _titleTop = 0;
 	bool _closeByOutsideClick = true;

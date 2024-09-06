@@ -260,10 +260,6 @@ void BoxContent::scrollToWidget(not_null<QWidget*> widget) {
 	}
 }
 
-RectParts BoxContent::customCornersFilling() {
-	return {};
-}
-
 void BoxContent::scrollToY(int top, int bottom) {
 	scrollTo({ top, bottom });
 }

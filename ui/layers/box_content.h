@@ -71,6 +71,7 @@ public:
 	virtual void setAdditionalTitle(rpl::producer<QString> additional) = 0;
 	virtual void setCloseByOutsideClick(bool close) = 0;
 
+	virtual void setCustomCornersFilling(RectParts corners) = 0;
 	virtual void clearButtons() = 0;
 	virtual void addButton(object_ptr<AbstractButton> button) = 0;
 	virtual void addLeftButton(object_ptr<AbstractButton> button) = 0;
@@ -141,7 +142,9 @@ public:
 
 	virtual void showFinished() {
 	}
-	virtual RectParts customCornersFilling();
+	void setCustomCornersFilling(RectParts corners) {
+		getDelegate()->setCustomCornersFilling(corners);
+	}
 	void clearButtons() {
 		getDelegate()->clearButtons();
 	}
