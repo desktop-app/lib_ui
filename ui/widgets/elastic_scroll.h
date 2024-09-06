@@ -276,6 +276,9 @@ private:
 
 };
 
+[[nodiscard]] int OverscrollFromAccumulated(int accumulated);
+[[nodiscard]] int OverscrollToAccumulated(int overscroll);
+[[nodiscard]] QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch = false);
 [[nodiscard]] QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch = false);
 
 } // namespace Ui
