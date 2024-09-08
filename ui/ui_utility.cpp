@@ -234,7 +234,8 @@ bool IsContentVisible(
 
 	return activeOrNotOverlapped
 		&& widget->isVisible()
-		&& !widget->window()->isMinimized();
+		&& !widget->window()->isMinimized()
+		&& widget->window()->windowHandle()->isExposed();
 }
 
 int WheelDirection(not_null<QWheelEvent*> e) {
