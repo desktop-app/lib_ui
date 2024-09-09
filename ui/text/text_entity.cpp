@@ -2055,13 +2055,15 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		return result;
 	}
 
-	constexpr auto kInMaskTypes = std::array{
+	constexpr auto kInMaskTypesInline = std::array{
 		EntityType::Bold,
 		EntityType::Italic,
 		EntityType::Underline,
 		EntityType::StrikeOut,
 		EntityType::Spoiler,
 		EntityType::Code,
+	};
+	constexpr auto kInMaskTypesBlock = std::array{
 		EntityType::Pre,
 		EntityType::Blockquote,
 	};
@@ -2089,13 +2091,15 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		Expects(!notClosedEntities.empty());
 
 		auto &entity = result[notClosedEntities.back()];
+		const auto type = entity.type();
 		entity = {
-			entity.type(),
+			type,
 			entity.offset(),
 			offset - entity.offset(),
 			entity.data(),
 		};
-		if (ranges::contains(kInMaskTypes, entity.type())) {
+		if (ranges::contains(kInMaskTypesInline, type)
+			|| ranges::contains(kInMaskTypesBlock, type)) {
 			state.remove(entity.type());
 		} else {
 			state.link = QString();
@@ -2123,23 +2127,41 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 
 	const auto processState = [&](State nextState) {
 		const auto linkChanged = (nextState.link != state.link);
-		if (linkChanged) {
-			if (Ui::InputField::IsCustomEmojiLink(state.link)) {
-				closeType(EntityType::CustomEmoji);
-			} else if (IsMentionLink(state.link)) {
+		const auto customEmojiChanged = linkChanged
+			&& Ui::InputField::IsCustomEmojiLink(nextState.link);
+		if (customEmojiChanged) {
+			closeType(EntityType::CustomEmoji);
+		}
+		for (const auto type : kInMaskTypesInline) {
+			if (state.has(type) && !nextState.has(type)) {
+				closeType(type);
+			}
+		}
+		if (linkChanged && !customEmojiChanged) {
+			if (IsMentionLink(state.link)) {
 				closeType(EntityType::MentionName);
 			} else {
 				closeType(EntityType::CustomUrl);
 			}
 		}
-		for (const auto type : kInMaskTypes) {
+		for (const auto type : kInMaskTypesBlock) {
 			if (state.has(type) && !nextState.has(type)) {
 				closeType(type);
 			}
 		}
+
 		const auto openLink = linkChanged && !nextState.link.isEmpty();
 		const auto openCustomEmoji = openLink
 			&& Ui::InputField::IsCustomEmojiLink(nextState.link);
+		for (const auto type : kInMaskTypesBlock | ranges::views::reverse) {
+			if (nextState.has(type) && !state.has(type)) {
+				openType(type, (type == EntityType::Pre)
+					? nextState.language
+					: (type == EntityType::Blockquote && nextState.collapsed)
+					? u"1"_q
+					: QString());
+			}
+		}
 		if (openLink && !openCustomEmoji) {
 			if (IsMentionLink(nextState.link)) {
 				const auto data = MentionEntityData(nextState.link);
@@ -2150,13 +2172,9 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				openType(EntityType::CustomUrl, nextState.link);
 			}
 		}
-		for (const auto type : kInMaskTypes | ranges::views::reverse) {
+		for (const auto type : kInMaskTypesInline | ranges::views::reverse) {
 			if (nextState.has(type) && !state.has(type)) {
-				openType(type, (type == EntityType::Pre)
-					? nextState.language
-					: (type == EntityType::Blockquote && nextState.collapsed)
-					? u"1"_q
-					: QString());
+				openType(type);
 			}
 		}
 		if (openCustomEmoji) {
