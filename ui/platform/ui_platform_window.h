@@ -64,6 +64,9 @@ public:
 
 	virtual int manualRoundingRadius() const;
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
+	[[nodiscard]] bool mousePressCancelled() const {
+		return _mousePressCancelled;
+	}
 
 	[[nodiscard]] virtual const style::TextStyle &titleTextStyle() const;
 
@@ -82,6 +85,7 @@ private:
 	const not_null<RpWidget*> _window;
 	Fn<WindowTitleHitTestFlags(QPoint)> _bodyTitleAreaTestMethod;
 	bool _mousePressed = false;
+	bool _mousePressCancelled = false;
 
 };
 

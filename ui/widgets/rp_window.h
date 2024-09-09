@@ -72,6 +72,10 @@ public:
 	[[nodiscard]] int manualRoundingRadius() const;
 	void setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod);
 
+	// Check if MouseButtonRelease was from the pressed state being
+	// cancelled by startSystemMove / startSystemResize call.
+	[[nodiscard]] bool mousePressCancelled() const;
+
 	[[nodiscard]] const style::TextStyle &titleTextStyle() const;
 
 private:

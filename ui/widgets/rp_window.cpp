@@ -107,6 +107,10 @@ void RpWindow::setBodyTitleArea(
 	_helper->setBodyTitleArea(std::move(testMethod));
 }
 
+bool RpWindow::mousePressCancelled() const {
+	return _helper->mousePressCancelled();
+}
+
 int RpWindow::manualRoundingRadius() const {
 	return _helper->manualRoundingRadius();
 }

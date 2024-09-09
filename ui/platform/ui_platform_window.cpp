@@ -280,11 +280,16 @@ void BasicWindowHelper::setupBodyTitleAreaEvents() {
 				}
 #endif // Q_OS_WIN
 				_mousePressed = false;
+				_mousePressCancelled = true;
+				const auto weak = QPointer(_window.get());
 				_window->windowHandle()->startSystemMove();
 				SendSynteticMouseEvent(
 					body().get(),
 					QEvent::MouseButtonRelease,
 					Qt::LeftButton);
+				if (weak) {
+					_mousePressCancelled = false;
+				}
 			}
 		}
 	}, body()->lifetime());
