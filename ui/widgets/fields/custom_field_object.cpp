@@ -270,6 +270,7 @@ void CustomFieldObject::refreshSpoilerShown(InputFieldTextRange range) {
 
 void CustomFieldObject::setCollapsedText(int quoteId, TextWithTags text) {
 	auto &quote = _quotes[quoteId];
+	quote.string = Text::String(_field->_st.widthMin);
 	quote.string.setMarkedText(_field->_st.style, {
 		text.text,
 		TextUtilities::ConvertTextTagsToEntities(text.tags),

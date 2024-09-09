@@ -293,6 +293,7 @@ InputField {
 	width: pixels;
 	heightMin: pixels;
 	heightMax: pixels;
+	widthMin: pixels;
 }
 
 OutlineButton {
@@ -915,6 +916,7 @@ defaultInputField: InputField {
 
 	heightMin: 55px;
 	heightMax: 148px;
+	widthMin: 64px;
 }
 defaultInputFieldLimit: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
