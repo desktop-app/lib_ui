@@ -176,6 +176,7 @@ void WordParser::parse() {
 				-_lbh.negativeRightBearing());
 			wordProcessed(_itemEnd);
 		} else if (atSpaceBreak) {
+			pushAccumulatedWord();
 			accumulateWhitespaces();
 			ensureWordForRightPadding();
 			_tWords.back().add_rpadding(_lbh.spaceData.textWidth);
