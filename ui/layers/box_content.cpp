@@ -344,7 +344,9 @@ void BoxContent::updateShadowsVisibility(anim::type animated) {
 				&& !getDelegate()->style().shadowIgnoreTopSkip)),
 		animated);
 	_bottomShadow->toggle(
-		(top < _scroll->scrollTopMax() || _innerBottomSkip > 0),
+		(top < _scroll->scrollTopMax())
+			|| (_innerBottomSkip > 0
+				&& !getDelegate()->style().shadowIgnoreBottomSkip),
 		animated);
 }
 
