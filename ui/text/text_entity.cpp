@@ -2127,9 +2127,10 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 
 	const auto processState = [&](State nextState) {
 		const auto linkChanged = (nextState.link != state.link);
-		const auto customEmojiChanged = linkChanged
-			&& Ui::InputField::IsCustomEmojiLink(nextState.link);
-		if (customEmojiChanged) {
+		const auto closeLink = linkChanged && !state.link.isEmpty();
+		const auto closeCustomEmoji = closeLink
+			&& Ui::InputField::IsCustomEmojiLink(state.link);
+		if (closeCustomEmoji) {
 			closeType(EntityType::CustomEmoji);
 		}
 		for (const auto type : kInMaskTypesInline) {
@@ -2137,7 +2138,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				closeType(type);
 			}
 		}
-		if (linkChanged && !customEmojiChanged) {
+		if (closeLink && !closeCustomEmoji) {
 			if (IsMentionLink(state.link)) {
 				closeType(EntityType::MentionName);
 			} else {
