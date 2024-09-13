@@ -802,13 +802,13 @@ void SeparatePanel::focusInEvent(QFocusEvent *e) {
 	});
 }
 
-void SeparatePanel::setInnerSize(QSize size) {
+void SeparatePanel::setInnerSize(QSize size, bool fixed) {
 	Expects(!size.isEmpty());
 
 	if (rect().isEmpty()) {
-		initGeometry(size);
+		initGeometry(size, fixed);
 	} else {
-		updateGeometry(size);
+		updateGeometry(size, fixed);
 	}
 }
 
@@ -816,7 +816,7 @@ QRect SeparatePanel::innerGeometry() const {
 	return _body->geometry();
 }
 
-void SeparatePanel::initGeometry(QSize size) {
+void SeparatePanel::initGeometry(QSize size, bool fixed) {
 	const auto active = QApplication::activeWindow();
 	const auto available = !active
 		? QGuiApplication::primaryScreen()->availableGeometry()
@@ -861,14 +861,24 @@ void SeparatePanel::initGeometry(QSize size) {
 		return initRect.translated(center - initRect.center()).marginsAdded(_padding);
 	}();
 	move(rect.topLeft());
-	setFixedSize(rect.size());
+	if (fixed) {
+		setFixedSize(rect.size());
+	} else {
+		resize(rect.size());
+	}
 	updateControlsGeometry();
 }
 
-void SeparatePanel::updateGeometry(QSize size) {
-	setFixedSize(
-		_padding.left() + size.width() + _padding.right(),
-		_padding.top() + size.height() + _padding.bottom());
+void SeparatePanel::updateGeometry(QSize size, bool fixed) {
+	if (fixed) {
+		setFixedSize(
+			_padding.left() + size.width() + _padding.right(),
+			_padding.top() + size.height() + _padding.bottom());
+	} else {
+		resize(
+			_padding.left() + size.width() + _padding.right(),
+			_padding.top() + size.height() + _padding.bottom());
+	}
 	updateControlsGeometry();
 	update();
 }
