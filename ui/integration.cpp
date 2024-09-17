@@ -77,11 +77,11 @@ Fn<void()> Integration::createSpoilerRepaint(const std::any &context) {
 	return nullptr;
 }
 
-bool Integration::allowClickHandlerActivation(
-		const std::shared_ptr<ClickHandler> &handler,
-		const ClickContext &context) {
-	return true;
-}
+// bool Integration::allowClickHandlerActivation(
+// 		const std::shared_ptr<ClickHandler> &handler,
+// 		const ClickContext &context) {
+// 	return true;
+// }
 
 bool Integration::handleUrlClick(
 		const QString &url,

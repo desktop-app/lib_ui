@@ -171,9 +171,9 @@ void ActivateClickHandler(
 		ClickContext context) {
 	crl::on_main(guard, [=, weak = std::weak_ptr<ClickHandler>(handler)] {
 		if (const auto strong = weak.lock()) {
-			if (Ui::Integration::Instance().allowClickHandlerActivation(strong, context)) {
+			// if (Ui::Integration::Instance().allowClickHandlerActivation(strong, context)) {
 				strong->onClick(context);
-			}
+			// }
 		}
 	});
 }
