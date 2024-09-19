@@ -58,7 +58,7 @@ public:
 
 	void setTitle(rpl::producer<QString> title);
 	void setTitleHeight(int height);
-	void setInnerSize(QSize size);
+	void setInnerSize(QSize size, bool allowResize = false);
 	[[nodiscard]] QRect innerGeometry() const;
 
 	void setHideOnDeactivate(bool hideOnDeactivate);
@@ -117,6 +117,8 @@ protected:
 	bool eventHook(QEvent *e) override;
 
 private:
+	class ResizeEdge;
+
 	void initControls();
 	void initLayout(const SeparatePanelArgs &args);
 	void initGeometry(QSize size);
@@ -160,11 +162,13 @@ private:
 	base::unique_qptr<RpWidget> _inner;
 	base::unique_qptr<LayerStackWidget> _layer = { nullptr };
 	base::unique_qptr<PopupMenu> _menu;
+	std::vector<std::unique_ptr<ResizeEdge>> _resizeEdges;
 	rpl::event_stream<> _synteticBackRequests;
 	rpl::event_stream<> _userCloseRequests;
 	rpl::event_stream<> _closeEvents;
 
 	int _titleHeight = 0;
+	bool _allowResize = false;
 	bool _hideOnDeactivate = false;
 	bool _useTransparency = true;
 	bool _backAllowed = false;

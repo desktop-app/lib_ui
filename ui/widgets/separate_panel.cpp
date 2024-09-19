@@ -144,6 +144,129 @@ PanelShow::operator bool() const {
 
 } // namespace
 
+class SeparatePanel::ResizeEdge final : public RpWidget {
+public:
+	ResizeEdge(not_null<QWidget*> parent, Qt::Edges edges);
+
+	void updateSize();
+	void setParentPadding(QMargins padding);
+
+private:
+	void mousePressEvent(QMouseEvent *e) override;
+	void mouseReleaseEvent(QMouseEvent *e) override;
+	void mouseMoveEvent(QMouseEvent *e) override;
+
+	const Qt::Edges _edges;
+	QMargins _extent;
+	bool _press = false;
+
+};
+
+SeparatePanel::ResizeEdge::ResizeEdge(
+	not_null<QWidget*> parent,
+	Qt::Edges edges)
+: RpWidget(parent)
+, _edges(edges) {
+	show();
+	setCursor([&] {
+		if ((_edges == (Qt::LeftEdge | Qt::TopEdge))
+			|| (_edges == (Qt::RightEdge | Qt::BottomEdge))) {
+			return Qt::SizeFDiagCursor;
+		} else if (_edges == Qt::TopEdge || _edges == Qt::BottomEdge) {
+			return Qt::SizeVerCursor;
+		} else if ((_edges == (Qt::RightEdge | Qt::TopEdge))
+			|| (_edges == (Qt::LeftEdge | Qt::BottomEdge))) {
+			return Qt::SizeBDiagCursor;
+		} else if (_edges == Qt::RightEdge || _edges == Qt::LeftEdge) {
+			return Qt::SizeHorCursor;
+		} else {
+			Unexpected("Bad edges in SeparatePanel::ResizeEdge.");
+		}
+	}());
+}
+
+void SeparatePanel::ResizeEdge::updateSize() {
+	const auto parent = parentWidget()->rect();
+	if ((_extent.left() + _extent.right() >= parent.width())
+		|| (_extent.top() + _extent.bottom() >= parent.height())) {
+		return;
+	}
+	if (_edges == (Qt::LeftEdge | Qt::TopEdge)) {
+		setGeometry(0, 0, _extent.left(), _extent.top());
+	} else if (_edges == Qt::TopEdge) {
+		setGeometry(
+			_extent.left(),
+			0,
+			parent.width() - _extent.left() - _extent.right(),
+			_extent.top());
+	} else if (_edges == (Qt::RightEdge | Qt::TopEdge)) {
+		setGeometry(
+			parent.width() - _extent.right(),
+			0,
+			_extent.right(),
+			_extent.top());
+	} else if (_edges == Qt::RightEdge) {
+		setGeometry(
+			parent.width() - _extent.right(),
+			_extent.top(),
+			_extent.right(),
+			parent.height() - _extent.top() - _extent.bottom());
+	} else if (_edges == (Qt::RightEdge | Qt::BottomEdge)) {
+		setGeometry(
+			parent.width() - _extent.right(),
+			parent.height() - _extent.bottom(),
+			_extent.right(),
+			_extent.bottom());
+	} else if (_edges == Qt::BottomEdge) {
+		setGeometry(
+			_extent.left(),
+			parent.height() - _extent.bottom(),
+			parent.width() - _extent.left() - _extent.right(),
+			_extent.bottom());
+	} else if (_edges == (Qt::LeftEdge | Qt::BottomEdge)) {
+		setGeometry(
+			0,
+			parent.height() - _extent.bottom(),
+			_extent.left(),
+			_extent.bottom());
+	} else if (_edges == Qt::LeftEdge) {
+		setGeometry(
+			0,
+			_extent.top(),
+			_extent.left(),
+			parent.height() - _extent.top() - _extent.bottom());
+	} else {
+		Unexpected("Corrupt edges in SeparatePanel::ResizeEdge.");
+	}
+}
+
+void SeparatePanel::ResizeEdge::setParentPadding(QMargins padding) {
+	if (_extent != padding) {
+		_extent = padding;
+		updateSize();
+	}
+}
+
+void SeparatePanel::ResizeEdge::mousePressEvent(QMouseEvent *e) {
+	if (e->button() == Qt::LeftButton) {
+		_press = true;
+	}
+}
+
+void SeparatePanel::ResizeEdge::mouseReleaseEvent(QMouseEvent *e) {
+	if (e->button() == Qt::LeftButton) {
+		_press = false;
+	}
+}
+
+void SeparatePanel::ResizeEdge::mouseMoveEvent(QMouseEvent *e) {
+	if (base::take(_press)) {
+		if (const auto handle = window()->windowHandle()) {
+			handle->startSystemResize(_edges);
+		}
+	}
+}
+
 SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 : RpWidget(args.parent)
 , _close(this, st::separatePanelClose)
@@ -802,9 +925,30 @@ void SeparatePanel::focusInEvent(QFocusEvent *e) {
 	});
 }
 
-void SeparatePanel::setInnerSize(QSize size) {
+void SeparatePanel::setInnerSize(QSize size, bool allowResize) {
 	Expects(!size.isEmpty());
 
+	if (_allowResize != allowResize) {
+		_allowResize = allowResize;
+		if (!_allowResize) {
+			_resizeEdges.clear();
+		} else if (_resizeEdges.empty()) {
+			const auto areas = std::array<Qt::Edges, 8>{ {
+				Qt::LeftEdge | Qt::TopEdge,
+				Qt::TopEdge,
+				Qt::RightEdge | Qt::TopEdge,
+				Qt::RightEdge,
+				Qt::RightEdge | Qt::BottomEdge,
+				Qt::BottomEdge,
+				Qt::LeftEdge | Qt::BottomEdge,
+				Qt::LeftEdge
+			} };
+			for (const auto area : areas) {
+				_resizeEdges.push_back(
+					std::make_unique<ResizeEdge>(this, area));
+			}
+		}
+	}
 	if (rect().isEmpty()) {
 		initGeometry(size);
 	} else {
@@ -855,26 +999,40 @@ void SeparatePanel::initGeometry(QSize size) {
 			st::lineWidth,
 			st::lineWidth,
 			st::lineWidth);
+	for (const auto &edge : _resizeEdges) {
+		edge->setParentPadding(_padding);
+	}
+
 	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
 	const auto rect = [&] {
 		const QRect initRect(QPoint(), size);
 		return initRect.translated(center - initRect.center()).marginsAdded(_padding);
 	}();
 	move(rect.topLeft());
-	setFixedSize(rect.size());
+	if (_allowResize) {
+		setMinimumSize(rect.size());
+	} else {
+		setFixedSize(rect.size());
+	}
 	updateControlsGeometry();
 }
 
 void SeparatePanel::updateGeometry(QSize size) {
-	setFixedSize(
-		_padding.left() + size.width() + _padding.right(),
-		_padding.top() + size.height() + _padding.bottom());
+	size = QRect(QPoint(), size).marginsAdded(_padding).size();
+	if (_allowResize) {
+		setMinimumSize(size);
+	} else {
+		setFixedSize(size);
+	}
 	updateControlsGeometry();
 	update();
 }
 
 void SeparatePanel::resizeEvent(QResizeEvent *e) {
 	updateControlsGeometry();
+	for (const auto &edge : _resizeEdges) {
+		edge->updateSize();
+	}
 }
 
 void SeparatePanel::updateControlsGeometry() {
