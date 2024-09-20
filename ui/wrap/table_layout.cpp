@@ -28,14 +28,32 @@ void TableLayout::paintEvent(QPaintEvent *e) {
 	auto hq = PainterHighQualityEnabler(p);
 
 	const auto half = _st.border / 2.;
+
+	auto yfrom = half;
+	auto ytill = height() - half;
+	for (auto i = 0, count = int(_rows.size()); i != count; ++i) {
+		yfrom = _rows[i].top + half;
+		if (_rows[i].label) {
+			break;
+		}
+	}
+	for (auto i = 0, count = int(_rows.size()); i != count; ++i) {
+		const auto index = count - i - 1;
+		if (_rows[index].label) {
+			break;
+		}
+		ytill = _rows[index].top - half;
+	}
 	const auto inner = QRectF(rect()).marginsRemoved(
 		{ half, half, half, half });
 
-	p.setClipRect(0, 0, _valueLeft, height());
-	p.setBrush(_st.headerBg);
-	p.setPen(Qt::NoPen);
-	p.drawRoundedRect(inner, _st.radius, _st.radius);
-	p.setClipping(false);
+	if (ytill > yfrom) {
+		p.setClipRect(0, yfrom, _valueLeft, ytill);
+		p.setBrush(_st.headerBg);
+		p.setPen(Qt::NoPen);
+		p.drawRoundedRect(inner, _st.radius, _st.radius);
+		p.setClipping(false);
+	}
 
 	auto path = QPainterPath();
 	path.addRoundedRect(inner, _st.radius, _st.radius);
@@ -44,8 +62,10 @@ void TableLayout::paintEvent(QPaintEvent *e) {
 		path.moveTo(half, y);
 		path.lineTo(width() - half, y);
 	}
-	path.moveTo(_valueLeft - half, half);
-	path.lineTo(_valueLeft - half, height() - half);
+	if (ytill > yfrom) {
+		path.moveTo(_valueLeft - half, yfrom);
+		path.lineTo(_valueLeft - half, ytill);
+	}
 
 	auto pen = _st.borderFg->p;
 	pen.setWidth(_st.border);
@@ -67,9 +87,11 @@ int TableLayout::resizeGetHeight(int newWidth) {
 	}
 	auto label = _st.labelMinWidth;
 	for (auto &row : _rows) {
-		const auto natural = row.label->naturalWidth()
-			+ row.labelMargin.left()
-			+ row.labelMargin.right();
+		const auto natural = row.label
+			? (row.label->naturalWidth()
+				+ row.labelMargin.left()
+				+ row.labelMargin.right())
+			: 0;
 		if (natural < 0 || natural >= labelMax) {
 			label = labelMax;
 			break;
@@ -91,10 +113,12 @@ void TableLayout::visibleTopBottomUpdated(
 		int visibleTop,
 		int visibleBottom) {
 	for (auto &row : _rows) {
-		setChildVisibleTopBottom(
-			row.label,
-			visibleTop,
-			visibleBottom);
+		if (row.label) {
+			setChildVisibleTopBottom(
+				row.label,
+				visibleTop,
+				visibleBottom);
+		}
 		setChildVisibleTopBottom(
 			row.value,
 			visibleTop,
@@ -106,24 +130,46 @@ void TableLayout::updateRowGeometry(
 		const Row &row,
 		int width,
 		int top) const {
+	if (row.label) {
+		row.label->resizeToNaturalWidth(_valueLeft
+			- 2 * _st.border
+			- row.labelMargin.left()
+			- row.labelMargin.right());
+		row.value->resizeToNaturalWidth(width
+			- _valueLeft
+			- _st.border
+			- row.valueMargin.left()
+			- row.valueMargin.right());
+	} else {
+		row.value->resizeToNaturalWidth(width
+			- 2 * _st.border
+			- row.labelMargin.left()
+			- row.valueMargin.right());
+	}
+	updateRowPosition(row, width, top);
+}
+
+void TableLayout::updateRowPosition(
+		const Row &row,
+		int width,
+		int top) const {
 	row.top = top;
-	row.label->resizeToNaturalWidth(_valueLeft
-		- 2 * _st.border
-		- row.labelMargin.left()
-		- row.labelMargin.right());
-	row.label->moveToLeft(
-		_st.border + row.labelMargin.left(),
-		top + row.labelMargin.top(),
-		width);
-	row.value->resizeToNaturalWidth(width
-		- _valueLeft
-		- _st.border
-		- row.valueMargin.left()
-		- row.valueMargin.right());
-	row.value->moveToLeft(
-		_valueLeft + row.valueMargin.left(),
-		top + row.valueMargin.top(),
-		width);
+	row.top = top;
+	if (row.label) {
+		row.label->moveToLeft(
+			_st.border + row.labelMargin.left(),
+			top + row.labelMargin.top(),
+			width);
+		row.value->moveToLeft(
+			_valueLeft + row.valueMargin.left(),
+			top + row.valueMargin.top(),
+			width);
+	} else {
+		row.value->moveToLeft(
+			_st.border + row.labelMargin.left(),
+			top + row.valueMargin.top(),
+			width);
+	}
 }
 
 void TableLayout::insertRow(
@@ -135,23 +181,25 @@ void TableLayout::insertRow(
 	Expects(atPosition >= 0 && atPosition <= _rows.size());
 	Expects(!_inResize);
 
-	const auto wlabel = AttachParentChild(this, label);
+	const auto wlabel = label ? AttachParentChild(this, label) : nullptr;
 	const auto wvalue = AttachParentChild(this, value);
-	if (wlabel && wvalue) {
+	if (wvalue) {
 		_rows.insert(begin(_rows) + atPosition, {
 			std::move(label),
 			std::move(value),
 			labelMargin,
 			valueMargin,
 		});
-		wlabel->heightValue(
-		) | rpl::start_with_next_done([=] {
-			if (!_inResize) {
-				childHeightUpdated(wlabel);
-			}
-		}, [=] {
-			removeChild(wlabel);
-		}, _rowsLifetime);
+		if (wlabel) {
+			wlabel->heightValue(
+			) | rpl::start_with_next_done([=] {
+				if (!_inResize) {
+					childHeightUpdated(wlabel);
+				}
+			}, [=] {
+				removeChild(wlabel);
+			}, _rowsLifetime);
+		}
 		wvalue->heightValue(
 		) | rpl::start_with_next_done([=] {
 			if (!_inResize) {
@@ -172,15 +220,7 @@ void TableLayout::childHeightUpdated(RpWidget *child) {
 	const auto outer = width();
 	for (auto end = _rows.end(); it != end; ++it) {
 		const auto &row = *it;
-		row.top = top;
-		row.label->moveToLeft(
-			_st.border + row.labelMargin.left(),
-			top + row.labelMargin.top(),
-			outer);
-		row.value->moveToLeft(
-			_valueLeft + row.valueMargin.left(),
-			top + row.valueMargin.top(),
-			outer);
+		updateRowPosition(row, outer, top);
 		top += rowVerticalSkip(row);
 	}
 	resize(width(), _rows.empty() ? 0 : top);
@@ -197,15 +237,7 @@ void TableLayout::removeChild(RpWidget *child) {
 	const auto outer = width();
 	for (auto next = it + 1; next != end; ++next) {
 		auto &row = *next;
-		row.top = top;
-		row.label->moveToLeft(
-			_st.border + row.labelMargin.left(),
-			top + row.labelMargin.top(),
-			outer);
-		row.value->moveToLeft(
-			_valueLeft + row.valueMargin.left(),
-			top + row.valueMargin.top(),
-			outer);
+		updateRowPosition(row, outer, top);
 		top += rowVerticalSkip(row);
 	}
 	it->label = nullptr;
@@ -216,9 +248,11 @@ void TableLayout::removeChild(RpWidget *child) {
 }
 
 int TableLayout::rowVerticalSkip(const Row &row) const {
-	const auto labelHeight = row.labelMargin.top()
-		+ row.label->heightNoMargins()
-		+ row.labelMargin.bottom();
+	const auto labelHeight = row.label
+		? (row.labelMargin.top()
+			+ row.label->heightNoMargins()
+			+ row.labelMargin.bottom())
+		: 0;
 	const auto valueHeight = row.valueMargin.top()
 		+ row.value->heightNoMargins()
 		+ row.valueMargin.bottom();
@@ -227,7 +261,7 @@ int TableLayout::rowVerticalSkip(const Row &row) const {
 
 void TableLayout::clear() {
 	while (!_rows.empty()) {
-		removeChild(_rows.front().label.data());
+		removeChild(_rows.front().value.data());
 	}
 }
 

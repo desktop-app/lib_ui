@@ -81,6 +81,7 @@ private:
 	void childHeightUpdated(RpWidget *child);
 	void removeChild(RpWidget *child);
 	void updateRowGeometry(const Row &row, int width, int top) const;
+	void updateRowPosition(const Row &row, int width, int top) const;
 
 	const style::Table &_st;
 
