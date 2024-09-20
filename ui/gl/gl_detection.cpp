@@ -93,6 +93,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			tester.window()->createWinId();
 			return gsl::finally(Fn<void()>([&] {
 				tester.window()->windowHandle()->destroy();
+				tester.window()->setAttribute(Qt::WA_OutsideWSRange, false);
 			}));
 		}
 		return std::nullopt;
