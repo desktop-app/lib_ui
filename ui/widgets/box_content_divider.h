@@ -26,8 +26,8 @@ public:
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
-	void paintTop(QPainter &p);
-	void paintBottom(QPainter &p);
+	void paintTop(QPainter &p, int skip = 0);
+	void paintBottom(QPainter &p, int skip = 0);
 
 private:
 	const style::color &_bg;

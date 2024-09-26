@@ -45,19 +45,19 @@ void BoxContentDivider::paintEvent(QPaintEvent *e) {
 	}
 }
 
-void BoxContentDivider::paintTop(QPainter &p) {
+void BoxContentDivider::paintTop(QPainter &p, int skip) {
 	const auto dividerFillTop = QRect(
 		0,
-		0,
+		skip,
 		width(),
 		st::boxDividerTop.height());
 	st::boxDividerTop.fill(p, dividerFillTop);
 }
 
-void BoxContentDivider::paintBottom(QPainter &p) {
+void BoxContentDivider::paintBottom(QPainter &p, int skip) {
 	const auto dividerFillBottom = myrtlrect(
 		0,
-		height() - st::boxDividerBottom.height(),
+		height() - skip - st::boxDividerBottom.height(),
 		width(),
 		st::boxDividerBottom.height());
 	st::boxDividerBottom.fill(p, dividerFillBottom);
