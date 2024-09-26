@@ -154,7 +154,6 @@ void TableLayout::updateRowPosition(
 		int width,
 		int top) const {
 	row.top = top;
-	row.top = top;
 	if (row.label) {
 		row.label->moveToLeft(
 			_st.border + row.labelMargin.left(),
@@ -215,10 +214,12 @@ void TableLayout::childHeightUpdated(RpWidget *child) {
 	auto it = ranges::find_if(_rows, [child](const Row &row) {
 		return (row.label == child) || (row.value == child);
 	});
+	const auto end = _rows.end();
+	Assert(it != end);
 
-	auto top = (it == _rows.begin()) ? _st.border : (it - 1)->top;
+	auto top = it->top;
 	const auto outer = width();
-	for (auto end = _rows.end(); it != end; ++it) {
+	for (; it != end; ++it) {
 		const auto &row = *it;
 		updateRowPosition(row, outer, top);
 		top += rowVerticalSkip(row);
@@ -230,10 +231,10 @@ void TableLayout::removeChild(RpWidget *child) {
 	auto it = ranges::find_if(_rows, [child](const Row &row) {
 		return (row.label == child) || (row.value == child);
 	});
-	auto end = _rows.end();
+	const auto end = _rows.end();
 	Assert(it != end);
 
-	auto top = (it == _rows.begin()) ? _st.border : (it - 1)->top;
+	auto top = it->top;
 	const auto outer = width();
 	for (auto next = it + 1; next != end; ++next) {
 		auto &row = *next;
