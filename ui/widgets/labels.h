@@ -115,7 +115,8 @@ public:
 		QWidget *parent,
 		rpl::producer<TextWithEntities> &&text,
 		const style::FlatLabel &st = st::defaultFlatLabel,
-		const style::PopupMenu &stMenu = st::defaultPopupMenu);
+		const style::PopupMenu &stMenu = st::defaultPopupMenu,
+		const Fn<std::any(Fn<void()>)> &makeContext = nullptr);
 
 	[[nodiscard]] const style::FlatLabel &st() const {
 		return _st;

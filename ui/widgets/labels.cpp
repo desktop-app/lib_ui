@@ -243,7 +243,8 @@ FlatLabel::FlatLabel(
 	QWidget *parent,
 	rpl::producer<TextWithEntities> &&text,
 	const style::FlatLabel &st,
-	const style::PopupMenu &stMenu)
+	const style::PopupMenu &stMenu,
+	const Fn<std::any(Fn<void()>)> &makeContext)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
@@ -252,8 +253,10 @@ FlatLabel::FlatLabel(
 	textUpdated();
 	std::move(
 		text
-	) | rpl::start_with_next([this](const TextWithEntities &value) {
-		setMarkedText(value);
+	) | rpl::start_with_next([=](const TextWithEntities &value) {
+		setMarkedText(
+			value,
+			makeContext ? makeContext([=] { update(); }) : std::any());
 	}, lifetime());
 	init();
 }
