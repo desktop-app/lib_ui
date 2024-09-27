@@ -654,6 +654,7 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 void AddLengthLimitLabel(
 	not_null<InputField*> field,
 	int limit,
-	std::optional<uint> customThreshold = std::nullopt);
+	std::optional<uint> customThreshold = std::nullopt,
+	int limitLabelTop = 0);
 
 } // namespace Ui
