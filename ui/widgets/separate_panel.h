@@ -58,6 +58,7 @@ public:
 
 	void setTitle(rpl::producer<QString> title);
 	void setTitleHeight(int height);
+	void setTitleBadge(object_ptr<RpWidget> badge);
 	void setInnerSize(QSize size, bool allowResize = false);
 	[[nodiscard]] QRect innerGeometry() const;
 
@@ -157,6 +158,7 @@ private:
 	object_ptr<FadeWrap<RpWidget>> _searchWrap = { nullptr };
 	InputField *_searchField = nullptr;
 	object_ptr<FlatLabel> _title = { nullptr };
+	object_ptr<RpWidget> _titleBadge = { nullptr };
 	object_ptr<FadeWrapScaled<IconButton>> _back;
 	object_ptr<RpWidget> _body;
 	base::unique_qptr<RpWidget> _inner;

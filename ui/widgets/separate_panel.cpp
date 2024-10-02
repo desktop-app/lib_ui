@@ -302,6 +302,14 @@ void SeparatePanel::setTitleHeight(int height) {
 	updateControlsGeometry();
 }
 
+void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
+	if (badge) {
+		badge->setParent(this);
+	}
+	_titleBadge = std::move(badge);
+	updateControlsGeometry();
+}
+
 void SeparatePanel::initControls() {
 	widthValue(
 	) | rpl::start_with_next([=](int width) {
@@ -398,12 +406,21 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 		- left
 		- _close->width();
 	if (_title) {
-		_title->resizeToWidth(available
-			- (_menuToggle ? _menuToggle->width() : 0)
-			- (_searchToggle ? _searchToggle->width() : 0));
+		_title->resizeToWidth(
+			std::min(
+				available
+					- (_menuToggle ? _menuToggle->width() : 0)
+					- (_searchToggle ? _searchToggle->width() : 0)
+					- (_titleBadge ? _titleBadge->width() : 0),
+				_title->textMaxWidth()));
 		_title->moveToLeft(
 			_padding.left() + left,
 			_padding.top() + st::separatePanelTitleTop);
+		if (_titleBadge) {
+			_titleBadge->moveToLeft(
+				_title->x() + _title->width(),
+				_title->y() + (_title->height() - _titleBadge->height()) / 2);
+		}
 	}
 	if (_searchWrap) {
 		_searchWrap->entity()->resize(available, _close->height());
