@@ -3414,11 +3414,8 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 				ApplyTagFormat(format, cursor.charFormat());
 				cursor.setCharFormat(format);
 			} else if (action.type == ActionType::RemoveNewline) {
-				cursor.removeSelectedText();
+				cursor.insertText(u" "_q);
 				insertPosition = action.intervalStart;
-				if (insertEnd >= action.intervalEnd) {
-					insertEnd -= action.intervalEnd - action.intervalStart;
-				}
 			}
 		} else {
 			break;
