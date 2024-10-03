@@ -154,6 +154,7 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 		: 0.;
 	_quotePreCache = context.pre;
 	_quoteBlockquoteCache = context.blockquote;
+	_elisionMiddle = context.elisionMiddle && (context.elisionLines == 1);
 	enumerate();
 }
 
@@ -547,6 +548,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			_elidedLine = false;
 		}
 	}
+	if (!_elidedLine && _elisionMiddle) {
+		_elisionMiddle = false;
+	}
+	if (_elisionMiddle) {
+		trimmedLineEnd = _t->blockEnd(end(_t->_blocks));
+	}
 
 	const auto startBlock = _t->_blocks[_lineStartBlock].get();
 
@@ -565,12 +572,18 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	auto lineLength = trimmedLineEnd - _lineStart;
 
 	if (_elidedLine) {
-		initParagraphBidi();
-		prepareElidedLine(lineText, lineStart, lineLength, endBlock);
+		if (_elisionMiddle) {
+			_paragraphLength = lineLength;
+			initParagraphBidi();
+		} else {
+			initParagraphBidi();
+			prepareElidedLine(lineText, lineStart, lineLength, endBlock);
+		}
 	}
 
 	auto x = _x;
-	if (_align & Qt::AlignHCenter) {
+	if (_elisionMiddle) {
+	} else if (_align & Qt::AlignHCenter) {
 		x += (_wLeft / 2).toInt();
 	} else if (((_align & Qt::AlignLeft)
 		&& (_paragraphDirection == Qt::RightToLeft))
@@ -646,6 +659,10 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	}
 
 	_f = _t->_st->font;
+	auto leftLineLengthLeft = _elisionMiddle
+		? (_lineWidth.toReal() - _f->elidew) / 2.
+		: -1;
+	auto rightLineLengthLeft = leftLineLengthLeft;
 	auto engine = StackEngine(
 		_t,
 		_localFrom,
@@ -687,9 +704,14 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	auto textY = _y + _yDelta + _t->_st->font->ascent;
 	auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
 
+	auto lastLeftToMiddleX = x;
+
 	_f = style::font();
 	for (int i = 0; i < nItems; ++i) {
-		const auto item = firstItem + visualOrder[i];
+		const auto paintRightToMiddleElision = (leftLineLengthLeft == 0);
+		const auto item = firstItem + visualOrder[paintRightToMiddleElision
+			? (nItems - 1 - i)
+			: i];
 		const auto blockIt = blocks[item - firstItem];
 		const auto block = blockIt->get();
 		const auto isLastItem = (item == lastItem);
@@ -700,6 +722,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		if (si.analysis.flags >= QScriptAnalysis::TabOrObject) {
 			const auto _type = block->type();
 			if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
+				if (_elisionMiddle) {
+					return false;
+				}
 				if (_lookupLink) {
 					if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
 						if (const auto link = lookupLink(block)) {
@@ -740,6 +765,41 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			} else if (_p
 				&& (_type == TextBlockType::Emoji
 					|| _type == TextBlockType::CustomEmoji)) {
+				if (_elisionMiddle && !paintRightToMiddleElision) {
+					if (leftLineLengthLeft - si.width.toReal() < 0) {
+						leftLineLengthLeft = 0;
+						i = -1;
+						lastLeftToMiddleX = (x + si.width);
+						_p->setPen(*_currentPen);
+						rightLineLengthLeft = qCeil((x).toReal()) - _x.toReal() - _f->elidew;
+					} else {
+						leftLineLengthLeft -= si.width.toReal();
+						leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
+					}
+				} else if (_elisionMiddle && paintRightToMiddleElision && rightLineLengthLeft) {
+					if (i == 0) {
+						x = _x + _lineWidth;
+					}
+					if (rightLineLengthLeft - si.width.toReal() < 0) {
+						rightLineLengthLeft = 0;
+						i = nItems;
+						{
+							_p->setPen(*_currentPen);
+							const auto bigWidth = x - lastLeftToMiddleX;
+							const auto smallWidth = _f->elidew;
+							const auto left = lastLeftToMiddleX;
+							_p->drawText(
+								(left + (bigWidth - smallWidth) / 2).toReal(),
+								textY,
+								kQEllipsis);
+						}
+						continue;
+					} else {
+						rightLineLengthLeft -= si.width.toReal();
+						rightLineLengthLeft = std::max(0.01, rightLineLengthLeft);
+					}
+					x -= si.width;
+				}
 				const auto fillSelect = _background.selectActiveBlock
 					? FixedRange{ x, x + si.width }
 					: findSelectEmojiRange(
@@ -817,6 +877,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			//	_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
 			}
 			x += si.width;
+			if (paintRightToMiddleElision) {
+				x -= si.width;
+			}
 			continue;
 		}
 
@@ -838,7 +901,64 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		for (int g = glyphsStart; g < glyphsEnd; ++g)
 			itemWidth += glyphs.effectiveAdvance(g);
 
+		if (_elisionMiddle && !paintRightToMiddleElision) {
+			itemWidth = 0;
+			for (int g = glyphsStart; g < glyphsEnd; ++g) {
+				const auto adv = glyphs.effectiveAdvance(g);
+				if (leftLineLengthLeft - adv.toReal() < 0) {
+					leftLineLengthLeft = 0;
+					if (lineText.at(g).isSpace()) {
+						rightLineLengthLeft += _f->spacew;
+					}
+					glyphsEnd = g;
+					i = -1;
+					lastLeftToMiddleX = (x + itemWidth);
+					break;
+				} else {
+					leftLineLengthLeft -= adv.toReal();
+					leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
+					itemWidth += adv;
+				}
+			}
+		}
+		if (_elisionMiddle && paintRightToMiddleElision && rightLineLengthLeft) {
+			itemWidth = 0;
+			if (i == 0) {
+				x = _x + _lineWidth;
+			}
+			for (int g = glyphsEnd - 1; g >= glyphsStart; --g) {
+				const auto adv = glyphs.effectiveAdvance(g);
+				if (rightLineLengthLeft - adv.toReal() < 0) {
+					rightLineLengthLeft = 0;
+					glyphsStart = std::min(g + 1, glyphsEnd - 1);
+					i = nItems;
+					if (lineText.at(glyphsStart).isSpace()) {
+						x -= _f->spacew;
+					}
+					{
+						_p->setPen(*_currentPen);
+						const auto bigWidth = x - itemWidth - lastLeftToMiddleX;
+						const auto smallWidth = _f->elidew;
+						const auto left = lastLeftToMiddleX;
+						_p->drawText(
+							(left + (bigWidth - smallWidth) / 2).toReal(),
+							textY,
+							kQEllipsis);
+					}
+					break;
+				} else {
+					rightLineLengthLeft -= adv.toReal();
+					rightLineLengthLeft = std::max(0.01, rightLineLengthLeft);
+					itemWidth += adv;
+				}
+			}
+			x -= itemWidth;
+		}
+
 		if (!_p && _lookupX >= x && _lookupX < x + itemWidth) { // _lookupRequest
+			if (_elisionMiddle) {
+				return false;
+			}
 			if (_lookupLink) {
 				if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
 					if (const auto link = lookupLink(block)) {
@@ -1026,6 +1146,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		}
 
 		x += itemWidth;
+		if (paintRightToMiddleElision) {
+			x -= itemWidth;
+		}
 	}
 	fillRectsFromRanges();
 	return !_elidedLine;

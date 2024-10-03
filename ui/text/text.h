@@ -238,6 +238,8 @@ struct PaintContext {
 	int elisionLines = 0;
 	int elisionRemoveFromEnd = 0;
 	bool elisionBreakEverywhere = false;
+	// Elision middle works only with elisionLines = 1 and is very limited.
+	bool elisionMiddle = false;
 	bool useFullWidth = false; // !(width = min(availableWidth, maxWidth()))
 };
 

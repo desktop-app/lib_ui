@@ -213,6 +213,8 @@ private:
 	StateRequest _lookupRequest;
 	StateResult _lookupResult;
 
+	bool _elisionMiddle = false;
+
 };
 
 } // namespace Ui::Text
