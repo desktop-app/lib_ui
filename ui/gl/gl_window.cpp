@@ -48,13 +48,8 @@ not_null<RpWidget*> Window::widget() const {
 
 std::unique_ptr<RpWindow> Window::createWindow(
 		const Fn<Backend(Capabilities)> &chooseBackend) {
-	auto result = std::make_unique<RpWindow>();
-	_backend = chooseBackend(CheckCapabilities(result.get()));
-	if (_backend != Backend::OpenGL) {
-		// We have to create a new window, if OpenGL initialization failed.
-		result = std::make_unique<RpWindow>();
-	}
-	return result;
+	_backend = chooseBackend(CheckCapabilities());
+	return std::make_unique<RpWindow>();
 }
 
 } // namespace Ui::GL
