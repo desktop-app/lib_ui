@@ -771,7 +771,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						i = -1;
 						lastLeftToMiddleX = (x + si.width);
 						_p->setPen(*_currentPen);
-						rightLineLengthLeft = qCeil((x).toReal()) - _x.toReal() - _f->elidew;
+						rightLineLengthLeft = std::ceil((x).toReal()) - _x.toReal() - _f->elidew;
 					} else {
 						leftLineLengthLeft -= si.width.toReal();
 						leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
