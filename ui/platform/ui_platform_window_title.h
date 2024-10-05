@@ -135,9 +135,6 @@ private:
 	void init(Fn<void(bool maximized)> maximize);
 	void updateButtonsState();
 	void updateControlsPosition();
-	void updateControlsPositionBySide(
-		const std::vector<Control> &controls,
-		bool right);
 	void handleWindowStateChanged(Qt::WindowStates state = Qt::WindowNoState);
 
 	not_null<const style::WindowTitle*> _st;
