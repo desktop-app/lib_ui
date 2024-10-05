@@ -312,18 +312,20 @@ void TitleControls::updateControlsPosition() {
 	auto &controlsRight = controlsLayout.right;
 	ranges::reverse(controlsRight);
 
-	const auto moveFromTo = [&](auto &from, auto &to) {
-		for (const auto control : from) {
-			if (!ranges::contains(to, control)) {
-				to.push_back(control);
+	if (_st->oneSideControls) {
+		const auto moveFromTo = [&](auto &from, auto &to) {
+			for (const auto control : from) {
+				if (!ranges::contains(to, control)) {
+					to.push_back(control);
+				}
 			}
+			from.clear();
+		};
+		if (TitleControlsOnLeft(controlsLayout)) {
+			moveFromTo(controlsRight, controlsLeft);
+		} else {
+			moveFromTo(controlsLeft, controlsRight);
 		}
-		from.clear();
-	};
-	if (TitleControlsOnLeft(controlsLayout)) {
-		moveFromTo(controlsRight, controlsLeft);
-	} else {
-		moveFromTo(controlsLeft, controlsRight);
 	}
 
 	const auto controlPresent = [&](Control control) {
