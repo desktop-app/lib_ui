@@ -323,6 +323,8 @@ void TitleControls::updateControlsPosition() {
 	auto controlsLayout = TitleControlsLayout();
 	auto &controlsLeft = controlsLayout.left;
 	auto &controlsRight = controlsLayout.right;
+	ranges::reverse(controlsRight);
+
 	const auto moveFromTo = [&](auto &from, auto &to) {
 		for (const auto control : from) {
 			if (!ranges::contains(to, control)) {
@@ -381,10 +383,7 @@ void TitleControls::updateControlsPosition() {
 void TitleControls::updateControlsPositionBySide(
 		const std::vector<Control> &controls,
 		bool right) {
-	auto preparedControls = right
-		? (ranges::views::reverse(controls) | ranges::to_vector)
-		: controls;
-
+	auto preparedControls = controls;
 	RemoveDuplicates(preparedControls);
 
 	auto position = 0;
