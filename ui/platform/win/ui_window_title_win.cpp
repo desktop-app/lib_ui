@@ -153,13 +153,7 @@ void TitleWidget::resizeEvent(QResizeEvent *e) {
 }
 
 HitTestResult TitleWidget::hitTest(QPoint point) const {
-	const auto origin = _paddingHelper
-		? _paddingHelper->controlsParent.pos()
-		: QPoint();
-	const auto padding = _paddingHelper
-		? _paddingHelper->padding.current()
-		: 0;
-	const auto controlsResult = _controls.hitTest(point - origin, padding);
+	const auto controlsResult = _controls.hitTest(point);
 	return (controlsResult != HitTestResult::None)
 		? controlsResult
 		: HitTestResult::Caption;

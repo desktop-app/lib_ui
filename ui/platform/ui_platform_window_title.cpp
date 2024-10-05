@@ -248,10 +248,11 @@ void TitleControls::raise() {
 	_close->raise();
 }
 
-HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
+HitTestResult TitleControls::hitTest(QPoint point) const {
 	const auto test = [&](const object_ptr<AbstractButton> &button) {
-		return button && button->geometry().marginsAdded(
-			{ 0, padding, 0, 0 }
+		return button && QRect(
+			button->mapTo(button->window(), QPoint()),
+			button->size()
 		).contains(point);
 	};
 	if (test(_minimize)) {
@@ -561,10 +562,7 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
 
 	window->hitTestRequests(
 	) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
-		const auto origin = raw->wrap.pos();
-		const auto relative = request->point - origin;
-		const auto padding = window->additionalContentPadding();
-		const auto controlsResult = raw->controls.hitTest(relative, padding);
+		const auto controlsResult = raw->controls.hitTest(request->point);
 		if (controlsResult != HitTestResult::None) {
 			request->result = controlsResult;
 		}
