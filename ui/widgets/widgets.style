@@ -562,6 +562,7 @@ WindowTitle {
 	fg: color;
 	fgActive: color;
 	shadow: bool;
+	oneSideControls: bool;
 	style: TextStyle;
 	minimize: IconButton;
 	minimizeIconActive: icon;
@@ -1440,6 +1441,7 @@ defaultWindowTitle: WindowTitle {
 		font: font(semibold 12px);
 	}
 	shadow: true;
+	oneSideControls: false;
 	minimize: IconButton(windowTitleButton) {
 		icon: icon {
 			{ windowTitleButtonSize, titleButtonBg },
