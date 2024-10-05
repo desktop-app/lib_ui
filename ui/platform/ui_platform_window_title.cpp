@@ -24,19 +24,6 @@
 
 namespace Ui {
 namespace Platform {
-namespace {
-
-template <typename T>
-void RemoveDuplicates(std::vector<T> &v) {
-	auto end = v.end();
-	for (auto it = v.begin(); it != end; ++it) {
-		end = std::remove(it + 1, end, *it);
-	}
-
-	v.erase(end, v.end());
-}
-
-} // namespace
 
 bool SemiNativeSystemButtonProcessing() {
 	return ::Platform::IsWindows11OrGreater();
@@ -376,31 +363,30 @@ void TitleControls::updateControlsPosition() {
 		_close->hide();
 	}
 
-	updateControlsPositionBySide(controlsLeft, false);
-	updateControlsPositionBySide(controlsRight, true);
-}
+	std::vector<Control> visitedControls;
+	const auto updateBySide = [&](
+			const std::vector<Control> &controls,
+			bool right) {
+		auto position = 0;
+		for (const auto &control : controls) {
+			const auto widget = controlWidget(control);
+			if (!widget || ranges::contains(visitedControls, control)) {
+				continue;
+			}
 
-void TitleControls::updateControlsPositionBySide(
-		const std::vector<Control> &controls,
-		bool right) {
-	auto preparedControls = controls;
-	RemoveDuplicates(preparedControls);
+			if (right) {
+				widget->moveToRight(position, 0);
+			} else {
+				widget->moveToLeft(position, 0);
+			}
 
-	auto position = 0;
-	for (const auto &control : preparedControls) {
-		const auto widget = controlWidget(control);
-		if (!widget) {
-			continue;
+			position += widget->width();
+			visitedControls.push_back(control);
 		}
+	};
 
-		if (right) {
-			widget->moveToRight(position, 0);
-		} else {
-			widget->moveToLeft(position, 0);
-		}
-
-		position += widget->width();
-	}
+	updateBySide(controlsLeft, false);
+	updateBySide(controlsRight, true);
 }
 
 void TitleControls::handleWindowStateChanged(Qt::WindowStates state) {
