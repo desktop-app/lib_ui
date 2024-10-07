@@ -164,11 +164,5 @@ std::optional<bool> IsOverlapped(
 	return false;
 }
 
-void SetGeometryWithPossibleScreenChange(
-		not_null<QWidget*> widget,
-		QRect geometry) {
-	widget->setGeometry(geometry);
-}
-
 } // namespace Platform
 } // namespace Ui

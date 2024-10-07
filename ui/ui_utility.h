@@ -127,7 +127,7 @@ int WheelDirection(not_null<QWheelEvent*> e);
 	not_null<QWidget*> from,
 	QRect rect);
 
-void SetGeomtryWithPossibleScreenChange(
+void SetGeometryAndScreen(
 	not_null<QWidget*> widget,
 	QRect geometry);
 

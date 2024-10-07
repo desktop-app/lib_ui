@@ -265,10 +265,18 @@ QPoint MapFrom(
 	return { MapFrom(to, from, rect.topLeft()), rect.size() };
 }
 
-void SetGeometryWithPossibleScreenChange(
+void SetGeometryAndScreen(
 		not_null<QWidget*> widget,
 		QRect geometry) {
-	Platform::SetGeometryWithPossibleScreenChange(widget, geometry);
+	if (const auto screen = QGuiApplication::screenAt(geometry.center())) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		widget()->setScreen(screen);
+#else // Qt >= 6.0.0
+		widget->createWinId();
+		widget->windowHandle()->setScreen(screen);
+#endif // Qt < 6.0.0
+	}
+	widget->setGeometry(geometry);
 }
 
 } // namespace Ui
