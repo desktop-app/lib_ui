@@ -270,7 +270,7 @@ void SetGeometryAndScreen(
 		QRect geometry) {
 	if (const auto screen = QGuiApplication::screenAt(geometry.center())) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-		widget()->setScreen(screen);
+		widget->setScreen(screen);
 #else // Qt >= 6.0.0
 		widget->createWinId();
 		widget->windowHandle()->setScreen(screen);
