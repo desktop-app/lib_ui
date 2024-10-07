@@ -30,6 +30,7 @@ public:
 
 private:
 	void initializeGL() override;
+	void resizeEvent(QResizeEvent *e) override;
 	void resizeGL(int w, int h) override;
 	void paintEvent(QPaintEvent *e) override;
 	void paintGL() override;
@@ -75,6 +76,13 @@ void SurfaceOpenGL::initializeGL() {
 		&QOpenGLContext::aboutToBeDestroyed,
 		[=] { callDeInit(); });
 	_renderer->init(this, *context->functions());
+}
+
+void SurfaceOpenGL::resizeEvent(QResizeEvent *e) {
+	if (!window()->windowHandle()) {
+		return;
+	}
+	QOpenGLWidget::resizeEvent(e);
 }
 
 void SurfaceOpenGL::resizeGL(int w, int h) {
