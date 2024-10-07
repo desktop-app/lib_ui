@@ -66,8 +66,6 @@ SurfaceOpenGL::~SurfaceOpenGL() {
 }
 
 void SurfaceOpenGL::initializeGL() {
-	Expects(window()->windowHandle() != nullptr);
-
 	if (_connection) {
 		QObject::disconnect(base::take(_connection));
 	}
