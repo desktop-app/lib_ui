@@ -478,7 +478,7 @@ void BlockParser::skipBadEntities() {
 }
 
 void BlockParser::parseCurrentChar() {
-	_ch = ((_ptr < _end) ? *_ptr : 0);
+	_ch = ((_ptr < _end) ? *_ptr : QChar(0));
 	_emojiLookback = 0;
 	const auto inCustomEmoji = !_customEmojiData.isEmpty();
 	const auto isNewLine = !inCustomEmoji && _multiline && IsNewline(_ch);
@@ -488,7 +488,7 @@ void BlockParser::parseCurrentChar() {
 	const auto skip = [&] {
 		if (IsBad(_ch) || _ch.isLowSurrogate()) {
 			return true;
-		} else if (_ch == 0xFE0F && Platform::IsMac()) {
+		} else if (_ch.unicode() == 0xFE0F && Platform::IsMac()) {
 			// Some sequences like 0x0E53 0xFE0F crash OS X harfbuzz text processing :(
 			return true;
 		} else if (isDiacritic) {
@@ -536,7 +536,7 @@ void BlockParser::parseCurrentChar() {
 		if (_ptr < _end) {
 			_t->insertModifications(_tText.size(), -1);
 		}
-		_ch = 0;
+		_ch = QChar(0);
 		_allowDiacritic = false;
 	} else {
 		if (isTilde) { // Tilde fix in OpenSans.
