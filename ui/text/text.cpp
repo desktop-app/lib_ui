@@ -1830,13 +1830,13 @@ void String::clear() {
 }
 
 bool IsBad(QChar ch) {
-	return (ch == 0)
-		|| (ch >= 8232 && ch < 8237)
-		|| (ch >= 65024 && ch < 65040 && ch != 65039)
-		|| (ch >= 127 && ch < 160 && ch != 156)
+	return (ch.unicode() == 0)
+		|| (ch.unicode() >= 8232 && ch.unicode() < 8237)
+		|| (ch.unicode() >= 65024 && ch.unicode() < 65040 && ch.unicode() != 65039)
+		|| (ch.unicode() >= 127 && ch.unicode() < 160 && ch.unicode() != 156)
 
 		// qt harfbuzz crash see https://github.com/telegramdesktop/tdesktop/issues/4551
-		|| (Platform::IsMac() && ch == 6158);
+		|| (Platform::IsMac() && ch.unicode() == 6158);
 }
 
 bool IsWordSeparator(QChar ch) {
@@ -1906,12 +1906,12 @@ bool IsLinkEnd(QChar ch) {
 
 bool IsNewline(QChar ch) {
 	return (ch == QChar::LineFeed)
-		|| (ch == 156);
+		|| (ch.unicode() == 156);
 }
 
 bool IsSpace(QChar ch) {
 	return ch.isSpace()
-		|| (ch < 32)
+		|| (ch.unicode() < 32)
 		|| (ch == QChar::ParagraphSeparator)
 		|| (ch == QChar::LineSeparator)
 		|| (ch == QChar::ObjectReplacementCharacter)
@@ -1921,8 +1921,8 @@ bool IsSpace(QChar ch) {
 
 bool IsDiacritic(QChar ch) { // diacritic and variation selectors
 	return (ch.category() == QChar::Mark_NonSpacing)
-		|| (ch == 1652)
-		|| (ch >= 64606 && ch <= 64611);
+		|| (ch.unicode() == 1652)
+		|| (ch.unicode() >= 64606 && ch.unicode() <= 64611);
 }
 
 bool IsReplacedBySpace(QChar ch) {
@@ -1934,13 +1934,13 @@ bool IsReplacedBySpace(QChar ch) {
 	// \xcc[\xb3\xbf\x8a] // 819, 831, 778
 	// QString bad1 = QString::fromUtf8("\xcc\xb3"), bad2 = QString::fromUtf8("\xcc\xbf"), bad3 = QString::fromUtf8("\xcc\x8a");
 	// [\x00\x01\x02\x07\x08\x0b-\x1f] // '\t' = 0x09
-	return (/*code >= 0x00 && */ch <= 0x02)
-		|| (ch >= 0x07 && ch <= 0x09)
-		|| (ch >= 0x0b && ch <= 0x1f)
-		|| (ch == 819)
-		|| (ch == 831)
-		|| (ch == 778)
-		|| (ch >= 8232 && ch <= 8237);
+	return (/*code >= 0x00 && */ch.unicode() <= 0x02)
+		|| (ch.unicode() >= 0x07 && ch.unicode() <= 0x09)
+		|| (ch.unicode() >= 0x0b && ch.unicode() <= 0x1f)
+		|| (ch.unicode() == 819)
+		|| (ch.unicode() == 831)
+		|| (ch.unicode() == 778)
+		|| (ch.unicode() >= 8232 && ch.unicode() <= 8237);
 }
 
 bool IsTrimmed(QChar ch) {
