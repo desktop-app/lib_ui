@@ -2546,10 +2546,12 @@ void InputField::editPreLanguage(int quoteId, QStringView tag) {
 	const auto apply = crl::guard(this, [=](QString language) {
 		auto block = FindBlock(document(), quoteId);
 		if (block.isValid()) {
+			const auto id = kTagPre + language;
+			_insertedTags = { { block.position(), block.length() - 1, id } };
 			auto cursor = QTextCursor(document());
 			cursor.setPosition(block.position());
-			cursor.setBlockFormat(
-				PrepareBlockFormat(_st, kTagPre + language));
+			cursor.setBlockFormat(PrepareBlockFormat(_st, id));
+			_insertedTags.clear();
 		}
 	});
 	_editLanguageCallback(tag.mid(kTagPre.size()).toString(), apply);
