@@ -117,6 +117,7 @@ public:
 
 	void setHandleTouch(bool handle);
 	bool viewportEvent(QEvent *e);
+	void keyPressEvent(QKeyEvent *e) override;
 
 	int scrollWidth() const;
 	int scrollHeight() const;
@@ -190,7 +191,6 @@ private:
 	void paintEvent(QPaintEvent *e) override;
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
-	void keyPressEvent(QKeyEvent *e) override;
 	bool handleWheelEvent(not_null<QWheelEvent*> e, bool touch = false);
 	void handleTouchEvent(QTouchEvent *e);
 
