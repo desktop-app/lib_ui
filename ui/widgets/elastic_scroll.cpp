@@ -1055,11 +1055,25 @@ void ElasticScroll::moveEvent(QMoveEvent *e) {
 }
 
 void ElasticScroll::keyPressEvent(QKeyEvent *e) {
-	if ((e->key() == Qt::Key_Up || e->key() == Qt::Key_Down)
-		&& e->modifiers().testFlag(Qt::AltModifier)) {
+	const auto key = e->key();
+	if (!_widget) {
 		e->ignore();
-	} else if (_widget && (e->key() == Qt::Key_Escape || e->key() == Qt::Key_Back)) {
+		return;
+	} else if ((key == Qt::Key_Up || key == Qt::Key_Down)
+		&& (e->modifiers().testFlag(Qt::AltModifier)
+			|| e->modifiers().testFlag(Qt::ControlModifier))) {
+		e->ignore();
+	} else if (_widget && (key == Qt::Key_Escape || key == Qt::Key_Back)) {
 		((QObject*)_widget.data())->event(e);
+	} else if (key == Qt::Key_Up
+		|| key == Qt::Key_Down
+		|| key == Qt::Key_PageUp
+		|| key == Qt::Key_PageDown) {
+		const auto up = (key == Qt::Key_Up) || (key == Qt::Key_PageUp);
+		const auto step = (key == Qt::Key_Up || key == Qt::Key_Down)
+			? style::ConvertScale(20)
+			: height();
+		tryScrollTo(_state.visibleFrom + (up ? -step : step));
 	}
 }
 
