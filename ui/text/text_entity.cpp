@@ -80,6 +80,10 @@ QString ExpressionHashtag() {
 	return QString::fromUtf8("(^|[") + ExpressionSeparators(QString::fromUtf8("`\\*/")) + QString::fromUtf8("])#[\\w]{2,64}([\\W]|$)");
 }
 
+QString ExpressionHashtagMention() {
+	return QString::fromUtf8("(^|[") + ExpressionSeparators(QString::fromUtf8("`\\*/")) + QString::fromUtf8("])#[\\w]{2,64}(@[A-Za-z_0-9]{1,32})?([\\W]|$)");
+}
+
 QString ExpressionHashtagExclude() {
 	return QString::fromUtf8("^#?\\d+$");
 }
@@ -1217,9 +1221,14 @@ const QRegularExpression &RegExpMailNameAtEnd() {
 	return result;
 }
 
-const QRegularExpression &RegExpHashtag() {
-	static const auto result = CreateRegExp(ExpressionHashtag());
-	return result;
+const QRegularExpression &RegExpHashtag(bool allowWithMention) {
+	if (allowWithMention) {
+		static const auto result = CreateRegExp(ExpressionHashtagMention());
+		return result;
+	} else {
+		static const auto result = CreateRegExp(ExpressionHashtag());
+		return result;
+	}
 }
 
 const QRegularExpression &RegExpHashtagExclude() {
@@ -1590,7 +1599,7 @@ void ParseEntities(TextWithEntities &result, int32 flags) {
 	for (int32 offset = 0, matchOffset = offset, mentionSkip = 0; offset < len;) {
 		auto mDomain = qthelp::RegExpDomain().match(result.text, matchOffset);
 		auto mExplicitDomain = qthelp::RegExpDomainExplicit().match(result.text, matchOffset);
-		auto mHashtag = withHashtags ? RegExpHashtag().match(result.text, matchOffset) : QRegularExpressionMatch();
+		auto mHashtag = withHashtags ? RegExpHashtag(true).match(result.text, matchOffset) : QRegularExpressionMatch();
 		auto mMention = withMentions ? RegExpMention().match(result.text, qMax(mentionSkip, matchOffset)) : QRegularExpressionMatch();
 		auto mBotCommand = withBotCommands ? RegExpBotCommand().match(result.text, matchOffset) : QRegularExpressionMatch();
 
@@ -1613,7 +1622,7 @@ void ParseEntities(TextWithEntities &result, int32 flags) {
 			if (!mHashtag.capturedView(1).isEmpty()) {
 				++hashtagStart;
 			}
-			if (!mHashtag.capturedView(2).isEmpty()) {
+			if (!mHashtag.capturedView(3).isEmpty()) {
 				--hashtagEnd;
 			}
 			if (RegExpHashtagExclude().match(

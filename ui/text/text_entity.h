@@ -290,7 +290,7 @@ bool IsValidProtocol(const QString &protocol);
 bool IsValidTopDomain(const QString &domain);
 
 const QRegularExpression &RegExpMailNameAtEnd();
-const QRegularExpression &RegExpHashtag();
+const QRegularExpression &RegExpHashtag(bool allowWithMention);
 const QRegularExpression &RegExpHashtagExclude();
 const QRegularExpression &RegExpMention();
 const QRegularExpression &RegExpBotCommand();
