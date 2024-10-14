@@ -59,12 +59,6 @@ SurfaceOpenGL::SurfaceOpenGL(
 	std::unique_ptr<Renderer> renderer)
 : RpWidgetBase<QOpenGLWidget, SurfaceTraits>(parent)
 , _renderer(std::move(renderer)) {
-	auto format = this->format();
-	format.setAlphaBufferSize(8);
-	setFormat(format);
-
-	window()->setAttribute(Qt::WA_TranslucentBackground);
-
 	setUpdateBehavior(QOpenGLWidget::PartialUpdate);
 }
 
