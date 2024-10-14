@@ -155,10 +155,14 @@ private:
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
+	void updateFromResize(QPoint delta);
 
 	const Qt::Edges _edges;
 	QMargins _extent;
+	QRect _startGeometry;
+	QPoint _startPosition;
 	bool _press = false;
+	bool _resizing = false;
 
 };
 
@@ -250,21 +254,63 @@ void SeparatePanel::ResizeEdge::setParentPadding(QMargins padding) {
 void SeparatePanel::ResizeEdge::mousePressEvent(QMouseEvent *e) {
 	if (e->button() == Qt::LeftButton) {
 		_press = true;
+		_startPosition = e->globalPos();
+		_startGeometry = window()->geometry();
 	}
 }
 
 void SeparatePanel::ResizeEdge::mouseReleaseEvent(QMouseEvent *e) {
 	if (e->button() == Qt::LeftButton) {
 		_press = false;
+		_resizing = false;
 	}
 }
 
 void SeparatePanel::ResizeEdge::mouseMoveEvent(QMouseEvent *e) {
 	if (base::take(_press)) {
 		if (const auto handle = window()->windowHandle()) {
-			handle->startSystemResize(_edges);
+			if (!handle->startSystemResize(_edges)) {
+				_resizing = true;
+			}
 		}
 	}
+	if (_resizing) {
+		updateFromResize(e->globalPos() - _startPosition);
+	}
+}
+
+void SeparatePanel::ResizeEdge::updateFromResize(QPoint delta) {
+	auto geometry = _startGeometry;
+	const auto min = window()->minimumSize();
+	const auto minw = std::max(min.width(), 80);
+	const auto minh = std::max(min.height(), 40);
+	const auto updateLeft = [&](int left) {
+		geometry.setX(std::min(
+			left,
+			geometry.x() + geometry.width() - minw));
+	};
+	const auto updateRight = [&](int right) {
+		geometry.setWidth(std::max(right - geometry.x(), minw));
+	};
+	const auto updateTop = [&](int top) {
+		geometry.setY(std::min(
+			top,
+			geometry.y() + geometry.height() - minh));
+	};
+	const auto updateBottom = [&](int bottom) {
+		geometry.setHeight(std::max(bottom - geometry.y(), minh));
+	};
+	if (_edges & Qt::LeftEdge) {
+		updateLeft(geometry.x() + delta.x());
+	} else if (_edges & Qt::RightEdge) {
+		updateRight(geometry.x() + geometry.width() + delta.x());
+	}
+	if (_edges & Qt::TopEdge) {
+		updateTop(geometry.y() + delta.y());
+	} else if (_edges & Qt::BottomEdge) {
+		updateBottom(geometry.y() + geometry.height() + delta.y());
+	}
+	window()->setGeometry(geometry);
 }
 
 SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
