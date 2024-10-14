@@ -7,6 +7,7 @@
 #include "ui/rp_widget.h"
 
 #include "base/qt_signal_producer.h"
+#include "ui/gl/gl_detection.h"
 
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
@@ -18,6 +19,11 @@ TWidget::TWidget(QWidget *parent)
 	[[maybe_unused]] static const auto Once = [] {
 		auto format = QSurfaceFormat::defaultFormat();
 		format.setSwapInterval(0);
+#ifdef DESKTOP_APP_USE_ANGLE
+		format.setRedBufferSize(8);
+		format.setGreenBufferSize(8);
+		format.setBlueBufferSize(8);
+#endif // DESKTOP_APP_USE_ANGLE
 #ifdef Q_OS_MAC
 		format.setColorSpace(QColorSpace::SRgb);
 #endif // Q_OS_MAC
