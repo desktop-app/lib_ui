@@ -18,6 +18,8 @@
 #include "base/platform/base_platform_info.h"
 #include "styles/style_basic.h"
 
+#include <QtGui/QGuiApplication>
+
 namespace Ui {
 
 const QString kQEllipsis = u"..."_q;
@@ -657,9 +659,12 @@ void String::recountNaturalSize(
 	if (quote) {
 		quote->maxWidth = qmaxwidth.ceil().toInt();
 		quote->minHeight = _minHeight - qoldheight;
-		_endsWithQuote = true;
+		_endsWithQuoteOrOtherDirection = true;
 	} else {
-		_endsWithQuote = false;
+		_endsWithQuoteOrOtherDirection = (lastNewlineBlock != end(_blocks))
+			&& (static_cast<NewlineBlock*>( // Last block has odd direction.
+				lastNewlineBlock->get())->paragraphDirection()
+				!= QGuiApplication::layoutDirection());
 	}
 }
 
@@ -820,7 +825,7 @@ bool String::updateSkipBlock(int width, int height) {
 		_blocks.pop_back();
 		_words.pop_back();
 		removeModificationsAfter(size);
-	} else if (_endsWithQuote) {
+	} else if (_endsWithQuoteOrOtherDirection) {
 		insertModifications(_text.size(), 1);
 		_words.push_back(Word(
 			uint16(_text.size()),

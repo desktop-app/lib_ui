@@ -478,7 +478,7 @@ private:
 	bool _isOnlyCustomEmoji : 1 = false;
 	bool _hasNotEmojiAndSpaces : 1 = false;
 	bool _skipBlockAddedNewline : 1 = false;
-	bool _endsWithQuote : 1 = false;
+	bool _endsWithQuoteOrOtherDirection : 1 = false;
 
 	friend class BlockParser;
 	friend class WordParser;
