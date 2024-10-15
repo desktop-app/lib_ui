@@ -661,10 +661,18 @@ void String::recountNaturalSize(
 		quote->minHeight = _minHeight - qoldheight;
 		_endsWithQuoteOrOtherDirection = true;
 	} else {
-		_endsWithQuoteOrOtherDirection = (lastNewlineBlock != end(_blocks))
-			&& (static_cast<NewlineBlock*>( // Last block has odd direction.
-				lastNewlineBlock->get())->paragraphDirection()
-				!= QGuiApplication::layoutDirection());
+		const auto lastIsNewline = (lastNewlineBlock != end(_blocks))
+			&& (lastNewlineBlock->get()->type() == TextBlockType::Newline);
+		const auto lastNewline = lastIsNewline
+			? static_cast<NewlineBlock*>(lastNewlineBlock->get())
+			: nullptr;
+		const auto lastLineDirection = lastNewline
+			? lastNewline->paragraphDirection()
+			: _startParagraphRTL
+			? Qt::RightToLeft
+			: Qt::LeftToRight;
+		_endsWithQuoteOrOtherDirection
+			= (lastLineDirection != style::LayoutDirection());
 	}
 }
 
