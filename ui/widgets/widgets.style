@@ -641,6 +641,9 @@ defaultFlatLabel: FlatLabel {
 	style: defaultTextStyle;
 	palette: defaultTextPalette;
 }
+defaultSubTextLabel: FlatLabel(defaultFlatLabel) {
+	textFg: windowSubTextFg;
+}
 
 defaultLinkButton: LinkButton {
 	color: windowActiveTextFg;
@@ -919,9 +922,7 @@ defaultInputField: InputField {
 	heightMax: 148px;
 	widthMin: 64px;
 }
-defaultInputFieldLimit: FlatLabel(defaultFlatLabel) {
-	textFg: windowSubTextFg;
-}
+defaultInputFieldLimit: defaultSubTextLabel;
 
 defaultIconButton: IconButton {
 	iconPosition: point(-1px, -1px);
