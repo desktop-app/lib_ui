@@ -112,7 +112,7 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 
 	const auto screen = QGuiApplication::screenAt(m);
 	if (screen) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && !defined(Q_OS_MAC)
 		setScreen(screen);
 #else // Qt >= 6.0.0
 		createWinId();
