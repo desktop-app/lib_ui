@@ -109,9 +109,7 @@ boxTitleClose: IconButton(defaultIconButton) {
 
 	rippleAreaPosition: point(4px, 4px);
 	rippleAreaSize: 40px;
-	ripple: RippleAnimation(defaultRippleAnimation) {
-		color: windowBgOver;
-	}
+	ripple: defaultRippleAnimationBgOver;
 }
 
 boxLinkButton: LinkButton(defaultLinkButton) {
@@ -182,9 +180,7 @@ separatePanelClose: IconButton(boxTitleClose) {
 
 	rippleAreaPosition: point(8px, 8px);
 	rippleAreaSize: 44px;
-	ripple: RippleAnimation(defaultRippleAnimation) {
-		color: windowBgOver;
-	}
+	ripple: defaultRippleAnimationBgOver;
 }
 separatePanelMenu: IconButton(separatePanelClose) {
 	width: 44px;

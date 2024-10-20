@@ -670,6 +670,10 @@ defaultTable: Table {
 emptyRippleAnimation: RippleAnimation {
 }
 
+defaultRippleAnimationBgOver: RippleAnimation(defaultRippleAnimation) {
+	color: windowBgOver;
+}
+
 buttonRadius: 4px;
 
 defaultActiveButton: RoundButton {
@@ -985,9 +989,7 @@ defaultMultiSelectSearchCancel: CrossButton {
 
 	duration: 150;
 	loadingPeriod: 1000;
-	ripple: RippleAnimation(defaultRippleAnimation) {
-		color: windowBgOver;
-	}
+	ripple: defaultRippleAnimationBgOver;
 }
 defaultMultiSelect: MultiSelect {
 	bg: boxSearchBg;
@@ -1334,9 +1336,7 @@ menuToggle: IconButton {
 
 	rippleAreaPosition: point(0px, 0px);
 	rippleAreaSize: 40px;
-	ripple: RippleAnimation(defaultRippleAnimation) {
-		color: windowBgOver;
-	}
+	ripple: defaultRippleAnimationBgOver;
 }
 
 backButtonIcon: icon {{ "box_button_back", menuIconFg }};
@@ -1350,9 +1350,7 @@ backButton: IconButton(defaultIconButton) {
 
 	rippleAreaPosition: point(0px, 0px);
 	rippleAreaSize: 40px;
-	ripple: RippleAnimation(defaultRippleAnimation) {
-		color: windowBgOver;
-	}
+	ripple: defaultRippleAnimationBgOver;
 }
 
 defaultSettingsToggle: Toggle(defaultToggle) {
