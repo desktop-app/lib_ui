@@ -309,4 +309,18 @@ private:
 
 };
 
+[[nodiscard]] not_null<RippleButton*> CreateSimpleRectButton(
+	QWidget *parent,
+	const style::RippleAnimation &st);
+[[nodiscard]] not_null<RippleButton*> CreateSimpleSettingsButton(
+	QWidget *parent,
+	const style::RippleAnimation &st,
+	const style::color &bg);
+[[nodiscard]] not_null<RippleButton*> CreateSimpleCircleButton(
+	QWidget *parent,
+	const style::RippleAnimation &st);
+[[nodiscard]] not_null<RippleButton*> CreateSimpleRoundButton(
+	QWidget *parent,
+	const style::RippleAnimation &st);
+
 } // namespace Ui

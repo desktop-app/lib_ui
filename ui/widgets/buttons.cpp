@@ -12,10 +12,50 @@
 #include "ui/effects/numbers_animation.h"
 #include "ui/image/image_prepare.h"
 #include "ui/painter.h"
+#include "ui/qt_object_factory.h"
 
 #include <QtGui/QtEvents>
 
 namespace Ui {
+namespace {
+
+class SimpleRippleButton : public RippleButton {
+public:
+	using RippleButton::RippleButton;
+
+protected:
+	QPoint prepareRippleStartPosition() const override final {
+		const auto result = mapFromGlobal(QCursor::pos());
+		return rect().contains(result)
+			? result
+			: DisabledRippleStartPosition();
+	}
+
+};
+
+class SimpleCircleButton final : public SimpleRippleButton {
+public:
+	using SimpleRippleButton::SimpleRippleButton;
+
+protected:
+	QImage prepareRippleMask() const override final {
+		return RippleAnimation::EllipseMask(size());
+	}
+
+};
+
+class SimpleRoundButton final : public SimpleRippleButton {
+public:
+	using SimpleRippleButton::SimpleRippleButton;
+
+protected:
+	QImage prepareRippleMask() const override final {
+		return RippleAnimation::RoundRectMask(size(), st::buttonRadius);
+	}
+
+};
+
+} // namespace
 
 LinkButton::LinkButton(
 	QWidget *parent,
@@ -895,6 +935,56 @@ void SettingsButton::onStateChanged(
 void SettingsButton::setText(QString &&text) {
 	_text.setText(_st.style, text);
 	update();
+}
+
+not_null<RippleButton*> CreateSimpleRectButton(
+		QWidget *parent,
+		const style::RippleAnimation &st) {
+	const auto result = CreateChild<SimpleRippleButton>(parent, st);
+	result->paintRequest() | rpl::start_with_next([result] {
+		auto p = QPainter(result);
+		result->paintRipple(p, 0, 0);
+	}, result->lifetime());
+	return result;
+}
+
+not_null<RippleButton*> CreateSimpleSettingsButton(
+		QWidget *parent,
+		const style::RippleAnimation &st,
+		const style::color &bg) {
+	const auto result = CreateChild<SimpleRippleButton>(parent, st);
+	result->paintRequest() | rpl::start_with_next([result, bg] {
+		auto p = QPainter(result);
+		const auto paintOver = (result->isOver() || result->isDown())
+			&& !result->isDisabled();
+		if (paintOver) {
+			p.fillRect(result->rect(), bg);
+		}
+		result->paintRipple(p, 0, 0);
+	}, result->lifetime());
+	return result;
+}
+
+not_null<RippleButton*> CreateSimpleCircleButton(
+		QWidget *parent,
+		const style::RippleAnimation &st) {
+	const auto result = CreateChild<SimpleCircleButton>(parent, st);
+	result->paintRequest() | rpl::start_with_next([result] {
+		auto p = QPainter(result);
+		result->paintRipple(p, 0, 0);
+	}, result->lifetime());
+	return result;
+}
+
+not_null<RippleButton*> CreateSimpleRoundButton(
+		QWidget *parent,
+		const style::RippleAnimation &st) {
+	const auto result = CreateChild<SimpleRoundButton>(parent, st);
+	result->paintRequest() | rpl::start_with_next([result] {
+		auto p = QPainter(result);
+		result->paintRipple(p, 0, 0);
+	}, result->lifetime());
+	return result;
 }
 
 } // namespace Ui
