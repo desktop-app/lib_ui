@@ -70,7 +70,7 @@ void MultilineAction::paintEvent(QPaintEvent *e) {
 void MultilineAction::updateMinWidth() {
 	const auto skip = _labelPosition.x();
 	const auto rightSkip = _icon ? _st.itemIconPosition.x() : skip;
-	auto min = _text->textMaxWidth() / 2;
+	auto min = _text->textMaxWidth() / 4;
 	auto max = _icon ? _st.widthMax : (_text->textMaxWidth() - skip);
 	_text->resizeToWidth(max);
 	const auto height = _icon
