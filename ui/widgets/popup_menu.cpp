@@ -376,9 +376,13 @@ void PopupMenu::handleMenuResize() {
 	_scroll->resize(
 		newWidth - _padding.left() - _padding.right(),
 		scrollHeight);
-	setFixedSize(
-		newWidth,
-		_padding.top() + scrollHeight + _padding.bottom());
+	{
+		const auto newSize = QSize(
+			newWidth,
+			_padding.top() + scrollHeight + _padding.bottom());
+		setFixedSize(newSize);
+		resize(newSize);
+	}
 	_inner = rect().marginsRemoved(_padding);
 }
 
