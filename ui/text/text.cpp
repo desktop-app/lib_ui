@@ -672,7 +672,8 @@ void String::recountNaturalSize(
 			? Qt::RightToLeft
 			: Qt::LeftToRight;
 		_endsWithQuoteOrOtherDirection
-			= (lastLineDirection != style::LayoutDirection());
+			= ((lastLineDirection != style::LayoutDirection())
+				&& (lastLineDirection != Qt::LayoutDirectionAuto));
 	}
 }
 
