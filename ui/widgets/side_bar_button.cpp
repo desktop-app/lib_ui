@@ -26,20 +26,12 @@ SideBarButton::SideBarButton(
 	const style::SideBarButton &st)
 : RippleButton(parent, st.ripple)
 , _st(st)
-, _arcPen(
-	_st.textFg,
-	// Use a divider to get 1.5.
-	st::sideBarButtonLockPenWidth
-		/ float64(st::sideBarButtonLockPenWidthDivider),
-	Qt::SolidLine,
-	Qt::SquareCap,
-	Qt::RoundJoin)
 , _text(_st.minTextWidth) {
 	_text.setText(_st.style, title);
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::start_with_next([this] {
 		_iconCache = _iconCacheActive = QImage();
 		_lock.iconCache = _lock.iconCacheActive = QImage();
 		update();
@@ -245,7 +237,20 @@ void SideBarButton::validateLockIconCache() {
 	if (!(_active ? _lock.iconCacheActive : _lock.iconCache).isNull()) {
 		return;
 	}
+	(_active ? _lock.iconCacheActive : _lock.iconCache)
+		= SideBarLockIcon(_st.textFg);
+}
+
+QImage SideBarLockIcon(const style::color &fg) {
 	const auto &size = st::sideBarButtonLockSize;
+	const auto arcPen = QPen(
+		fg,
+		// Use a divider to get 1.5.
+		st::sideBarButtonLockPenWidth
+			/ float64(st::sideBarButtonLockPenWidthDivider),
+		Qt::SolidLine,
+		Qt::SquareCap,
+		Qt::RoundJoin);
 	auto image = QImage(
 		size * style::DevicePixelRatio(),
 		QImage::Format_ARGB32_Premultiplied);
@@ -269,17 +274,17 @@ void SideBarButton::validateLockIconCache() {
 			blockRectWidth,
 			blockRectHeight);
 		const auto lineHeight = -(blockRect.y() - arcHeight)
-			+ _arcPen.width() / 2.;
+			+ arcPen.width() / 2.;
 
 		p.setPen(Qt::NoPen);
-		p.setBrush(_st.textFg);
+		p.setBrush(fg);
 		{
 			p.drawRoundedRect(blockRect, 2, 2);
 		}
 
 		p.translate(size.width() - arcOffset, blockRect.y());
 
-		p.setPen(_arcPen);
+		p.setPen(arcPen);
 		const auto rLine = QLineF(0, 0, 0, lineHeight);
 		const auto lLine = rLine.translated(-arcWidth, 0);
 		p.drawLine(rLine);
@@ -287,13 +292,13 @@ void SideBarButton::validateLockIconCache() {
 
 		p.drawArc(
 			-arcWidth,
-			-arcHeight - _arcPen.width() / 2.,
+			-arcHeight - arcPen.width() / 2.,
 			arcWidth,
 			arcHeight * 2,
 			0,
 			180 * 16);
 	}
-	(_active ? _lock.iconCacheActive : _lock.iconCache) = std::move(image);
+	return image;
 }
 
 } // namespace Ui

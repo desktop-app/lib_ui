@@ -17,6 +17,8 @@ namespace Ui {
 
 class RippleAnimation;
 
+[[nodiscard]] QImage SideBarLockIcon(const style::color &fg);
+
 class SideBarButton final : public Ui::RippleButton {
 public:
 	SideBarButton(
@@ -45,7 +47,6 @@ private:
 	const style::SideBarButton &_st;
 	const style::icon *_iconOverride = nullptr;
 	const style::icon *_iconOverrideActive = nullptr;
-	const QPen _arcPen;
 	Ui::Text::String _text;
 	Ui::Text::String _badge;
 	QImage _iconCache;
