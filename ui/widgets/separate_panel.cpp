@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/separate_panel.h"
 
+#include "ui/effects/ripple_animation.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/menu/menu_add_action_callback.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
@@ -144,6 +145,23 @@ PanelShow::operator bool() const {
 
 } // namespace
 
+class SeparatePanel::FullScreenButton : public RippleButton {
+public:
+	FullScreenButton(QWidget *parent, const style::IconButton &st);
+
+	void init(not_null<QWidget*> parentWindow);
+
+protected:
+	void paintEvent(QPaintEvent *e) override;
+
+	QImage prepareRippleMask() const override;
+	QPoint prepareRippleStartPosition() const override;
+
+private:
+	const style::IconButton &_st;
+
+};
+
 class SeparatePanel::ResizeEdge final : public RpWidget {
 public:
 	ResizeEdge(not_null<QWidget*> parent, Qt::Edges edges);
@@ -165,6 +183,70 @@ private:
 	bool _resizing = false;
 
 };
+
+SeparatePanel::FullScreenButton::FullScreenButton(
+	QWidget *parent,
+	const style::IconButton &st)
+: RippleButton(parent, st.ripple)
+, _st(st) {
+	resize(_st.width, _st.height);
+}
+
+void InitFullScreenButton(
+		not_null<QWidget*> button,
+		not_null<QWidget*> parentWindow) {
+	button->setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint)
+		| Qt::BypassWindowManagerHint
+		| Qt::NoDropShadowWindowHint
+		| Qt::Tool);
+	button->setAttribute(Qt::WA_MacAlwaysShowToolWindow);
+	button->setAttribute(Qt::WA_OpaquePaintEvent, false);
+	button->setAttribute(Qt::WA_TranslucentBackground, true);
+	button->setAttribute(Qt::WA_NoSystemBackground, true);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	button->setScreen(parentWindow->screen());
+#else // Qt >= 6.0.0
+	button->createWinId();
+	button->windowHandle()->setScreen(
+		parentWindow->windowHandle()->screen());
+#endif
+	button->show();
+}
+
+void SeparatePanel::FullScreenButton::paintEvent(QPaintEvent *e) {
+	Painter p(this);
+
+	auto hq = PainterHighQualityEnabler(p);
+	p.setBrush(st::radialBg);
+	p.setPen(Qt::NoPen);
+	p.drawEllipse(rect());
+
+	paintRipple(p, _st.rippleAreaPosition);
+
+	const auto icon = &_st.icon;
+	auto position = _st.iconPosition;
+	if (position.x() < 0) {
+		position.setX((width() - icon->width()) / 2);
+	}
+	if (position.y() < 0) {
+		position.setY((height() - icon->height()) / 2);
+	}
+	icon->paint(p, position, width());
+}
+
+QPoint SeparatePanel::FullScreenButton::prepareRippleStartPosition() const {
+	auto result = mapFromGlobal(QCursor::pos())
+		- _st.rippleAreaPosition;
+	auto rect = QRect(0, 0, _st.rippleAreaSize, _st.rippleAreaSize);
+	return rect.contains(result)
+		? result
+		: DisabledRippleStartPosition();
+}
+
+QImage SeparatePanel::FullScreenButton::prepareRippleMask() const {
+	return RippleAnimation::EllipseMask(
+		QSize(_st.rippleAreaSize, _st.rippleAreaSize));
+}
 
 SeparatePanel::ResizeEdge::ResizeEdge(
 	not_null<QWidget*> parent,
@@ -363,6 +445,60 @@ void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
 }
 
 void SeparatePanel::initControls() {
+	_fullscreen.value(
+	) | rpl::start_with_next([=](bool fullscreen) {
+		if (!fullscreen) {
+			_fsClose = nullptr;
+			_fsMenuToggle = nullptr;
+			_fsBack = nullptr;
+			return;
+		} else if (_fsClose) {
+			return;
+		}
+		_fsClose = std::make_unique<FullScreenButton>(
+			this,
+			st::fullScreenPanelClose);
+		InitFullScreenButton(_fsClose.get(), this);
+		_fsClose->clicks() | rpl::to_empty | rpl::start_to_stream(
+			_userCloseRequests,
+			_fsClose->lifetime());
+
+		_fsBack = std::make_unique<FadeWrapScaled<FullScreenButton>>(
+			this,
+			object_ptr<FullScreenButton>(this, st::fullScreenPanelBack));
+		InitFullScreenButton(_fsBack.get(), this);
+		_fsBack->toggle(_back->toggled(), anim::type::instant);
+		if (_back->toggled()) {
+			_fsBack->raise();
+		}
+		_fsBack->entity()->clicks() | rpl::to_empty | rpl::start_to_stream(
+			_synteticBackRequests,
+			_fsBack->lifetime());
+		if (_menuToggle) {
+			_fsMenuToggle = std::make_unique<FullScreenButton>(
+				this,
+				st::fullScreenPanelMenu);
+			InitFullScreenButton(_fsMenuToggle.get(), this);
+			_fsMenuToggle->setClickedCallback([=] {
+				_menuToggle->clicked(
+					_fsMenuToggle->clickModifiers(),
+					Qt::LeftButton);
+			});
+		}
+		geometryValue() | rpl::start_with_next([=](QRect geometry) {
+			const auto shift = st::separatePanelClose.rippleAreaPosition;
+			_fsBack->move(geometry.topLeft() + shift);
+			_fsBack->resize(st::fullScreenPanelBack.width, st::fullScreenPanelBack.height);
+			_fsClose->move(geometry.topLeft() + QPoint(geometry.width() - _fsClose->width() - shift.x(), shift.y()));
+			_fsClose->resize(st::fullScreenPanelClose.width, st::fullScreenPanelClose.height);
+			if (_fsMenuToggle) {
+				_fsMenuToggle->move(_fsClose->pos()
+					- QPoint(_fsMenuToggle->width() + shift.x(), 0));
+				_fsMenuToggle->resize(st::fullScreenPanelMenu.width, st::fullScreenPanelMenu.height);
+			}
+		}, _fsClose->lifetime());
+	}, lifetime());
+
 	rpl::combine(
 		widthValue(),
 		_fullscreen.value()
@@ -529,6 +665,12 @@ void SeparatePanel::updateBackToggled() {
 	const auto toggled = _backAllowed || (_searchField != nullptr);
 	if (_back->toggled() != toggled) {
 		_back->toggle(toggled, anim::type::normal);
+		if (_fsBack) {
+			_fsBack->toggle(toggled, anim::type::normal);
+			if (toggled) {
+				_fsBack->raise();
+			}
+		}
 	}
 }
 
@@ -538,7 +680,6 @@ void SeparatePanel::setMenuAllowed(
 	updateTitleButtonColors(_menuToggle.data());
 	_menuToggle->show();
 	_menuToggle->setClickedCallback([=] { showMenu(fill); });
-
 	rpl::combine(
 		widthValue(),
 		_fullscreen.value()

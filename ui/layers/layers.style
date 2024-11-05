@@ -216,6 +216,29 @@ separatePanelBack: IconButton(separatePanelClose) {
 }
 separatePanelDuration: 150;
 
+fullScreenPanelClose: IconButton {
+	width: 44px;
+	height: 44px;
+
+	icon: icon {{ "box_button_close", radialFg }};
+	iconOver: icon {{ "box_button_close", radialFg }};
+	iconPosition: point(-1px, -1px);
+
+	rippleAreaPosition: point(0px, 0px);
+	rippleAreaSize: 44px;
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: shadowFg;
+	}
+}
+fullScreenPanelBack: IconButton(fullScreenPanelClose) {
+	icon: icon {{ "box_button_back", radialFg }};
+	iconOver: icon {{ "box_button_back", radialFg }};
+}
+fullScreenPanelMenu: IconButton(fullScreenPanelClose) {
+	icon: icon {{ "title_menu_dots", radialFg }};
+	iconOver: icon {{ "title_menu_dots", radialFg }};
+}
+
 webviewDialogButton: defaultBoxButton;
 webviewDialogDestructiveButton: attentionBoxButton;
 webviewDialogSubmit: RoundButton(defaultActiveButton) {
