@@ -324,12 +324,18 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 	initControls();
 	initLayout(args);
 
-	shownValue() | rpl::filter([=](bool shown) {
+	rpl::combine(
+		shownValue(),
+		_fullscreen.value()
+	) | rpl::filter([=](bool shown, bool) {
 		return shown;
-	}) | rpl::start_with_next([=] {
-		Platform::SetWindowMargins(this, _useTransparency
-			? _padding
-			: QMargins());
+	}) | rpl::start_with_next([=](bool, bool fullscreen) {
+		if (_title) {
+			_title->setVisible(!fullscreen);
+		}
+		Platform::SetWindowMargins(
+			this,
+			_useTransparency ? computePadding() : QMargins());
 	}, lifetime());
 }
 
@@ -339,7 +345,7 @@ void SeparatePanel::setTitle(rpl::producer<QString> title) {
 	_title.create(this, std::move(title), st::separatePanelTitle);
 	updateTitleColors();
 	_title->setAttribute(Qt::WA_TransparentForMouseEvents);
-	_title->show();
+	_title->setVisible(!_fullscreen.current());
 	updateTitleGeometry(width());
 }
 
@@ -357,10 +363,13 @@ void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
 }
 
 void SeparatePanel::initControls() {
-	widthValue(
-	) | rpl::start_with_next([=](int width) {
-		_back->moveToLeft(_padding.left(), _padding.top());
-		_close->moveToRight(_padding.right(), _padding.top());
+	rpl::combine(
+		widthValue(),
+		_fullscreen.value()
+	) | rpl::start_with_next([=](int width, bool fullscreen) {
+		const auto padding = computePadding();
+		_back->moveToLeft(padding.left(), padding.top());
+		_close->moveToRight(padding.right(), padding.top());
 		updateTitleGeometry(width);
 	}, lifetime());
 
@@ -447,8 +456,9 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 		st::separatePanelTitleLeft,
 		_back->width() + st::separatePanelTitleSkip,
 		progress);
+	const auto padding = computePadding();
 	const auto available = newWidth
-		- rect::m::sum::h(_padding)
+		- rect::m::sum::h(padding)
 		- left
 		- _close->width();
 	if (_title) {
@@ -460,8 +470,8 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 					- (_titleBadge ? _titleBadge->width() : 0),
 				_title->textMaxWidth()));
 		_title->moveToLeft(
-			_padding.left() + left,
-			_padding.top() + st::separatePanelTitleTop);
+			padding.left() + left,
+			padding.top() + st::separatePanelTitleTop);
 		if (_titleBadge) {
 			_titleBadge->moveToLeft(
 				_title->x() + _title->width(),
@@ -470,7 +480,7 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 	}
 	if (_searchWrap) {
 		_searchWrap->entity()->resize(available, _close->height());
-		_searchWrap->move(_padding.left() + left, _padding.top());
+		_searchWrap->move(padding.left() + left, padding.top());
 		if (_searchField) {
 			_searchField->resizeToWidth(available);
 			_searchField->move(
@@ -529,11 +539,14 @@ void SeparatePanel::setMenuAllowed(
 	_menuToggle->show();
 	_menuToggle->setClickedCallback([=] { showMenu(fill); });
 
-	widthValue(
-	) | rpl::start_with_next([=](int width) {
+	rpl::combine(
+		widthValue(),
+		_fullscreen.value()
+	) | rpl::start_with_next([=](int width, bool) {
+		const auto padding = computePadding();
 		_menuToggle->moveToRight(
-			_padding.right() + _close->width(),
-			_padding.top());
+			padding.right() + _close->width(),
+			padding.top());
 	}, _menuToggle->lifetime());
 	updateTitleGeometry(width());
 }
@@ -551,11 +564,14 @@ void SeparatePanel::setSearchAllowed(
 	_searchToggle->show(anim::type::instant);
 	button->setClickedCallback([=] { toggleSearch(true); });
 
-	widthValue(
-	) | rpl::start_with_next([=](int width) {
+	rpl::combine(
+		widthValue(),
+		_fullscreen.value()
+	) | rpl::start_with_next([=](int width, bool) {
+		const auto padding = computePadding();
 		_searchToggle->moveToRight(
-			_padding.right() + _close->width(),
-			_padding.top());
+			padding.right() + _close->width(),
+			padding.top());
 	}, _searchToggle->lifetime());
 	updateTitleGeometry(width());
 }
@@ -672,7 +688,7 @@ void SeparatePanel::showMenu(Fn<void(const Menu::MenuCallback&)> fill) {
 		_menu->setForcedOrigin(PanelAnimation::Origin::TopRight);
 		_menu->popup(mapToGlobal(QPoint(
 			(width()
-				- _padding.right()
+				- computePadding().right()
 				- _close->width()
 				+ st::separatePanelMenuPosition.x()),
 			st::separatePanelMenuPosition.y())));
@@ -1009,6 +1025,8 @@ void SeparatePanel::setInnerSize(QSize size, bool allowResize) {
 			for (const auto area : areas) {
 				_resizeEdges.push_back(
 					std::make_unique<ResizeEdge>(this, area));
+				_resizeEdges.back()->showOn(
+					_fullscreen.value() | rpl::map(!rpl::mappers::_1));
 			}
 		}
 	}
@@ -1021,6 +1039,19 @@ void SeparatePanel::setInnerSize(QSize size, bool allowResize) {
 
 QRect SeparatePanel::innerGeometry() const {
 	return _body->geometry();
+}
+
+void SeparatePanel::toggleFullScreen(bool fullscreen) {
+	_fullscreen = fullscreen;
+	if (fullscreen) {
+		showFullScreen();
+	} else {
+		showNormal();
+	}
+}
+
+QMargins SeparatePanel::computePadding() const {
+	return _fullscreen.current() ? QMargins() : _padding;
 }
 
 void SeparatePanel::initGeometry(QSize size) {
@@ -1067,27 +1098,32 @@ void SeparatePanel::initGeometry(QSize size) {
 	}
 
 	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
-	const auto rect = [&] {
-		const QRect initRect(QPoint(), size);
-		return initRect.translated(center - initRect.center()).marginsAdded(_padding);
-	}();
-	move(rect.topLeft());
-	if (_allowResize) {
-		setMinimumSize(rect.size());
-	} else {
-		setFixedSize(rect.size());
+	if (!_fullscreen.current()) {
+		const auto rect = [&] {
+			const auto initRect = QRect(QPoint(), size);
+			const auto shift = center - initRect.center();
+			return initRect.translated(shift).marginsAdded(_padding);
+		}();
+		move(rect.topLeft());
+		if (_allowResize) {
+			setMinimumSize(rect.size());
+		} else {
+			setFixedSize(rect.size());
+		}
+		updateControlsGeometry();
 	}
-	updateControlsGeometry();
 }
 
 void SeparatePanel::updateGeometry(QSize size) {
-	size = QRect(QPoint(), size).marginsAdded(_padding).size();
-	if (_allowResize) {
-		setMinimumSize(size);
-	} else {
-		setFixedSize(size);
+	if (!_fullscreen.current()) {
+		size = QRect(QPoint(), size).marginsAdded(_padding).size();
+		if (_allowResize) {
+			setMinimumSize(size);
+		} else {
+			setFixedSize(size);
+		}
+		updateControlsGeometry();
 	}
-	updateControlsGeometry();
 	update();
 }
 
@@ -1099,12 +1135,14 @@ void SeparatePanel::resizeEvent(QResizeEvent *e) {
 }
 
 void SeparatePanel::updateControlsGeometry() {
-	const auto top = _padding.top() + _titleHeight;
+	const auto padding = computePadding();
+	const auto top = padding.top()
+		+ (_fullscreen.current() ? 0 : _titleHeight);
 	_body->setGeometry(
-		_padding.left(),
+		padding.left(),
 		top,
-		width() - _padding.left() - _padding.right(),
-		height() - top - _padding.bottom());
+		width() - padding.left() - padding.right(),
+		height() - top - padding.bottom());
 }
 
 void SeparatePanel::paintEvent(QPaintEvent *e) {
@@ -1133,8 +1171,7 @@ void SeparatePanel::paintEvent(QPaintEvent *e) {
 			return;
 		}
 	}
-
-	if (_useTransparency) {
+	if (_useTransparency && !_fullscreen.current()) {
 		paintShadowBorder(p);
 	} else {
 		paintOpaqueBorder(p);
@@ -1247,43 +1284,45 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 
 void SeparatePanel::paintOpaqueBorder(QPainter &p) const {
 	const auto border = st::windowShadowFgFallback;
-	p.fillRect(0, 0, width(), _padding.top(), border);
-	p.fillRect(
-		myrtlrect(
-			0,
-			_padding.top(),
-			_padding.left(),
-			height() - _padding.top()),
-		border);
-	p.fillRect(
-		myrtlrect(
-			width() - _padding.right(),
-			_padding.top(),
-			_padding.right(),
-			height() - _padding.top()),
-		border);
-	p.fillRect(
-		_padding.left(),
-		height() - _padding.bottom(),
-		width() - _padding.left() - _padding.right(),
-		_padding.bottom(),
-		border);
-
+	const auto padding = computePadding();
+	if (_fullscreen.current()) {
+		p.fillRect(0, 0, width(), padding.top(), border);
+		p.fillRect(
+			myrtlrect(
+				0,
+				padding.top(),
+				padding.left(),
+				height() - padding.top()),
+			border);
+		p.fillRect(
+			myrtlrect(
+				width() - padding.right(),
+				padding.top(),
+				padding.right(),
+				height() - padding.top()),
+			border);
+		p.fillRect(
+			padding.left(),
+			height() - padding.bottom(),
+			width() - padding.left() - padding.right(),
+			padding.bottom(),
+			border);
+	}
 	const auto fillBody = [&](int from, int till, QColor color) {
 		p.fillRect(
-			_padding.left(),
+			padding.left(),
 			from,
-			width() - _padding.left() - _padding.right(),
+			width() - padding.left() - padding.right(),
 			till - from,
 			color);
 	};
 	const auto bg = st::windowBg->c;
 	if (_titleOverrideColor) {
 		const auto half = height() / 2;
-		fillBody(_padding.top(), half, *_titleOverrideColor);
-		fillBody(half, height() - _padding.bottom(), bg);
+		fillBody(padding.top(), half, *_titleOverrideColor);
+		fillBody(half, height() - padding.bottom(), bg);
 	} else {
-		fillBody(_padding.top(), height() - _padding.bottom(), bg);
+		fillBody(padding.top(), height() - padding.bottom(), bg);
 	}
 }
 
@@ -1293,6 +1332,9 @@ void SeparatePanel::closeEvent(QCloseEvent *e) {
 }
 
 void SeparatePanel::mousePressEvent(QMouseEvent *e) {
+	if (_fullscreen.current()) {
+		return;
+	}
 	auto dragArea = myrtlrect(
 		_padding.left(),
 		_padding.top(),
@@ -1323,7 +1365,9 @@ void SeparatePanel::mousePressEvent(QMouseEvent *e) {
 }
 
 void SeparatePanel::mouseMoveEvent(QMouseEvent *e) {
-	if (_dragging) {
+	if (_fullscreen.current()) {
+		return;
+	} else if (_dragging) {
 		if (!(e->buttons() & Qt::LeftButton)) {
 			_dragging = false;
 		} else {
@@ -1334,7 +1378,9 @@ void SeparatePanel::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void SeparatePanel::mouseReleaseEvent(QMouseEvent *e) {
-	if (e->button() == Qt::LeftButton && _dragging) {
+	if (_fullscreen.current()) {
+		return;
+	} else if (e->button() == Qt::LeftButton && _dragging) {
 		_dragging = false;
 	}
 }

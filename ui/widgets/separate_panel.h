@@ -62,6 +62,9 @@ public:
 	void setInnerSize(QSize size, bool allowResize = false);
 	[[nodiscard]] QRect innerGeometry() const;
 
+	void toggleFullScreen(bool fullscreen);
+	[[nodiscard]] QMargins computePadding() const;
+
 	void setHideOnDeactivate(bool hideOnDeactivate);
 	void showAndActivate();
 	int hideGetDuration();
@@ -182,6 +185,7 @@ private:
 
 	Animations::Simple _titleLeft;
 	bool _visible = false;
+	rpl::variable<bool> _fullscreen = false;
 
 	Animations::Simple _opacityAnimation;
 	QPixmap _animationCache;
