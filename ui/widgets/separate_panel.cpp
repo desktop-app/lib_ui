@@ -572,6 +572,17 @@ void SeparatePanel::overrideTitleColor(std::optional<QColor> color) {
 	update();
 }
 
+void SeparatePanel::overrideBodyColor(std::optional<QColor> color) {
+	if (_bodyOverrideColor == color) {
+		return;
+	}
+	_bodyOverrideColor = color;
+	_bodyOverrideBorderParts = _bodyOverrideColor
+		? createBorderImage(*_bodyOverrideColor)
+		: QPixmap();
+	update();
+}
+
 void SeparatePanel::overrideBottomBarColor(std::optional<QColor> color) {
 	if (_bottomBarOverrideColor == color) {
 		return;
@@ -580,6 +591,16 @@ void SeparatePanel::overrideBottomBarColor(std::optional<QColor> color) {
 	_bottomBarOverrideBorderParts = _bottomBarOverrideColor
 		? createBorderImage(*_bottomBarOverrideColor)
 		: QPixmap();
+	update();
+}
+
+void SeparatePanel::setBottomBarHeight(int height) {
+	Expects(!height || height >= st::callRadius);
+
+	if (_bottomBarHeight == height) {
+		return;
+	}
+	_bottomBarHeight = height;
 	update();
 }
 
@@ -1330,8 +1351,10 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 	const auto &header = _titleOverrideColor
 		? _titleOverrideBorderParts
 		: _borderParts;
-	const auto &bottomBar = _bottomBarOverrideColor
+	const auto &footer = (_bottomBarHeight && _bottomBarOverrideColor)
 		? _bottomBarOverrideBorderParts
+		: _bodyOverrideColor
+		? _bodyOverrideBorderParts
 		: _borderParts;
 	const auto topleft = QRect(QPoint(0, 0), corner);
 	p.drawPixmap(QRect(0, 0, part1, part1), header, topleft);
@@ -1350,13 +1373,13 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 	const auto bottomleft = QRect(QPoint(0, part2) * factor, corner);
 	p.drawPixmap(
 		QRect(0, height() - part1, part1, part1),
-		bottomBar,
+		footer,
 		bottomleft);
 
 	const auto bottomright = QRect(QPoint(part2, part2) * factor, corner);
 	p.drawPixmap(
 		QRect(width() - part1, height() - part1, part1, part1),
-		bottomBar,
+		footer,
 		bottomright);
 
 	const auto bottom = QRect(
@@ -1368,7 +1391,7 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 			height() - _padding.bottom() - radius,
 			width() - 2 * part1,
 			_padding.bottom() + radius),
-		bottomBar,
+		footer,
 		bottom);
 
 	const auto fillLeft = [&](int from, int till, const auto &parts) {
@@ -1394,6 +1417,9 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 			right);
 	};
 	const auto fillBody = [&](int from, int till, QColor color) {
+		if (till <= from) {
+			return;
+		}
 		p.fillRect(
 			_padding.left(),
 			from,
@@ -1401,25 +1427,35 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 			till - from,
 			color);
 	};
-	const auto bg = st::windowBg->c;
-	if (_titleOverrideColor) {
-		const auto niceOverscroll = ::Platform::IsMac();
-		const auto top = niceOverscroll
-			? (height() / 2)
-			: (_padding.top() + _titleHeight);
-		fillLeft(part1, top, _titleOverrideBorderParts);
-		fillLeft(top, height() - part1, _borderParts);
-		fillRight(part1, top, _titleOverrideBorderParts);
-		fillRight(top, height() - part1, _borderParts);
-		fillBody(_padding.top() + radius, top, *_titleOverrideColor);
-		fillBody(top, height() - _padding.bottom() - radius, bg);
-	} else {
-		fillLeft(part1, height() - part1, _borderParts);
-		fillRight(part1, height() - part1, _borderParts);
+	const auto bg = _bodyOverrideColor.value_or(st::windowBg->c);
+	const auto chosenFooter = (_bottomBarHeight && _bottomBarOverrideColor)
+		? _bottomBarOverrideColor
+		: _bodyOverrideColor;
+	const auto footerColor = chosenFooter.value_or(st::windowBg->c);
+	const auto titleColor = _titleOverrideColor.value_or(st::windowBg->c);
+	const auto niceOverscroll = ::Platform::IsMac();
+	fillLeft(part1, height() - part1, _borderParts);
+	fillRight(part1, height() - part1, _borderParts);
+	if ((niceOverscroll && titleColor == footerColor)
+		|| (titleColor == footerColor && titleColor == bg)) {
 		fillBody(
 			_padding.top() + radius,
 			height() - _padding.bottom() - radius,
-			bg);
+			titleColor);
+	} else if (niceOverscroll || titleColor == bg || footerColor == bg) {
+		const auto top = niceOverscroll
+			? (height() / 2)
+			: (titleColor != bg)
+			? (_padding.top() + _titleHeight)
+			: (height() - _padding.bottom() - _bottomBarHeight);
+		fillBody(_padding.top() + radius, top, titleColor);
+		fillBody(top, height() - _padding.bottom() - radius, footerColor);
+	} else {
+		const auto one = _padding.top() + _titleHeight;
+		const auto two = height() - _padding.bottom() - _bottomBarHeight;
+		fillBody(_padding.top() + radius, one, titleColor);
+		fillBody(one, two, bg);
+		fillBody(two, height() - _padding.bottom() - radius, footerColor);
 	}
 }
 

@@ -95,7 +95,9 @@ public:
 	bool closeSearch();
 
 	void overrideTitleColor(std::optional<QColor> color);
+	void overrideBodyColor(std::optional<QColor> color);
 	void overrideBottomBarColor(std::optional<QColor> color);
+	void setBottomBarHeight(int height);
 
 	base::weak_ptr<Toast::Instance> showToast(Toast::Config &&config);
 	base::weak_ptr<Toast::Instance> showToast(
@@ -204,8 +206,12 @@ private:
 		not_null<IconButton*>,
 		std::unique_ptr<style::IconButton>> _titleOverrideStyles;
 
+	std::optional<QColor> _bodyOverrideColor;
+	QPixmap _bodyOverrideBorderParts;
+
 	std::optional<QColor> _bottomBarOverrideColor;
 	QPixmap _bottomBarOverrideBorderParts;
+	int _bottomBarHeight = 0;
 
 	Fn<bool(int zorder)> _animationsPaused;
 
