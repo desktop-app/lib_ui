@@ -40,8 +40,8 @@ public:
 
 	void draw(
 		QPainter &p,
-		const QRect &inner,
-		int32 thickness,
+		const QRectF &inner,
+		float64 thickness,
 		style::color color) const;
 
 	[[nodiscard]] RadialState computeState() const;

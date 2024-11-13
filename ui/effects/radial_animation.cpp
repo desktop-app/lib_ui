@@ -75,8 +75,8 @@ void RadialAnimation::stop() {
 
 void RadialAnimation::draw(
 		QPainter &p,
-		const QRect &inner,
-		int32 thickness,
+		const QRectF &inner,
+		float64 thickness,
 		style::color color) const {
 	const auto state = computeState();
 
@@ -85,7 +85,7 @@ void RadialAnimation::draw(
 
 	auto pen = color->p;
 	auto was = p.pen();
-	pen.setWidth(thickness);
+	pen.setWidthF(thickness);
 	pen.setCapStyle(Qt::RoundCap);
 	p.setPen(pen);
 
