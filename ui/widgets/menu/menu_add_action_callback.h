@@ -29,7 +29,7 @@ public:
 		Fn<void()> handler;
 		const style::icon *icon;
 		const style::MenuSeparator *separatorSt = nullptr;
-		Fn<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
+		FnMut<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
 		Fn<bool()> triggerFilter;
 		rpl::producer<anim::type> hideRequests;
 		int addTopShift = 0;
