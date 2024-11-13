@@ -88,7 +88,8 @@ public:
 
 	void updateBackToggled();
 
-	void setMenuAllowed(Fn<void(const Menu::MenuCallback&)> fill);
+	not_null<IconButton*> setMenuAllowed(
+		Fn<void(const Menu::MenuCallback&)> fill);
 	void setSearchAllowed(
 		rpl::producer<QString> placeholder,
 		Fn<void(std::optional<QString>)> queryChanged);
@@ -98,6 +99,7 @@ public:
 	void overrideBodyColor(std::optional<QColor> color);
 	void overrideBottomBarColor(std::optional<QColor> color);
 	void setBottomBarHeight(int height);
+	[[nodiscard]] style::palette *titleOverridePalette() const;
 
 	base::weak_ptr<Toast::Instance> showToast(Toast::Config &&config);
 	base::weak_ptr<Toast::Instance> showToast(

@@ -604,6 +604,10 @@ void SeparatePanel::setBottomBarHeight(int height) {
 	update();
 }
 
+style::palette *SeparatePanel::titleOverridePalette() const {
+	return _titleOverridePalette.get();
+}
+
 void SeparatePanel::updateTitleGeometry(int newWidth) const {
 	if (!_title && !_searchWrap) {
 		return;
@@ -695,7 +699,7 @@ void SeparatePanel::updateBackToggled() {
 	}
 }
 
-void SeparatePanel::setMenuAllowed(
+not_null<IconButton*> SeparatePanel::setMenuAllowed(
 		Fn<void(const Menu::MenuCallback&)> fill) {
 	_menuToggle.create(this, st::separatePanelMenu);
 	updateTitleButtonColors(_menuToggle.data());
@@ -711,6 +715,7 @@ void SeparatePanel::setMenuAllowed(
 			padding.top());
 	}, _menuToggle->lifetime());
 	updateTitleGeometry(width());
+	return _menuToggle.data();
 }
 
 void SeparatePanel::setSearchAllowed(
