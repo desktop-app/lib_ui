@@ -19,6 +19,7 @@ class Painter;
 
 namespace style {
 struct IconButton;
+struct PopupMenu;
 } // namespace style
 
 namespace Ui::Menu {
@@ -49,6 +50,7 @@ struct SeparatePanelArgs {
 	QWidget *parent = nullptr;
 	bool onAllSpaces = false;
 	Fn<bool(int zorder)> animationsPaused;
+	const style::PopupMenu *menuSt = nullptr;
 };
 
 class SeparatePanel final : public RpWidget {
@@ -158,6 +160,7 @@ private:
 	[[nodiscard]] rpl::producer<> allBackRequests() const;
 	[[nodiscard]] rpl::producer<> allCloseRequests() const;
 
+	const style::PopupMenu &_menuSt;
 	object_ptr<IconButton> _close;
 	object_ptr<IconButton> _menuToggle = { nullptr };
 	object_ptr<FadeWrapScaled<IconButton>> _searchToggle = { nullptr };

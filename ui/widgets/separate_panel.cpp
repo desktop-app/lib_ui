@@ -397,6 +397,7 @@ void SeparatePanel::ResizeEdge::updateFromResize(QPoint delta) {
 
 SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 : RpWidget(args.parent)
+, _menuSt(args.menuSt ? *args.menuSt : st::popupMenuWithIcons)
 , _close(this, st::separatePanelClose)
 , _back(this, object_ptr<IconButton>(this, st::separatePanelBack))
 , _body(this)
@@ -866,7 +867,7 @@ bool SeparatePanel::createMenu(not_null<IconButton*> button) {
 	if (_menu) {
 		return false;
 	}
-	_menu = base::make_unique_q<PopupMenu>(this, st::popupMenuWithIcons);
+	_menu = base::make_unique_q<PopupMenu>(this, _menuSt);
 	_menu->setDestroyedCallback([
 		weak = MakeWeak(this),
 			weakButton = MakeWeak(button),
