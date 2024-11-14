@@ -154,30 +154,6 @@ not_null<QAction*> Menu::insertAction(
 		}
 	});
 
-	const auto recountWidth = [=] {
-		return _forceWidth
-			? _forceWidth
-			: std::clamp(
-				(_actionWidgets.empty()
-					? 0
-					: (*ranges::max_element(
-						_actionWidgets,
-						std::less<>(),
-						&ItemBase::minWidth))->minWidth()),
-				_st.widthMin,
-				_st.widthMax);
-	};
-	const auto recountHeight = [=] {
-		auto result = 0;
-		for (const auto &widget : _actionWidgets) {
-			if (widget->y() != result) {
-				widget->move(0, result);
-			}
-			result += widget->height();
-		}
-		return result;
-	};
-
 	raw->minWidthValue(
 	) | rpl::skip(1) | rpl::filter([=] {
 		return !_forceWidth;
@@ -195,6 +171,42 @@ not_null<QAction*> Menu::insertAction(
 	updateSelected(QCursor::pos());
 
 	return action;
+}
+
+int Menu::recountWidth() const {
+	return _forceWidth
+		? _forceWidth
+		: std::clamp(
+			(_actionWidgets.empty()
+				? 0
+				: (*ranges::max_element(
+					_actionWidgets,
+					std::less<>(),
+					&ItemBase::minWidth))->minWidth()),
+			_st.widthMin,
+			_st.widthMax);
+}
+
+int Menu::recountHeight() const {
+	auto result = 0;
+	for (const auto &widget : _actionWidgets) {
+		if (widget->y() != result) {
+			widget->move(0, result);
+		}
+		result += widget->height();
+	}
+	return result;
+}
+
+void Menu::removeAction(int position) {
+	Expects(position >= 0 && position < actions().size());
+
+	_actionWidgets.erase(begin(_actionWidgets) + position);
+	if (_actions[position]->parent() == this) {
+		delete _actions[position];
+	}
+	_actions.erase(begin(_actions) + position);
+	resizeFromInner(width(), recountHeight());
 }
 
 not_null<QAction*> Menu::addSeparator(const style::MenuSeparator *st) {

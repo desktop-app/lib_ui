@@ -67,6 +67,7 @@ public:
 	not_null<QAction*> insertAction(
 		int position,
 		base::unique_qptr<Menu::ItemBase> widget);
+	void removeAction(int position);
 	void clearActions();
 
 	[[nodiscard]] const std::vector<not_null<QAction*>> &actions() const;

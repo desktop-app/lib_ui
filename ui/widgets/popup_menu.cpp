@@ -428,6 +428,14 @@ not_null<QAction*> PopupMenu::insertAction(
 	return _menu->insertAction(position, std::move(widget));
 }
 
+void PopupMenu::removeAction(int position) {
+	const auto i = _submenus.find(_menu->actions()[position]);
+	if (i != end(_submenus)) {
+		_submenus.erase(i);
+	}
+	_menu->removeAction(position);
+}
+
 void PopupMenu::clearActions() {
 	_submenus.clear();
 	return _menu->clearActions();

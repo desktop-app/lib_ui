@@ -56,6 +56,7 @@ public:
 	not_null<QAction*> insertAction(
 		int position,
 		base::unique_qptr<ItemBase> widget);
+	void removeAction(int position);
 	void clearActions();
 	void clearLastSeparator();
 	void finishAnimating();
@@ -125,6 +126,8 @@ private:
 
 	void itemPressed(TriggeredSource source);
 
+	[[nodiscard]] int recountWidth() const;
+	[[nodiscard]] int recountHeight() const;
 	void resizeFromInner(int w, int h);
 
 	const style::Menu &_st;
