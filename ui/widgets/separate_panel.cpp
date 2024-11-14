@@ -480,6 +480,9 @@ void SeparatePanel::initControls() {
 				this,
 				st::fullScreenPanelMenu);
 			InitFullScreenButton(_fsMenuToggle.get(), this);
+			if (const auto onstack = _menuToggleCreated) {
+				onstack(_fsMenuToggle.get(), true);
+			}
 			_fsMenuToggle->setClickedCallback([=] {
 				_menuToggle->clicked(
 					_fsMenuToggle->clickModifiers(),
@@ -700,8 +703,9 @@ void SeparatePanel::updateBackToggled() {
 	}
 }
 
-not_null<IconButton*> SeparatePanel::setMenuAllowed(
-		Fn<void(const Menu::MenuCallback&)> fill) {
+void SeparatePanel::setMenuAllowed(
+		Fn<void(const Menu::MenuCallback&)> fill,
+		Fn<void(not_null<RpWidget*>, bool fullscreen)> created) {
 	_menuToggle.create(this, st::separatePanelMenu);
 	updateTitleButtonColors(_menuToggle.data());
 	_menuToggle->show();
@@ -716,7 +720,10 @@ not_null<IconButton*> SeparatePanel::setMenuAllowed(
 			padding.top());
 	}, _menuToggle->lifetime());
 	updateTitleGeometry(width());
-	return _menuToggle.data();
+	_menuToggleCreated = std::move(created);
+	if (const auto onstack = _menuToggleCreated) {
+		onstack(_menuToggle.data(), false);
+	}
 }
 
 void SeparatePanel::setSearchAllowed(
@@ -1422,14 +1429,21 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 			parts,
 			right);
 	};
+	fillLeft(part1, height() - part1, _borderParts);
+	fillRight(part1, height() - part1, _borderParts);
+	paintBodyBg(p, radius);
+}
+
+void SeparatePanel::paintBodyBg(QPainter &p, int radius) const {
+	const auto padding = computePadding();
 	const auto fillBody = [&](int from, int till, QColor color) {
 		if (till <= from) {
 			return;
 		}
 		p.fillRect(
-			_padding.left(),
+			padding.left(),
 			from,
-			width() - _padding.left() - _padding.right(),
+			width() - padding.left() - padding.right(),
 			till - from,
 			color);
 	};
@@ -1438,37 +1452,40 @@ void SeparatePanel::paintShadowBorder(QPainter &p) const {
 		? _bottomBarOverrideColor
 		: _bodyOverrideColor;
 	const auto footerColor = chosenFooter.value_or(st::windowBg->c);
-	const auto titleColor = _titleOverrideColor.value_or(st::windowBg->c);
-	const auto niceOverscroll = ::Platform::IsMac();
-	fillLeft(part1, height() - part1, _borderParts);
-	fillRight(part1, height() - part1, _borderParts);
+	const auto chosenHeader = (_titleHeight
+		&& !_fullscreen.current()
+		&& _titleOverrideColor)
+		? _titleOverrideColor
+		: _bodyOverrideColor;
+	const auto titleColor = chosenHeader.value_or(st::windowBg->c);
+	const auto niceOverscroll = !_layer && ::Platform::IsMac();
 	if ((niceOverscroll && titleColor == footerColor)
 		|| (titleColor == footerColor && titleColor == bg)) {
 		fillBody(
-			_padding.top() + radius,
-			height() - _padding.bottom() - radius,
+			padding.top() + radius,
+			height() - padding.bottom() - radius,
 			titleColor);
 	} else if (niceOverscroll || titleColor == bg || footerColor == bg) {
 		const auto top = niceOverscroll
 			? (height() / 2)
 			: (titleColor != bg)
-			? (_padding.top() + _titleHeight)
-			: (height() - _padding.bottom() - _bottomBarHeight);
-		fillBody(_padding.top() + radius, top, titleColor);
-		fillBody(top, height() - _padding.bottom() - radius, footerColor);
+			? (padding.top() + _titleHeight)
+			: (height() - padding.bottom() - _bottomBarHeight);
+		fillBody(padding.top() + radius, top, titleColor);
+		fillBody(top, height() - padding.bottom() - radius, footerColor);
 	} else {
-		const auto one = _padding.top() + _titleHeight;
-		const auto two = height() - _padding.bottom() - _bottomBarHeight;
-		fillBody(_padding.top() + radius, one, titleColor);
+		const auto one = padding.top() + _titleHeight;
+		const auto two = height() - padding.bottom() - _bottomBarHeight;
+		fillBody(padding.top() + radius, one, titleColor);
 		fillBody(one, two, bg);
-		fillBody(two, height() - _padding.bottom() - radius, footerColor);
+		fillBody(two, height() - padding.bottom() - radius, footerColor);
 	}
 }
 
 void SeparatePanel::paintOpaqueBorder(QPainter &p) const {
 	const auto border = st::windowShadowFgFallback;
 	const auto padding = computePadding();
-	if (_fullscreen.current()) {
+	if (!_fullscreen.current()) {
 		p.fillRect(0, 0, width(), padding.top(), border);
 		p.fillRect(
 			myrtlrect(
@@ -1491,22 +1508,7 @@ void SeparatePanel::paintOpaqueBorder(QPainter &p) const {
 			padding.bottom(),
 			border);
 	}
-	const auto fillBody = [&](int from, int till, QColor color) {
-		p.fillRect(
-			padding.left(),
-			from,
-			width() - padding.left() - padding.right(),
-			till - from,
-			color);
-	};
-	const auto bg = st::windowBg->c;
-	if (_titleOverrideColor) {
-		const auto half = height() / 2;
-		fillBody(padding.top(), half, *_titleOverrideColor);
-		fillBody(half, height() - padding.bottom(), bg);
-	} else {
-		fillBody(padding.top(), height() - padding.bottom(), bg);
-	}
+	paintBodyBg(p);
 }
 
 void SeparatePanel::closeEvent(QCloseEvent *e) {
