@@ -8,8 +8,7 @@
 
 #include "ui/platform/ui_platform_window.h"
 
-namespace Ui {
-namespace Platform {
+namespace Ui::Platform {
 
 class TitleWidget;
 
@@ -46,5 +45,4 @@ private:
 
 };
 
-} // namespace Platform
-} // namespace Ui
+} // namespace Ui::Platform

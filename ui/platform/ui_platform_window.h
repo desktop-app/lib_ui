@@ -145,5 +145,14 @@ private:
 
 [[nodiscard]] bool NativeWindowFrameSupported();
 
+enum class FullScreenEvent {
+	WillEnter,
+	DidEnter,
+	WillExit,
+	DidExit,
+};
+[[nodiscard]] rpl::producer<FullScreenEvent> FullScreenEvents(
+	not_null<RpWidget*> window);
+
 } // namespace Platform
 } // namespace Ui

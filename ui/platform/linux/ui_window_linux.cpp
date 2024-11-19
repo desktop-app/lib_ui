@@ -6,8 +6,7 @@
 //
 #include "ui/platform/linux/ui_window_linux.h"
 
-namespace Ui {
-namespace Platform {
+namespace Ui::Platform {
 
 std::unique_ptr<BasicWindowHelper> CreateSpecialWindowHelper(
 		not_null<RpWidget*> window) {
@@ -18,5 +17,9 @@ bool NativeWindowFrameSupported() {
 	return true;
 }
 
-} // namespace Platform
-} // namespace Ui
+rpl::producer<FullScreenEvent> FullScreenEvents(
+		not_null<RpWidget*> window) {
+	return rpl::never<FullScreenEvent>();
+}
+
+} // namespace Ui::Platform

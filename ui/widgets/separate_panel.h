@@ -65,6 +65,7 @@ public:
 	[[nodiscard]] QRect innerGeometry() const;
 
 	void toggleFullScreen(bool fullscreen);
+	[[nodiscard]] rpl::producer<bool> fullScreenValue() const;
 	[[nodiscard]] QMargins computePadding() const;
 
 	void setHideOnDeactivate(bool hideOnDeactivate);
@@ -155,6 +156,7 @@ private:
 	void showMenu(Fn<void(const Menu::MenuCallback&)> fill);
 	[[nodiscard]] bool createMenu(not_null<IconButton*> button);
 
+	void createFullScreenButtons();
 	void updateTitleButtonColors(not_null<IconButton*> button);
 	void updateTitleColors();
 

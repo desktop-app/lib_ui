@@ -18,6 +18,7 @@
 #include "ui/wrap/padding_wrap.h"
 #include "ui/wrap/fade_wrap.h"
 #include "ui/platform/ui_platform_utility.h"
+#include "ui/platform/ui_platform_window.h"
 #include "ui/layers/box_content.h"
 #include "ui/layers/layer_widget.h"
 #include "ui/layers/show.h"
@@ -420,6 +421,16 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 			this,
 			_useTransparency ? computePadding() : QMargins());
 	}, lifetime());
+
+	Platform::FullScreenEvents(
+		this
+	) | rpl::start_with_next([=](Platform::FullScreenEvent event) {
+		if (event == Platform::FullScreenEvent::DidEnter) {
+			createFullScreenButtons();
+		} else if (event == Platform::FullScreenEvent::WillExit) {
+			_fullscreen = false;
+		}
+	}, lifetime());
 }
 
 SeparatePanel::~SeparatePanel() = default;
@@ -452,55 +463,9 @@ void SeparatePanel::initControls() {
 			_fsClose = nullptr;
 			_fsMenuToggle = nullptr;
 			_fsBack = nullptr;
-			return;
-		} else if (_fsClose) {
-			return;
+		} else if (!_fsClose) {
+			createFullScreenButtons();
 		}
-		_fsClose = std::make_unique<FullScreenButton>(
-			this,
-			st::fullScreenPanelClose);
-		InitFullScreenButton(_fsClose.get(), this);
-		_fsClose->clicks() | rpl::to_empty | rpl::start_to_stream(
-			_userCloseRequests,
-			_fsClose->lifetime());
-
-		_fsBack = std::make_unique<FadeWrapScaled<FullScreenButton>>(
-			this,
-			object_ptr<FullScreenButton>(this, st::fullScreenPanelBack));
-		InitFullScreenButton(_fsBack.get(), this);
-		_fsBack->toggle(_back->toggled(), anim::type::instant);
-		if (_back->toggled()) {
-			_fsBack->raise();
-		}
-		_fsBack->entity()->clicks() | rpl::to_empty | rpl::start_to_stream(
-			_synteticBackRequests,
-			_fsBack->lifetime());
-		if (_menuToggle) {
-			_fsMenuToggle = std::make_unique<FullScreenButton>(
-				this,
-				st::fullScreenPanelMenu);
-			InitFullScreenButton(_fsMenuToggle.get(), this);
-			if (const auto onstack = _menuToggleCreated) {
-				onstack(_fsMenuToggle.get(), true);
-			}
-			_fsMenuToggle->setClickedCallback([=] {
-				_menuToggle->clicked(
-					_fsMenuToggle->clickModifiers(),
-					Qt::LeftButton);
-			});
-		}
-		geometryValue() | rpl::start_with_next([=](QRect geometry) {
-			const auto shift = st::separatePanelClose.rippleAreaPosition;
-			_fsBack->move(geometry.topLeft() + shift);
-			_fsBack->resize(st::fullScreenPanelBack.width, st::fullScreenPanelBack.height);
-			_fsClose->move(geometry.topLeft() + QPoint(geometry.width() - _fsClose->width() - shift.x(), shift.y()));
-			_fsClose->resize(st::fullScreenPanelClose.width, st::fullScreenPanelClose.height);
-			if (_fsMenuToggle) {
-				_fsMenuToggle->move(_fsClose->pos()
-					- QPoint(_fsMenuToggle->width() + shift.x(), 0));
-				_fsMenuToggle->resize(st::fullScreenPanelMenu.width, st::fullScreenPanelMenu.height);
-			}
-		}, _fsClose->lifetime());
 	}, lifetime());
 
 	rpl::combine(
@@ -526,6 +491,56 @@ void SeparatePanel::initControls() {
 
 	_back->raise();
 	_close->raise();
+}
+
+void SeparatePanel::createFullScreenButtons() {
+	_fsClose = std::make_unique<FullScreenButton>(
+		this,
+		st::fullScreenPanelClose);
+	InitFullScreenButton(_fsClose.get(), this);
+	_fsClose->clicks() | rpl::to_empty | rpl::start_to_stream(
+		_userCloseRequests,
+		_fsClose->lifetime());
+
+	_fsBack = std::make_unique<FadeWrapScaled<FullScreenButton>>(
+		this,
+		object_ptr<FullScreenButton>(this, st::fullScreenPanelBack));
+	InitFullScreenButton(_fsBack.get(), this);
+	_fsBack->toggle(_back->toggled(), anim::type::instant);
+	if (_back->toggled()) {
+		_fsBack->raise();
+	}
+	_fsBack->entity()->clicks() | rpl::to_empty | rpl::start_to_stream(
+		_synteticBackRequests,
+		_fsBack->lifetime());
+	if (_menuToggle) {
+		_fsMenuToggle = std::make_unique<FullScreenButton>(
+			this,
+			st::fullScreenPanelMenu);
+		InitFullScreenButton(_fsMenuToggle.get(), this);
+		if (const auto onstack = _menuToggleCreated) {
+			onstack(_fsMenuToggle.get(), true);
+		}
+		_fsMenuToggle->setClickedCallback([=] {
+			_menuToggle->clicked(
+				_fsMenuToggle->clickModifiers(),
+				Qt::LeftButton);
+		});
+	} else {
+		_fsMenuToggle = nullptr;
+	}
+	geometryValue() | rpl::start_with_next([=](QRect geometry) {
+		const auto shift = st::separatePanelClose.rippleAreaPosition;
+		_fsBack->move(geometry.topLeft() + shift);
+		_fsBack->resize(st::fullScreenPanelBack.width, st::fullScreenPanelBack.height);
+		_fsClose->move(geometry.topLeft() + QPoint(geometry.width() - _fsClose->width() - shift.x(), shift.y()));
+		_fsClose->resize(st::fullScreenPanelClose.width, st::fullScreenPanelClose.height);
+		if (_fsMenuToggle) {
+			_fsMenuToggle->move(_fsClose->pos()
+				- QPoint(_fsMenuToggle->width() + shift.x(), 0));
+			_fsMenuToggle->resize(st::fullScreenPanelMenu.width, st::fullScreenPanelMenu.height);
+		}
+	}, _fsClose->lifetime());
 }
 
 void SeparatePanel::updateTitleButtonColors(not_null<IconButton*> button) {
@@ -1223,6 +1238,10 @@ void SeparatePanel::toggleFullScreen(bool fullscreen) {
 	} else {
 		showNormal();
 	}
+}
+
+rpl::producer<bool> SeparatePanel::fullScreenValue() const {
+	return _fullscreen.value();
 }
 
 QMargins SeparatePanel::computePadding() const {
