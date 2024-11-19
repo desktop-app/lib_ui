@@ -65,6 +65,7 @@ public:
 	[[nodiscard]] QRect innerGeometry() const;
 
 	void toggleFullScreen(bool fullscreen);
+	void allowChildFullScreenControls(bool allow);
 	[[nodiscard]] rpl::producer<bool> fullScreenValue() const;
 	[[nodiscard]] QMargins computePadding() const;
 
@@ -157,6 +158,7 @@ private:
 	[[nodiscard]] bool createMenu(not_null<IconButton*> button);
 
 	void createFullScreenButtons();
+	void initFullScreenButton(not_null<QWidget*> button);
 	void updateTitleButtonColors(not_null<IconButton*> button);
 	void updateTitleColors();
 
@@ -185,6 +187,7 @@ private:
 	std::unique_ptr<FullScreenButton> _fsClose;
 	std::unique_ptr<FullScreenButton> _fsMenuToggle;
 	std::unique_ptr<FadeWrapScaled<FullScreenButton>> _fsBack;
+	bool _fsAllowChildControls = false;
 
 	rpl::event_stream<> _synteticBackRequests;
 	rpl::event_stream<> _userCloseRequests;
