@@ -393,9 +393,7 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 	) | rpl::filter([=](bool shown, bool) {
 		return shown;
 	}) | rpl::start_with_next([=](bool, bool fullscreen) {
-		if (_title) {
-			_title->setVisible(!fullscreen);
-		}
+		updateControlsVisibility(fullscreen);
 		Platform::SetWindowMargins(
 			this,
 			_useTransparency ? computePadding() : QMargins());
@@ -436,6 +434,20 @@ void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
 }
 
 void SeparatePanel::initControls() {
+	_back->toggledValue(
+	) | rpl::start_with_next([=](bool toggled) {
+		_titleLeft.start(
+			[=] { updateTitleGeometry(width()); },
+			toggled ? 0. : 1.,
+			toggled ? 1. : 0.,
+			st::fadeWrapDuration);
+	}, _back->lifetime());
+	_back->hide(anim::type::instant);
+	if (_fsBack) {
+		_fsBack->hide(anim::type::instant);
+	}
+	_titleLeft.stop();
+
 	_fullscreen.value(
 	) | rpl::start_with_next([=](bool fullscreen) {
 		if (!fullscreen) {
@@ -456,17 +468,6 @@ void SeparatePanel::initControls() {
 		_close->moveToRight(padding.right(), padding.top());
 		updateTitleGeometry(width);
 	}, lifetime());
-
-	_back->toggledValue(
-	) | rpl::start_with_next([=](bool toggled) {
-		_titleLeft.start(
-			[=] { updateTitleGeometry(width()); },
-			toggled ? 0. : 1.,
-			toggled ? 1. : 0.,
-			st::fadeWrapDuration);
-	}, _back->lifetime());
-	_back->hide(anim::type::instant);
-	_titleLeft.stop();
 
 	_back->raise();
 	_close->raise();
@@ -527,6 +528,7 @@ void SeparatePanel::createFullScreenButtons() {
 
 void SeparatePanel::initFullScreenButton(not_null<QWidget*> button) {
 	if (_fsAllowChildControls) {
+		button->show();
 		return;
 	}
 	button->setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint)
@@ -738,6 +740,9 @@ void SeparatePanel::setMenuAllowed(
 			padding.top());
 	}, _menuToggle->lifetime());
 	updateTitleGeometry(width());
+	if (_fullscreen.current()) {
+		createFullScreenButtons();
+	}
 	_menuToggleCreated = std::move(created);
 	if (const auto onstack = _menuToggleCreated) {
 		onstack(_menuToggle.data(), false);
@@ -1055,8 +1060,27 @@ void SeparatePanel::finishAnimating() {
 
 void SeparatePanel::showControls() {
 	showChildren();
+	updateControlsVisibility(_fullscreen.current());
+}
+
+void SeparatePanel::updateControlsVisibility(bool fullscreen) {
+	if (_title) {
+		_title->setVisible(!fullscreen);
+	}
+	_close->setVisible(!fullscreen);
+	if (_menuToggle) {
+		_menuToggle->setVisible(!fullscreen);
+	}
+	if (fullscreen) {
+		_back->lower();
+	} else {
+		_back->raise();
+	}
 	if (!_back->toggled()) {
 		_back->setVisible(false);
+		if (_fsBack) {
+			_fsBack->setVisible(false);
+		}
 	}
 }
 
@@ -1248,7 +1272,9 @@ void SeparatePanel::allowChildFullScreenControls(bool allow) {
 		return;
 	}
 	_fsAllowChildControls = allow;
-	createFullScreenButtons();
+	if (_fullscreen.current()) {
+		createFullScreenButtons();
+	}
 }
 
 rpl::producer<bool> SeparatePanel::fullScreenValue() const {

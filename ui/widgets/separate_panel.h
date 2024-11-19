@@ -139,6 +139,7 @@ private:
 	void updateGeometry(QSize size);
 	void showControls();
 	void updateControlsGeometry();
+	void updateControlsVisibility(bool fullscreen);
 	void validateBorderImage();
 	[[nodiscard]] QPixmap createBorderImage(QColor color) const;
 	void opacityCallback();
