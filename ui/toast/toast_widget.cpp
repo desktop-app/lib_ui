@@ -101,6 +101,13 @@ Widget::Widget(QWidget *parent, Config &&config)
 		parentResized();
 	}, lifetime());
 
+	crl::on_main_update_requests(
+	) | rpl::start_with_next([=] {//const auto filter = [=](not_null<QEvent*> e) {
+		if (_attach == RectPart::None && _shownLevel < 1.) {
+			scheduleChildrenPaintRestore();
+		}
+	}, lifetime());
+
 	show();
 }
 
@@ -200,18 +207,31 @@ void Widget::paintToProxy() {
 }
 
 void Widget::disableChildrenPaintOnce() {
-	const auto toggle = [=](bool updatesDisabled) {
-		for (const auto child : children()) {
-			if (child->isWidgetType()) {
-				static_cast<QWidget*>(child)->setAttribute(
-					Qt::WA_UpdatesDisabled,
-					updatesDisabled);
-			}
+	toggleChildrenPaint(false);
+	scheduleChildrenPaintRestore();
+}
+
+void Widget::toggleChildrenPaint(bool enabled) {
+	_childrenPaintDisabled = !enabled;
+	for (const auto child : children()) {
+		if (child->isWidgetType()) {
+			static_cast<QWidget*>(child)->setAttribute(
+				Qt::WA_UpdatesDisabled,
+				_childrenPaintDisabled);
 		}
-	};
-	toggle(true);
+	}
+}
+
+void Widget::scheduleChildrenPaintRestore() {
+	if (_childrenPaintRestoreScheduled) {
+		return;
+	}
+	_childrenPaintRestoreScheduled = true;
 	Ui::PostponeCall(this, [=] {
-		toggle(false);
+		_childrenPaintRestoreScheduled = false;
+		if (_childrenPaintDisabled) {
+			toggleChildrenPaint(true);
+		}
 	});
 }
 
@@ -230,9 +250,6 @@ void Widget::paintEvent(QPaintEvent *e) {
 	}
 
 	auto hq = PainterHighQualityEnabler(p);
-	if (_attach == RectPart::None && _shownLevel < 1.) {
-		p.setOpacity(_shownLevel);
-	}
 	_roundRect.paint(p, rect());
 
 	if (!_st->icon.empty()) {

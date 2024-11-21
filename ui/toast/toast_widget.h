@@ -28,6 +28,8 @@ private:
 	void updateGeometry();
 	void paintToProxy();
 	void disableChildrenPaintOnce();
+	void toggleChildrenPaint(bool enable);
+	void scheduleChildrenPaintRestore();
 
 	const not_null<const style::Toast*> _st;
 	RoundRect _roundRect;
@@ -40,6 +42,8 @@ private:
 	rpl::variable<QMargins> _padding;
 	Fn<void(float64)> _updateShownGeometry;
 
+	bool _childrenPaintDisabled : 1 = false;
+	bool _childrenPaintRestoreScheduled : 1 = false;
 	bool _adaptive : 1 = false;
 
 };
