@@ -156,5 +156,9 @@ TextWithEntities Filtered(
 	return { .text = text.text, .entities = std::move(result) };
 }
 
+QString FixAmpersandInAction(QString text) {
+	return text.replace('&', u"&&"_q);
+}
+
 } // namespace Text
 } // namespace Ui
