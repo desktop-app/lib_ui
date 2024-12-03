@@ -314,6 +314,7 @@ QString SingleLine(const QString &text);
 TextWithEntities SingleLine(const TextWithEntities &text);
 QString RemoveAccents(const QString &text);
 QString RemoveEmoji(const QString &text);
+QString NameSortKey(const QString &text);
 QStringList PrepareSearchWords(const QString &query, const QRegularExpression *SplitterOverride = nullptr);
 bool CutPart(TextWithEntities &sending, TextWithEntities &left, int limit);
 

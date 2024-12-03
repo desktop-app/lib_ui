@@ -1413,6 +1413,10 @@ QString RemoveEmoji(const QString &text) {
 	return result;
 }
 
+QString NameSortKey(const QString &text) {
+	return RemoveAccents(text).toLower();
+}
+
 QStringList PrepareSearchWords(
 		const QString &query,
 		const QRegularExpression *SplitterOverride) {
