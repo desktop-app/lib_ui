@@ -25,8 +25,6 @@ constexpr auto kOverscrollReturnDuration = crl::time(250);
 constexpr auto kOverscrollFromThreshold = -(1 << 30);
 constexpr auto kOverscrollTillThreshold = (1 << 30);
 constexpr auto kTouchOverscrollMultiplier = 2;
-constexpr auto kMagicScrollMultiplier = 2.5;
-constexpr auto kDefaultWheelScrollLines = 3;
 
 constexpr auto kLogA = 16.;
 constexpr auto kLogB = 10.;
@@ -1303,26 +1301,6 @@ int OverscrollToAccumulated(int overscroll) {
 	}
 	return (overscroll > 0 ? 1. : -1.)
 		* int(base::SafeRound(RawTo(std::abs(overscroll))));
-}
-
-QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
-	const auto convert = [](QPointF point) {
-		return QPointF(
-			style::ConvertScaleExact(point.x()),
-			style::ConvertScaleExact(point.y()));
-	};
-	if (!e->pixelDelta().isNull()) {
-		return convert(e->pixelDelta())
-			* ((Platform::IsWayland() && !touch)
-				? kMagicScrollMultiplier
-				: 1.);
-	}
-	return (convert(e->angleDelta()) * QApplication::wheelScrollLines())
-		/ float64(kPixelToAngleDelta * kDefaultWheelScrollLines);
-}
-
-QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
-	return ScrollDeltaF(e, touch).toPoint();
 }
 
 } // namespace Ui

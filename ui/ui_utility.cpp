@@ -6,6 +6,7 @@
 //
 #include "ui/ui_utility.h"
 
+#include "base/platform/base_platform_info.h"
 #include "ui/integration.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/style/style_core.h"
@@ -19,6 +20,9 @@
 
 namespace Ui {
 namespace {
+
+constexpr auto kDefaultWheelScrollLines = 3;
+constexpr auto kMagicScrollMultiplier = 2.5;
 
 class WidgetCreator : public QWidget {
 public:
@@ -277,6 +281,26 @@ void SetGeometryAndScreen(
 #endif // Qt < 6.0.0
 	}
 	widget->setGeometry(geometry);
+}
+
+QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
+	const auto convert = [](QPointF point) {
+		return QPointF(
+			style::ConvertScaleExact(point.x()),
+			style::ConvertScaleExact(point.y()));
+	};
+	if (!e->pixelDelta().isNull()) {
+		return convert(e->pixelDelta())
+			* ((::Platform::IsWayland() && !touch)
+				? kMagicScrollMultiplier
+				: 1.);
+	}
+	return (convert(e->angleDelta()) * QApplication::wheelScrollLines())
+		/ float64(kPixelToAngleDelta * kDefaultWheelScrollLines);
+}
+
+QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
+	return ScrollDeltaF(e, touch).toPoint();
 }
 
 } // namespace Ui

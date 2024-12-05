@@ -21,6 +21,8 @@ class object_ptr;
 
 namespace Ui {
 
+inline constexpr auto kPixelToAngleDelta = 2;
+
 template <typename Widget, typename ...Args>
 inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
 	return base::make_unique_q<Widget>(
@@ -130,5 +132,12 @@ int WheelDirection(not_null<QWheelEvent*> e);
 void SetGeometryAndScreen(
 	not_null<QWidget*> widget,
 	QRect geometry);
+
+[[nodiscard]] QPointF ScrollDeltaF(
+	not_null<QWheelEvent*> e,
+	bool touch = false);
+[[nodiscard]] QPoint ScrollDelta(
+	not_null<QWheelEvent*> e,
+	bool touch = false);
 
 } // namespace Ui
