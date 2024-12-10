@@ -112,6 +112,10 @@ void LinkButton::setColorOverride(std::optional<QColor> textFg) {
 	update();
 }
 
+QString LinkButton::accessibleName() const {
+	return _text;
+}
+
 void LinkButton::onStateChanged(State was, StateChangeSource source) {
 	update();
 }
@@ -259,6 +263,10 @@ int32 FlatButton::textWidth() const {
 	return _st.font->width(_text);
 }
 
+QString FlatButton::accessibleName() const {
+	return _text;
+}
+
 void FlatButton::onStateChanged(State was, StateChangeSource source) {
 	RippleButton::onStateChanged(was, source);
 	update();
@@ -311,6 +319,10 @@ RoundButton::RoundButton(
 void RoundButton::setTextTransform(TextTransform transform) {
 	_transform = transform;
 	resizeToText(_textFull.current());
+}
+
+QString RoundButton::accessibleName() const {
+	return _textFull.current();
 }
 
 void RoundButton::setText(rpl::producer<QString> text) {
@@ -914,6 +926,10 @@ QRect SettingsButton::toggleRect() const {
 
 QRect SettingsButton::maybeToggleRect() const {
 	return _toggle ? toggleRect() : QRect(0, 0, 0, 0);
+}
+
+QString SettingsButton::accessibleName() const {
+	return _text.toString();
 }
 
 int SettingsButton::resizeGetHeight(int newWidth) {

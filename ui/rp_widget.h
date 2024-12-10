@@ -17,6 +17,8 @@
 #include <QtCore/QPointer>
 #include <QtGui/QtEvents>
 
+class QAccessibleInterface;
+
 namespace Ui {
 
 void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible);
@@ -300,6 +302,10 @@ public:
 protected:
 	bool handleEvent(QEvent *event);
 	virtual bool eventHook(QEvent *event) = 0;
+
+	[[nodiscard]] virtual QAccessibleInterface *createAccessible() {
+		return nullptr;
+	}
 
 private:
 	template <typename Widget, typename Traits>

@@ -31,6 +31,8 @@ public:
 	void setText(const QString &text);
 	void setColorOverride(std::optional<QColor> textFg);
 
+	QString accessibleName() const override;
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
@@ -104,6 +106,8 @@ public:
 
 	int32 textWidth() const;
 
+	QString accessibleName() const override;
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
@@ -149,6 +153,8 @@ public:
 		ToUpper,
 	};
 	void setTextTransform(TextTransform transform);
+
+	QString accessibleName() const override;
 
 	~RoundButton();
 
@@ -282,6 +288,8 @@ public:
 	[[nodiscard]] int fullTextWidth() const;
 
 	void finishAnimating();
+
+	QString accessibleName() const override;
 
 protected:
 	int resizeGetHeight(int newWidth) override;

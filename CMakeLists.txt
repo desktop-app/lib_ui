@@ -36,6 +36,8 @@ PRIVATE
     fonts/fonts.qrc
     qt_conf/win.qrc
 
+    ui/accessibility/accessibility_factory.cpp
+    ui/accessibility/accessibility_factory.h
     ui/dpr/dpr_icon.cpp
     ui/dpr/dpr_icon.h
     ui/dpr/dpr_image.h

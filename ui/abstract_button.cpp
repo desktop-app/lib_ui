@@ -11,11 +11,35 @@
 #include "ui/integration.h"
 
 #include <QtGui/QtEvents>
+#include <QtWidgets/QAccessibleWidget>
 
 #include <rpl/filter.h>
 #include <rpl/mappers.h>
 
 namespace Ui {
+namespace {
+
+class ButtonAccessible final : public QAccessibleWidget {
+public:
+	ButtonAccessible(AbstractButton *button);
+
+	QAccessible::State state() const override;
+	QString text(QAccessible::Text t) const override;
+	QAccessible::Role role() const override;
+
+	void *interface_cast(QAccessible::InterfaceType t) override;
+
+	QStringList actionNames() const override;
+	void doAction(const QString &actionName) override;
+
+private:
+	AbstractButton *button() const {
+		return static_cast<AbstractButton*>(object());
+	}
+
+};
+
+} // namespace
 
 AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	setMouseTracking(true);
@@ -24,6 +48,8 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	shownValue()
 		| rpl::filter(_1 == false)
 		| rpl::start_with_next([this] { clearState(); }, lifetime());
+
+	setFocusPolicy(Qt::StrongFocus);
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {
@@ -80,6 +106,11 @@ void AbstractButton::mouseReleaseEvent(QMouseEvent *e) {
 	if (set) {
 		e->accept();
 	}
+}
+
+QAccessibleInterface *AbstractButton::createAccessible() {
+	const auto text = accessibleName();
+	return text.isEmpty() ? nullptr : new ButtonAccessible(this);
 }
 
 void AbstractButton::clicked(
@@ -175,5 +206,57 @@ void AbstractButton::clearState() {
 	_state = StateFlag::None;
 	onStateChanged(was, StateChangeSource::ByUser);
 }
+
+ButtonAccessible::ButtonAccessible(AbstractButton *button)
+: QAccessibleWidget(button, QAccessible::Button) {
+}
+
+QAccessible::State ButtonAccessible::state() const {
+	QAccessible::State state;
+	state.focusable = true;
+	state.focused = button()->hasFocus();
+	state.disabled = button()->isDisabled();
+	return state;
+}
+
+QString ButtonAccessible::text(QAccessible::Text t) const {
+	switch (t) {
+	case QAccessible::Name:
+		return button()->accessibleName();
+	case QAccessible::Description:
+		return button()->accessibleDescription();
+	default:
+		return QString();
+	}
+}
+
+QAccessible::Role ButtonAccessible::role() const {
+	return QAccessible::Button;
+}
+
+void *ButtonAccessible::interface_cast(QAccessible::InterfaceType t) {
+	if (t == QAccessible::ActionInterface) {
+		return static_cast<QAccessibleActionInterface*>(this);
+	}
+	return QAccessibleWidget::interface_cast(t);
+}
+
+QStringList ButtonAccessible::actionNames() const {
+	return QStringList() << QAccessibleActionInterface::pressAction();
+}
+
+void ButtonAccessible::doAction(const QString &actionName) {
+	if (actionName == QAccessibleActionInterface::pressAction()) {
+		button()->clicked({}, Qt::LeftButton);
+	}
+}
+//
+//void AbstractButton::onStateChanged(State was, StateChangeSource source) {
+//	// Notify accessibility about state changes
+//	if (QAccessible::isActive()) {
+//		QAccessibleStateChangeEvent event(this, QAccessible::StateChanged);
+//		QAccessible::updateAccessibility(&event);
+//	}
+//}
 
 } // namespace Ui

@@ -7,6 +7,7 @@
 #include "ui/rp_widget.h"
 
 #include "base/qt_signal_producer.h"
+#include "ui/accessibility/accessibility_factory.h"
 #include "ui/gl/gl_detection.h"
 
 #include <QtGui/QWindow>
@@ -175,6 +176,11 @@ rpl::lifetime &RpWidgetWrap::lifetime() {
 
 bool RpWidgetWrap::handleEvent(QEvent *event) {
 	Expects(event != nullptr);
+
+	if (event->type() == Accessibility::Event::Type()) {
+		static_cast<Accessibility::Event*>(event)->set(createAccessible());
+		return true;
+	}
 
 	auto streams = _eventStreams.get();
 	if (!streams) {

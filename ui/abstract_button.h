@@ -60,12 +60,18 @@ public:
 
 	void clicked(Qt::KeyboardModifiers modifiers, Qt::MouseButton button);
 
+	[[nodiscard]] virtual QString accessibleName() const {
+		return {};
+	}
+
 protected:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
+
+	QAccessibleInterface *createAccessible() override;
 
 protected:
 	enum class StateFlag {
