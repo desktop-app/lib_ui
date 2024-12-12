@@ -219,7 +219,7 @@ private:
 	object_ptr<ScrollShadow> _topShadow, _bottomShadow;
 	int _horizontalValue, _verticalValue;
 
-	bool _touchEnabled;
+	bool _touchEnabled = false;
 	base::Timer _touchTimer;
 	bool _touchScroll = false;
 	bool _touchPress = false;

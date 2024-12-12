@@ -300,7 +300,10 @@ auto ScrollBar::shadowVisibilityChanged() const
 	return _shadowVisibilityChanged.events();
 }
 
-ScrollArea::ScrollArea(QWidget *parent, const style::ScrollArea &st, bool handleTouch)
+ScrollArea::ScrollArea(
+	QWidget *parent,
+	const style::ScrollArea &st,
+	bool handleTouch)
 : Parent(parent)
 , _st(st)
 , _horizontalBar(this, false, &_st)
@@ -643,13 +646,26 @@ void ScrollArea::scrollContentsBy(int dx, int dy) {
 }
 
 bool ScrollArea::touchScroll(const QPoint &delta) {
-	const auto scTop = scrollTop();
-	const auto scMax = scrollTopMax();
-	const auto scNew = std::clamp(scTop - delta.y(), 0, scMax);
-	if (scNew == scTop) {
+	const auto top = scrollTop();
+	const auto topMax = scrollTopMax();
+	const auto left = scrollLeft();
+	const auto leftMax = scrollLeftMax();
+	const auto xAbs = qAbs(delta.x());
+	const auto yAbs = qAbs(delta.y());
+	const auto direction = (leftMax <= 0 || yAbs > xAbs)
+		? Qt::Vertical
+		: Qt::Horizontal;
+	const auto was = (direction == Qt::Vertical) ? top : left;
+	const auto now = (direction == Qt::Vertical)
+		? std::clamp(top - delta.y(), 0, topMax)
+		: std::clamp(left - delta.x(), 0, leftMax);
+	if (now == was) {
 		return false;
+	} else if (direction == Qt::Vertical) {
+		scrollToY(now);
+	} else {
+		horizontalScrollBar()->setValue(now);
 	}
-	scrollToY(scNew);
 	return true;
 }
 
