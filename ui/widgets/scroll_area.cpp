@@ -18,6 +18,46 @@
 #include <QtGui/QWindow>
 
 namespace Ui {
+namespace {
+
+[[nodiscard]] int ComputeScrollTo(
+		int toFrom,
+		int toTill,
+		int toMin,
+		int toMax,
+		int current,
+		int size) {
+	if (toFrom < toMin) {
+		toFrom = toMin;
+	} else if (toFrom > toMax) {
+		toFrom = toMax;
+	}
+	const auto exact = (toTill < 0);
+
+	const auto curBottom = current + size;
+	auto scToFrom = toFrom;
+	if (!exact && toFrom >= current) {
+		if (toTill < toFrom) {
+			toTill = toFrom;
+		}
+		if (toTill <= curBottom) {
+			return current;
+		}
+
+		scToFrom = toTill - size;
+		if (scToFrom > toFrom) {
+			scToFrom = toFrom;
+		}
+		if (scToFrom == current) {
+			return current;
+		}
+	} else {
+		scToFrom = toFrom;
+	}
+	return scToFrom;
+}
+
+} // namespace
 
 // flick scroll taken from http://qt-project.org/doc/qt-4.8/demos-embedded-anomaly-src-flickcharm-cpp.html
 
@@ -61,21 +101,40 @@ ScrollBar::ScrollBar(ScrollArea *parent, bool vert, const style::ScrollArea *st)
 }
 
 void ScrollBar::recountSize() {
-	setGeometry(_vertical ? QRect(style::RightToLeft() ? 0 : (area()->width() - _st->width), _st->deltat, _st->width, area()->height() - _st->deltat - _st->deltab) : QRect(_st->deltat, area()->height() - _st->width, area()->width() - _st->deltat - _st->deltab, _st->width));
+	setGeometry(_vertical
+		? QRect(
+			style::RightToLeft() ? 0 : (area()->width() - _st->width),
+			_st->deltat,
+			_st->width,
+			area()->height() - _st->deltat - _st->deltab)
+		: QRect(
+			_st->deltat,
+			area()->height() - _st->width,
+			area()->width() - _st->deltat - _st->deltab,
+			_st->width));
 }
 
 void ScrollBar::updateBar(bool force) {
 	QRect newBar;
 	if (_connected->maximum() != _scrollMax) {
-		int32 oldMax = _scrollMax, newMax = _connected->maximum();
+		const auto oldMax = _scrollMax;
+		const auto newMax = _connected->maximum();
 		_scrollMax = newMax;
 		area()->rangeChanged(oldMax, newMax, _vertical);
 	}
 	if (_vertical) {
-		int sh = area()->scrollHeight(), rh = height(), h = sh ? int32((rh * int64(area()->height())) / sh) : 0;
-		if (h >= rh || !area()->scrollTopMax() || rh < _st->minHeight) {
-			if (!isHidden()) hide();
-			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
+		const auto sh = area()->scrollHeight();
+		const auto rh = height();
+		auto h = sh ? int32((rh * int64(area()->height())) / sh) : 0;
+		if (_st->barHidden
+			|| h >= rh
+			|| !area()->scrollTopMax()
+			|| rh < _st->minHeight) {
+			if (!isHidden()) {
+				hide();
+			}
+			const auto newTopSh = (_st->topsh < 0);
+			const auto newBottomSh = (_st->bottomsh < 0);
 			if (newTopSh != _topSh || force) {
 				_shadowVisibilityChanged.fire({
 					.type = ScrollShadow::Type::Top,
@@ -91,21 +150,40 @@ void ScrollBar::updateBar(bool force) {
 			return;
 		}
 
-		if (h <= _st->minHeight) h = _st->minHeight;
-		int stm = area()->scrollTopMax(), y = stm ? int32(((rh - h) * int64(area()->scrollTop())) / stm) : 0;
-		if (y > rh - h) y = rh - h;
+		if (h <= _st->minHeight) {
+			h = _st->minHeight;
+		}
+		const auto stm = area()->scrollTopMax();
+		const auto y = stm
+			? std::min(
+				int32(((rh - h) * int64(area()->scrollTop())) / stm),
+				rh - h)
+			: 0;
 
 		newBar = QRect(_st->deltax, y, width() - 2 * _st->deltax, h);
 	} else {
-		int sw = area()->scrollWidth(), rw = width(), w = sw ? int32((rw * int64(area()->width())) / sw) : 0;
-		if (w >= rw || !area()->scrollLeftMax() || rw < _st->minHeight) {
-			if (!isHidden()) hide();
+		const auto sw = area()->scrollWidth();
+		const auto rw = width();
+		auto w = sw ? int32((rw * int64(area()->width())) / sw) : 0;
+		if (_st->barHidden
+			|| w >= rw
+			|| !area()->scrollLeftMax()
+			|| rw < _st->minHeight) {
+			if (!isHidden()) {
+				hide();
+			}
 			return;
 		}
 
-		if (w <= _st->minHeight) w = _st->minHeight;
-		int slm = area()->scrollLeftMax(), x = slm ? int32(((rw - w) * int64(area()->scrollLeft())) / slm) : 0;
-		if (x > rw - w) x = rw - w;
+		if (w <= _st->minHeight) {
+			w = _st->minHeight;
+		}
+		const auto slm = area()->scrollLeftMax();
+		const auto x = slm
+			? std::min(
+				int32(((rw - w) * int64(area()->scrollLeft())) / slm),
+				rw - w)
+			: 0;
 
 		newBar = QRect(x, _st->deltax, w, height() - 2 * _st->deltax);
 	}
@@ -114,7 +192,11 @@ void ScrollBar::updateBar(bool force) {
 		update();
 	}
 	if (_vertical) {
-		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
+		const auto newTopSh = (_st->topsh < 0)
+			|| (area()->scrollTop() > _st->topsh);
+		const auto newBottomSh = (_st->bottomsh < 0)
+			|| (area()->scrollTop()
+				< area()->scrollTopMax() - _st->bottomsh);
 		if (newTopSh != _topSh || force) {
 			_shadowVisibilityChanged.fire({
 				.type = ScrollShadow::Type::Top,
@@ -726,48 +808,40 @@ void ScrollArea::scrollToWidget(not_null<QWidget*> widget) {
 	}
 }
 
-int ScrollArea::computeScrollTo(int toTop, int toBottom) {
+int ScrollArea::computeScrollToX(int toLeft, int toRight) {
 	if (const auto inner = widget()) {
 		SendPendingMoveResizeEvents(inner);
 	}
 	SendPendingMoveResizeEvents(this);
+	return ComputeScrollTo(
+		toLeft,
+		toRight,
+		0,
+		scrollLeftMax(),
+		scrollLeft(),
+		width());
+}
 
-	const auto toMin = 0;
-	const auto toMax = scrollTopMax();
-	if (toTop < toMin) {
-		toTop = toMin;
-	} else if (toTop > toMax) {
-		toTop = toMax;
+int ScrollArea::computeScrollToY(int toTop, int toBottom) {
+	if (const auto inner = widget()) {
+		SendPendingMoveResizeEvents(inner);
 	}
-	const auto exact = (toBottom < 0);
+	SendPendingMoveResizeEvents(this);
+	return ComputeScrollTo(
+		toTop,
+		toBottom,
+		0,
+		scrollTopMax(),
+		scrollTop(),
+		height());
+}
 
-	const auto curTop = scrollTop();
-	const auto curHeight = height();
-	const auto curBottom = curTop + curHeight;
-	auto scToTop = toTop;
-	if (!exact && toTop >= curTop) {
-		if (toBottom < toTop) {
-			toBottom = toTop;
-		}
-		if (toBottom <= curBottom) {
-			return curTop;
-		}
-
-		scToTop = toBottom - curHeight;
-		if (scToTop > toTop) {
-			scToTop = toTop;
-		}
-		if (scToTop == curTop) {
-			return curTop;
-		}
-	} else {
-		scToTop = toTop;
-	}
-	return scToTop;
+void ScrollArea::scrollToX(int toLeft, int toRight) {
+	horizontalScrollBar()->setValue(computeScrollToX(toLeft, toRight));
 }
 
 void ScrollArea::scrollToY(int toTop, int toBottom) {
-	verticalScrollBar()->setValue(computeScrollTo(toTop, toBottom));
+	verticalScrollBar()->setValue(computeScrollToY(toTop, toBottom));
 }
 
 void ScrollArea::doSetOwnedWidget(object_ptr<QWidget> w) {

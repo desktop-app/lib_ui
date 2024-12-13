@@ -166,8 +166,10 @@ public:
 
 	void scrollTo(ScrollToRequest request);
 	void scrollToWidget(not_null<QWidget*> widget);
-	[[nodiscard]] int computeScrollTo(int toTop, int toBottom);
+	[[nodiscard]] int computeScrollToX(int toLeft, int toRight);
+	[[nodiscard]] int computeScrollToY(int toTop, int toBottom);
 
+	void scrollToX(int toLeft, int toRight = -1);
 	void scrollToY(int toTop, int toBottom = -1);
 	void disableScroll(bool dis);
 	void scrolled();

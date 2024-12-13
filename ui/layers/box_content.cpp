@@ -266,7 +266,7 @@ void BoxContent::scrollToY(int top, int bottom) {
 
 void BoxContent::scrollTo(ScrollToRequest request, anim::type animated) {
 	if (_scroll) {
-		const auto v = _scroll->computeScrollTo(request.ymin, request.ymax);
+		const auto v = _scroll->computeScrollToY(request.ymin, request.ymax);
 		const auto now = _scroll->scrollTop();
 		if (animated == anim::type::instant || v == now) {
 			_scrollAnimation.stop();
