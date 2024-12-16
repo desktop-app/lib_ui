@@ -42,6 +42,14 @@
 namespace Ui {
 namespace {
 
+void OverlayWidgetCache(QPainter &p, Ui::RpWidget *widget) {
+	if (widget) {
+		widget->show();
+		p.drawPixmap(widget->pos(), GrabWidget(widget));
+		widget->hide();
+	}
+}
+
 class PanelShow final : public Show {
 public:
 	explicit PanelShow(not_null<SeparatePanel*> panel);
@@ -430,7 +438,7 @@ void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
 		badge->setParent(this);
 	}
 	_titleBadge = std::move(badge);
-	updateControlsGeometry();
+	updateTitleGeometry(width());
 }
 
 void SeparatePanel::initControls() {
@@ -652,14 +660,17 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 				available
 					- (_menuToggle ? _menuToggle->width() : 0)
 					- (_searchToggle ? _searchToggle->width() : 0)
-					- (_titleBadge ? _titleBadge->width() : 0),
+					- (_titleBadge
+						? (_titleBadge->width()
+							+ st::separatePanelTitleBadgeSkip * 2)
+						: 0),
 				_title->textMaxWidth()));
 		_title->moveToLeft(
 			padding.left() + left,
 			padding.top() + st::separatePanelTitleTop);
 		if (_titleBadge) {
 			_titleBadge->moveToLeft(
-				_title->x() + _title->width(),
+				rect::right(_title) + st::separatePanelTitleBadgeSkip,
 				_title->y() + (_title->height() - _titleBadge->height()) / 2);
 		}
 	}
@@ -746,6 +757,16 @@ void SeparatePanel::setMenuAllowed(
 	_menuToggleCreated = std::move(created);
 	if (const auto onstack = _menuToggleCreated) {
 		onstack(_menuToggle.data(), false);
+	}
+	if (!_animationCache.isNull()) {
+		const auto rect = _menuToggle->geometry()
+			| (_title ? _title->geometry() : QRect())
+			| (_titleBadge ? _titleBadge->geometry() : QRect());
+		auto p = QPainter(&_animationCache);
+		p.fillRect(rect, st::windowBg);
+		OverlayWidgetCache(p, _title);
+		OverlayWidgetCache(p, _titleBadge);
+		OverlayWidgetCache(p, _menuToggle);
 	}
 }
 
@@ -1066,6 +1087,9 @@ void SeparatePanel::showControls() {
 void SeparatePanel::updateControlsVisibility(bool fullscreen) {
 	if (_title) {
 		_title->setVisible(!fullscreen);
+	}
+	if (_titleBadge) {
+		_titleBadge->setVisible(!fullscreen);
 	}
 	_close->setVisible(!fullscreen);
 	if (_menuToggle) {
