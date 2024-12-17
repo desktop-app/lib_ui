@@ -31,7 +31,8 @@ TitleControls::Control GtkKeywordToTitleControl(const QString &keyword) {
 	return TitleControls::Control::Unknown;
 }
 
-TitleControls::Layout GtkKeywordsToTitleControlsLayout(const QString &keywords) {
+TitleControls::Layout GtkKeywordsToTitleControlsLayout(
+		const QString &keywords) {
 	const auto splitted = keywords.split(':');
 
 	std::vector<TitleControls::Control> controlsLeft;
@@ -85,14 +86,17 @@ TitleControls::Layout TitleControlsLayout() {
 	}();
 
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-	const auto xSettingsResult = []() -> std::optional<TitleControls::Layout> {
+	const auto xSettingsResult = []()
+	-> std::optional<TitleControls::Layout> {
 		using base::Platform::XCB::XSettings;
 		const auto xSettings = XSettings::Instance();
 		if (!xSettings) {
 			return std::nullopt;
 		}
 
-		const auto decorationLayout = xSettings->setting("Gtk/DecorationLayout");
+		const auto decorationLayout = xSettings->setting(
+			"Gtk/DecorationLayout");
+
 		if (!decorationLayout.isValid()) {
 			return std::nullopt;
 		}
