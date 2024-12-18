@@ -61,16 +61,17 @@ TitleControls::Layout TitleControlsLayout() {
 	[[maybe_unused]] static const auto Inited = [] {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 		using base::Platform::XCB::XSettings;
-		XSettings::Instance().registerCallbackForProperty(
-			"Gtk/DecorationLayout",
-			[](
-					xcb_connection_t *,
-					const QByteArray &,
-					const QVariant &,
-					void *) {
-				NotifyTitleControlsLayoutChanged();
-			},
-			nullptr);
+		if (const auto xSettings = XSettings::Instance()) {
+			static const auto lifetime
+				= xSettings->registerCallbackForProperty(
+					"Gtk/DecorationLayout",
+					[](
+							xcb_connection_t *,
+							const QByteArray &,
+							const QVariant &) {
+						NotifyTitleControlsLayoutChanged();
+					});
+		}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 		namespace XDP = base::Platform::XDP;
@@ -90,7 +91,12 @@ TitleControls::Layout TitleControlsLayout() {
 	const auto xSettingsResult = []()
 	-> std::optional<TitleControls::Layout> {
 		using base::Platform::XCB::XSettings;
-		const auto decorationLayout = XSettings::Instance().setting(
+		const auto xSettings = XSettings::Instance();
+		if (!xSettings) {
+			return std::nullopt;
+		}
+
+		const auto decorationLayout = xSettings->setting(
 			"Gtk/DecorationLayout");
 
 		if (!decorationLayout.isValid()) {
