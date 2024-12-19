@@ -44,19 +44,15 @@ HRESULT(__stdcall *GetScaleFactorForMonitor)(
 
 } // namespace
 
-namespace internal {
-
-TitleControls::Layout TitleControlsLayout() {
-	return TitleControls::Layout{
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::CreateInstance() {
+	return std::shared_ptr<TitleControlsLayout>(new TitleControlsLayout({
 		.right = {
 			TitleControls::Control::Minimize,
 			TitleControls::Control::Maximize,
 			TitleControls::Control::Close,
 		}
-	};
+	}));
 }
-
-} // namespace internal
 
 struct TitleWidget::PaddingHelper {
 	explicit PaddingHelper(QWidget *parent) : controlsParent(parent) {

@@ -348,7 +348,7 @@ void DefaultWindowHelper::init() {
 		window()->widthValue(),
 		_windowState.value(),
 		_title->shownValue(),
-		TitleControlsLayoutValue()
+		_title->layout().value()
 	) | rpl::start_with_next([=](
 			int width,
 			Qt::WindowStates windowState,
@@ -369,7 +369,7 @@ void DefaultWindowHelper::init() {
 		_windowState.value(),
 		_title->heightValue(),
 		_title->shownValue(),
-		TitleControlsLayoutValue()
+		_title->layout().value()
 	) | rpl::start_with_next([=](
 			QSize size,
 			Qt::WindowStates windowState,
