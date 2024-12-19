@@ -322,7 +322,7 @@ void TitleControls::updateControlsPosition() {
 			}
 			from.clear();
 		};
-		if (TitleControlsOnLeft(controlsLayout)) {
+		if (controlsLayout.onLeft()) {
 			moveFromTo(controlsRight, controlsLeft);
 		} else {
 			moveFromTo(controlsLeft, controlsRight);
