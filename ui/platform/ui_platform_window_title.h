@@ -123,6 +123,17 @@ public:
 
 	using Control = TitleControl;
 	struct Layout {
+		[[nodiscard]] inline bool onLeft() const {
+			if (ranges::contains(left, Control::Close)) {
+				return true;
+			} else if (ranges::contains(right, Control::Close)) {
+				return false;
+			} else if (left.size() > right.size()) {
+				return true;
+			}
+			return false;
+		}
+
 		std::vector<Control> left;
 		std::vector<Control> right;
 	};
@@ -162,17 +173,6 @@ void NotifyTitleControlsLayoutChanged(
 [[nodiscard]] TitleControls::Layout TitleControlsLayout();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
 [[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
-[[nodiscard]] inline bool TitleControlsOnLeft(
-		const TitleControls::Layout &layout = TitleControlsLayout()) {
-	if (ranges::contains(layout.left, TitleControl::Close)) {
-		return true;
-	} else if (ranges::contains(layout.right, TitleControl::Close)) {
-		return false;
-	} else if (layout.left.size() > layout.right.size()) {
-		return true;
-	}
-	return false;
-}
 
 class DefaultTitleWidget : public RpWidget {
 public:
