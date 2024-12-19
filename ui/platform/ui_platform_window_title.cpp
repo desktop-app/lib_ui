@@ -137,6 +137,7 @@ TitleControls::TitleControls(
 	std::unique_ptr<AbstractTitleButtons> buttons,
 	Fn<void(bool maximized)> maximize)
 : _st(&st)
+, _layout(TitleControlsLayout::Create())
 , _buttons(std::move(buttons))
 , _minimize(_buttons->create(parent, Control::Minimize, st))
 , _maximizeRestore(_buttons->create(parent, Control::Maximize, st))
@@ -163,6 +164,10 @@ void TitleControls::setStyle(const style::WindowTitle &st) {
 
 not_null<const style::WindowTitle*> TitleControls::st() const {
 	return _st;
+}
+
+TitleControlsLayout &TitleControls::layout() const {
+	return *_layout;
 }
 
 QRect TitleControls::geometry() const {
@@ -221,7 +226,7 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
 
 	rpl::combine(
 		parent()->widthValue(),
-		TitleControlsLayoutValue()
+		_layout->value()
 	) | rpl::start_with_next([=] {
 		updateControlsPosition();
 	}, _close->lifetime());
@@ -308,7 +313,7 @@ AbstractButton *TitleControls::controlWidget(Control control) const {
 }
 
 void TitleControls::updateControlsPosition() {
-	auto controlsLayout = TitleControlsLayout();
+	auto controlsLayout = _layout->current();
 	auto &controlsLeft = controlsLayout.left;
 	auto &controlsRight = controlsLayout.right;
 	ranges::reverse(controlsRight);
@@ -409,34 +414,13 @@ void TitleControls::updateButtonsState() {
 	_buttons->updateState(_activeState, _maximizedState, *_st);
 }
 
-namespace internal {
-namespace {
-
-auto &CachedTitleControlsLayout() {
-	using Layout = TitleControls::Layout;
-	static rpl::variable<Layout> Result = TitleControlsLayout();
-	return Result;
-};
-
-} // namespace
-
-void NotifyTitleControlsLayoutChanged(
-		const std::optional<TitleControls::Layout> &layout) {
-	CachedTitleControlsLayout() = layout ? *layout : TitleControlsLayout();
-}
-
-} // namespace internal
-
-TitleControls::Layout TitleControlsLayout() {
-	return internal::CachedTitleControlsLayout().current();
-}
-
-rpl::producer<TitleControls::Layout> TitleControlsLayoutValue() {
-	return internal::CachedTitleControlsLayout().value();
-}
-
-rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged() {
-	return internal::CachedTitleControlsLayout().changes();
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Create() {
+	static std::weak_ptr<TitleControlsLayout> Weak;
+	auto result = Weak.lock();
+	if (!result) {
+		Weak = result = CreateInstance();
+	}
+	return result;
 }
 
 DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)
@@ -448,6 +432,10 @@ DefaultTitleWidget::DefaultTitleWidget(not_null<RpWidget*> parent)
 
 not_null<const style::WindowTitle*> DefaultTitleWidget::st() const {
 	return _controls.st();
+}
+
+TitleControlsLayout &DefaultTitleWidget::layout() const {
+	return _controls.layout();
 }
 
 QRect DefaultTitleWidget::controlsGeometry() const {

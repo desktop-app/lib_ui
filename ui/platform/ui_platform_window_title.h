@@ -26,6 +26,7 @@ class RpWindow;
 namespace Platform {
 
 class TitleControls;
+class TitleControlsLayout;
 
 enum class HitTestResult {
 	None = 0,
@@ -112,6 +113,7 @@ public:
 
 	void setStyle(const style::WindowTitle &st);
 	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
+	[[nodiscard]] TitleControlsLayout &layout() const;
 	[[nodiscard]] QRect geometry() const;
 	void setResizeEnabled(bool enabled);
 	void raise();
@@ -149,6 +151,7 @@ private:
 	void handleWindowStateChanged(Qt::WindowStates state = Qt::WindowNoState);
 
 	not_null<const style::WindowTitle*> _st;
+	const std::shared_ptr<TitleControlsLayout> _layout;
 	const std::unique_ptr<AbstractTitleButtons> _buttons;
 
 	object_ptr<AbstractButton> _minimize;
@@ -161,24 +164,40 @@ private:
 
 };
 
-namespace internal {
+class TitleControlsLayout {
+public:
+	virtual ~TitleControlsLayout() = default;
 
-// Actual requestor, cached by the public interface
-[[nodiscard]] TitleControls::Layout TitleControlsLayout();
-void NotifyTitleControlsLayoutChanged(
-	const std::optional<TitleControls::Layout> &layout = std::nullopt);
+	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> Create();
 
-} // namespace internal
+	[[nodiscard]] TitleControls::Layout current() const {
+		return _variable.current();
+	}
 
-[[nodiscard]] TitleControls::Layout TitleControlsLayout();
-[[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutValue();
-[[nodiscard]] rpl::producer<TitleControls::Layout> TitleControlsLayoutChanged();
+	[[nodiscard]] rpl::producer<TitleControls::Layout> value() const {
+		return _variable.value();
+	}
+
+	[[nodiscard]] rpl::producer<TitleControls::Layout> changes() const {
+		return _variable.changes();
+	}
+
+protected:
+	TitleControlsLayout(TitleControls::Layout layout) : _variable(layout) {}
+
+	rpl::variable<TitleControls::Layout> _variable;
+
+private:
+	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> CreateInstance();
+
+};
 
 class DefaultTitleWidget : public RpWidget {
 public:
 	explicit DefaultTitleWidget(not_null<RpWidget*> parent);
 
 	[[nodiscard]] not_null<const style::WindowTitle*> st() const;
+	[[nodiscard]] TitleControlsLayout &layout() const;
 	[[nodiscard]] QRect controlsGeometry() const;
 	void setText(const QString &text);
 	void setStyle(const style::WindowTitle &st);

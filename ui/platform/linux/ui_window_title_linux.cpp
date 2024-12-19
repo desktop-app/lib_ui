@@ -16,38 +16,41 @@
 
 namespace Ui {
 namespace Platform {
-namespace internal {
+namespace {
 
-TitleControls::Layout TitleControlsLayout() {
-	[[maybe_unused]] static const auto Inited = [] {
+class TitleControlsLayoutImpl : public TitleControlsLayout {
+public:
+	TitleControlsLayoutImpl();
+
+private:
+	[[nodiscard]] static TitleControls::Layout Get();
+
+	const rpl::lifetime _lifetime;
+	const base::Platform::XDP::SettingWatcher _settingWatcher;
+};
+
+TitleControlsLayoutImpl::TitleControlsLayoutImpl()
+: TitleControlsLayout(Get())
+, _lifetime([&] {
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-		using base::Platform::XCB::XSettings;
-		if (const auto xSettings = XSettings::Instance()) {
-			static const auto lifetime
-				= xSettings->registerCallbackForProperty(
-					"Gtk/DecorationLayout",
-					[](
-							xcb_connection_t *,
-							const QByteArray &,
-							const QVariant &) {
-						NotifyTitleControlsLayoutChanged();
-					});
-		}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-
-		namespace XDP = base::Platform::XDP;
-		static const XDP::SettingWatcher settingWatcher(
-			"org.gnome.desktop.wm.preferences",
-			"button-layout",
-			[] {
-				base::Integration::Instance().enterFromEventLoop([] {
-					NotifyTitleControlsLayoutChanged();
-				});
+	using base::Platform::XCB::XSettings;
+	if (const auto xSettings = XSettings::Instance()) {
+		return xSettings->registerCallbackForProperty(
+			"Gtk/DecorationLayout",
+			[=](xcb_connection_t *, const QByteArray &, const QVariant &) {
+				_variable = Get();
 			});
+	}
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+	return rpl::lifetime();
+}())
+, _settingWatcher("org.gnome.desktop.wm.preferences", "button-layout", [=] {
+	base::Integration::Instance().enterFromEventLoop([&] {
+		_variable = Get();
+	});
+}) {}
 
-		return true;
-	}();
-
+TitleControls::Layout TitleControlsLayoutImpl::Get() {
 	const auto convert = [](const QString &keywords) {
 		const auto toControl = [](const QString &keyword) {
 			if (keyword == qstr("minimize")) {
@@ -128,6 +131,11 @@ TitleControls::Layout TitleControlsLayout() {
 	};
 }
 
-} // namespace internal
+} // namespace
+
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::CreateInstance() {
+	return std::make_shared<TitleControlsLayoutImpl>();
+}
+
 } // namespace Platform
 } // namespace Ui
