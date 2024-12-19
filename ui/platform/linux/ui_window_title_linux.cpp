@@ -17,45 +17,6 @@
 namespace Ui {
 namespace Platform {
 namespace internal {
-namespace {
-
-TitleControls::Control GtkKeywordToTitleControl(const QString &keyword) {
-	if (keyword == qstr("minimize")) {
-		return TitleControls::Control::Minimize;
-	} else if (keyword == qstr("maximize")) {
-		return TitleControls::Control::Maximize;
-	} else if (keyword == qstr("close")) {
-		return TitleControls::Control::Close;
-	}
-
-	return TitleControls::Control::Unknown;
-}
-
-TitleControls::Layout GtkKeywordsToTitleControlsLayout(
-		const QString &keywords) {
-	const auto splitted = keywords.split(':');
-
-	std::vector<TitleControls::Control> controlsLeft;
-	ranges::transform(
-		splitted[0].split(','),
-		ranges::back_inserter(controlsLeft),
-		GtkKeywordToTitleControl);
-
-	std::vector<TitleControls::Control> controlsRight;
-	if (splitted.size() > 1) {
-		ranges::transform(
-			splitted[1].split(','),
-			ranges::back_inserter(controlsRight),
-			GtkKeywordToTitleControl);
-	}
-
-	return TitleControls::Layout{
-		.left = controlsLeft,
-		.right = controlsRight,
-	};
-}
-
-} // namespace
 
 TitleControls::Layout TitleControlsLayout() {
 	[[maybe_unused]] static const auto Inited = [] {
@@ -87,8 +48,38 @@ TitleControls::Layout TitleControlsLayout() {
 		return true;
 	}();
 
+	const auto convert = [](const QString &keywords) {
+		const auto toControl = [](const QString &keyword) {
+			if (keyword == qstr("minimize")) {
+				return TitleControls::Control::Minimize;
+			} else if (keyword == qstr("maximize")) {
+				return TitleControls::Control::Maximize;
+			} else if (keyword == qstr("close")) {
+				return TitleControls::Control::Close;
+			}
+			return TitleControls::Control::Unknown;
+		};
+
+		TitleControls::Layout result;
+		const auto splitted = keywords.split(':');
+
+		ranges::transform(
+			splitted[0].split(','),
+			ranges::back_inserter(result.left),
+			toControl);
+
+		if (splitted.size() > 1) {
+			ranges::transform(
+				splitted[1].split(','),
+				ranges::back_inserter(result.right),
+				toControl);
+		}
+
+		return result;
+	};
+
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-	const auto xSettingsResult = []()
+	const auto xSettingsResult = [&]()
 	-> std::optional<TitleControls::Layout> {
 		using base::Platform::XCB::XSettings;
 		const auto xSettings = XSettings::Instance();
@@ -103,7 +94,7 @@ TitleControls::Layout TitleControlsLayout() {
 			return std::nullopt;
 		}
 
-		return GtkKeywordsToTitleControlsLayout(decorationLayout.toString());
+		return convert(decorationLayout.toString());
 	}();
 
 	if (xSettingsResult.has_value()) {
@@ -111,7 +102,7 @@ TitleControls::Layout TitleControlsLayout() {
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
-	const auto portalResult = []() -> std::optional<TitleControls::Layout> {
+	const auto portalResult = [&]() -> std::optional<TitleControls::Layout> {
 		auto decorationLayout = base::Platform::XDP::ReadSetting(
 			"org.gnome.desktop.wm.preferences",
 			"button-layout");
@@ -120,7 +111,7 @@ TitleControls::Layout TitleControlsLayout() {
 			return std::nullopt;
 		}
 
-		return GtkKeywordsToTitleControlsLayout(
+		return convert(
 			QString::fromStdString(decorationLayout->get_string(nullptr)));
 	}();
 
