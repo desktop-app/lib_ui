@@ -168,7 +168,7 @@ class TitleControlsLayout {
 public:
 	virtual ~TitleControlsLayout() = default;
 
-	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> Create();
+	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> Instance();
 
 	[[nodiscard]] TitleControls::Layout current() const {
 		return _variable.current();
@@ -188,7 +188,7 @@ protected:
 	rpl::variable<TitleControls::Layout> _variable;
 
 private:
-	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> CreateInstance();
+	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> Create();
 
 };
 

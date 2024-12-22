@@ -44,7 +44,7 @@ HRESULT(__stdcall *GetScaleFactorForMonitor)(
 
 } // namespace
 
-std::shared_ptr<TitleControlsLayout> TitleControlsLayout::CreateInstance() {
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Create() {
 	return std::shared_ptr<TitleControlsLayout>(new TitleControlsLayout({
 		.right = {
 			TitleControls::Control::Minimize,
