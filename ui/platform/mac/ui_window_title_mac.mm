@@ -22,7 +22,7 @@
 namespace Ui {
 namespace Platform {
 
-std::shared_ptr<TitleControlsLayout> TitleControlsLayout::CreateInstance() {
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Create() {
 	return std::shared_ptr<TitleControlsLayout>(new TitleControlsLayout({
 		.left = {
 			TitleControls::Control::Close,

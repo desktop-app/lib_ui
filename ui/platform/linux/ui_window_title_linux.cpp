@@ -133,7 +133,7 @@ TitleControls::Layout TitleControlsLayoutImpl::Get() {
 
 } // namespace
 
-std::shared_ptr<TitleControlsLayout> TitleControlsLayout::CreateInstance() {
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Create() {
 	return std::make_shared<TitleControlsLayoutImpl>();
 }
 

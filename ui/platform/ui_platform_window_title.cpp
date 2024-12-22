@@ -137,7 +137,7 @@ TitleControls::TitleControls(
 	std::unique_ptr<AbstractTitleButtons> buttons,
 	Fn<void(bool maximized)> maximize)
 : _st(&st)
-, _layout(TitleControlsLayout::Create())
+, _layout(TitleControlsLayout::Instance())
 , _buttons(std::move(buttons))
 , _minimize(_buttons->create(parent, Control::Minimize, st))
 , _maximizeRestore(_buttons->create(parent, Control::Maximize, st))
@@ -414,11 +414,11 @@ void TitleControls::updateButtonsState() {
 	_buttons->updateState(_activeState, _maximizedState, *_st);
 }
 
-std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Create() {
+std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Instance() {
 	static std::weak_ptr<TitleControlsLayout> Weak;
 	auto result = Weak.lock();
 	if (!result) {
-		Weak = result = CreateInstance();
+		Weak = result = Create();
 	}
 	return result;
 }
