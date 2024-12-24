@@ -22,12 +22,19 @@ constexpr auto kPremiumLockedOpacity = 0.6;
 
 SideBarButton::SideBarButton(
 	not_null<QWidget*> parent,
-	const QString &title,
-	const style::SideBarButton &st)
+	const TextWithEntities &title,
+	const style::SideBarButton &st,
+	const Fn<std::any(Fn<void()>)> &makeContext,
+	Fn<bool()> paused)
 : RippleButton(parent, st.ripple)
 , _st(st)
-, _text(_st.minTextWidth) {
-	_text.setText(_st.style, title);
+, _text(_st.minTextWidth)
+, _paused(paused) {
+	_text.setMarkedText(
+		_st.style,
+		title,
+		kMarkupTextOptions,
+		makeContext ? makeContext([=] { update(); }) : std::any());
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
 	style::PaletteChanged(
@@ -126,13 +133,13 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 		icon.paint(p, x, y, width());
 	}
 	p.setPen(_active ? _st.textFgActive : _st.textFg);
-	_text.drawElided(
-		p,
-		_st.textSkip,
-		_st.textTop,
-		(width() - 2 * _st.textSkip),
-		kMaxLabelLines,
-		style::al_top);
+	_text.draw(p, {
+		.position = { _st.textSkip, _st.textTop },
+		.availableWidth = (width() - 2 * _st.textSkip),
+		.align = style::al_top,
+		.pausedEmoji = _paused && _paused(),
+		.elisionLines = kMaxLabelLines,
+	});
 
 	if (_iconCacheBadgeWidth) {
 		const auto desiredLeft = width() / 2 + _st.badgePosition.x();
