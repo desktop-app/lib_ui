@@ -28,27 +28,41 @@ void TableLayout::paintEvent(QPaintEvent *e) {
 	auto hq = PainterHighQualityEnabler(p);
 
 	const auto half = _st.border / 2.;
+	const auto inner = QRectF(rect()).marginsRemoved(
+		{ half, half, half, half });
 
+	auto labels = QRegion();
 	auto yfrom = half;
 	auto ytill = height() - half;
 	for (auto i = 0, count = int(_rows.size()); i != count; ++i) {
-		yfrom = _rows[i].top + half;
-		if (_rows[i].label) {
+		const auto &row = _rows[i];
+		yfrom = row.top + half;
+		if (!row.value) {
+			const auto till = (i + 1 == count)
+				? (inner.y() + inner.height())
+				: (_rows[i + 1].top - half);
+			labels += QRect(inner.x(), yfrom, inner.width(), till - yfrom);
+		} else if (row.label) {
 			break;
 		}
 	}
 	for (auto i = 0, count = int(_rows.size()); i != count; ++i) {
 		const auto index = count - i - 1;
-		if (_rows[index].label) {
+		const auto &row = _rows[index];
+		if (!row.value) {
+			const auto from = row.top + half;
+			labels += QRect(inner.x(), from, inner.width(), ytill - from);
+		} else if (row.label) {
 			break;
 		}
-		ytill = _rows[index].top - half;
+		ytill = row.top - half;
 	}
-	const auto inner = QRectF(rect()).marginsRemoved(
-		{ half, half, half, half });
 
 	if (ytill > yfrom) {
-		p.setClipRect(0, yfrom, _valueLeft, ytill);
+		labels += QRect(0, yfrom, _valueLeft, ytill - yfrom);
+	}
+	if (!labels.isEmpty()) {
+		p.setClipRegion(labels);
 		p.setBrush(_st.headerBg);
 		p.setPen(Qt::NoPen);
 		p.drawRoundedRect(inner, _st.radius, _st.radius);
@@ -87,7 +101,7 @@ int TableLayout::resizeGetHeight(int newWidth) {
 	}
 	auto label = _st.labelMinWidth;
 	for (auto &row : _rows) {
-		const auto natural = row.label
+		const auto natural = (row.label && row.value)
 			? (row.label->naturalWidth()
 				+ row.labelMargin.left()
 				+ row.labelMargin.right())
@@ -119,10 +133,12 @@ void TableLayout::visibleTopBottomUpdated(
 				visibleTop,
 				visibleBottom);
 		}
-		setChildVisibleTopBottom(
-			row.value,
-			visibleTop,
-			visibleBottom);
+		if (row.value) {
+			setChildVisibleTopBottom(
+				row.value,
+				visibleTop,
+				visibleBottom);
+		}
 	}
 }
 
@@ -130,7 +146,7 @@ void TableLayout::updateRowGeometry(
 		const Row &row,
 		int width,
 		int top) const {
-	if (row.label) {
+	if (row.label && row.value) {
 		row.label->resizeToNaturalWidth(_valueLeft
 			- 2 * _st.border
 			- row.labelMargin.left()
@@ -139,6 +155,11 @@ void TableLayout::updateRowGeometry(
 			- _valueLeft
 			- _st.border
 			- row.valueMargin.left()
+			- row.valueMargin.right());
+	} else if (row.label) {
+		row.label->resizeToNaturalWidth(width
+			- 2 * _st.border
+			- row.labelMargin.left()
 			- row.valueMargin.right());
 	} else {
 		row.value->resizeToNaturalWidth(width
@@ -154,13 +175,18 @@ void TableLayout::updateRowPosition(
 		int width,
 		int top) const {
 	row.top = top;
-	if (row.label) {
+	if (row.label && row.value) {
 		row.label->moveToLeft(
 			_st.border + row.labelMargin.left(),
 			top + row.labelMargin.top(),
 			width);
 		row.value->moveToLeft(
 			_valueLeft + row.valueMargin.left(),
+			top + row.valueMargin.top(),
+			width);
+	} else if (row.label) {
+		row.label->moveToLeft(
+			_st.border + row.labelMargin.left(),
 			top + row.valueMargin.top(),
 			width);
 	} else {
@@ -181,8 +207,8 @@ void TableLayout::insertRow(
 	Expects(!_inResize);
 
 	const auto wlabel = label ? AttachParentChild(this, label) : nullptr;
-	const auto wvalue = AttachParentChild(this, value);
-	if (wvalue) {
+	const auto wvalue = value ? AttachParentChild(this, value) : nullptr;
+	if (wlabel || wvalue) {
 		_rows.insert(begin(_rows) + atPosition, {
 			std::move(label),
 			std::move(value),
@@ -199,14 +225,16 @@ void TableLayout::insertRow(
 				removeChild(wlabel);
 			}, _rowsLifetime);
 		}
-		wvalue->heightValue(
-		) | rpl::start_with_next_done([=] {
-			if (!_inResize) {
-				childHeightUpdated(wvalue);
-			}
-		}, [=] {
-			removeChild(wvalue);
-		}, _rowsLifetime);
+		if (wvalue) {
+			wvalue->heightValue(
+			) | rpl::start_with_next_done([=] {
+				if (!_inResize) {
+					childHeightUpdated(wvalue);
+				}
+			}, [=] {
+				removeChild(wvalue);
+			}, _rowsLifetime);
+		}
 	}
 }
 
@@ -254,15 +282,18 @@ int TableLayout::rowVerticalSkip(const Row &row) const {
 			+ row.label->heightNoMargins()
 			+ row.labelMargin.bottom())
 		: 0;
-	const auto valueHeight = row.valueMargin.top()
-		+ row.value->heightNoMargins()
-		+ row.valueMargin.bottom();
+	const auto valueHeight = row.value
+		? (row.valueMargin.top()
+			+ row.value->heightNoMargins()
+			+ row.valueMargin.bottom())
+		: 0;
 	return std::max(labelHeight, valueHeight) + _st.border;
 }
 
 void TableLayout::clear() {
 	while (!_rows.empty()) {
-		removeChild(_rows.front().value.data());
+		const auto &row = _rows.front();
+		removeChild(row.value ? row.value.data() : row.label.data());
 	}
 }
 
