@@ -38,7 +38,9 @@ TitleControlsLayoutImpl::TitleControlsLayoutImpl()
 		return xSettings->registerCallbackForProperty(
 			"Gtk/DecorationLayout",
 			[=](xcb_connection_t *, const QByteArray &, const QVariant &) {
-				_variable = Get();
+				base::Integration::Instance().enterFromEventLoop([&] {
+					_variable = Get();
+				});
 			});
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
