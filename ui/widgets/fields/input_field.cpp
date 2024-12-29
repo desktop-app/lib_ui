@@ -1069,11 +1069,6 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 			text[position] = ch;
 		}
 	};
-	for (auto i = 0, length = int(data.text.size()); i != length; ++i) {
-		if (newline(i)) {
-			force(i, kSoftLine);
-		}
-	}
 	for (auto i = data.tags.begin(); i != data.tags.end();) {
 		auto &tagStart = *i;
 		const auto &id = tagStart.id;
@@ -1097,6 +1092,13 @@ void ApplyTagFormat(QTextCharFormat &to, const QTextCharFormat &from) {
 			till = std::min(next.offset + next.length, length);
 		}
 		auto &tagEnd = *(j - 1);
+
+		// Multiple lines in the same formatting tag belong to the same block
+		for (auto c = from; c < till; ++c) {
+			if (newline(c)) {
+				force(c, kSoftLine);
+			}
+		}
 
 		if (from > 0 && newline(from - 1)) {
 			force(from - 1, kHardLine);
