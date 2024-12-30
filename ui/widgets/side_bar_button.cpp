@@ -29,12 +29,13 @@ SideBarButton::SideBarButton(
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _text(_st.minTextWidth)
-, _paused(paused) {
+, _paused(paused)
+, _makeContext(std::move(makeContext)) {
 	_text.setMarkedText(
 		_st.style,
 		title,
 		kMarkupTextOptions,
-		makeContext ? makeContext([=] { update(); }) : std::any());
+		_makeContext ? _makeContext([=] { update(); }) : std::any());
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
 	style::PaletteChanged(
@@ -86,10 +87,20 @@ void SideBarButton::setLocked(bool locked) {
 	const auto count = std::ceil(st::sideBarButtonLockSize.width()
 		/ float(_st.style.font->width(charFiller)));
 	const auto filler = QString().fill(charFiller, count);
-	const auto result = _lock.locked
-		? (filler + _text.toString())
-		: _text.toString().mid(count);
-	_text.setText(_st.style, result);
+	auto result = TextWithEntities();
+	if (_lock.locked) {
+		result.append(filler);
+	}
+	const auto len = _text.length();
+	result.append(_text.toTextWithEntities({
+		ushort(_lock.locked ? 0 : count),
+		ushort(len),
+	}));
+	_text.setMarkedText(
+		_st.style,
+		result,
+		kMarkupTextOptions,
+		_makeContext ? _makeContext([=] { update(); }) : std::any());
 	update();
 }
 

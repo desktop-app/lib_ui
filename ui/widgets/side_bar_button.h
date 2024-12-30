@@ -58,6 +58,7 @@ private:
 	bool _badgeMuted = false;
 
 	Fn<bool()> _paused;
+	Fn<std::any(Fn<void()>)> _makeContext;
 
 	struct {
 		bool locked = false;
