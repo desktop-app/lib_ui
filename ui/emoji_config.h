@@ -127,8 +127,8 @@ private:
 	return internal::Find(start, end, outLength);
 }
 
-[[nodiscard]] inline EmojiPtr Find(const QString &text, int *outLength = nullptr) {
-	return Find(text.constBegin(), text.constEnd(), outLength);
+[[nodiscard]] inline EmojiPtr Find(QStringView text, int *outLength = nullptr) {
+	return Find(text.begin(), text.end(), outLength);
 }
 
 [[nodiscard]] QString IdFromOldKey(uint64 oldKey);
