@@ -152,17 +152,21 @@ void Action::processAction() {
 	const auto actionShortcut = (actionTextParts.size() > 1)
 		? actionTextParts[1]
 		: QString();
-	_text.setMarkedText(
-		_st.itemStyle,
-		ParseMenuItem(actionText),
-		MenuTextOptions);
+	setMarkedText(ParseMenuItem(actionText), actionShortcut);
+}
+
+void Action::setMarkedText(
+		TextWithEntities text,
+		QString shortcut,
+		std::any context) {
+	_text.setMarkedText(_st.itemStyle, text, MenuTextOptions, context);
 	const auto textWidth = _text.maxWidth();
 	const auto &padding = _st.itemPadding;
 
 	const auto additionalWidth = hasSubmenu()
 		? (_st.itemRightSkip + _st.arrow.width())
-		: (!actionShortcut.isEmpty())
-		? (_st.itemRightSkip + _st.itemStyle.font->width(actionShortcut))
+		: (!shortcut.isEmpty())
+		? (_st.itemRightSkip + _st.itemStyle.font->width(shortcut))
 		: 0;
 	const auto goodWidth = padding.left()
 		+ textWidth
@@ -171,7 +175,7 @@ void Action::processAction() {
 
 	const auto w = std::clamp(goodWidth, _st.widthMin, _st.widthMax);
 	_textWidth = w - (goodWidth - textWidth);
-	_shortcut = actionShortcut;
+	_shortcut = shortcut;
 	setMinWidth(w);
 	update();
 }

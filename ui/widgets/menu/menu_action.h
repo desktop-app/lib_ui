@@ -32,6 +32,11 @@ public:
 		const style::icon *icon,
 		const style::icon *iconOver = nullptr);
 
+	void setMarkedText(
+		TextWithEntities text,
+		QString shortcut,
+		std::any context = {});
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	QPoint prepareRippleStartPosition() const override;
