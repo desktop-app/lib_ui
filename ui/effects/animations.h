@@ -120,6 +120,7 @@ private:
 	template <typename Callback>
 	[[nodiscard]] static decltype(auto) Prepare(Callback &&callback);
 
+	/// Passing `from < 0` leaves current value unchanged (animation must exist)
 	void prepare(float64 from, crl::time duration);
 	void startPrepared(
 		float64 to,
@@ -381,16 +382,26 @@ inline void Simple::change(
 		anim::transition transition) {
 	Expects(_data != nullptr);
 
-	prepare(0. /* ignored */, duration);
+	prepare(-1 /* leave the old value */, duration);
 	startPrepared(to, duration, transition);
 }
 
 inline void Simple::prepare(float64 from, crl::time duration) {
+	// `from < 0` is to start from the current value. We must thus have
+	// the current animation available.
+	Expects(from >= 0 || _data);
+	if (from < 0) {
+		from = _data->value;
+	}
+
 	const auto isLong = (duration > kLongAnimationDuration);
-	if (!_data) {
+	if (_data) {
+		_data->value = from;
+		if (!isLong) {
+			_data->tracker.restart();
+		}
+	} else {
 		_data = std::make_unique<Data>(from);
-	} else if (!isLong) {
-		_data->tracker.restart();
 	}
 	if (isLong) {
 		_data->tracker.release();
