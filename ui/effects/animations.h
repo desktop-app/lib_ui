@@ -381,16 +381,19 @@ inline void Simple::change(
 		anim::transition transition) {
 	Expects(_data != nullptr);
 
-	prepare(0. /* ignored */, duration);
+	prepare(_data->value /* keep the old value */, duration);
 	startPrepared(to, duration, transition);
 }
 
 inline void Simple::prepare(float64 from, crl::time duration) {
 	const auto isLong = (duration > kLongAnimationDuration);
-	if (!_data) {
+	if (_data) {
+		_data->value = from;
+		if (!isLong) {
+			_data->tracker.restart();
+		}
+	} else {
 		_data = std::make_unique<Data>(from);
-	} else if (!isLong) {
-		_data->tracker.restart();
 	}
 	if (isLong) {
 		_data->tracker.release();
