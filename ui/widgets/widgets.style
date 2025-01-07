@@ -626,6 +626,9 @@ Table {
 	radius: pixels;
 	labelMinWidth: pixels;
 	labelMaxWidth: double;
+	smallButton: RoundButton;
+	defaultLabel: FlatLabel;
+	defaultValue: FlatLabel;
 }
 
 defaultLabelSimple: LabelSimple {
@@ -657,15 +660,6 @@ defaultRippleAnimation: RippleAnimation {
 	color: windowBgRipple;
 	showDuration: 650;
 	hideDuration: 200;
-}
-
-defaultTable: Table {
-	bg: windowBg;
-	headerBg: windowBgOver;
-	borderFg: inputBorderFg;
-	border: 1px;
-	radius: 6px;
-	labelMaxWidth: 0.5;
 }
 
 emptyRippleAnimation: RippleAnimation {
@@ -713,6 +707,48 @@ defaultLightButton: RoundButton(defaultActiveButton) {
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: lightButtonBgRipple;
 	}
+}
+
+defaultTableLabel: FlatLabel(defaultFlatLabel) {
+	textFg: windowBoldFg;
+	maxHeight: 24px;
+	style: TextStyle(semiboldTextStyle) {
+		font: font(12px semibold);
+	}
+}
+defaultTableValue: FlatLabel(defaultFlatLabel) {
+	maxHeight: 24px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px);
+		linkUnderline: kLinkUnderlineNever;
+	}
+}
+defaultTableSmallButton: RoundButton(defaultActiveButton) {
+	textFg: windowActiveTextFg;
+	textFgOver: windowActiveTextFg;
+	textBg: lightButtonBgOver;
+	textBgOver: lightButtonBgOver;
+	width: -12px;
+	height: 18px;
+	radius: 9px;
+	textTop: 0px;
+	style: TextStyle(defaultTextStyle) {
+		font: font(12px);
+	}
+	ripple: RippleAnimation(defaultRippleAnimation) {
+		color: lightButtonBgRipple;
+	}
+}
+defaultTable: Table {
+	bg: windowBg;
+	headerBg: windowBgOver;
+	borderFg: inputBorderFg;
+	border: 1px;
+	radius: 6px;
+	labelMaxWidth: 0.5;
+	smallButton: defaultTableSmallButton;
+	defaultLabel: defaultTableLabel;
+	defaultValue: defaultTableValue;
 }
 
 defaultScrollArea: ScrollArea {
