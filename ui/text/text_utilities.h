@@ -94,5 +94,7 @@ inline constexpr auto Upper = details::ToUpperType{};
 
 [[nodiscard]] QString FixAmpersandInAction(QString text);
 
+[[nodiscard]] TextWithEntities WrapEmailPattern(const QString &);
+
 } // namespace Text
 } // namespace Ui

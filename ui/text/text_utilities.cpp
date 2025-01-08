@@ -160,5 +160,19 @@ QString FixAmpersandInAction(QString text) {
 	return text.replace('&', u"&&"_q);
 }
 
+TextWithEntities WrapEmailPattern(const QString &pattern) {
+	constexpr auto kHidden = '*';
+	const auto from = int(pattern.indexOf(kHidden));
+	const auto to = int(pattern.lastIndexOf(kHidden));
+
+	if (from != -1 && to != -1 && from <= to) {
+		const auto length = to - from + 1;
+		auto result = TextWithEntities{ pattern };
+		result.entities.push_back({ EntityType::Spoiler, from, length });
+		return result;
+	}
+	return { pattern };
+}
+
 } // namespace Text
 } // namespace Ui
