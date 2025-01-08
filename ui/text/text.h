@@ -37,6 +37,10 @@ inline constexpr auto kQFixedMax = (INT_MAX / 256);
 
 } // namespace Ui
 
+struct CommonTextContext {
+	Fn<void()> repaint;
+};
+
 struct TextParseOptions {
 	int32 flags;
 	int32 maxw;
