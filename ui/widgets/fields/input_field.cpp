@@ -4260,11 +4260,25 @@ void InputField::editMarkdownLink(EditLinkSelection selection) {
 		return;
 	}
 	const auto data = selectionEditLinkData(selection);
-	_editLinkCallback(
-		selection,
-		getTextWithTagsPart(data.from, data.till).text,
-		data.link,
-		EditLinkAction::Edit);
+	auto text = getTextWithTagsPart(data.from, data.till);
+	for (auto i = text.tags.begin(); i != text.tags.end();) {
+		auto all = TextUtilities::SplitTags(i->id);
+		auto j = all.begin();
+		for (auto j = all.begin(); j != all.end();) {
+			if (IsValidMarkdownLink(*j)) {
+				j = all.erase(j);
+			} else {
+				++j;
+			}
+		}
+		if (all.empty()) {
+			i = text.tags.erase(i);
+		} else {
+			i->id = TextUtilities::JoinTag(all);
+			++i;
+		}
+	}
+	_editLinkCallback(selection, text, data.link, EditLinkAction::Edit);
 }
 
 void InputField::inputMethodEventInner(QInputMethodEvent *e) {
@@ -4745,15 +4759,48 @@ QString InputField::CustomEmojiEntityData(QStringView link) {
 
 void InputField::commitMarkdownLinkEdit(
 		EditLinkSelection selection,
-		const QString &text,
+		const TextWithTags &textWithTags,
 		const QString &link) {
-	if (text.isEmpty()
+	if (textWithTags.text.isEmpty()
 		|| !IsValidMarkdownLink(link)
 		|| !_editLinkCallback) {
 		return;
 	}
-	_insertedTags.clear();
-	_insertedTags.push_back({ 0, int(text.size()), link });
+	auto prepared = PrepareForInsert(textWithTags);
+	{
+		auto from = 0;
+		const auto till = int(prepared.text.size());
+		auto &tags = prepared.tags;
+		auto i = tags.begin();
+		while (from < till) {
+			while (i != tags.end() && i->offset <= from) {
+				auto all = TextUtilities::SplitTags(i->id);
+				auto j = all.begin();
+				for (; j != all.end(); ++j) {
+					if (IsValidMarkdownLink(*j)) {
+						*j = link;
+						break;
+					}
+				}
+				if (j == all.end()) {
+					all.push_back(link);
+				}
+				i->id = TextUtilities::JoinTag(all);
+				from = i->offset + i->length;
+				++i;
+			}
+			const auto tagFrom = (i == tags.end())
+				? till
+				: i->offset;
+			if (from < tagFrom) {
+				i = tags.insert(i, { from, tagFrom - from, link });
+				from = tagFrom;
+				++i;
+			}
+		}
+	}
+	_insertedTags = prepared.tags;
+	_insertedTagsAreFromMime = false;
 
 	auto cursor = textCursor();
 	const auto editData = selectionEditLinkData(selection);
@@ -4761,6 +4808,7 @@ void InputField::commitMarkdownLinkEdit(
 	cursor.setPosition(editData.till, QTextCursor::KeepAnchor);
 	auto format = _defaultCharFormat;
 	_insertedTagsAreFromMime = false;
+	const auto text = prepared.text;
 	cursor.insertText(
 		(editData.from == editData.till) ? (text + QChar(' ')) : text,
 		_defaultCharFormat);
@@ -5169,7 +5217,7 @@ void InputField::setPlaceholder(
 void InputField::setEditLinkCallback(
 	Fn<bool(
 		EditLinkSelection selection,
-		QString text,
+		TextWithTags text,
 		QString link,
 		EditLinkAction action)> callback) {
 	_editLinkCallback = std::move(callback);
