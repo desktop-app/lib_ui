@@ -4263,7 +4263,6 @@ void InputField::editMarkdownLink(EditLinkSelection selection) {
 	auto text = getTextWithTagsPart(data.from, data.till);
 	for (auto i = text.tags.begin(); i != text.tags.end();) {
 		auto all = TextUtilities::SplitTags(i->id);
-		auto j = all.begin();
 		for (auto j = all.begin(); j != all.end();) {
 			if (IsValidMarkdownLink(*j)) {
 				j = all.erase(j);
