@@ -203,6 +203,7 @@ separatePanelTitle: FlatLabel(defaultFlatLabel) {
 separatePanelTitleTop: 18px;
 separatePanelTitleLeft: 22px;
 separatePanelTitleSkip: 0px;
+separatePanelTitleBadgeTop: 4px;
 separatePanelSearch: IconButton(separatePanelClose) {
 	width: 44px;
 

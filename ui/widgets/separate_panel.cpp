@@ -671,7 +671,7 @@ void SeparatePanel::updateTitleGeometry(int newWidth) const {
 		if (_titleBadge) {
 			_titleBadge->moveToLeft(
 				rect::right(_title) + st::separatePanelTitleBadgeSkip,
-				_title->y() + (_title->height() - _titleBadge->height()) / 2);
+				_title->y() + st::separatePanelTitleBadgeTop);
 		}
 	}
 	if (_searchWrap) {
