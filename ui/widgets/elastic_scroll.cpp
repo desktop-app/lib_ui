@@ -406,6 +406,10 @@ bool ElasticScroll::viewportEvent(QEvent *e) {
 	return false;
 }
 
+QWidget *ElasticScroll::viewport() const {
+	return _widget;
+}
+
 void ElasticScroll::touchDeaccelerate(int32 elapsed) {
 	int32 x = _touchSpeed.x();
 	int32 y = _touchSpeed.y();

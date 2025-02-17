@@ -117,6 +117,8 @@ public:
 	bool viewportEvent(QEvent *e);
 	void keyPressEvent(QKeyEvent *e) override;
 
+	QWidget *viewport() const; // Dummy.
+
 	int scrollWidth() const;
 	int scrollHeight() const;
 	int scrollLeftMax() const;
