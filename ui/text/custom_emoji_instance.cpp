@@ -954,4 +954,33 @@ bool DynamicImageEmoji::readyInDefaultState() {
 	return true;
 }
 
+void PaintIconEmoji(
+		QPainter &p,
+		const Context &context,
+		not_null<const style::IconEmoji*> emoji,
+		IconEmojiFrameCache &cache) {
+	context.internal.colorized = !emoji->useIconColor;
+
+	const auto size = emoji->icon.size();
+	const auto rect = QRect(context.position
+		+ QPoint(emoji->padding.left(), emoji->padding.top()), size);
+
+	const auto ratio = style::DevicePixelRatio();
+	const auto full = size * ratio;
+	const auto invalid = (cache.frame.size() != full);
+	if (invalid
+		|| (emoji->useIconColor
+			&& cache.paletteVersion != style::PaletteVersion())) {
+		cache.paletteVersion = style::PaletteVersion();
+		if (invalid) {
+			cache.frame = QImage(full, QImage::Format_ARGB32_Premultiplied);
+		}
+		cache.frame.setDevicePixelRatio(ratio);
+		cache.frame.fill(Qt::transparent);
+		auto q = QPainter(&cache.frame);
+		emoji->icon.paint(q, 0, 0, size.width());
+	}
+	PaintScaledImage(p, rect, { &cache.frame }, context);
+}
+
 } // namespace Ui::CustomEmoji

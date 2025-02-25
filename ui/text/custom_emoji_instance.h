@@ -16,6 +16,10 @@
 class QColor;
 class QPainter;
 
+namespace style {
+struct IconEmoji;
+} // namespace style
+
 namespace Ui {
 class DynamicImage;
 class FrameGenerator;
@@ -322,5 +326,15 @@ private:
 	bool _subscribed = false;
 
 };
+
+struct IconEmojiFrameCache {
+	QImage frame;
+	int paletteVersion = 0;
+};
+void PaintIconEmoji(
+	QPainter &p,
+	const Context &context,
+	not_null<const style::IconEmoji*> emoji,
+	IconEmojiFrameCache &cache);
 
 } // namespace Ui::CustomEmoji

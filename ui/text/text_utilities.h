@@ -8,6 +8,10 @@
 
 #include "ui/text/text_entity.h"
 
+namespace style {
+struct IconEmoji;
+} // namespace style
+
 namespace Ui {
 namespace Text {
 namespace details {
@@ -22,6 +26,8 @@ struct ToUpperType {
 };
 
 } // namespace details
+
+class CustomEmoji;
 
 inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] TextWithEntities Bold(const QString &text);
@@ -53,6 +59,13 @@ inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] TextWithEntities SingleCustomEmoji(
 	QString data,
 	QString text = QString());
+
+[[nodiscard]] TextWithEntities IconEmoji(
+	not_null<const style::IconEmoji*> emoji,
+	QString text = QString());
+
+[[nodiscard]] std::unique_ptr<CustomEmoji> TryMakeSimpleEmoji(
+	QStringView data);
 
 [[nodiscard]] inline auto ToUpper() {
 	return rpl::map(Upper);

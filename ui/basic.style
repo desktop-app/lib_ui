@@ -59,6 +59,12 @@ emojiPadding: 1px;
 
 lineWidth: 1px;
 
+IconEmoji {
+	icon: icon;
+	padding: margins;
+	useIconColor: bool;
+}
+
 defaultTextPalette: TextPalette {
 	linkFg: windowActiveTextFg;
 	monoFg: msgInMonoFg;

@@ -8,6 +8,9 @@
 
 #include "base/algorithm.h"
 #include "base/qt/qt_string_view.h"
+#include "ui/text/custom_emoji_instance.h"
+#include "ui/text/text_custom_emoji.h"
+#include "styles/style_basic.h"
 
 #include <QtCore/QRegularExpression>
 
@@ -15,13 +18,74 @@ namespace Ui {
 namespace Text {
 namespace {
 
-TextWithEntities WithSingleEntity(
+struct IconEmojiData {
+	base::flat_map<not_null<const style::IconEmoji*>, int> indices;
+	std::vector<not_null<const style::IconEmoji*>> list;
+};
+
+[[nodiscard]] TextWithEntities WithSingleEntity(
 		const QString &text,
 		EntityType type,
 		const QString &data = QString()) {
 	auto result = TextWithEntities{ text };
 	result.entities.push_back({ type, 0, int(text.size()), data });
 	return result;
+}
+
+[[nodiscard]] IconEmojiData &IconEmojiInfo() {
+	static IconEmojiData result;
+	return result;
+}
+
+[[nodiscard]] QString IconEmojiPrefix() {
+	return u"icon-emoji-"_q;
+}
+
+class IconEmojiObject final : public CustomEmoji {
+public:
+	explicit IconEmojiObject(not_null<const style::IconEmoji*> emoji);
+
+	int width() override;
+	QString entityData() override;
+	void paint(QPainter &p, const Context &context) override;
+	void unload() override;
+	bool ready() override;
+	bool readyInDefaultState() override;
+
+private:
+	const not_null<const style::IconEmoji*> _emoji;
+	Ui::CustomEmoji::IconEmojiFrameCache _cache;
+
+};
+
+IconEmojiObject::IconEmojiObject(not_null<const style::IconEmoji*> emoji)
+: _emoji(emoji) {
+}
+
+int IconEmojiObject::width() {
+	return _emoji->padding.left()
+		+ _emoji->icon.width()
+		+ _emoji->padding.right();
+}
+
+QString IconEmojiObject::entityData() {
+	return IconEmojiPrefix()
+		+ QString::number(IconEmojiInfo().indices[_emoji]);
+}
+
+void IconEmojiObject::paint(QPainter &p, const Context &context) {
+	Ui::CustomEmoji::PaintIconEmoji(p, context, _emoji, _cache);
+}
+
+void IconEmojiObject::unload() {
+}
+
+bool IconEmojiObject::ready() {
+	return true;
+}
+
+bool IconEmojiObject::readyInDefaultState() {
+	return true;
 }
 
 } // namespace
@@ -111,6 +175,35 @@ TextWithEntities SingleCustomEmoji(QString data, QString text) {
 		text.isEmpty() ? u"@"_q : text,
 		{ EntityInText(EntityType::CustomEmoji, 0, 1, data) },
 	};
+}
+
+TextWithEntities IconEmoji(
+		not_null<const style::IconEmoji*> emoji,
+		QString text) {
+	const auto index = [&] {
+		auto &info = IconEmojiInfo();
+		const auto count = int(info.list.size());
+		auto i = info.indices.emplace(emoji, count).first;
+		if (i->second == count) {
+			info.list.push_back(emoji);
+		}
+		return i->second;
+	}();
+	return SingleCustomEmoji(
+		IconEmojiPrefix() + QString::number(index),
+		text);
+}
+
+std::unique_ptr<CustomEmoji> TryMakeSimpleEmoji(QStringView data) {
+	const auto prefix = IconEmojiPrefix();
+	if (!data.startsWith(prefix)) {
+		return nullptr;
+	}
+	auto &info = IconEmojiInfo();
+	const auto index = data.mid(prefix.size()).toInt();
+	return (index >= 0 && index < info.list.size())
+		? std::make_unique<IconEmojiObject>(info.list[index])
+		: nullptr;
 }
 
 TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
