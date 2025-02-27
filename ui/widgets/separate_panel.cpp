@@ -339,7 +339,12 @@ void SeparatePanel::ResizeEdge::mouseReleaseEvent(QMouseEvent *e) {
 void SeparatePanel::ResizeEdge::mouseMoveEvent(QMouseEvent *e) {
 	if (base::take(_press)) {
 		if (const auto handle = window()->windowHandle()) {
-			if (!handle->startSystemResize(_edges)) {
+			if (handle->startSystemResize(_edges)) {
+				SendSynteticMouseEvent(
+					this,
+					QEvent::MouseButtonRelease,
+					Qt::LeftButton);
+			} else {
 				_resizing = true;
 			}
 		}
