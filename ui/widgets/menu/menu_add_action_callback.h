@@ -13,6 +13,7 @@ enum class type : uchar;
 } // namespace anim
 
 namespace style {
+struct PopupMenu;
 struct MenuSeparator;
 } // namespace style
 
@@ -30,6 +31,7 @@ public:
 		const style::icon *icon;
 		const style::MenuSeparator *separatorSt = nullptr;
 		FnMut<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
+		const style::PopupMenu *submenuSt = nullptr;
 		Fn<bool()> triggerFilter;
 		rpl::producer<anim::type> hideRequests;
 		int addTopShift = 0;

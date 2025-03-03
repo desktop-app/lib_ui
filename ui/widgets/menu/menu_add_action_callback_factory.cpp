@@ -48,7 +48,9 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 				a.icon);
 			// Dummy menu.
 			action->setMenu(Ui::CreateChild<QMenu>(menu->menu().get()));
-			a.fillSubmenu(menu->ensureSubmenu(action, menu->st()));
+			a.fillSubmenu(menu->ensureSubmenu(
+				action,
+				a.submenuSt ? *a.submenuSt : menu->st()));
 			return action;
 		} else if (a.separatorSt || a.isSeparator) {
 			return menu->addSeparator(a.separatorSt);
