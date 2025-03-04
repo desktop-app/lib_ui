@@ -772,22 +772,34 @@ QImage CrossButton::prepareRippleMask() const {
 
 SettingsButton::SettingsButton(
 	QWidget *parent,
-	rpl::producer<QString> &&text)
-: SettingsButton(parent, std::move(text), st::defaultSettingsButton) {
+	rpl::producer<QString> &&text,
+	const style::SettingsButton &st)
+: SettingsButton(parent, std::move(text) | rpl::map([=](QString &&text) {
+	return TextWithEntities{ std::move(text) };
+}), st) {
 }
 
 SettingsButton::SettingsButton(
 	QWidget *parent,
-	rpl::producer<QString> &&text,
+	rpl::producer<TextWithEntities> &&text,
 	const style::SettingsButton &st)
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _padding(_st.padding) {
 	std::move(
 		text
-	) | rpl::start_with_next([this](QString &&value) {
+	) | rpl::start_with_next([this](TextWithEntities &&value) {
 		setText(std::move(value));
 	}, lifetime());
+}
+
+SettingsButton::SettingsButton(
+	QWidget *parent,
+	nullptr_t,
+	const style::SettingsButton &st)
+: RippleButton(parent, st.ripple)
+, _st(st)
+, _padding(_st.padding) {
 }
 
 SettingsButton::~SettingsButton() = default;
@@ -942,8 +954,8 @@ void SettingsButton::onStateChanged(
 	setPointerCursor(!isDisabled());
 }
 
-void SettingsButton::setText(QString &&text) {
-	_text.setText(_st.style, text);
+void SettingsButton::setText(TextWithEntities &&text) {
+	_text.setMarkedText(_st.style, text, kMarkupTextOptions);
 	update();
 }
 

@@ -16,6 +16,10 @@
 
 class Painter;
 
+namespace st {
+extern const style::SettingsButton &defaultSettingsButton;
+} // namespace st
+
 namespace Ui {
 
 class RippleAnimation;
@@ -261,11 +265,16 @@ class SettingsButton : public Ui::RippleButton {
 public:
 	SettingsButton(
 		QWidget *parent,
-		rpl::producer<QString> &&text);
+		rpl::producer<QString> &&text,
+		const style::SettingsButton &st = st::defaultSettingsButton);
 	SettingsButton(
 		QWidget *parent,
-		rpl::producer<QString> &&text,
-		const style::SettingsButton &st);
+		rpl::producer<TextWithEntities> &&text,
+		const style::SettingsButton &st = st::defaultSettingsButton);
+	SettingsButton(
+		QWidget *parent,
+		nullptr_t,
+		const style::SettingsButton &st = st::defaultSettingsButton);
 	~SettingsButton();
 
 	SettingsButton *toggleOn(
@@ -299,8 +308,8 @@ protected:
 	[[nodiscard]] QRect maybeToggleRect() const;
 
 private:
-	void setText(QString &&text);
-	QRect toggleRect() const;
+	void setText(TextWithEntities &&text);
+	[[nodiscard]] QRect toggleRect() const;
 
 	const style::SettingsButton &_st;
 	style::margins _padding;
