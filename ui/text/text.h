@@ -37,10 +37,6 @@ inline constexpr auto kQFixedMax = (INT_MAX / 256);
 
 } // namespace Ui
 
-struct CommonTextContext {
-	Fn<void()> repaint;
-};
-
 struct TextParseOptions {
 	int32 flags;
 	int32 maxw;
@@ -80,6 +76,7 @@ static constexpr TextSelection AllTextSelection = { 0, 0xFFFF };
 
 namespace Ui::Text {
 
+class CustomEmoji;
 class AbstractBlock;
 class Block;
 class Word;
@@ -89,6 +86,17 @@ struct SpoilerData;
 struct QuoteDetails;
 struct QuotesData;
 struct ExtendedData;
+struct MarkedContext;
+
+using CustomEmojiFactory = Fn<std::unique_ptr<CustomEmoji>(
+	QStringView,
+	const MarkedContext &)>;
+
+struct MarkedContext {
+	Fn<void()> repaint;
+	CustomEmojiFactory customEmojiFactory;
+	std::any other;
+};
 
 struct Modification {
 	int position = 0;
@@ -260,7 +268,7 @@ public:
 		const TextWithEntities &textWithEntities,
 		const TextParseOptions &options = kMarkupTextOptions,
 		int minResizeWidth = kQFixedMax,
-		const std::any &context = {});
+		const MarkedContext &context = {});
 	String(String &&other);
 	String &operator=(String &&other);
 	~String();
@@ -297,8 +305,15 @@ public:
 		GeometryDescriptor geometry,
 		DimensionsRequest request) const;
 
-	void setText(const style::TextStyle &st, const QString &text, const TextParseOptions &options = kDefaultTextOptions);
-	void setMarkedText(const style::TextStyle &st, const TextWithEntities &textWithEntities, const TextParseOptions &options = kMarkupTextOptions, const std::any &context = {});
+	void setText(
+		const style::TextStyle &st,
+		const QString &text,
+		const TextParseOptions &options = kDefaultTextOptions);
+	void setMarkedText(
+		const style::TextStyle &st,
+		const TextWithEntities &textWithEntities,
+		const TextParseOptions &options = kMarkupTextOptions,
+		const MarkedContext &context = {});
 
 	[[nodiscard]] bool hasLinks() const;
 	void setLink(uint16 index, const ClickHandlerPtr &lnk);

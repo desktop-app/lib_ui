@@ -58,9 +58,9 @@ namespace {
 	const auto raw = result.data();
 
 	raw->lifetime().add(std::move(lifetime));
-	raw->setMarkedText(
-		ComputeText(config),
-		config.textContext ? config.textContext(raw) : std::any());
+	auto context = config.textContext;
+	context.repaint = [raw] { raw->update(); };
+	raw->setMarkedText(ComputeText(config), context);
 	raw->setClickHandlerFilter(std::move(config.filter));
 	raw->show();
 

@@ -116,7 +116,7 @@ public:
 		rpl::producer<TextWithEntities> &&text,
 		const style::FlatLabel &st = st::defaultFlatLabel,
 		const style::PopupMenu &stMenu = st::defaultPopupMenu,
-		const Fn<std::any(Fn<void()>)> &makeContext = nullptr);
+		const Text::MarkedContext &context = {});
 
 	[[nodiscard]] const style::FlatLabel &st() const {
 		return _st;
@@ -128,7 +128,7 @@ public:
 	void setText(const QString &text);
 	void setMarkedText(
 		const TextWithEntities &textWithEntities,
-		const std::any &context = {});
+		Text::MarkedContext context = {});
 	void setSelectable(bool selectable);
 	void setDoubleClickSelectsParagraph(bool doubleClickSelectsParagraph);
 	void setContextCopyText(const QString &copyText);

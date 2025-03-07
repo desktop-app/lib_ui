@@ -24,18 +24,19 @@ SideBarButton::SideBarButton(
 	not_null<QWidget*> parent,
 	const TextWithEntities &title,
 	const style::SideBarButton &st,
-	const Fn<std::any(Fn<void()>)> &makeContext,
+	Text::MarkedContext context,
 	Fn<bool()> paused)
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _text(_st.minTextWidth)
 , _paused(paused)
-, _makeContext(std::move(makeContext)) {
+, _context(std::move(context)) {
+	_context.repaint = [this] { update(); };
 	_text.setMarkedText(
 		_st.style,
 		title,
 		kMarkupTextOptions,
-		_makeContext ? _makeContext([=] { update(); }) : std::any());
+		_context);
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
 	style::PaletteChanged(
@@ -96,11 +97,7 @@ void SideBarButton::setLocked(bool locked) {
 		ushort(_lock.locked ? 0 : count),
 		ushort(len),
 	}));
-	_text.setMarkedText(
-		_st.style,
-		result,
-		kMarkupTextOptions,
-		_makeContext ? _makeContext([=] { update(); }) : std::any());
+	_text.setMarkedText(_st.style, result, kMarkupTextOptions, _context);
 	update();
 }
 

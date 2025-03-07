@@ -6,6 +6,9 @@
 //
 #include "ui/text/text_custom_emoji.h"
 
+#include "ui/text/text_utilities.h"
+#include "ui/text/text.h"
+
 namespace Ui::Text {
 
 int AdjustCustomEmojiSize(int emojiSize) {
@@ -135,6 +138,17 @@ bool LimitedLoopsEmoji::ready() {
 
 bool LimitedLoopsEmoji::readyInDefaultState() {
 	return _wrapped->readyInDefaultState();
+}
+
+std::unique_ptr<CustomEmoji> MakeCustomEmoji(
+		QStringView data,
+		const MarkedContext &context) {
+	if (auto simple = TryMakeSimpleEmoji(data)) {
+		return simple;
+	} else if (const auto &factory = context.customEmojiFactory) {
+		return factory(data, context);
+	}
+	return nullptr;
 }
 
 } // namespace Ui::Text

@@ -22,10 +22,9 @@ class CustomFieldObject : public QObject, public QTextObjectInterface {
 public:
 	CustomFieldObject(
 		not_null<InputField*> field,
-		Fn<std::any(Fn<void()> repaint)> context,
+		Text::MarkedContext context,
 		Fn<bool()> pausedEmoji,
-		Fn<bool()> pausedSpoiler,
-		Text::CustomEmojiFactory factory);
+		Fn<bool()> pausedSpoiler);
 	~CustomFieldObject();
 
 	void *qt_metacast(const char *iid) override;
@@ -59,11 +58,11 @@ private:
 	};
 
 	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
-	[[nodiscard]] Factory makeFactory(
-		Text::CustomEmojiFactory custom = nullptr);
+	[[nodiscard]] Factory makeFactory();
+	[[nodiscard]] Text::MarkedContext makeFieldContext();
 
 	const not_null<InputField*> _field;
-	const Fn<std::any(Fn<void()> repaint)> _context;
+	const Text::MarkedContext _context;
 	const Fn<bool()> _pausedEmoji;
 	const Fn<bool()> _pausedSpoiler;
 	const Factory _factory;

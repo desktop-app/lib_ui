@@ -35,7 +35,7 @@ public:
 	void setMarkedText(
 		TextWithEntities text,
 		QString shortcut,
-		std::any context = {});
+		const Text::MarkedContext &context = {});
 
 protected:
 	void paintEvent(QPaintEvent *e) override;

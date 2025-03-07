@@ -25,7 +25,7 @@ public:
 		not_null<QWidget*> parent,
 		const TextWithEntities &title,
 		const style::SideBarButton &st,
-		const Fn<std::any(Fn<void()>)> &makeContext = nullptr,
+		Text::MarkedContext context = {},
 		Fn<bool()> paused = nullptr);
 
 	void setActive(bool active);
@@ -58,7 +58,7 @@ private:
 	bool _badgeMuted = false;
 
 	Fn<bool()> _paused;
-	Fn<std::any(Fn<void()>)> _makeContext;
+	Text::MarkedContext _context;
 
 	struct {
 		bool locked = false;

@@ -129,7 +129,7 @@ BlockParser::BlockParser(
 	not_null<String*> string,
 	const TextWithEntities &textWithEntities,
 	const TextParseOptions &options,
-	const std::any &context)
+	const MarkedContext &context)
 : BlockParser(
 	string,
 	PrepareRichFromRich(textWithEntities, options),
@@ -142,7 +142,7 @@ BlockParser::BlockParser(
 	not_null<String*> string,
 	TextWithEntities &&source,
 	const TextParseOptions &options,
-	const std::any &context,
+	const MarkedContext &context,
 	ReadyToken)
 : _t(string)
 , _tText(string->_text)
@@ -187,9 +187,7 @@ void BlockParser::createBlock(int skipBack) {
 	const auto linkIndex = _monoIndex ? _monoIndex : _linkIndex;
 	auto custom = _customEmojiData.isEmpty()
 		? nullptr
-		: Integration::Instance().createCustomEmoji(
-			_customEmojiData,
-			_context);
+		: MakeCustomEmoji(_customEmojiData, _context);
 	const auto push = [&](auto &&factory, auto &&...args) {
 		_tBlocks.push_back(factory({
 			.position = uint16(_blockStart),
@@ -732,8 +730,7 @@ void BlockParser::finalize(const TextParseOptions &options) {
 		if (block->flags() & TextBlockFlag::Spoiler) {
 			auto &spoiler = _t->ensureExtended()->spoiler;
 			if (!spoiler) {
-				spoiler = std::make_unique<SpoilerData>(
-					Integration::Instance().createSpoilerRepaint(_context));
+				spoiler = std::make_unique<SpoilerData>(_context.repaint);
 			}
 		}
 		const auto shiftedIndex = block->linkIndex();

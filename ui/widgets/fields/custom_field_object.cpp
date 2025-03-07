@@ -103,15 +103,14 @@ void FieldSpoilerOverlay::paintEvent(QPaintEvent *e) {
 
 CustomFieldObject::CustomFieldObject(
 	not_null<InputField*> field,
-	Fn<std::any(Fn<void()> repaint)> context,
+	Text::MarkedContext context,
 	Fn<bool()> pausedEmoji,
-	Fn<bool()> pausedSpoiler,
-	Text::CustomEmojiFactory factory)
+	Fn<bool()> pausedSpoiler)
 : _field(field)
 , _context(std::move(context))
 , _pausedEmoji(std::move(pausedEmoji))
 , _pausedSpoiler(std::move(pausedSpoiler))
-, _factory(makeFactory(std::move(factory)))
+, _factory(makeFactory())
 , _now(crl::now()) {
 }
 
@@ -274,7 +273,7 @@ void CustomFieldObject::setCollapsedText(int quoteId, TextWithTags text) {
 	quote.string.setMarkedText(_field->_st.style, {
 		text.text,
 		TextUtilities::ConvertTextTagsToEntities(text.tags),
-	}, kMarkupTextOptions, _context([=] { _field->update(); }));
+	}, kMarkupTextOptions, makeFieldContext());
 	quote.text = std::move(text);
 }
 
@@ -286,17 +285,15 @@ const TextWithTags &CustomFieldObject::collapsedText(int quoteId) const {
 	return kEmpty;
 }
 
-CustomFieldObject::Factory CustomFieldObject::makeFactory(
-		Text::CustomEmojiFactory custom) {
-	const auto repaint = [field = _field] { field->update(); };
-	if (custom) {
-		return [=, factory = std::move(custom)](QStringView data) {
-			return factory(data, repaint);
-		};
-	}
-	return [=, context = _context](QStringView data) {
-		auto &instance = Integration::Instance();
-		return instance.createCustomEmoji(data, context(repaint));
+Text::MarkedContext CustomFieldObject::makeFieldContext() {
+	auto context = _context;
+	context.repaint = [field = _field] { field->update(); };
+	return context;
+}
+
+CustomFieldObject::Factory CustomFieldObject::makeFactory() {
+	return [context = makeFieldContext()](QStringView data) {
+		return Text::MakeCustomEmoji(data, context);
 	};
 }
 

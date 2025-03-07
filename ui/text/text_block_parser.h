@@ -19,7 +19,7 @@ public:
 		not_null<String*> string,
 		const TextWithEntities &textWithEntities,
 		const TextParseOptions &options,
-		const std::any &context);
+		const MarkedContext &context);
 
 private:
 	struct ReadyToken {
@@ -53,7 +53,7 @@ private:
 		not_null<String*> string,
 		TextWithEntities &&source,
 		const TextParseOptions &options,
-		const std::any &context,
+		const MarkedContext &context,
 		ReadyToken);
 
 	void trimSourceRange();
@@ -86,7 +86,7 @@ private:
 	QString &_tText;
 	std::vector<Block> &_tBlocks;
 	const TextWithEntities _source;
-	const std::any &_context;
+	const MarkedContext &_context;
 	const QChar * const _start = nullptr;
 	const QChar *_end = nullptr; // mutable, because we trim by decrementing.
 	const QChar *_ptr = nullptr;

@@ -50,7 +50,7 @@ bool Integration::screenIsLocked() {
 
 std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 		const EntityLinkData &data,
-		const std::any &context) {
+		const Text::MarkedContext &context) {
 	switch (data.type) {
 	case EntityType::CustomUrl:
 		return !data.data.isEmpty()
@@ -64,16 +64,6 @@ std::shared_ptr<ClickHandler> Integration::createLinkHandler(
 				data.shown == EntityLinkShown::Full)
 			: nullptr;
 	}
-	return nullptr;
-}
-
-std::unique_ptr<Text::CustomEmoji> Integration::createCustomEmoji(
-		QStringView data,
-		const std::any &context) {
-	return nullptr;
-}
-
-Fn<void()> Integration::createSpoilerRepaint(const std::any &context) {
 	return nullptr;
 }
 

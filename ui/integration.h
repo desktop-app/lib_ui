@@ -30,6 +30,7 @@ class One;
 
 namespace Text {
 class CustomEmoji;
+struct MarkedContext;
 } // namespace Text
 
 class Integration {
@@ -53,7 +54,7 @@ public:
 
 	[[nodiscard]] virtual std::shared_ptr<ClickHandler> createLinkHandler(
 		const EntityLinkData &data,
-		const std::any &context);
+		const Text::MarkedContext &context);
 	[[nodiscard]] virtual bool handleUrlClick(
 		const QString &url,
 		const QVariant &context);
@@ -61,11 +62,6 @@ public:
 	[[nodiscard]] virtual QString convertTagToMimeTag(const QString &tagId);
 	[[nodiscard]] virtual const Emoji::One *defaultEmojiVariant(
 		const Emoji::One *emoji);
-	[[nodiscard]] virtual auto createCustomEmoji(
-		QStringView data,
-		const std::any &context) -> std::unique_ptr<Text::CustomEmoji>;
-	[[nodiscard]] virtual Fn<void()> createSpoilerRepaint(
-		const std::any &context);
 	// [[nodiscard]] virtual bool allowClickHandlerActivation(
 	// 	const std::shared_ptr<ClickHandler> &handler,
 	// 	const ClickContext &context);

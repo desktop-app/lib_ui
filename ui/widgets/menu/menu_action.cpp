@@ -158,7 +158,7 @@ void Action::processAction() {
 void Action::setMarkedText(
 		TextWithEntities text,
 		QString shortcut,
-		std::any context) {
+		const Text::MarkedContext &context) {
 	_text.setMarkedText(_st.itemStyle, text, MenuTextOptions, context);
 	const auto textWidth = _text.maxWidth();
 	const auto &padding = _st.itemPadding;

@@ -10,6 +10,7 @@
 #include "base/weak_ptr.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
+#include "ui/text/text.h"
 #include "ui/click_handler.h"
 #include "ui/rect_part.h"
 #include "ui/rp_widget.h"
@@ -38,7 +39,7 @@ struct Config {
 	// Default way of composing the content, a FlatLabel.
 	QString title;
 	TextWithEntities text;
-	Fn<std::any(not_null<QWidget*>)> textContext;
+	Text::MarkedContext textContext;
 	ClickHandlerFilter filter;
 	int maxlines = 16;
 	bool singleline = false;

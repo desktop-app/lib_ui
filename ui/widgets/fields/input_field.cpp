@@ -1857,16 +1857,14 @@ void InputField::setTagMimeProcessor(Fn<QString(QStringView)> processor) {
 }
 
 void InputField::setCustomTextContext(
-		Fn<std::any(Fn<void()> repaint)> context,
+		Text::MarkedContext context,
 		Fn<bool()> pausedEmoji,
-		Fn<bool()> pausedSpoiler,
-		CustomEmojiFactory factory) {
+		Fn<bool()> pausedSpoiler) {
 	_customObject = std::make_unique<CustomFieldObject>(
 		this,
 		std::move(context),
 		std::move(pausedEmoji),
-		std::move(pausedSpoiler),
-		std::move(factory));
+		std::move(pausedSpoiler));
 	_inner->document()->documentLayout()->registerHandler(
 		kCustomEmojiFormat,
 		_customObject.get());

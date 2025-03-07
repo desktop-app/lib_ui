@@ -244,19 +244,18 @@ FlatLabel::FlatLabel(
 	rpl::producer<TextWithEntities> &&text,
 	const style::FlatLabel &st,
 	const style::PopupMenu &stMenu,
-	const Fn<std::any(Fn<void()>)> &makeContext)
+	const Text::MarkedContext &context)
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
 , _stMenu(stMenu)
 , _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
+
 	std::move(
 		text
 	) | rpl::start_with_next([=](const TextWithEntities &value) {
-		setMarkedText(
-			value,
-			makeContext ? makeContext([=] { update(); }) : std::any());
+		setMarkedText(value, context);
 	}, lifetime());
 	init();
 }
@@ -284,7 +283,8 @@ void FlatLabel::setText(const QString &text) {
 
 void FlatLabel::setMarkedText(
 		const TextWithEntities &textWithEntities,
-		const std::any &context) {
+		Text::MarkedContext context) {
+	context.repaint = [=] { update(); };
 	_text.setMarkedText(
 		_st.style,
 		textWithEntities,

@@ -13,9 +13,13 @@
 
 #include <crl/crl_time.h>
 
+#include <any>
+
 class QPainter;
 
 namespace Ui::Text {
+
+struct MarkedContext;
 
 [[nodiscard]] int AdjustCustomEmojiSize(int emojiSize);
 
@@ -50,10 +54,6 @@ public:
 	[[nodiscard]] virtual bool readyInDefaultState() = 0;
 
 };
-
-using CustomEmojiFactory = Fn<std::unique_ptr<CustomEmoji>(
-	QStringView,
-	Fn<void()>)>;
 
 class ShiftedEmoji final : public CustomEmoji {
 public:
@@ -110,5 +110,9 @@ private:
 	bool _stopOnLast = false;
 
 };
+
+[[nodiscard]] std::unique_ptr<CustomEmoji> MakeCustomEmoji(
+	QStringView data,
+	const MarkedContext &context);
 
 } // namespace Ui::Text
