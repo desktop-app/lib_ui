@@ -931,10 +931,11 @@ void DynamicImageEmoji::paint(QPainter &p, const Context &context) {
 		_image->subscribeToUpdates(_repaint);
 	}
 
+	auto image = _image->image(_size);
+	const auto size = image.size() / image.devicePixelRatio();
 	const auto rect = QRect(
 		context.position + QPoint(_padding.left(), _padding.top()),
-		QSize(_size, _size));
-	auto image = _image->image(_size);
+		size);
 	context.internal.colorized = false;
 	PaintScaledImage(p, rect, { &image }, context);
 }
