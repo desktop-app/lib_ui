@@ -859,7 +859,9 @@ bool Object::readyInDefaultState() {
 }
 
 void Object::repaint() {
-	_repaint();
+	if (const auto onstack = _repaint) {
+		onstack();
+	}
 }
 
 Internal::Internal(
