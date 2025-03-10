@@ -433,7 +433,7 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
 		int maxWidth,
 		Fn<int(int width)> heightForWidth) {
 	Expects(minWidth >= 0);
-	Expects(maxWidth > minWidth);
+	Expects(maxWidth >= minWidth);
 
 	const auto desired = heightForWidth(maxWidth);
 	while (maxWidth - minWidth > 1) {
