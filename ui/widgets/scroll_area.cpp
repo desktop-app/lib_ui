@@ -626,11 +626,13 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 		if (_touchScrollState == TouchScrollState::Auto) {
 			_touchScrollState = TouchScrollState::Acceleration;
 			_touchWaitingAcceleration = true;
+			_touchMaybePressing = false;
 			_touchAccelerationTime = crl::now();
 			touchUpdateSpeed();
 			_touchStart = _touchPos;
 		} else {
 			_touchScroll = false;
+			_touchMaybePressing = true;
 			_touchTimer.callOnce(QApplication::startDragTime());
 		}
 		_touchStart = _touchPrevPos = _touchPos;
@@ -642,6 +644,7 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 		if (!_touchScroll && (_touchPos - _touchStart).manhattanLength() >= QApplication::startDragDistance()) {
 			_touchTimer.cancel();
 			_touchScroll = true;
+			_touchMaybePressing = false;
 			touchUpdateSpeed();
 		}
 		if (_touchScroll) {
@@ -694,12 +697,14 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 		if (weak) {
 			_touchTimer.cancel();
 			_touchRightButton = false;
+			_touchMaybePressing = false;
 		}
 	} break;
 
 	case QEvent::TouchCancel: {
 		_touchPress = false;
 		_touchScroll = false;
+		_touchMaybePressing = false;
 		_touchScrollState = TouchScrollState::Manual;
 		_touchTimer.cancel();
 	} break;
@@ -897,6 +902,10 @@ rpl::producer<> ScrollArea::innerResizes() const {
 
 rpl::producer<> ScrollArea::geometryChanged() const {
 	return _geometryChanged.events();
+}
+
+rpl::producer<bool> ScrollArea::touchMaybePressing() const {
+	return _touchMaybePressing.value();
 }
 
 } // namespace Ui

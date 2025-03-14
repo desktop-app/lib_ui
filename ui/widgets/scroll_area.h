@@ -186,6 +186,8 @@ public:
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
 
+	[[nodiscard]] rpl::producer<bool> touchMaybePressing() const;
+
 protected:
 	bool eventHook(QEvent *e) override;
 	bool eventFilter(QObject *obj, QEvent *e) override;
@@ -231,6 +233,7 @@ private:
 	TouchScrollState _touchScrollState = TouchScrollState::Manual;
 	bool _touchPrevPosValid = false;
 	bool _touchWaitingAcceleration = false;
+	rpl::variable<bool> _touchMaybePressing;
 	QPoint _touchSpeed;
 	crl::time _touchSpeedTime = 0;
 	crl::time _touchAccelerationTime = 0;

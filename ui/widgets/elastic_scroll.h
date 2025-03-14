@@ -182,6 +182,8 @@ public:
 	[[nodiscard]] Movement movement() const;
 	[[nodiscard]] rpl::producer<Movement> movementValue() const;
 
+	[[nodiscard]] rpl::producer<bool> touchMaybePressing() const;
+
 private:
 	bool eventHook(QEvent *e) override;
 	bool eventFilter(QObject *obj, QEvent *e) override;
@@ -240,6 +242,7 @@ private:
 	crl::time _touchAccelerationTime = 0;
 	crl::time _touchTime = 0;
 	crl::time _lastScroll = 0;
+	rpl::variable<bool> _touchMaybePressing;
 	TouchScrollState _touchScrollState = TouchScrollState::Manual;
 	int _overscrollAccumulated = 0;
 	int _ignoreMomentumFromOverscroll = 0;
