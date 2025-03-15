@@ -326,9 +326,6 @@ struct Metrics {
 		font.setFamily(family);
 	} else {
 		font.setFamily("Open Sans"_q);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-		font.setFeature("ss03", true);
-#endif // Qt >= 6.7.0
 	}
 	font.setPixelSize(size);
 
