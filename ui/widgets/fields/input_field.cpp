@@ -3933,14 +3933,15 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		|| e->modifiers().testFlag(Qt::MetaModifier);
 	const auto enterSubmit = (_mode != Mode::MultiLine)
 		|| ShouldSubmit(_submitSettings, e->modifiers());
-	const auto enter = (e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return);
-	const auto backspace = (e->key() == Qt::Key_Backspace);
-	if (e->key() == Qt::Key_Left
-		|| e->key() == Qt::Key_Right
-		|| e->key() == Qt::Key_Up
-		|| e->key() == Qt::Key_Down
-		|| e->key() == Qt::Key_Home
-		|| e->key() == Qt::Key_End) {
+	const auto key = e->key();
+	const auto enter = (key == Qt::Key_Enter || key == Qt::Key_Return);
+	const auto backspace = (key == Qt::Key_Backspace);
+	if (key == Qt::Key_Left
+		|| key == Qt::Key_Right
+		|| key == Qt::Key_Up
+		|| key == Qt::Key_Down
+		|| key == Qt::Key_Home
+		|| key == Qt::Key_End) {
 		_reverseMarkdownReplacement = false;
 	}
 
@@ -3957,25 +3958,29 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		e->accept();
 	} else if (enter && enterSubmit) {
 		_submits.fire(e->modifiers());
-	} else if (e->key() == Qt::Key_Escape) {
+	} else if (key == Qt::Key_Escape) {
 		e->ignore();
 		_cancelled.fire({});
-	} else if (e->key() == Qt::Key_Tab || e->key() == Qt::Key_Backtab) {
+	} else if (key == Qt::Key_Tab || key == Qt::Key_Backtab) {
 		if (alt || ctrl) {
 			e->ignore();
 		} else if (_customTab) {
 			_tabbed.fire({});
-		} else if (!focusNextPrevChild(e->key() == Qt::Key_Tab && !shift)) {
+		} else if (!focusNextPrevChild(key == Qt::Key_Tab && !shift)) {
 			e->ignore();
 		}
-	} else if (e->key() == Qt::Key_Search || e == QKeySequence::Find) {
+	} else if (key == Qt::Key_Search || e == QKeySequence::Find) {
 		e->ignore();
 	} else if (handleMarkdownKey(e)) {
 		e->accept();
-	} else if (_customUpDown && (e->key() == Qt::Key_Up || e->key() == Qt::Key_Down || e->key() == Qt::Key_PageUp || e->key() == Qt::Key_PageDown)) {
+	} else if (_customUpDown
+		&& (key == Qt::Key_Up
+			|| key == Qt::Key_Down
+			|| key == Qt::Key_PageUp
+			|| key == Qt::Key_PageDown)) {
 		e->ignore();
 #ifdef Q_OS_MAC
-	} else if (e->key() == Qt::Key_E && e->modifiers().testFlag(Qt::ControlModifier)) {
+	} else if (key == Qt::Key_E && e->modifiers().testFlag(Qt::ControlModifier)) {
 		const auto cursor = textCursor();
 		const auto start = cursor.selectionStart();
 		const auto end = cursor.selectionEnd();
@@ -4010,8 +4015,8 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		//	&& (e != QKeySequence::Redo);
 		const auto createEditBlock = enter
 			|| backspace
-			|| (e->key() == Qt::Key_Space)
-			|| (e->key() == Qt::Key_Delete);
+			|| (key == Qt::Key_Space)
+			|| (key == Qt::Key_Delete);
 		if (createEditBlock) {
 			cursor.beginEditBlock();
 		}
@@ -4038,7 +4043,12 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		if (createEditBlock) {
 			cursor.endEditBlock();
 		}
-		_inner->ensureCursorVisible();
+		if (key != Qt::Key_Control
+			&& key != Qt::Key_Shift
+			&& key != Qt::Key_Alt
+			&& key != Qt::Key_Meta) {
+			_inner->ensureCursorVisible();
+		}
 		if (changeModifiers) {
 			e->setModifiers(oldModifiers);
 		}
@@ -4046,21 +4056,21 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		if (updatedCursor.position() == oldPosition) {
 			const auto shift = e->modifiers().testFlag(Qt::ShiftModifier);
 			bool check = false;
-			if (e->key() == Qt::Key_PageUp || e->key() == Qt::Key_Up) {
+			if (key == Qt::Key_PageUp || key == Qt::Key_Up) {
 				updatedCursor.movePosition(QTextCursor::Start, shift ? QTextCursor::KeepAnchor : QTextCursor::MoveAnchor);
 				check = true;
-			} else if (e->key() == Qt::Key_PageDown || e->key() == Qt::Key_Down) {
+			} else if (key == Qt::Key_PageDown || key == Qt::Key_Down) {
 				updatedCursor.movePosition(QTextCursor::End, shift ? QTextCursor::KeepAnchor : QTextCursor::MoveAnchor);
 				check = true;
 			} else if (!oldSelection
-				&& (e->key() == Qt::Key_Left
-					|| e->key() == Qt::Key_Right
-					|| e->key() == Qt::Key_Backspace)) {
+				&& (key == Qt::Key_Left
+					|| key == Qt::Key_Right
+					|| key == Qt::Key_Backspace)) {
 				e->ignore();
 			}
 			if (check) {
 				if (oldPosition == updatedCursor.position()) {
-					if (shift || !exitQuoteWithNewBlock(e->key())) {
+					if (shift || !exitQuoteWithNewBlock(key)) {
 						e->ignore();
 					}
 				} else {
