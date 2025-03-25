@@ -14,6 +14,7 @@
 
 #include <QtCore/QMap>
 #include <QtCore/QVector>
+#include <QtCore/QDir>
 #include <QtGui/QFontInfo>
 #include <QtGui/QFontDatabase>
 
@@ -65,17 +66,6 @@ ResolvedFont::ResolvedFont(FontResolveResult result, FontVariants *modified)
 }
 
 namespace {
-
-#ifndef LIB_UI_USE_PACKAGED_FONTS
-const auto FontTypes = std::array{
-	u"OpenSans-Regular"_q,
-	u"OpenSans-Italic"_q,
-	u"OpenSans-SemiBold"_q,
-	u"OpenSans-SemiBoldItalic"_q,
-	u"Vazirmatn-UI-NL-Regular"_q,
-	u"Vazirmatn-UI-NL-SemiBold"_q,
-};
-#endif // !LIB_UI_USE_PACKAGED_FONTS
 
 bool Started = false;
 
@@ -373,8 +363,8 @@ void StartFonts() {
 #ifndef LIB_UI_USE_PACKAGED_FONTS
 	const auto name = u"Open Sans"_q;
 
-	for (const auto &file : FontTypes) {
-		LoadCustomFont(u":/gui/fonts/"_q + file + u".ttf"_q);
+	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
+		LoadCustomFont(file.canonicalFilePath());
 	}
 
 	QFont::insertSubstitution(name, u"Vazirmatn UI NL"_q);
