@@ -72,8 +72,6 @@ const auto FontTypes = std::array{
 	u"OpenSans-Italic"_q,
 	u"OpenSans-SemiBold"_q,
 	u"OpenSans-SemiBoldItalic"_q,
-};
-const auto PersianFontTypes = std::array{
 	u"Vazirmatn-UI-NL-Regular"_q,
 	u"Vazirmatn-UI-NL-SemiBold"_q,
 };
@@ -373,16 +371,12 @@ void StartFonts() {
 	style_InitFontsResource();
 
 #ifndef LIB_UI_USE_PACKAGED_FONTS
-	const auto base = u":/gui/fonts/"_q;
 	const auto name = u"Open Sans"_q;
 
 	for (const auto &file : FontTypes) {
-		LoadCustomFont(base + file + u".ttf"_q);
+		LoadCustomFont(u":/gui/fonts/"_q + file + u".ttf"_q);
 	}
 
-	for (const auto &file : PersianFontTypes) {
-		LoadCustomFont(base + file + u".ttf"_q);
-	}
 	QFont::insertSubstitution(name, u"Vazirmatn UI NL"_q);
 
 #ifdef Q_OS_MAC
