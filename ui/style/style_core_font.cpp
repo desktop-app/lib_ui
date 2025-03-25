@@ -8,8 +8,6 @@
 
 #include "base/algorithm.h"
 #include "base/debug_log.h"
-#include "base/variant.h"
-#include "base/base_file_utilities.h"
 #include "ui/integration.h"
 
 #include <QtCore/QMap>
