@@ -917,6 +917,13 @@ Text::StateResult FlatLabel::getTextState(const QPoint &m) const {
 	const auto useWidth = !(_st.align & Qt::AlignLeft)
 		? textWidth
 		: std::min(textWidth, _text.maxWidth());
+	const auto textLeft = _textWidth
+		? ((_st.align & Qt::AlignLeft)
+			? _st.margin.left()
+			: (_st.align & Qt::AlignHCenter)
+			? ((width() - _textWidth) / 2)
+			: (width() - _st.margin.right() - _textWidth))
+		: _st.margin.left();
 
 	Text::StateResult state;
 	bool heightExceeded = _st.maxHeight && (_st.maxHeight < _fullTextHeight || useWidth < _text.maxWidth());
@@ -928,9 +935,9 @@ Text::StateResult FlatLabel::getTextState(const QPoint &m) const {
 		if (_breakEverywhere) {
 			request.flags |= Text::StateRequest::Flag::BreakEverywhere;
 		}
-		state = _text.getStateElided(m - QPoint(_st.margin.left(), _st.margin.top()), useWidth, request);
+		state = _text.getStateElided(m - QPoint(textLeft, _st.margin.top()), useWidth, request);
 	} else {
-		state = _text.getState(m - QPoint(_st.margin.left(), _st.margin.top()), useWidth, request);
+		state = _text.getState(m - QPoint(textLeft, _st.margin.top()), useWidth, request);
 	}
 
 	return state;
