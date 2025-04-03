@@ -96,7 +96,6 @@ base::flat_map<uint64, uint32> QtFontsKeys;
 		| (uint64(font.pixelSize()));
 }
 
-#ifndef LIB_UI_USE_PACKAGED_FONTS
 bool LoadCustomFont(const QString &filePath) {
 	auto regularId = QFontDatabase::addApplicationFont(filePath);
 	if (regularId < 0) {
@@ -110,7 +109,6 @@ bool LoadCustomFont(const QString &filePath) {
 
 	return true;
 }
-#endif // !LIB_UI_USE_PACKAGED_FONTS
 
 [[nodiscard]] QString SystemMonospaceFont() {
 	const auto type = QFontDatabase::FixedFont;
@@ -359,7 +357,6 @@ void StartFonts() {
 
 	style_InitFontsResource();
 
-#ifndef LIB_UI_USE_PACKAGED_FONTS
 	const auto name = u"Open Sans"_q;
 
 	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
@@ -377,7 +374,6 @@ void StartFonts() {
 	};
 	QFont::insertSubstitutions(name, list);
 #endif // Q_OS_MAC
-#endif // !LIB_UI_USE_PACKAGED_FONTS
 }
 
 void DestroyFonts() {
