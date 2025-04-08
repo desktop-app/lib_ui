@@ -64,6 +64,22 @@ enum class TitleControl {
 	Close,
 };
 
+struct TitleLayout {
+	[[nodiscard]] inline bool onLeft() const {
+		if (ranges::contains(left, TitleControl::Close)) {
+			return true;
+		} else if (ranges::contains(right, TitleControl::Close)) {
+			return false;
+		} else if (left.size() > right.size()) {
+			return true;
+		}
+		return false;
+	}
+
+	std::vector<TitleControl> left;
+	std::vector<TitleControl> right;
+};
+
 class AbstractTitleButtons {
 public:
 	[[nodiscard]] virtual object_ptr<AbstractButton> create(
@@ -124,21 +140,7 @@ public:
 	void buttonDown(HitTestResult testResult);
 
 	using Control = TitleControl;
-	struct Layout {
-		[[nodiscard]] inline bool onLeft() const {
-			if (ranges::contains(left, Control::Close)) {
-				return true;
-			} else if (ranges::contains(right, Control::Close)) {
-				return false;
-			} else if (left.size() > right.size()) {
-				return true;
-			}
-			return false;
-		}
-
-		std::vector<Control> left;
-		std::vector<Control> right;
-	};
+	using Layout = TitleLayout;
 
 private:
 	[[nodiscard]] not_null<RpWidget*> parent() const;
@@ -170,22 +172,22 @@ public:
 
 	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> Instance();
 
-	[[nodiscard]] TitleControls::Layout current() const {
+	[[nodiscard]] TitleLayout current() const {
 		return _variable.current();
 	}
 
-	[[nodiscard]] rpl::producer<TitleControls::Layout> value() const {
+	[[nodiscard]] rpl::producer<TitleLayout> value() const {
 		return _variable.value();
 	}
 
-	[[nodiscard]] rpl::producer<TitleControls::Layout> changes() const {
+	[[nodiscard]] rpl::producer<TitleLayout> changes() const {
 		return _variable.changes();
 	}
 
 protected:
-	TitleControlsLayout(TitleControls::Layout layout) : _variable(layout) {}
+	TitleControlsLayout(TitleLayout layout) : _variable(layout) {}
 
-	rpl::variable<TitleControls::Layout> _variable;
+	rpl::variable<TitleLayout> _variable;
 
 private:
 	[[nodiscard]] static std::shared_ptr<TitleControlsLayout> Create();
