@@ -23,6 +23,8 @@ public:
 		const style::icon *icon,
 		const style::icon *iconOver);
 
+	[[nodiscard]] const style::Menu &st() const;
+
 	bool isEnabled() const override;
 	not_null<QAction*> action() const override;
 

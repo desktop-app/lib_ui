@@ -180,6 +180,10 @@ void Action::setMarkedText(
 	update();
 }
 
+const style::Menu &Action::st() const {
+	return _st;
+}
+
 bool Action::isEnabled() const {
 	return _action->isEnabled();
 }
