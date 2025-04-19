@@ -8,10 +8,12 @@
 
 #include "ui/style/style_core_palette.h"
 #include "ui/style/style_core.h"
+#include "ui/painter.h"
 #include "base/basic_types.h"
 
 #include <QtCore/QMutex>
 #include <QtGui/QPainter>
+#include <QtSvg/QSvgRenderer>
 
 namespace style {
 namespace internal {
@@ -32,6 +34,28 @@ base::flat_set<IconData*> iconData;
 		int scale,
 		bool ignoreDpr = false) {
 	const auto ratio = ignoreDpr ? 1 : DevicePixelRatio();
+	const auto realscale = scale * ratio;
+
+	const auto buffer = QByteArray::fromRawData(
+		reinterpret_cast<const char*>(mask->data()),
+		mask->size());
+	if (buffer.startsWith("SVG:")) {
+		auto svg = QSvgRenderer(
+			QByteArray::fromRawData(buffer.data() + 4, buffer.size() - 4));
+		Assert(svg.isValid());
+		const auto size = svg.defaultSize();
+		const auto width = ConvertScale(size.width(), scale);
+		const auto height = ConvertScale(size.height(), scale);
+		auto maskImage = QImage(
+			QSize(width, height) * ratio,
+			QImage::Format_ARGB32_Premultiplied);
+		maskImage.fill(Qt::transparent);
+		maskImage.setDevicePixelRatio(ratio);
+		auto p = QPainter(&maskImage);
+		auto hq = PainterHighQualityEnabler(p);
+		svg.render(&p, QRectF(0, 0, width, height));
+		return maskImage;
+	}
 
 	auto maskImage = QImage::fromData(mask->data(), mask->size(), "PNG");
 	maskImage.setDevicePixelRatio(ratio);
@@ -40,7 +64,6 @@ base::flat_set<IconData*> iconData;
 	// images are laid out like this:
 	// 100x 200x
 	// 300x
-	const auto realscale = scale * ratio;
 	const auto width = maskImage.width() / 3;
 	const auto height = maskImage.height() / 5;
 	const auto one = QRect(0, 0, width, height);
