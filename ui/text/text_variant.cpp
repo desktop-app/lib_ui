@@ -8,6 +8,16 @@
 
 namespace v::text {
 
+bool is_plain(const data &d) {
+	return v::is<v::null_t>(d)
+		|| v::is<QString>(d)
+		|| v::is<rpl::producer<QString>>(d);
+}
+
+bool is_marked(const data &d) {
+	return !is_plain(d);
+}
+
 rpl::producer<QString> take_plain(
 		data &&d,
 		rpl::producer<QString> &&fallback) {

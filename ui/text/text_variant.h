@@ -17,6 +17,8 @@ using data = std::variant<
 	TextWithEntities,
 	rpl::producer<TextWithEntities>>;
 
+[[nodiscard]] bool is_plain(const data &d);
+[[nodiscard]] bool is_marked(const data &d);
 [[nodiscard]] rpl::producer<QString> take_plain(
 	data &&d,
 	rpl::producer<QString> &&fallback = rpl::never<QString>());
