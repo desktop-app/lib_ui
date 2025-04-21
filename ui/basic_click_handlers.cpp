@@ -92,7 +92,7 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 
 bool UrlClickHandler::IsSuspicious(const QString &url) {
 	static const auto Check1 = QRegularExpression(
-		"^((https?|s?ftp)://)?([^/#\\:]+)([/#\\:]|$)",
+		"^((https?|s?ftp)://)?([^/#\\:\\?]+)([/#\\:\\?]|$)",
 		QRegularExpression::CaseInsensitiveOption);
 	const auto match1 = Check1.match(url);
 	if (!match1.hasMatch()) {
