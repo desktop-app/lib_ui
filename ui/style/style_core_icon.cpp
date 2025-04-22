@@ -36,14 +36,30 @@ base::flat_set<IconData*> iconData;
 	const auto ratio = ignoreDpr ? 1 : DevicePixelRatio();
 	const auto realscale = scale * ratio;
 
-	const auto buffer = QByteArray::fromRawData(
+	auto data = QByteArray::fromRawData(
 		reinterpret_cast<const char*>(mask->data()),
 		mask->size());
-	if (buffer.startsWith("SVG:")) {
-		auto svg = QSvgRenderer(
-			QByteArray::fromRawData(buffer.data() + 4, buffer.size() - 4));
+	if (data.startsWith("SVG:")) {
+		auto size = QSize();
+		data = QByteArray::fromRawData(data.constData() + 4, data.size() - 4);
+		if (data.startsWith("SIZE:")) {
+			data = QByteArray::fromRawData(data.constData() + 5, data.size() - 5);
+
+			QDataStream stream(data);
+			stream.setVersion(QDataStream::Qt_5_1);
+
+			qint32 width = 0, height = 0;
+			stream >> width >> height;
+			Assert(stream.status() == QDataStream::Ok);
+
+			size = QSize(width, height);
+			data = QByteArray::fromRawData(data.constData() + 8, data.size() - 8);
+		}
+		auto svg = QSvgRenderer(data);
 		Assert(svg.isValid());
-		const auto size = svg.defaultSize();
+		if (size.isEmpty()) {
+			size = svg.defaultSize();
+		}
 		const auto width = ConvertScale(size.width(), scale);
 		const auto height = ConvertScale(size.height(), scale);
 		auto maskImage = QImage(
