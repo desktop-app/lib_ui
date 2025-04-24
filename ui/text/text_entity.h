@@ -14,6 +14,18 @@
 #include <QtCore/QVector>
 #include <QtGui/QClipboard>
 
+struct TextWithEntities;
+
+namespace style {
+struct IconEmoji;
+} // namespace style
+
+namespace Ui::Text {
+[[nodiscard]] TextWithEntities IconEmoji(
+	not_null<const style::IconEmoji*> emoji,
+	QString text);
+} // namespace Ui::Text
+
 enum class EntityType : uchar {
 	Invalid = 0,
 
@@ -179,6 +191,11 @@ struct TextWithEntities {
 	TextWithEntities &append(QChar other) {
 		text.append(other);
 		return *this;
+	}
+	TextWithEntities &append(
+			const style::IconEmoji &icon,
+			const QString &text = QString()) {
+		return append(Ui::Text::IconEmoji(&icon, text));
 	}
 
 	static TextWithEntities Simple(const QString &simple) {
