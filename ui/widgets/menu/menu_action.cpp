@@ -40,7 +40,7 @@ namespace {
 }
 
 TextParseOptions MenuTextOptions = {
-	TextParseLinks, // flags
+	TextParseLinks | TextParseMarkdown, // flags
 	0, // maxw
 	0, // maxh
 	Qt::LayoutDirectionAuto, // dir
