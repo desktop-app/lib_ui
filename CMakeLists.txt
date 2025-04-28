@@ -339,4 +339,8 @@ PRIVATE
     desktop-app::external_xxhash
 )
 
+if (WIN32 AND QT_VERSION LESS 6)
+    target_link_libraries(lib_ui PRIVATE desktop-app::external_angle)
+endif()
+
 target_prepare_qrc(lib_ui)
