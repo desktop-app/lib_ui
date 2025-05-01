@@ -43,11 +43,25 @@ namespace {
 
 UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
 
+BOOL(__stdcall *GetPointerType)(
+	UINT32 pointerId,
+	POINTER_INPUT_TYPE *pointerType);
+
 [[nodiscard]] bool GetDpiForWindowSupported() {
 	static const auto Result = [&] {
 #define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
 		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
 		return LOAD_SYMBOL(user32, GetDpiForWindow);
+#undef LOAD_SYMBOL
+	}();
+	return Result;
+}
+
+[[nodiscard]] bool GetPointerTypeSupported() {
+	static const auto Result = [&] {
+#define LOAD_SYMBOL(lib, name) base::Platform::LoadMethod(lib, #name, name)
+		const auto user32 = base::Platform::SafeLoadLibrary(L"User32.dll");
+		return LOAD_SYMBOL(user32, GetPointerType);
 #undef LOAD_SYMBOL
 	}();
 	return Result;
@@ -452,10 +466,10 @@ bool DirectManipulation::filterNativeEvent(
 	switch (msg) {
 
 	case DM_POINTERHITTEST:
-		if (_viewport) {
+		if (_viewport && GetPointerTypeSupported()) {
 			const auto id = UINT32(GET_POINTERID_WPARAM(wParam));
 			auto type = POINTER_INPUT_TYPE();
-			if (::GetPointerType(id, &type) && type == PT_TOUCHPAD) {
+			if (GetPointerType(id, &type) && type == PT_TOUCHPAD) {
 				_viewport->SetContact(id);
 			}
 			return true;
