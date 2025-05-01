@@ -41,6 +41,7 @@ enum class EntityType : uchar {
 	MediaTimestamp,
 	Colorized, // Senders in chat list, attachments in chat list, etc.
 	Phone,
+	BankCard,
 
 	Bold,
 	Semibold,
