@@ -96,25 +96,27 @@ bool NativeEventFilter::FilterSingleton::nativeEventFilter(
 	auto filtered = false;
 	_processing = true;
 	base::Integration::Instance().enterFromEventLoop([&] {
-		filtered = i->second.first->filterNativeEvent(
-			msg->message,
-			msg->wParam,
-			msg->lParam,
-			reinterpret_cast<LRESULT*>(result));
-		if (filtered) {
-			return;
-		}
-		for (const auto filter : i->second.other) {
-			if (_removing.contains(std::make_pair(msg->hwnd, filter))) {
-				continue;
-			}
-			filtered = filter->filterNativeEvent(
+		const auto first = i->second.first;
+		if (!_removing.contains(std::make_pair(msg->hwnd, first))) {
+			filtered = first->filterNativeEvent(
 				msg->message,
 				msg->wParam,
 				msg->lParam,
 				reinterpret_cast<LRESULT*>(result));
 			if (filtered) {
-				break;
+				return;
+			}
+		}
+		for (const auto other : i->second.other) {
+			if (!_removing.contains(std::make_pair(msg->hwnd, other))) {
+				filtered = other->filterNativeEvent(
+					msg->message,
+					msg->wParam,
+					msg->lParam,
+					reinterpret_cast<LRESULT*>(result));
+				if (filtered) {
+					return;
+				}
 			}
 		}
 	});
