@@ -111,6 +111,23 @@ private:
 
 };
 
+class StaticCustomEmoji final : public CustomEmoji {
+public:
+	StaticCustomEmoji(QImage &&image, QString entity);
+
+	int width() override;
+	QString entityData() override;
+	void paint(QPainter &p, const Context &context) override;
+	void unload() override;
+	bool ready() override;
+	bool readyInDefaultState() override;
+
+private:
+	QImage _image;
+	QString _entity;
+
+};
+
 [[nodiscard]] std::unique_ptr<CustomEmoji> MakeCustomEmoji(
 	QStringView data,
 	const MarkedContext &context);

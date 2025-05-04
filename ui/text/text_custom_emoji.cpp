@@ -151,4 +151,33 @@ std::unique_ptr<CustomEmoji> MakeCustomEmoji(
 	return nullptr;
 }
 
+StaticCustomEmoji::StaticCustomEmoji(QImage &&image, QString entity)
+: _image(std::move(image))
+, _entity(std::move(entity)) {
+}
+
+int StaticCustomEmoji::width() {
+	return _image.width() / style::DevicePixelRatio();
+}
+
+QString StaticCustomEmoji::entityData() {
+	return _entity;
+}
+
+void StaticCustomEmoji::paint(QPainter &p, const Context &context) {
+	p.drawImage(context.position, _image);
+}
+
+void StaticCustomEmoji::unload() {
+	_image = QImage();
+}
+
+bool StaticCustomEmoji::ready() {
+	return true;
+}
+
+bool StaticCustomEmoji::readyInDefaultState() {
+	return true;
+}
+
 } // namespace Ui::Text
