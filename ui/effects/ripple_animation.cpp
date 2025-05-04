@@ -63,7 +63,7 @@ RippleAnimation::Ripple::Ripple(
 	const QPixmap &mask,
 	Fn<void()> update)
 : _st(st)
-, _update(update)
+, _update(std::move(update))
 , _origin(origin)
 , _radiusFrom(startRadius)
 , _frame(mask.size(), QImage::Format_ARGB32_Premultiplied) {
@@ -88,7 +88,7 @@ RippleAnimation::Ripple::Ripple(
 
 RippleAnimation::Ripple::Ripple(const style::RippleAnimation &st, const QPixmap &mask, Fn<void()> update)
 : _st(st)
-, _update(update)
+, _update(std::move(update))
 , _origin(
 	mask.width() / (2 * style::DevicePixelRatio()),
 	mask.height() / (2 * style::DevicePixelRatio()))
@@ -182,7 +182,7 @@ RippleAnimation::RippleAnimation(
 	Fn<void()> callback)
 : _st(st)
 , _mask(PixmapFromImage(std::move(mask)))
-, _update(callback) {
+, _update(std::move(callback)) {
 }
 
 
