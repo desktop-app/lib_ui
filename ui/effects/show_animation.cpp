@@ -83,7 +83,9 @@ void AnimateWidgets(const Widgets &targets, bool show) {
 	state->animation.start(
 		[=](auto value) {
 			for (const auto &object : state->objects) {
-				object.container->update();
+				if (object.container) {
+					object.container->update();
+				}
 
 				if (!object.weakTarget && show) {
 					state->destroy.fire(Finish::Bad);
