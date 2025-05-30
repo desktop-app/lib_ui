@@ -11,5 +11,6 @@ namespace Ui {
 void ActivateWindow(not_null<QWidget*> widget);
 void ActivateWindowDelayed(not_null<QWidget*> widget);
 void PreventDelayedActivation();
+void KeepDelayedActivationPaused(bool keep);
 
 } // namespace Ui

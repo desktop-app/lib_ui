@@ -25,10 +25,11 @@ constexpr auto kPreventTimeout = crl::time(100);
 
 bool Paused/* = false*/;
 bool Attempted/* = false*/;
+int KeepingPaused/* = 0*/;
 auto Window = QPointer<QWidget>();
 
 bool Unpause(bool force = false) {
-	if (force || Attempted) {
+	if ((force && !KeepingPaused) || Attempted) {
 		Attempted = false;
 		Paused = false;
 		return true;
@@ -111,6 +112,16 @@ void PreventDelayedActivation() {
 			});
 		});
 	});
+}
+
+void KeepDelayedActivationPaused(bool keep) {
+	if (keep) {
+		++KeepingPaused;
+	} else if (KeepingPaused > 0) {
+		if (!--KeepingPaused && Paused) {
+			Unpause(true);
+		}
+	}
 }
 
 } // namespace Ui

@@ -225,6 +225,7 @@ private:
 
 	int _topShift = 0;
 	bool _clearLastSeparator = true;
+	bool _keepingDelayedActivationPaused = false;
 
 	Fn<void()> _destroyedCallback;
 

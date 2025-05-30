@@ -742,9 +742,13 @@ void PopupMenu::showAnimated(PanelAnimation::Origin origin) {
 }
 
 void PopupMenu::hideAnimated() {
-	if (isHidden()) return;
-	if (_hiding) return;
-
+	if (isHidden() || _hiding) {
+		return;
+	}
+	if (!_keepingDelayedActivationPaused) {
+		_keepingDelayedActivationPaused = true;
+		KeepDelayedActivationPaused(true);
+	}
 	startOpacityAnimation(true);
 }
 
@@ -1098,6 +1102,9 @@ PopupMenu::~PopupMenu() {
 			&& Ui::InFocusChain(parent->window())) {
 			ActivateWindowDelayed(parent);
 		}
+	}
+	if (_keepingDelayedActivationPaused) {
+		KeepDelayedActivationPaused(false);
 	}
 	if (_destroyedCallback) {
 		_destroyedCallback();
