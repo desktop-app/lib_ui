@@ -132,6 +132,7 @@ public:
 
 	void setText(rpl::producer<QString> text);
 	void setText(rpl::producer<TextWithEntities> text);
+	void setContext(const Text::MarkedContext &context);
 
 	void setNumbersText(const QString &numbersText) {
 		setNumbersText(numbersText, numbersText.toInt());
@@ -181,6 +182,7 @@ private:
 	std::optional<QPen> _penOverride;
 	RoundRect _roundRect;
 	RoundRect _roundRectOver;
+	Text::MarkedContext _context;
 
 	TextTransform _transform = TextTransform::ToUpper;
 	bool _fullRadius = false;
