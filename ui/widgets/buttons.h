@@ -272,7 +272,8 @@ public:
 	SettingsButton(
 		QWidget *parent,
 		rpl::producer<TextWithEntities> &&text,
-		const style::SettingsButton &st = st::defaultSettingsButton);
+		const style::SettingsButton &st = st::defaultSettingsButton,
+		const Text::MarkedContext &context = {});
 	SettingsButton(
 		QWidget *parent,
 		nullptr_t,
@@ -318,6 +319,7 @@ private:
 	Ui::Text::String _text;
 	std::unique_ptr<Ui::ToggleView> _toggle;
 	std::optional<QColor> _textColorOverride;
+	Text::MarkedContext _context;
 
 };
 

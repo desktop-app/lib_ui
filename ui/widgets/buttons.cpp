@@ -788,10 +788,12 @@ SettingsButton::SettingsButton(
 SettingsButton::SettingsButton(
 	QWidget *parent,
 	rpl::producer<TextWithEntities> &&text,
-	const style::SettingsButton &st)
+	const style::SettingsButton &st,
+	const Text::MarkedContext &context)
 : RippleButton(parent, st.ripple)
 , _st(st)
-, _padding(_st.padding) {
+, _padding(_st.padding)
+, _context(context) {
 	std::move(
 		text
 	) | rpl::start_with_next([this](TextWithEntities &&value) {
@@ -961,7 +963,7 @@ void SettingsButton::onStateChanged(
 }
 
 void SettingsButton::setText(TextWithEntities &&text) {
-	_text.setMarkedText(_st.style, text, kMarkupTextOptions);
+	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
 	update();
 }
 
