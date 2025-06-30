@@ -675,3 +675,4 @@ creditsBg2: #FFD951; // credits icon gradient 2, light
 creditsBg3: #f0b400; // credits icon gradient 3, dark
 creditsFg: #ba7000; // credits text on light background
 creditsStroke: #da8735; // credits icon stroke
+currencyFg: #168acd; // currency icon, blue
