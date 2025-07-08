@@ -18,7 +18,7 @@ namespace Ui::Menu {
 
 MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 	return MenuCallback([=](MenuCallback::Args a) -> QAction* {
-		const auto initFilter = [&](not_null<Ui::Menu::Action*> action) {
+		const auto initFilter = [&](not_null<Ui::Menu::ItemBase*> action) {
 			if (const auto copy = a.triggerFilter) {
 				action->setClickedCallback([=] {
 					const auto weak = Ui::MakeWeak(action);
@@ -76,6 +76,9 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 					std::move(a.handler)),
 				a.icon,
 				a.icon);
+			initFilter(owned.get());
+			return menu->addAction(std::move(owned));
+		} else if (auto owned = a.make ? a.make(menu) : nullptr) {
 			initFilter(owned.get());
 			return menu->addAction(std::move(owned));
 		}
