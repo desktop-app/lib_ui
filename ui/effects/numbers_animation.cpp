@@ -136,6 +136,7 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 	auto progress = anim::easeOutCirc(1., _a_ready.value(1.));
 	auto width = anim::interpolate(_fromWidth, _toWidth, progress);
 
+	const auto initial = p.opacity();
 	QString singleChar('0');
 	if (style::RightToLeft()) x = outerWidth - x - width;
 	x += width - _bothWidth;
@@ -152,24 +153,24 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 			? _digitWidth
 			: digit.fromWidth;
 		if (from == to) {
-			p.setOpacity(1.);
+			p.setOpacity(initial);
 			singleChar[0] = from;
 			p.drawText(x + (toCharWidth - digit.fromWidth) / 2, y + _font->ascent, singleChar);
 		} else {
 			if (from.unicode()) {
-				p.setOpacity(1. - progress);
+				p.setOpacity(initial * (1. - progress));
 				singleChar[0] = from;
 				p.drawText(x + (fromCharWidth - digit.fromWidth) / 2, y + fromTop + _font->ascent, singleChar);
 			}
 			if (to.unicode()) {
-				p.setOpacity(progress);
+				p.setOpacity(initial * progress);
 				singleChar[0] = to;
 				p.drawText(x + (toCharWidth - digit.toWidth) / 2, y + toTop + _font->ascent, singleChar);
 			}
 		}
 		x += std::max(toCharWidth, fromCharWidth);
 	}
-	p.setOpacity(1.);
+	p.setOpacity(initial);
 }
 
 LabelWithNumbers::LabelWithNumbers(
