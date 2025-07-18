@@ -8,7 +8,6 @@
 
 #include "ui/effects/ripple_animation.h"
 #include "ui/basic_click_handlers.h"
-#include "ui/qt_weak_factory.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
 #include "styles/palette.h"
@@ -774,7 +773,7 @@ void Checkbox::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void Checkbox::mouseReleaseEvent(QMouseEvent *e) {
-	const auto weak = Ui::MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	if (auto activated = _activatingHandler = ClickHandler::unpressed()) {
 		// _clickHandlerFilter may delete `this`. In that case we don't want
 		// to try to show a context menu or smth like that.

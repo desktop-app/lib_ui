@@ -94,11 +94,11 @@ public:
 	virtual void triggerButton(int index) = 0;
 
 	template <typename BoxType>
-	QPointer<BoxType> show(
+	base::weak_qptr<BoxType> show(
 			object_ptr<BoxType> content,
 			LayerOptions options = LayerOption::KeepOther,
 			anim::type animated = anim::type::normal) {
-		auto result = QPointer<BoxType>(content.data());
+		auto result = base::weak_qptr<BoxType>(content.data());
 		showBox(std::move(content), options, animated);
 		return result;
 	}
@@ -331,6 +331,8 @@ public:
 	}
 	BoxPointer(BoxContent *value) : _value(value) {
 	}
+	BoxPointer(base::weak_qptr<BoxContent> value) : _value(value) {
+	}
 	BoxPointer &operator=(const BoxPointer &other) {
 		if (_value != other._value) {
 			destroy();
@@ -352,12 +354,19 @@ public:
 		}
 		return *this;
 	}
+	BoxPointer &operator=(base::weak_qptr<BoxContent> other) {
+		if (_value != other) {
+			destroy();
+			_value = other;
+		}
+		return *this;
+	}
 	~BoxPointer() {
 		destroy();
 	}
 
 	BoxContent *get() const {
-		return _value.data();
+		return _value.get();
 	}
 	operator BoxContent*() const {
 		return get();
@@ -376,7 +385,7 @@ private:
 		}
 	}
 
-	QPointer<BoxContent> _value;
+	base::weak_qptr<BoxContent> _value;
 
 };
 

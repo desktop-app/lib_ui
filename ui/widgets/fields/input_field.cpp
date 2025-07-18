@@ -15,7 +15,6 @@
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
-#include "ui/qt_weak_factory.h"
 #include "ui/integration.h"
 #include "base/invoke_queued.h"
 #include "base/random.h"
@@ -2325,7 +2324,7 @@ void InputField::touchFinish() {
 	if (!_touchPress) {
 		return;
 	}
-	const auto weak = MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	if (!_touchMove && window()) {
 		QPoint mapped(mapFromGlobal(_touchStart));
 
@@ -3584,7 +3583,7 @@ void InputField::handleContentsChanged() {
 
 	if (tagsChanged || (_lastTextWithTags.text != currentText)) {
 		_lastTextWithTags.text = currentText;
-		const auto weak = MakeWeak(this);
+		const auto weak = base::make_weak(this);
 		_changes.fire({});
 		if (!weak) {
 			return;
@@ -4296,7 +4295,7 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 	}
 	_inputMethodCommit = e->commitString();
 
-	const auto weak = MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	_inner->QTextEdit::inputMethodEvent(e);
 
 	if (weak && _inputMethodCommit.has_value()) {

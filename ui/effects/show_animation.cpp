@@ -7,7 +7,6 @@
 #include "ui/effects/show_animation.h"
 
 #include "ui/effects/animations.h"
-#include "ui/qt_weak_factory.h"
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "styles/style_widgets.h"
@@ -22,7 +21,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
 	};
 	struct Object {
 		base::unique_qptr<Ui::RpWidget> container;
-		QPointer<Ui::RpWidget> weakTarget;
+		base::weak_qptr<Ui::RpWidget> weakTarget;
 	};
 	struct State {
 		rpl::event_stream<Finish> destroy;
@@ -38,7 +37,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
 	for (const auto &target : targets) {
 		state->objects.push_back({
 			base::make_unique_q<Ui::RpWidget>(target->parentWidget()),
-			Ui::MakeWeak(target),
+			base::make_weak(target),
 		});
 
 		const auto pixmap = Ui::GrabWidget(target);

@@ -7,7 +7,6 @@
 #include "ui/abstract_button.h"
 
 #include "ui/ui_utility.h"
-#include "ui/qt_weak_factory.h"
 #include "ui/integration.h"
 
 #include <QtGui/QtEvents>
@@ -86,7 +85,7 @@ void AbstractButton::clicked(
 		Qt::KeyboardModifiers modifiers,
 		Qt::MouseButton button) {
 	_modifiers = modifiers;
-	const auto weak = MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	if (button == Qt::LeftButton) {
 		if (const auto callback = _clickedCallback) {
 			callback();
@@ -137,7 +136,7 @@ bool AbstractButton::setDown(
 		const auto was = _state;
 		_state &= ~State(StateFlag::Down);
 
-		const auto weak = MakeWeak(this);
+		const auto weak = base::make_weak(this);
 		onStateChanged(was, source);
 		if (weak) {
 			if (was & StateFlag::Over) {

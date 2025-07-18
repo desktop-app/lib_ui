@@ -13,7 +13,6 @@
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/round_rect.h"
-#include "ui/qt_weak_factory.h"
 #include "base/qt/qt_tab_key.h"
 #include "base/integration.h"
 #include "styles/style_layers.h"
@@ -515,7 +514,7 @@ void LayerStackWidget::setCacheImages() {
 }
 
 void LayerStackWidget::closeLayer(not_null<LayerWidget*> layer) {
-	const auto weak = Ui::MakeWeak(layer.get());
+	const auto weak = base::make_weak(layer.get());
 	if (Ui::InFocusChain(layer)) {
 		setFocus();
 	}
@@ -615,7 +614,7 @@ bool LayerStackWidget::prepareAnimation(
 	} else {
 		setupNewWidgets();
 		setCacheImages();
-		const auto weak = Ui::MakeWeak(this);
+		const auto weak = base::make_weak(this);
 		clearOldWidgets();
 		if (weak) {
 			prepareForAnimation();
@@ -642,7 +641,7 @@ void LayerStackWidget::startAnimation(
 }
 
 void LayerStackWidget::resizeEvent(QResizeEvent *e) {
-	const auto weak = Ui::MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	_background->setGeometry(rect());
 	if (!weak) {
 		return;
@@ -889,7 +888,7 @@ void LayerStackWidget::clearLayers() {
 }
 
 void LayerStackWidget::clearClosingLayers() {
-	const auto weak = Ui::MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	while (!_closingLayers.empty()) {
 		const auto index = _closingLayers.size() - 1;
 		const auto layer = _closingLayers.back().get();

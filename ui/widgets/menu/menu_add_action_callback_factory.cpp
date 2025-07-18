@@ -11,7 +11,6 @@
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/qt_object_factory.h"
-#include "ui/qt_weak_factory.h"
 #include "styles/style_widgets.h"
 
 namespace Ui::Menu {
@@ -21,7 +20,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 		const auto initFilter = [&](not_null<Ui::Menu::ItemBase*> action) {
 			if (const auto copy = a.triggerFilter) {
 				action->setClickedCallback([=] {
-					const auto weak = Ui::MakeWeak(action);
+					const auto weak = base::make_weak(action);
 					if (copy() && weak && !action->isDisabled()) {
 						action->setDisabled(true);
 						crl::on_main(
@@ -91,7 +90,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::DropdownMenu*> menu) {
 		const auto initFilter = [&](not_null<Ui::Menu::Action*> action) {
 			if (const auto copy = a.triggerFilter) {
 				action->setClickedCallback([=] {
-					const auto weak = Ui::MakeWeak(action);
+					const auto weak = base::make_weak(action);
 					if (copy() && weak && !action->isDisabled()) {
 						action->setDisabled(true);
 						crl::on_main(

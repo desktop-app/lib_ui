@@ -8,7 +8,6 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
-#include "ui/qt_weak_factory.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_widgets.h"
@@ -757,7 +756,7 @@ bool ElasticScroll::eventFilter(QObject *obj, QEvent *e) {
 		if (filterOutTouchEvent(e)) {
 			return true;
 		} else if (e->type() == QEvent::Resize) {
-			const auto weak = Ui::MakeWeak(this);
+			const auto weak = base::make_weak(this);
 			updateState();
 			if (weak) {
 				_innerResizes.fire({});
@@ -849,7 +848,7 @@ void ElasticScroll::handleTouchEvent(QTouchEvent *e) {
 			return;
 		}
 		_touchPress = false;
-		auto weak = MakeWeak(this);
+		auto weak = base::make_weak(this);
 		if (_touchScroll) {
 			if (_touchScrollState == TouchScrollState::Manual) {
 				_touchScrollState = TouchScrollState::Auto;
@@ -963,7 +962,7 @@ void ElasticScroll::setState(ScrollState state) {
 		_position = Position{ _state.visibleFrom, _overscroll };
 		return;
 	}
-	const auto weak = Ui::MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	const auto old = _state.visibleFrom;
 	_state = state;
 	_bar->updateState(state);
@@ -984,7 +983,7 @@ void ElasticScroll::applyScrollTo(int position, bool synthMouseMove) {
 	if (_disabled) {
 		return;
 	}
-	const auto weak = Ui::MakeWeak(this);
+	const auto weak = base::make_weak(this);
 	_dirtyState = true;
 	const auto was = _widget->geometry();
 	_widget->move(

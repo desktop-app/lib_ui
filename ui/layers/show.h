@@ -62,11 +62,11 @@ public:
 	template <
 		typename BoxType,
 		typename = std::enable_if_t<std::is_base_of_v<BoxContent, BoxType>>>
-	QPointer<BoxType> show(
+	base::weak_qptr<BoxType> show(
 			object_ptr<BoxType> content,
 			LayerOptions options = LayerOption::KeepOther,
 			anim::type animated = anim::type()) const {
-		auto result = QPointer<BoxType>(content.data());
+		auto result = base::weak_qptr<BoxType>(content.data());
 		showBox(std::move(content), options, animated);
 		return result;
 	}

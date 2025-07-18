@@ -9,7 +9,6 @@
 #include "ui/platform/mac/ui_window_title_mac.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/qt_object_factory.h"
-#include "ui/qt_weak_factory.h"
 #include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
 #include "base/platform/base_platform_info.h"
@@ -247,7 +246,7 @@ void WindowHelper::Private::setNativeTitleVisibility(bool visible) {
 }
 
 void WindowHelper::Private::close() {
-	const auto weak = Ui::MakeWeak(_owner->window());
+	const auto weak = base::make_weak(_owner->window());
 	QCloseEvent e;
 	qApp->sendEvent(_owner->window(), &e);
 	if (!e.isAccepted() || !weak) {
