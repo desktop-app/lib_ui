@@ -133,6 +133,12 @@ private:
 	class ResizeEdge;
 	class FullScreenButton;
 
+	struct BgColors {
+		QColor title;
+		QColor bg;
+		QColor footer;
+	};
+
 	void initControls();
 	void initLayout(const SeparatePanelArgs &args);
 	void initGeometry(QSize size);
@@ -162,6 +168,8 @@ private:
 	void initFullScreenButton(not_null<QWidget*> button);
 	void updateTitleButtonColors(not_null<IconButton*> button);
 	void updateTitleColors();
+
+	[[nodiscard]] BgColors computeBgColors() const;
 
 	void toggleSearch(bool shown);
 	[[nodiscard]] rpl::producer<> allBackRequests() const;
