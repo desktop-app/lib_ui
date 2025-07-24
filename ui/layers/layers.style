@@ -24,6 +24,7 @@ ServiceCheck {
 Box {
 	buttonPadding: margins;
 	buttonHeight: pixels;
+	buttonWide: bool;
 	button: RoundButton;
 	margin: margins;
 	title: FlatLabel;
