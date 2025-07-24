@@ -171,9 +171,12 @@ TextWithEntities RichLangValue(const QString &text) {
 }
 
 TextWithEntities SingleCustomEmoji(QString data, QString text) {
+	if (text.isEmpty()) {
+		text = u"@"_q;
+	}
 	return {
-		text.isEmpty() ? u"@"_q : text,
-		{ EntityInText(EntityType::CustomEmoji, 0, 1, data) },
+		text,
+		{ EntityInText(EntityType::CustomEmoji, 0, text.size(), data)},
 	};
 }
 
