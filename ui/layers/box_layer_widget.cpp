@@ -233,8 +233,10 @@ void BoxLayerWidget::updateButtonsPositions() {
 			right += button->width() + padding.left();
 		}
 	}
-	if (_topButton) {
-		_topButton->moveToRight(0, 0);
+	auto right = 0;
+	for (const auto &button : _topButtons) {
+		button->moveToRight(right, 0);
+		right += button->width();
 	}
 }
 
@@ -250,11 +252,12 @@ void BoxLayerWidget::updateTitlePosition() {
 	_titleLeft = st::boxTitlePosition.x();
 	_titleTop = st::boxTitlePosition.y();
 	if (_title) {
-		const auto topButtonSkip = _topButton
-			? (_topButton->width() / 2)
-			: 0;
+		auto topButtonsSkip = 0;
+		for (const auto &button : _topButtons) {
+			topButtonsSkip += button->width();
+		}
 		_title->resizeToNaturalWidth(
-			width() - _titleLeft * 2 - topButtonSkip);
+			width() - _titleLeft * 2 - topButtonsSkip);
 		_title->moveToLeft(_titleLeft, _titleTop);
 	}
 }
@@ -269,7 +272,7 @@ void BoxLayerWidget::clearButtons() {
 		button.destroy();
 	}
 	_leftButton.destroy();
-	_topButton = nullptr;
+	base::take(_topButtons);
 }
 
 void BoxLayerWidget::addButton(object_ptr<AbstractButton> button) {
@@ -311,8 +314,8 @@ void BoxLayerWidget::addLeftButton(object_ptr<AbstractButton> button) {
 }
 
 void BoxLayerWidget::addTopButton(object_ptr<AbstractButton> button) {
-	_topButton = base::unique_qptr<AbstractButton>(button.release());
-	const auto raw = _topButton.get();
+	_topButtons.push_back(base::unique_qptr<AbstractButton>(button.release()));
+	const auto raw = _topButtons.back().get();
 	raw->setParent(this);
 	raw->show();
 	updateButtonsPositions();

@@ -135,7 +135,7 @@ private:
 
 	std::vector<object_ptr<AbstractButton>> _buttons;
 	object_ptr<AbstractButton> _leftButton = { nullptr };
-	base::unique_qptr<AbstractButton> _topButton = { nullptr };
+	std::vector<base::unique_qptr<AbstractButton>> _topButtons;
 	std::unique_ptr<LoadingProgress> _loadingProgress;
 
 };
