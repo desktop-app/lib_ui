@@ -6,6 +6,13 @@
 //
 #include "ui/widgets/fields/input_field.h"
 
+#include "base/platform/base_platform_info.h"
+#include "base/qt_signal_producer.h"
+#include "base/qt/qt_common_adapters.h"
+#include "base/invoke_queued.h"
+#include "base/qthelp_regex.h"
+#include "base/random.h"
+#include "emoji_suggestions_helper.h"
 #include "ui/text/text.h"
 #include "ui/text/text_renderer.h" // kQuoteCollapsedLines
 #include "ui/widgets/fields/custom_field_object.h"
@@ -16,13 +23,6 @@
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
 #include "ui/integration.h"
-#include "base/invoke_queued.h"
-#include "base/random.h"
-#include "base/platform/base_platform_info.h"
-#include "base/qt_signal_producer.h"
-#include "emoji_suggestions_helper.h"
-#include "base/qthelp_regex.h"
-#include "base/qt/qt_common_adapters.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 
@@ -4001,8 +4001,9 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			? (~Qt::ShiftModifier)
 			: oldModifiers;
 		const auto changeModifiers = (oldModifiers & ~allowedModifiers) != 0;
+		const auto changedModifiers = (oldModifiers & allowedModifiers);
 		if (changeModifiers) {
-			e->setModifiers(oldModifiers & allowedModifiers);
+			e->setModifiers(changedModifiers);
 		}
 
 		// If we enable this, the Undo/Redo will work through Key_Space
@@ -4037,7 +4038,26 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			}
 			e->accept();
 		} else {
+			// Ctrl+Shift+V as "Paste as Plain Text" support.
+			auto removedShift = false;
+			const auto nowModifiers = e->modifiers();
+			if ((e != QKeySequence::Paste)
+				&& (oldModifiers & Qt::ShiftModifier)) {
+				// If we had Shift+Smth and we see that Smth == Paste,
+				// then we'll "Paste as Plain Text". Like Ctrl+Shift+V.
+				e->setModifiers(oldModifiers & ~Qt::ShiftModifier);
+				if (e == QKeySequence::Paste) {
+					removedShift = true;
+				} else {
+					e->setModifiers(nowModifiers);
+				}
+			}
+
 			_inner->QTextEdit::keyPressEvent(e);
+
+			if (removedShift) {
+				e->setModifiers(nowModifiers);
+			}
 		}
 		if (createEditBlock) {
 			cursor.endEditBlock();
@@ -5150,7 +5170,13 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 	const auto text = [&] {
 		const auto textMime = TextUtilities::TagsTextMimeType();
 		const auto tagsMime = TextUtilities::TagsMimeType();
-		if (!source->hasFormat(textMime) || !source->hasFormat(tagsMime)) {
+		const auto modifiers = QGuiApplication::keyboardModifiers();
+		const auto plain = (modifiers & Qt::ControlModifier)
+			&& (modifiers & Qt::ShiftModifier);
+		const auto skipTags = plain
+			|| !source->hasFormat(textMime)
+			|| !source->hasFormat(tagsMime);
+		if (skipTags) {
 			_insertedTags.clear();
 
 			auto result = source->text();
