@@ -292,11 +292,13 @@ void BoxLayerWidget::addButton(object_ptr<AbstractButton> button) {
 	}
 	raw->widthValue(
 	) | rpl::start_with_next([=] {
-		const auto buttonWidth = width()
-			- st().buttonPadding.left()
-			- st().buttonPadding.right();
-		if (buttonWidth > 0 && raw->width() != buttonWidth) {
-			raw->resizeToWidth(buttonWidth);
+		if (st().buttonWide) {
+			const auto buttonWidth = width()
+				- st().buttonPadding.left()
+				- st().buttonPadding.right();
+			if (buttonWidth > 0 && raw->width() != buttonWidth) {
+				raw->resizeToWidth(buttonWidth);
+			}
 		}
 		updateButtonsPositions();
 	}, raw->lifetime());
