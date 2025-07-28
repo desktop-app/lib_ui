@@ -803,7 +803,7 @@ SettingsButton::SettingsButton(
 
 SettingsButton::SettingsButton(
 	QWidget *parent,
-	nullptr_t,
+	std::nullptr_t,
 	const style::SettingsButton &st)
 : RippleButton(parent, st.ripple)
 , _st(st)
