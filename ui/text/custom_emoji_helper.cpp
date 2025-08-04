@@ -6,6 +6,7 @@
 //
 #include "ui/text/custom_emoji_helper.h"
 
+#include "ui/text/custom_emoji_instance.h"
 #include "ui/text/text_custom_emoji.h"
 #include "ui/text/text_utilities.h"
 
@@ -47,46 +48,49 @@ CustomEmojiHelper::CustomEmojiHelper(MarkedContext parent)
 : _parent(std::move(parent)) {
 }
 
-QString CustomEmojiHelper::imageData(QImage image, QMargins padding) {
-	Expects(!image.isNull());
+QString CustomEmojiHelper::imageData(ImageEmoji emoji) {
+	Expects(!emoji.image.isNull());
 
 	const auto data = ensureData();
 	const auto result = data->prefix
 		+ u"image%1"_q.arg(data->images.size())
-		+ (padding.isNull() ? QString() : PaddingPostfix(padding));
-	data->images.push_back(std::move(image));
+		+ (emoji.margin.isNull() ? QString() : PaddingPostfix(emoji.margin))
+		+ (emoji.textColor
+			? (emoji.margin.isNull() ? u"::1"_q : u":1"_q)
+			: QString());
+	data->images.push_back(std::move(emoji.image));
 	return result;
 }
 
-TextWithEntities CustomEmojiHelper::image(QImage image, QMargins padding) {
-	return SingleCustomEmoji(imageData(std::move(image), padding));
+TextWithEntities CustomEmojiHelper::image(ImageEmoji emoji){
+	return SingleCustomEmoji(imageData(std::move(emoji)));
 }
 
 QString CustomEmojiHelper::paletteDependentData(
-		Fn<QImage()> factory,
-		QMargins padding) {
-	Expects(factory != nullptr);
+		PaletteDependentEmoji emoji) {
+	Expects(emoji.factory != nullptr);
 
 	const auto data = ensureData();
 	const auto result = data->prefix
 		+ u"factory%1"_q.arg(data->paletteDependent.size())
-		+ (padding.isNull() ? QString() : PaddingPostfix(padding));
-	data->paletteDependent.push_back(std::move(factory));
+		+ (emoji.margin.isNull() ? QString() : PaddingPostfix(emoji.margin));
+	data->paletteDependent.push_back(std::move(emoji.factory));
 	return result;
 }
 
 TextWithEntities CustomEmojiHelper::paletteDependent(
-		Fn<QImage()> factory,
-		QMargins padding) {
-	return SingleCustomEmoji(
-		paletteDependentData(std::move(factory), padding));
+		PaletteDependentEmoji emoji) {
+	return SingleCustomEmoji(paletteDependentData(std::move(emoji)));
 }
 
-MarkedContext CustomEmojiHelper::context() {
+MarkedContext CustomEmojiHelper::context(Fn<void()> repaint) {
 	if (!_data) {
 		return _parent;
 	}
 	auto result = _parent;
+	if (repaint) {
+		result.repaint = std::move(repaint);
+	}
 	auto factory = [map = _data](
 		QStringView data,
 		const MarkedContext &context
@@ -105,10 +109,11 @@ MarkedContext CustomEmojiHelper::context() {
 		if (type.startsWith(u"image"_q)) {
 			const auto index = type.mid(u"image"_q.size()).toInt();
 			if (index >= 0 && index < map->images.size()) {
-				return std::make_unique<StaticCustomEmoji>(
-					base::duplicate(map->images[index]),
+				return std::make_unique<Ui::CustomEmoji::Internal>(
 					data.toString(),
-					padding);
+					base::duplicate(map->images[index]),
+					padding,
+					(parts.size() > 2) && parts[2] == u"1"_q);
 			}
 		} else if (type.startsWith(u"factory"_q)) {
 			const auto index = type.mid(u"factory"_q.size()).toInt();

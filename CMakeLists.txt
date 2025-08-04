@@ -159,6 +159,8 @@ PRIVATE
     ui/text/custom_emoji_helper.h
     ui/text/custom_emoji_instance.cpp
     ui/text/custom_emoji_instance.h
+    ui/text/custom_emoji_text_badge.cpp
+    ui/text/custom_emoji_text_badge.h
     ui/text/text.cpp
     ui/text/text.h
     ui/text/text_bidi_algorithm.h

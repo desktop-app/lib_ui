@@ -694,6 +694,16 @@ defaultActiveButton: RoundButton {
 		color: activeButtonBgRipple;
 	}
 }
+customEmojiTextBadge: RoundButton(defaultActiveButton) {
+	width: -8px;
+	height: 16px;
+	radius: 4px;
+	textTop: 1px;
+	style: TextStyle(semiboldTextStyle) {
+		font: font(10px semibold);
+	}
+}
+customEmojiTextBadgeMargin: margins(0px, 2px, 0px, 0px);
 
 defaultLightButton: RoundButton(defaultActiveButton) {
 	textFg: lightButtonFg;

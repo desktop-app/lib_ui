@@ -111,27 +111,6 @@ private:
 
 };
 
-class StaticCustomEmoji final : public CustomEmoji {
-public:
-	StaticCustomEmoji(
-		QImage &&image,
-		QString entity,
-		QMargins padding = {});
-
-	int width() override;
-	QString entityData() override;
-	void paint(QPainter &p, const Context &context) override;
-	void unload() override;
-	bool ready() override;
-	bool readyInDefaultState() override;
-
-private:
-	QImage _image;
-	QString _entity;
-	QMargins _padding;
-
-};
-
 class PaletteDependentCustomEmoji final : public CustomEmoji {
 public:
 	PaletteDependentCustomEmoji(

@@ -283,8 +283,8 @@ public:
 	Internal(
 		QString entityData,
 		QImage image,
-		QMargins padding,
-		bool colored);
+		QMargins padding = {},
+		bool colored = false);
 
 	int width() override;
 	QString entityData() override;

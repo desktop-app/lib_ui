@@ -10,24 +10,30 @@
 
 namespace Ui::Text {
 
+struct ImageEmoji {
+	QImage image;
+	QMargins margin;
+	bool textColor = true;
+};
+
+struct PaletteDependentEmoji {
+	Fn<QImage()> factory;
+	QMargins margin;
+};
+
 class CustomEmojiHelper final {
 public:
 	CustomEmojiHelper();
 	CustomEmojiHelper(MarkedContext parent);
 
-	[[nodiscard]] QString imageData(QImage image, QMargins padding = {});
-	[[nodiscard]] TextWithEntities image(
-		QImage image,
-		QMargins padding = {});
+	[[nodiscard]] QString imageData(ImageEmoji emoji);
+	[[nodiscard]] TextWithEntities image(ImageEmoji emoji);
 
-	[[nodiscard]] QString paletteDependentData(
-		Fn<QImage()> factory,
-		QMargins padding = {});
+	[[nodiscard]] QString paletteDependentData(PaletteDependentEmoji emoji);
 	[[nodiscard]] TextWithEntities paletteDependent(
-		Fn<QImage()> factory,
-		QMargins padding = {});
+		PaletteDependentEmoji emoji);
 
-	[[nodiscard]] MarkedContext context();
+	[[nodiscard]] MarkedContext context(Fn<void()> repaint = nullptr);
 
 private:
 	struct Data {

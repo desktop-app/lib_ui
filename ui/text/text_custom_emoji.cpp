@@ -152,43 +152,6 @@ std::unique_ptr<CustomEmoji> MakeCustomEmoji(
 	return nullptr;
 }
 
-StaticCustomEmoji::StaticCustomEmoji(
-	QImage &&image,
-	QString entity,
-	QMargins padding)
-: _image(std::move(image))
-, _entity(std::move(entity))
-, _padding(padding) {
-}
-
-int StaticCustomEmoji::width() {
-	return _padding.left()
-		+ (_image.width() / style::DevicePixelRatio())
-		+ _padding.right();
-}
-
-QString StaticCustomEmoji::entityData() {
-	return _entity;
-}
-
-void StaticCustomEmoji::paint(QPainter &p, const Context &context) {
-	p.drawImage(
-		context.position + QPoint(_padding.left(), _padding.top()),
-		_image);
-}
-
-void StaticCustomEmoji::unload() {
-	_image = QImage();
-}
-
-bool StaticCustomEmoji::ready() {
-	return true;
-}
-
-bool StaticCustomEmoji::readyInDefaultState() {
-	return true;
-}
-
 PaletteDependentCustomEmoji::PaletteDependentCustomEmoji(
 	Fn<QImage()> factory,
 	QString entity,
