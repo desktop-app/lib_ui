@@ -270,5 +270,12 @@ TextWithEntities WrapEmailPattern(const QString &pattern) {
 	return { pattern };
 }
 
+QList<QStringView> Words(QStringView lower) {
+	static const auto kRegWords = QRegularExpression(
+		u"[\\W]"_q,
+		QRegularExpression::UseUnicodePropertiesOption);
+	return lower.split(kRegWords, Qt::SkipEmptyParts);
+}
+
 } // namespace Text
 } // namespace Ui
