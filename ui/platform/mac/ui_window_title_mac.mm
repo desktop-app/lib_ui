@@ -6,6 +6,7 @@
 //
 #include "ui/platform/mac/ui_window_title_mac.h"
 
+#include "base/platform/base_platform_info.h"
 #include "ui/platform/ui_platform_window_title.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
@@ -124,7 +125,8 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 
 	const auto full = _string.maxWidth();
 	const auto top = (height() - _textStyle->font->height) / 2;
-	if ((width() - _controlsRight * 2) < full) {
+	if (::Platform::IsMac26_0OrGreater()
+		|| ((width() - _controlsRight * 2) < full)) {
 		const auto left = _controlsRight;
 		_string.drawElided(p, left, top, width() - left);
 	} else {
