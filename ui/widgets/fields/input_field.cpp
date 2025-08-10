@@ -55,7 +55,7 @@ constexpr auto kPreLanguage = QTextFormat::UserProperty + 10;
 constexpr auto kCollapsedQuoteFormat = QTextFormat::UserObject + 1;
 constexpr auto kCustomEmojiFormat = QTextFormat::UserObject + 2;
 
-const auto kObjectReplacementCh = QChar(QChar::ObjectReplacementCharacter);
+constexpr auto kObjectReplacementCh = QChar(QChar::ObjectReplacementCharacter);
 const auto kObjectReplacement = QString::fromRawData(
 	&kObjectReplacementCh,
 	1);
@@ -4312,6 +4312,14 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 	if (_lastPreEditText != preedit) {
 		_lastPreEditText = preedit;
 		startPlaceholderAnimation();
+	}
+	if (!e->commitString().isEmpty()) {
+		if (const auto emoji = Emoji::Find(e->commitString(), nullptr)) {
+			auto mimeData = QMimeData();
+			mimeData.setText(e->commitString());
+			InputField::insertFromMimeDataInner(&mimeData);
+			return;
+		}
 	}
 	_inputMethodCommit = e->commitString();
 
