@@ -42,16 +42,10 @@ void PaddingWrap<RpWidget>::wrappedSizeUpdated(QSize size) {
 	resize(QRect(QPoint(), size).marginsAdded(_padding).size());
 }
 
-int PaddingWrap<RpWidget>::naturalWidth() const {
-	auto inner = [this] {
-		if (auto weak = wrapped()) {
-			return weak->naturalWidth();
-		}
-		return RpWidget::naturalWidth();
-	}();
-	return (inner < 0)
-		? inner
-		: (_padding.left() + inner + _padding.right());
+void PaddingWrap<RpWidget>::wrappedNaturalWidthUpdated(int width) {
+	setNaturalWidth((width < 0)
+		? width
+		: (_padding.left() + width + _padding.right()));
 }
 
 int PaddingWrap<RpWidget>::resizeGetHeight(int newWidth) {
@@ -74,15 +68,13 @@ CenterWrap<RpWidget>::CenterWrap(
 : Parent(parent, std::move(child)) {
 	if (const auto weak = wrapped()) {
 		wrappedSizeUpdated(weak->size());
+		setNaturalWidth(-1);
 	}
 }
 
-int CenterWrap<RpWidget>::naturalWidth() const {
-	return -1;
-}
-
 int CenterWrap<RpWidget>::resizeGetHeight(int newWidth) {
-	updateWrappedPosition(newWidth);
+	const auto margins = getMargins();
+	updateWrappedPosition(newWidth + margins.left() + margins.right());
 	return heightNoMargins();
 }
 
@@ -91,12 +83,16 @@ void CenterWrap<RpWidget>::wrappedSizeUpdated(QSize size) {
 	updateWrappedPosition(width());
 }
 
+void CenterWrap<RpWidget>::wrappedNaturalWidthUpdated(int width) {
+}
+
 void CenterWrap<RpWidget>::updateWrappedPosition(int forWidth) {
 	if (const auto weak = wrapped()) {
 		const auto margins = weak->getMargins();
 		weak->moveToLeft(
 			(forWidth - weak->width()) / 2 + margins.left(),
-			margins.top());
+			margins.top(),
+			forWidth);
 	}
 }
 

@@ -17,6 +17,7 @@ FollowSlideWrap<RpWidget>::FollowSlideWrap(
 , _duration(st::slideWrapDuration) {
 	if (const auto weak = wrapped()) {
 		wrappedSizeUpdated(weak->size());
+		wrappedNaturalWidthUpdated(weak->naturalWidth());
 	}
 }
 
@@ -26,21 +27,19 @@ FollowSlideWrap<RpWidget> *FollowSlideWrap<RpWidget>::setDuration(
 	return this;
 }
 
-int FollowSlideWrap<RpWidget>::naturalWidth() const {
-	return -1;
-}
-
 void FollowSlideWrap<RpWidget>::wrappedSizeUpdated(QSize size) {
 	updateWrappedPosition(size.height());
 }
 
+void FollowSlideWrap<RpWidget>::wrappedNaturalWidthUpdated(int width) {
+	setNaturalWidth(width);
+}
+
 void FollowSlideWrap<RpWidget>::updateWrappedPosition(int forHeight) {
 	_animation.stop();
-	_animation.start(
-		[=](float64 value) { resize(width(), value); },
-		height(),
-		forHeight,
-		_duration);
+	_animation.start([=](float64 value) {
+		resize(width(), value);
+	}, height(), forHeight, _duration);
 }
 
 } // namespace Ui

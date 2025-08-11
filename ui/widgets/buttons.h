@@ -30,8 +30,6 @@ class LinkButton : public AbstractButton {
 public:
 	LinkButton(QWidget *parent, const QString &text, const style::LinkButton &st = st::defaultLinkButton);
 
-	int naturalWidth() const override;
-
 	void setText(const QString &text);
 	void setColorOverride(std::optional<QColor> textFg);
 
@@ -42,6 +40,8 @@ protected:
 
 private:
 	void resizeToText();
+
+	int resizeGetHeight(int newWidth) override;
 
 	const style::LinkButton &_st;
 	QString _text;

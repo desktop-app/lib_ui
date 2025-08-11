@@ -318,8 +318,7 @@ void FlatLabel::setTryMakeSimilarLines(bool tryMakeSimilarLines) {
 }
 
 int FlatLabel::resizeGetHeight(int newWidth) {
-	_allowedWidth = newWidth;
-	_textWidth = countTextWidth();
+	_textWidth = countTextWidth(newWidth);
 	return countTextHeight(_textWidth);
 }
 
@@ -327,23 +326,17 @@ int FlatLabel::textMaxWidth() const {
 	return _text.maxWidth();
 }
 
-int FlatLabel::naturalWidth() const {
-	return (_st.align == style::al_top) ? -1 : textMaxWidth();
-}
-
 QMargins FlatLabel::getMargins() const {
 	return _st.margin;
 }
 
-int FlatLabel::countTextWidth() const {
-	const auto available = _allowedWidth
-		? _allowedWidth
-		: (_st.minWidth ? _st.minWidth : _text.maxWidth());
-	if (_allowedWidth > 0
-		&& _allowedWidth < _text.maxWidth()
+int FlatLabel::countTextWidth(int newWidth) const {
+	const auto available = newWidth;
+	if (newWidth > 0
+		&& newWidth < _text.maxWidth()
 		&& _tryMakeSimilarLines) {
-		auto large = _allowedWidth;
-		auto small = _allowedWidth / 2;
+		auto large = newWidth;
+		auto small = std::max(newWidth / 2, _st.minWidth);
 		const auto largeHeight = _text.countHeight(large, _breakEverywhere);
 		while (large - small > 1) {
 			const auto middle = (large + small) / 2;
@@ -366,11 +359,8 @@ int FlatLabel::countTextHeight(int textWidth) {
 }
 
 void FlatLabel::refreshSize() {
-	int textWidth = countTextWidth();
-	int textHeight = countTextHeight(textWidth);
-	int fullWidth = _st.margin.left() + textWidth + _st.margin.right();
-	int fullHeight = _st.margin.top() + textHeight + _st.margin.bottom();
-	resize(fullWidth, fullHeight);
+	setNaturalWidth(textMaxWidth());
+	resizeToWidth(width(), true);
 }
 
 void FlatLabel::setLink(uint16 index, const ClickHandlerPtr &lnk) {
@@ -1013,16 +1003,16 @@ DividerLabel::DividerLabel(
 	RectParts parts)
 : PaddingWrap(parent, std::move(child), padding)
 , _background(this, st::boxDividerHeight, st::boxDividerBg, parts) {
-}
-
-int DividerLabel::naturalWidth() const {
-	return -1;
+	setNaturalWidth(-1);
 }
 
 void DividerLabel::resizeEvent(QResizeEvent *e) {
 	_background->lower();
 	_background->setGeometry(rect());
 	return PaddingWrap::resizeEvent(e);
+}
+
+void DividerLabel::wrappedNaturalWidthUpdated(int width) {
 }
 
 } // namespace Ui

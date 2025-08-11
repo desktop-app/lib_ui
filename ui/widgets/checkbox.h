@@ -207,7 +207,6 @@ public:
 	[[nodiscard]] QMargins getMargins() const override {
 		return _st.margin;
 	}
-	[[nodiscard]] int naturalWidth() const override;
 
 	void updateCheck() {
 		rtlupdate(checkRect());
@@ -236,6 +235,7 @@ protected:
 
 private:
 	void resizeToText();
+	void updateNaturalWidth();
 	QPixmap grabCheckCache() const;
 	int countTextMinWidth() const;
 	Text::StateResult getTextState(const QPoint &m) const;

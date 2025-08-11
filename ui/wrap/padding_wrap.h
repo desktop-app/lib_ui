@@ -28,11 +28,10 @@ public:
 	}
 	void setPadding(const style::margins &padding);
 
-	int naturalWidth() const override;
-
 protected:
 	int resizeGetHeight(int newWidth) override;
 	void wrappedSizeUpdated(QSize size) override;
+	void wrappedNaturalWidthUpdated(int width) override;
 
 private:
 	style::margins _padding;
@@ -65,11 +64,10 @@ public:
 		QWidget *parent,
 		object_ptr<RpWidget> &&child);
 
-	int naturalWidth() const override;
-
 protected:
 	int resizeGetHeight(int newWidth) override;
 	void wrappedSizeUpdated(QSize size) override;
+	void wrappedNaturalWidthUpdated(int width) override;
 
 private:
 	void updateWrappedPosition(int forWidth);

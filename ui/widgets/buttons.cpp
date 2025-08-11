@@ -70,10 +70,6 @@ LinkButton::LinkButton(
 	setCursor(style::cur_pointer);
 }
 
-int LinkButton::naturalWidth() const {
-	return _st.padding.left() + _textWidth + _st.padding.right();
-}
-
 void LinkButton::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 
@@ -103,9 +99,11 @@ void LinkButton::setText(const QString &text) {
 }
 
 void LinkButton::resizeToText() {
-	resize(
-		naturalWidth(),
-		_st.padding.top() + _st.font->height + _st.padding.bottom());
+	setNaturalWidth(_st.padding.left() + _textWidth + _st.padding.right());
+}
+
+int LinkButton::resizeGetHeight(int newWidth) {
+	return _st.padding.top() + _st.font->height + _st.padding.bottom();
 }
 
 void LinkButton::setColorOverride(std::optional<QColor> textFg) {
@@ -413,6 +411,7 @@ void RoundButton::resizeToText(const TextWithEntities &text) {
 			_st.width + _st.padding.left() + _st.padding.right(),
 			_st.height + _st.padding.top() + _st.padding.bottom());
 	}
+	setNaturalWidth(width());
 
 	update();
 }

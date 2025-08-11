@@ -24,10 +24,10 @@ public:
 		object_ptr<RpWidget> &&child);
 
 	FollowSlideWrap *setDuration(crl::time duration);
-	int naturalWidth() const override;
 
 protected:
 	void wrappedSizeUpdated(QSize size) override;
+	void wrappedNaturalWidthUpdated(int width) override;
 
 private:
 	void updateWrappedPosition(int forHeight);

@@ -145,7 +145,6 @@ public:
 	}
 
 	[[nodiscard]] int textMaxWidth() const;
-	int naturalWidth() const override;
 	QMargins getMargins() const override;
 
 	void setLink(uint16 index, const ClickHandlerPtr &lnk);
@@ -216,7 +215,7 @@ private:
 	Text::StateResult getTextState(const QPoint &m) const;
 	void refreshCursor(bool uponSymbol);
 
-	int countTextWidth() const;
+	int countTextWidth(int newWidth) const;
 	int countTextHeight(int textWidth);
 	void refreshSize();
 
@@ -232,7 +231,6 @@ private:
 	std::optional<QColor> _textColorOverride;
 	float64 _opacity = 1.;
 
-	int _allowedWidth = 0;
 	int _textWidth = 0;
 	int _fullTextHeight = 0;
 	bool _breakEverywhere = false;
@@ -283,12 +281,12 @@ public:
 		const style::margins &padding,
 		RectParts parts = RectPart::Top | RectPart::Bottom);
 
-	int naturalWidth() const override;
-
 protected:
 	void resizeEvent(QResizeEvent *e) override;
 
 private:
+	void wrappedNaturalWidthUpdated(int width) override;
+
 	object_ptr<BoxContentDivider> _background;
 
 };

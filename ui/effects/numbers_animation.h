@@ -90,10 +90,6 @@ public:
 	void setValue(const StringWithNumbers &value);
 	void finishAnimating();
 
-	int naturalWidth() const override {
-		return _beforeWidth + _numbers.maxWidth() + _afterWidth;
-	}
-
 protected:
 	void paintEvent(QPaintEvent *e) override;
 

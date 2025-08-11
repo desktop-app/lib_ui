@@ -48,10 +48,8 @@ void NumbersAnimation::animationCallback() {
 	if (_widthChangedCallback) {
 		_widthChangedCallback();
 	}
-	if (!_a_ready.animating()) {
-		if (!_delayedText.isEmpty()) {
-			setText(_delayedText, _delayedValue);
-		}
+	if (!_a_ready.animating() && !_delayedText.isEmpty()) {
+		setText(_delayedText, _delayedValue);
 	}
 }
 
@@ -187,6 +185,10 @@ LabelWithNumbers::LabelWithNumbers(
 , _beforeWidth(_st.style.font->width(_before))
 , _afterWidth(st.style.font->width(_after)) {
 	Expects((value.offset < 0) == (value.length == 0));
+
+	_numbers.setWidthChangedCallback([=] {
+		setNaturalWidth(_beforeWidth + _numbers.maxWidth() + _afterWidth);
+	});
 
 	const auto numbers = GetNumbers(value);
 	_numbers.setText(numbers, numbers.toInt());

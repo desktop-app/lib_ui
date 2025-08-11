@@ -58,11 +58,13 @@ public:
 	Widget *insertRow(
 			int atPosition,
 			object_ptr<Widget> &&child,
-			const style::margins &margin = st::boxRowPadding) {
+			const style::margins &margin = st::boxRowPadding,
+			style::align align = style::al_left) {
 		return _content->insert(
 			atPosition,
 			std::move(child),
-			margin);
+			margin,
+			align);
 	}
 
 	template <
@@ -71,8 +73,9 @@ public:
 		std::is_base_of_v<RpWidget, Widget>>>
 	Widget *addRow(
 			object_ptr<Widget> &&child,
-			const style::margins &margin = st::boxRowPadding) {
-		return _content->add(std::move(child), margin);
+			const style::margins &margin = st::boxRowPadding,
+			style::align align = style::al_left) {
+		return _content->add(std::move(child), margin, align);
 	}
 
 	void addSkip(int height);

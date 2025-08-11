@@ -151,6 +151,46 @@ rpl::producer<WId> RpWidgetWrap::winIdValue() const {
 	return stream.events_starting_with(rpWidget()->internalWinId());
 }
 
+bool RpWidgetWrap::externalWidthWasSet() const {
+	if (const auto streams = _eventStreams.get()) {
+		return streams->externalWidthWasSet != 0;
+	}
+	return false;
+}
+
+int RpWidgetWrap::naturalWidth() const {
+	if (const auto streams = _eventStreams.get()) {
+		return (streams->naturalWidth != kNaturalWidthAny)
+			? streams->naturalWidth
+			: -1;
+	}
+	return -1;
+}
+
+rpl::producer<int> RpWidgetWrap::naturalWidthValue() const {
+	const auto &streams = eventStreams();
+	return streams.naturalWidthChanges.events_starting_with_copy(
+		naturalWidth());
+}
+
+void RpWidgetWrap::setNaturalWidth(int value) {
+	const auto set = uint32((value >= 0) ? value : kNaturalWidthAny);
+	auto &streams = eventStreams();
+	if (streams.naturalWidth != set) {
+		auto weak = base::make_weak(rpWidget());
+		streams.naturalWidth = set;
+		streams.naturalWidthChanges.fire(naturalWidth());
+
+		if (weak && !streams.externalWidthWasSet) {
+			callResizeToNaturalWidth();
+		}
+	}
+}
+
+QMargins RpWidgetWrap::getMargins() const {
+	return QMargins();
+}
+
 rpl::lifetime &RpWidgetWrap::lifetime() {
 	return _lifetime;
 }

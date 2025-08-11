@@ -37,26 +37,63 @@ class RpWidgetBase;
 
 class RpWidgetWrap {
 public:
-	virtual QWidget *rpWidget() = 0;
-	virtual const QWidget *rpWidget() const = 0;
+	virtual ~RpWidgetWrap() = default;
 
-	rpl::producer<not_null<QEvent*>> events() const;
-	rpl::producer<QRect> geometryValue() const;
-	rpl::producer<QSize> sizeValue() const;
-	rpl::producer<int> heightValue() const;
-	rpl::producer<int> widthValue() const;
-	rpl::producer<QPoint> positionValue() const;
-	rpl::producer<int> leftValue() const;
-	rpl::producer<int> topValue() const;
-	virtual rpl::producer<int> desiredHeightValue() const;
-	rpl::producer<bool> shownValue() const;
-	rpl::producer<not_null<QScreen*>> screenValue() const;
-	rpl::producer<bool> windowActiveValue() const;
-	rpl::producer<QRect> paintRequest() const;
-	rpl::producer<> alive() const;
-	rpl::producer<> death() const;
-	rpl::producer<> macWindowDeactivateEvents() const;
-	rpl::producer<WId> winIdValue() const;
+	[[nodiscard]] virtual QWidget *rpWidget() = 0;
+	[[nodiscard]] virtual const QWidget *rpWidget() const = 0;
+
+	[[nodiscard]] rpl::producer<not_null<QEvent*>> events() const;
+	[[nodiscard]] rpl::producer<QRect> geometryValue() const;
+	[[nodiscard]] rpl::producer<QSize> sizeValue() const;
+	[[nodiscard]] rpl::producer<int> heightValue() const;
+	[[nodiscard]] rpl::producer<int> widthValue() const;
+	[[nodiscard]] rpl::producer<QPoint> positionValue() const;
+	[[nodiscard]] rpl::producer<int> leftValue() const;
+	[[nodiscard]] rpl::producer<int> topValue() const;
+	[[nodiscard]] virtual rpl::producer<int> desiredHeightValue() const;
+	[[nodiscard]] rpl::producer<bool> shownValue() const;
+	[[nodiscard]] rpl::producer<not_null<QScreen*>> screenValue() const;
+	[[nodiscard]] rpl::producer<bool> windowActiveValue() const;
+	[[nodiscard]] rpl::producer<QRect> paintRequest() const;
+	[[nodiscard]] rpl::producer<> alive() const;
+	[[nodiscard]] rpl::producer<> death() const;
+	[[nodiscard]] rpl::producer<> macWindowDeactivateEvents() const;
+	[[nodiscard]] rpl::producer<WId> winIdValue() const;
+
+	[[nodiscard]] virtual QMargins getMargins() const;
+	[[nodiscard]] bool externalWidthWasSet() const;
+
+	// Get the size of the widget as it should be.
+	// Negative return value means no default width.
+	[[nodiscard]] int naturalWidth() const;
+	[[nodiscard]] rpl::producer<int> naturalWidthValue() const;
+	void setNaturalWidth(int value);
+
+	// Resizes content and counts natural widget height for the desired width.
+	virtual int resizeGetHeight(int newWidth) {
+		return heightNoMargins();
+	}
+
+	[[nodiscard]] QRect rectNoMargins() const {
+		return rpWidget()->rect().marginsRemoved(getMargins());
+	}
+
+	[[nodiscard]] int widthNoMargins() const {
+		return rectNoMargins().width();
+	}
+
+	[[nodiscard]] int heightNoMargins() const {
+		return rectNoMargins().height();
+	}
+
+	[[nodiscard]] int bottomNoMargins() const {
+		const auto g = rpWidget()->geometry().marginsRemoved(getMargins());
+		return g.y() + g.height();
+	}
+
+	[[nodiscard]] QSize sizeNoMargins() const {
+		return rectNoMargins().size();
+	}
 
 	template <typename Error, typename Generator>
 	void showOn(rpl::producer<bool, Error, Generator> &&shown) {
@@ -67,9 +104,7 @@ public:
 		}, lifetime());
 	}
 
-	rpl::lifetime &lifetime();
-
-	virtual ~RpWidgetWrap() = default;
+	[[nodiscard]] rpl::lifetime &lifetime();
 
 protected:
 	bool handleEvent(QEvent *event);
@@ -79,24 +114,30 @@ private:
 	template <typename Widget, typename Traits>
 	friend class RpWidgetBase;
 
+	static constexpr auto kNaturalWidthAny = uint32(0x7FFFFFFF);
+
 	struct EventStreams {
 		rpl::event_stream<not_null<QEvent*>> events;
 		rpl::event_stream<QRect> geometry;
 		rpl::event_stream<QRect> paint;
 		rpl::event_stream<bool> shown;
 		rpl::event_stream<not_null<QScreen*>> screen;
+		rpl::event_stream<int> naturalWidthChanges;
 		rpl::event_stream<bool> windowActive;
 		rpl::event_stream<WId> winId;
 		rpl::event_stream<> alive;
+		uint32 naturalWidth : 31 = kNaturalWidthAny;
+		uint32 externalWidthWasSet : 1 = 0;
 	};
 	struct Initer {
 		Initer(QWidget *parent, bool setZeroGeometry);
 	};
 
 	virtual void callSetVisible(bool visible) = 0;
+	virtual void callResizeToNaturalWidth() = 0;
 
 	void visibilityChangedHook(bool wasVisible, bool nowVisible);
-	EventStreams &eventStreams() const;
+	[[nodiscard]] EventStreams &eventStreams() const;
 
 	mutable std::unique_ptr<EventStreams> _eventStreams;
 	rpl::lifetime _lifetime;
@@ -117,10 +158,6 @@ public:
 	~RpWidgetBase() {
 		base::take(_lifetime);
 		base::take(_eventStreams);
-	}
-
-	virtual QMargins getMargins() const {
-		return QMargins();
 	}
 
 	void hideChildren() {
@@ -196,16 +233,16 @@ public:
 			w,
 			h);
 	}
-	QPoint myrtlpoint(int x, int y) const {
+	[[nodiscard]] QPoint myrtlpoint(int x, int y) const {
 		return style::rtlpoint(x, y, Widget::width());
 	}
-	QPoint myrtlpoint(const QPoint point) const {
+	[[nodiscard]] QPoint myrtlpoint(const QPoint point) const {
 		return style::rtlpoint(point, Widget::width());
 	}
-	QRect myrtlrect(int x, int y, int w, int h) const {
+	[[nodiscard]] QRect myrtlrect(int x, int y, int w, int h) const {
 		return style::rtlrect(x, y, w, h, Widget::width());
 	}
-	QRect myrtlrect(const QRect &rect) const {
+	[[nodiscard]] QRect myrtlrect(const QRect &rect) const {
 		return style::rtlrect(rect, Widget::width());
 	}
 	void rtlupdate(const QRect &rect) {
@@ -215,33 +252,50 @@ public:
 		Widget::update(myrtlrect(x, y, w, h));
 	}
 
-	QPoint mapFromGlobal(const QPoint &point) const {
+	[[nodiscard]] QPoint mapFromGlobal(const QPoint &point) const {
 		return Widget::mapFromGlobal(point);
 	}
-	QPoint mapToGlobal(const QPoint &point) const {
+	[[nodiscard]] QPoint mapToGlobal(const QPoint &point) const {
 		return Widget::mapToGlobal(point);
 	}
-	QRect mapFromGlobal(const QRect &rect) const {
+	[[nodiscard]] QRect mapFromGlobal(const QRect &rect) const {
 		return QRect(mapFromGlobal(rect.topLeft()), rect.size());
 	}
-	QRect mapToGlobal(const QRect &rect) const {
+	[[nodiscard]] QRect mapToGlobal(const QRect &rect) const {
 		return QRect(mapToGlobal(rect.topLeft()), rect.size());
 	}
 
-	QWidget *rpWidget() final override {
+	[[nodiscard]] QWidget *rpWidget() final {
 		return this;
 	}
-	const QWidget *rpWidget() const final override {
+	[[nodiscard]] const QWidget *rpWidget() const final {
 		return this;
 	}
-	void setVisible(bool visible) final override {
+	void setVisible(bool visible) final {
 		auto wasVisible = !this->isHidden();
 		setVisibleHook(visible);
 		visibilityChangedHook(wasVisible, !this->isHidden());
 	}
 
+	// Count new height for width=newWidth and resize to it.
+	void resizeToWidth(int newWidth, bool internal = false) {
+		if (!internal) {
+			eventStreams().externalWidthWasSet = 1;
+		}
+		const auto margins = getMargins();
+		const auto fullWidth = margins.left() + newWidth + margins.right();
+		const auto fullHeight = margins.top()
+			+ resizeGetHeight(newWidth)
+			+ margins.bottom();
+		const auto newSize = QSize(fullWidth, fullHeight);
+		if (newSize != Widget::size()) {
+			Widget::resize(newSize);
+			Widget::update();
+		}
+	}
+
 protected:
-	bool event(QEvent *event) final override {
+	bool event(QEvent *event) final {
 		return handleEvent(event);
 	}
 	bool eventHook(QEvent *event) override {
@@ -251,15 +305,15 @@ protected:
 		Widget::setVisible(visible);
 	}
 
-	#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-	void enterEvent(QEnterEvent *e) final override {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	void enterEvent(QEnterEvent *e) final {
 		if (auto parent = rparent()) {
 			parent->leaveToChildEvent(e, this);
 		}
 		return enterEventHook(e);
 	}
 #else // Qt >= 6.0.0
-	void enterEvent(QEvent *e) final override {
+	void enterEvent(QEvent *e) final {
 		if (auto parent = rparent()) {
 			parent->leaveToChildEvent(e, this);
 		}
@@ -270,7 +324,7 @@ protected:
 		return Widget::enterEvent(e);
 	}
 
-	void leaveEvent(QEvent *e) final override {
+	void leaveEvent(QEvent *e) final {
 		if (auto parent = rparent()) {
 			parent->enterFromChildEvent(e, this);
 		}
@@ -281,11 +335,15 @@ protected:
 	}
 
 private:
-	void callSetVisible(bool visible) final override {
+	void callSetVisible(bool visible) final {
 		Self::setVisible(visible); // Save one virtual method invocation.
 	}
+	void callResizeToNaturalWidth() final {
+		const auto natural = naturalWidth();
+		resizeToWidth((natural >= 0) ? natural : widthNoMargins(), true);
+	}
 
-	RpWidget *rparent() {
+	[[nodiscard]] RpWidget *rparent() {
 		return qobject_cast<RpWidget*>(Widget::parentWidget());
 	}
 
@@ -300,49 +358,10 @@ class RpWidget : public RpWidgetBase<QWidget> {
 public:
 	explicit RpWidget(QWidget *parent = nullptr);
 
-	// Get the size of the widget as it should be.
-	// Negative return value means no default width.
-	virtual int naturalWidth() const {
-		return -1;
-	}
-
-	// Count new height for width=newWidth and resize to it.
-	void resizeToWidth(int newWidth) {
-		auto margins = getMargins();
-		auto fullWidth = margins.left() + newWidth + margins.right();
-		auto fullHeight = margins.top() + resizeGetHeight(newWidth) + margins.bottom();
-		auto newSize = QSize(fullWidth, fullHeight);
-		if (newSize != size()) {
-			resize(newSize);
-			update();
-		}
-	}
-
 	// Resize to minimum of natural width and available width.
 	void resizeToNaturalWidth(int newWidth) {
 		const auto natural = naturalWidth();
 		resizeToWidth((natural >= 0) ? qMin(newWidth, natural) : newWidth);
-	}
-
-	QRect rectNoMargins() const {
-		return rect().marginsRemoved(getMargins());
-	}
-
-	int widthNoMargins() const {
-		return rectNoMargins().width();
-	}
-
-	int heightNoMargins() const {
-		return rectNoMargins().height();
-	}
-
-	int bottomNoMargins() const {
-		auto rectWithoutMargins = rectNoMargins();
-		return y() + rectWithoutMargins.y() + rectWithoutMargins.height();
-	}
-
-	QSize sizeNoMargins() const {
-		return rectNoMargins().size();
 	}
 
 	// Updates the area that is visible inside the scroll container.
@@ -372,11 +391,6 @@ protected:
 				visibleTop - top,
 				visibleBottom - top);
 		}
-	}
-
-	// Resizes content and counts natural widget height for the desired width.
-	virtual int resizeGetHeight(int newWidth) {
-		return heightNoMargins();
 	}
 
 	virtual void visibleTopBottomUpdated(
