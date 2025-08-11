@@ -189,7 +189,7 @@ void Shadow::paint(
 }
 
 QPixmap Shadow::grab(
-		not_null<TWidget*> target,
+		not_null<RpWidget*> target,
 		const style::Shadow &shadow,
 		RectParts sides) {
 	SendPendingMoveResizeEvents(target);

@@ -78,7 +78,11 @@ void ScrollShadow::changeVisibility(bool shown) {
 	setVisible(shown);
 }
 
-ScrollBar::ScrollBar(ScrollArea *parent, bool vert, const style::ScrollArea *st) : TWidget(parent)
+ScrollBar::ScrollBar(
+	ScrollArea *parent,
+	bool vert,
+	const style::ScrollArea *st)
+: RpWidget(parent)
 , _st(st)
 , _vertical(vert)
 , _hiding(_st->hiding != 0)

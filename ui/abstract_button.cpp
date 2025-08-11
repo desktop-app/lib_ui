@@ -31,12 +31,12 @@ void AbstractButton::leaveEventHook(QEvent *e) {
 	}
 
 	setOver(false, StateChangeSource::ByHover);
-	return TWidget::leaveEventHook(e);
+	return RpWidget::leaveEventHook(e);
 }
 
 void AbstractButton::enterEventHook(QEnterEvent *e) {
 	checkIfOver(mapFromGlobal(QCursor::pos()));
-	return TWidget::enterEventHook(e);
+	return RpWidget::enterEventHook(e);
 }
 
 void AbstractButton::setAcceptBoth(bool acceptBoth) {

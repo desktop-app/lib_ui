@@ -16,7 +16,7 @@ constexpr int kWideScale = 5;
 
 } // namespace
 
-FadeAnimation::FadeAnimation(TWidget *widget, float64 scale)
+FadeAnimation::FadeAnimation(RpWidget *widget, float64 scale)
 : _widget(widget)
 , _scale(scale) {
 }

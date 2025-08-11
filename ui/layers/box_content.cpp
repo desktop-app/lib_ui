@@ -194,7 +194,7 @@ QPointer<IconButton> BoxContent::addTopButton(
 }
 
 void BoxContent::setInner(
-		object_ptr<TWidget> inner,
+		object_ptr<RpWidget> inner,
 		const style::ScrollArea &st) {
 	if (inner) {
 		getDelegate()->setLayerType(true);
@@ -322,7 +322,7 @@ void BoxContent::scrollByDraggingDelta(int delta) {
 }
 
 void BoxContent::updateInnerVisibleTopBottom() {
-	const auto widget = static_cast<TWidget*>(_scroll
+	const auto widget = static_cast<RpWidget*>(_scroll
 		? _scroll->widget()
 		: nullptr);
 	if (widget) {
@@ -437,8 +437,8 @@ void BoxContent::updateScrollAreaGeometry() {
 	}
 }
 
-object_ptr<TWidget> BoxContent::doTakeInnerWidget() {
-	return _scroll->takeWidget<TWidget>();
+object_ptr<RpWidget> BoxContent::doTakeInnerWidget() {
+	return _scroll->takeWidget<RpWidget>();
 }
 
 void BoxContent::paintEvent(QPaintEvent *e) {

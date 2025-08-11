@@ -61,7 +61,7 @@ private:
 
 };
 
-class ScrollBar : public TWidget {
+class ScrollBar : public RpWidget {
 public:
 	struct ShadowVisibility {
 		ScrollShadow::Type type;

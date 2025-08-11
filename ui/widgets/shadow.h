@@ -28,13 +28,13 @@ private:
 
 };
 
-class Shadow : public TWidget {
+class Shadow : public RpWidget {
 public:
 	Shadow(
 		QWidget *parent,
 		const style::Shadow &st,
 		RectParts sides = RectPart::AllSides)
-	: TWidget(parent)
+	: RpWidget(parent)
 	, _st(st)
 	, _sides(sides) {
 	}
@@ -63,7 +63,7 @@ public:
 		const std::array<QImage, 4> &corners);
 
 	static QPixmap grab(
-		not_null<TWidget*> target,
+		not_null<RpWidget*> target,
 		const style::Shadow &shadow,
 		RectParts sides = RectPart::AllSides);
 

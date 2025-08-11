@@ -122,9 +122,9 @@ private:
 
 };
 
-class InnerDropdown::Container : public TWidget {
+class InnerDropdown::Container : public RpWidget {
 public:
-	Container(QWidget *parent, object_ptr<TWidget> child, const style::InnerDropdown &st);
+	Container(QWidget *parent, object_ptr<RpWidget> child, const style::InnerDropdown &st);
 
 	void resizeToContent();
 
@@ -135,7 +135,8 @@ protected:
 		int visibleBottom) override;
 
 private:
-	object_ptr<TWidget> _child;
+	object_ptr<RpWidget> _child;
+
 	const style::InnerDropdown &_st;
 
 };

@@ -23,9 +23,9 @@
 
 namespace Ui {
 
-class LayerStackWidget::BackgroundWidget : public TWidget {
+class LayerStackWidget::BackgroundWidget : public RpWidget {
 public:
-	using TWidget::TWidget;
+	using RpWidget::RpWidget;
 
 	void setDoneCallback(Fn<void()> callback) {
 		_doneCallback = std::move(callback);

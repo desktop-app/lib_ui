@@ -299,11 +299,11 @@ protected:
 private:
 	void finishPrepare();
 	void finishScrollCreate();
-	void setInner(object_ptr<TWidget> inner, const style::ScrollArea &st);
+	void setInner(object_ptr<RpWidget> inner, const style::ScrollArea &st);
 	void updateScrollAreaGeometry();
 	void updateInnerVisibleTopBottom();
 	void updateShadowsVisibility(anim::type animated = anim::type::normal);
-	object_ptr<TWidget> doTakeInnerWidget();
+	object_ptr<RpWidget> doTakeInnerWidget();
 
 	BoxContentDelegate *_delegate = nullptr;
 
