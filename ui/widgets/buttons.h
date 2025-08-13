@@ -12,6 +12,7 @@
 #include "ui/text/text.h"
 #include "styles/style_widgets.h"
 
+#include <cstddef>
 #include <memory>
 
 class Painter;
@@ -276,7 +277,7 @@ public:
 		const Text::MarkedContext &context = {});
 	SettingsButton(
 		QWidget *parent,
-		nullptr_t,
+		std::nullptr_t,
 		const style::SettingsButton &st = st::defaultSettingsButton);
 	~SettingsButton();
 
