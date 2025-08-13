@@ -68,12 +68,16 @@ private:
 	static constexpr auto kAlignLeft = 0;
 	static constexpr auto kAlignCenter = 1;
 	static constexpr auto kAlignRight = -1;
+	static constexpr auto kAlignJustify = -2;
 
 	RpWidget *insertChild(
 		int addPosition,
 		object_ptr<RpWidget> child,
 		const style::margins &margin,
 		style::align align);
+	void subscribeToWidth(
+		not_null<RpWidget*> child,
+		const style::margins &margin);
 	void childWidthUpdated(RpWidget *child);
 	void childHeightUpdated(RpWidget *child);
 	void removeChild(RpWidget *child);

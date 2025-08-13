@@ -98,7 +98,11 @@ void VerticalLayout::updateChildGeometry(
 		int top) const {
 	const auto available = width - margin.left() - margin.right();
 	if (available > 0) {
-		child->resizeToNaturalWidth(available);
+		if (align == kAlignJustify) {
+			child->resizeToWidth(available);
+		} else {
+			child->resizeToNaturalWidth(available);
+		}
 	}
 	moveChild(margins, child, margin, align, width, top);
 }
@@ -111,7 +115,7 @@ void VerticalLayout::moveChild(
 		int width,
 		int top) const {
 	const auto outer = width + margins.left() + margins.right();
-	if (align == kAlignLeft) {
+	if (align == kAlignLeft || align == kAlignJustify) {
 		child->moveToLeft(
 			margins.left() + margin.left(),
 			margins.top() + margin.top() + top,
@@ -140,7 +144,9 @@ RpWidget *VerticalLayout::insertChild(
 	Expects(!_inResize);
 
 	if (const auto weak = AttachParentChild(this, child)) {
-		const auto converted = (align & style::al_left)
+		const auto converted = (align == style::al_justify)
+			? kAlignJustify
+			: (align & style::al_left)
 			? kAlignLeft
 			: (align & style::al_right)
 			? kAlignRight
@@ -149,43 +155,9 @@ RpWidget *VerticalLayout::insertChild(
 			begin(_rows) + atPosition,
 			{ std::move(child), margin, 0, converted });
 
-		weak->naturalWidthValue(
-		) | rpl::start_with_next([=](int naturalWidth) {
-			setNaturalWidth([&] {
-				if (naturalWidth < 0) {
-					return -1;
-				}
-				auto result = -1;
-				for (const auto &row : _rows) {
-					const auto natural = row.widget->naturalWidth();
-					if (natural < 0) {
-						return natural;
-					}
-					accumulate_max(
-						result,
-						row.margin.left() + natural + row.margin.right());
-				}
-				return result;
-			}());
-
-			const auto availRowWidth = widthNoMargins()
-				- margin.left()
-				- margin.right();
-			if (availRowWidth > 0) {
-				weak->resizeToWidth((naturalWidth >= 0)
-					? std::min(naturalWidth, availRowWidth)
-					: availRowWidth);
-			}
-		}, _rowsLifetime);
-
-		const auto taken = std::exchange(_inResize, true);
-		weak->widthValue(
-		) | rpl::start_with_next([=] {
-			if (!_inResize) {
-				childWidthUpdated(weak);
-			}
-		}, _rowsLifetime);
-		_inResize = taken;
+		if (converted != kAlignJustify) {
+			subscribeToWidth(weak, margin);
+		}
 
 		weak->heightValue(
 		) | rpl::start_with_next_done([=] {
@@ -199,6 +171,51 @@ RpWidget *VerticalLayout::insertChild(
 		return weak;
 	}
 	return nullptr;
+}
+
+void VerticalLayout::subscribeToWidth(
+		not_null<RpWidget*> child,
+		const style::margins &margin) {
+	child->naturalWidthValue(
+	) | rpl::start_with_next([=](int naturalWidth) {
+		setNaturalWidth([&] {
+			if (naturalWidth < 0) {
+				return -1;
+			}
+			auto result = -1;
+			for (const auto &row : _rows) {
+				if (row.align == kAlignJustify) {
+					return -1;
+				}
+				const auto natural = row.widget->naturalWidth();
+				if (natural < 0) {
+					return -1;
+				}
+				accumulate_max(
+					result,
+					row.margin.left() + natural + row.margin.right());
+			}
+			return result;
+		}());
+
+		const auto available = widthNoMargins()
+			- margin.left()
+			- margin.right();
+		if (available > 0) {
+			child->resizeToWidth((naturalWidth >= 0)
+				? std::min(naturalWidth, available)
+				: available);
+		}
+	}, _rowsLifetime);
+
+	const auto taken = std::exchange(_inResize, true);
+	child->widthValue(
+	) | rpl::start_with_next([=] {
+		if (!_inResize) {
+			childWidthUpdated(child);
+		}
+	}, _rowsLifetime);
+	_inResize = taken;
 }
 
 void VerticalLayout::childWidthUpdated(RpWidget *child) {

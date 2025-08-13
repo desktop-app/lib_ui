@@ -52,5 +52,6 @@ static constexpr align al_bottom = (Qt::AlignBottom | Qt::AlignHCenter);
 static constexpr align al_bottomleft = (Qt::AlignBottom | Qt::AlignLeft);
 static constexpr align al_left = (Qt::AlignVCenter | Qt::AlignLeft);
 static constexpr align al_center = (Qt::AlignVCenter | Qt::AlignHCenter);
+static constexpr align al_justify = Qt::AlignJustify;
 
 } // namespace style
