@@ -360,7 +360,7 @@ int FlatLabel::countTextHeight(int textWidth) {
 
 void FlatLabel::refreshSize() {
 	setNaturalWidth(textMaxWidth());
-	resizeToWidth(width(), true);
+	resizeToWidth(widthNoMargins(), true);
 }
 
 void FlatLabel::setLink(uint16 index, const ClickHandlerPtr &lnk) {
