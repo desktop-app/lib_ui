@@ -70,6 +70,13 @@ private:
 	static constexpr auto kAlignRight = -1;
 	static constexpr auto kAlignJustify = -2;
 
+	struct Row {
+		object_ptr<RpWidget> widget;
+		style::margins margin;
+		int32 verticalShift : 30 = 0;
+		int32 align : 2 = 0;
+	};
+
 	RpWidget *insertChild(
 		int addPosition,
 		object_ptr<RpWidget> child,
@@ -81,27 +88,12 @@ private:
 	void childWidthUpdated(RpWidget *child);
 	void childHeightUpdated(RpWidget *child);
 	void removeChild(RpWidget *child);
-	void updateChildGeometry(
-		const style::margins &margins,
-		RpWidget *child,
-		const style::margins &margin,
-		int align,
-		int width,
-		int top) const;
-	void moveChild(
-		const style::margins &margins,
-		RpWidget *child,
-		const style::margins &margin,
-		int align,
-		int width,
-		int top) const;
+	int moveChildGetSkip(
+		const Row &row,
+		int top,
+		int outerWidth,
+		const style::margins &margins) const;
 
-	struct Row {
-		object_ptr<RpWidget> widget;
-		style::margins margin;
-		int32 verticalShift : 30 = 0;
-		int32 align : 2 = 0;
-	};
 	std::vector<Row> _rows;
 	bool _inResize = false;
 

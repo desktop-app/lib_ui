@@ -61,21 +61,23 @@ int VerticalLayout::resizeGetHeight(int newWidth) {
 	_inResize = true;
 	auto guard = gsl::finally([&] { _inResize = false; });
 
-	auto margins = getMargins();
-	auto result = 0;
+	const auto margins = getMargins();
+	const auto outerWidth = margins.left() + newWidth + margins.right();
+	auto result = margins.top();
 	for (auto &row : _rows) {
-		updateChildGeometry(
-			margins,
-			row.widget,
-			row.margin,
-			row.align,
-			newWidth,
-			result + row.verticalShift);
-		result += row.margin.top()
-			+ row.widget->heightNoMargins()
-			+ row.margin.bottom();
+		const auto widget = row.widget.data();
+		const auto &margin = row.margin;
+		const auto available = newWidth - margin.left() - margin.right();
+		if (available > 0) {
+			if (row.align == kAlignJustify) {
+				widget->resizeToWidth(available);
+			} else {
+				widget->resizeToNaturalWidth(available);
+			}
+		}
+		result += moveChildGetSkip(row, result, outerWidth, margins);
 	}
-	return result;
+	return result - margins.top();
 }
 
 void VerticalLayout::visibleTopBottomUpdated(
@@ -89,50 +91,34 @@ void VerticalLayout::visibleTopBottomUpdated(
 	}
 }
 
-void VerticalLayout::updateChildGeometry(
-		const style::margins &margins,
-		RpWidget *child,
-		const style::margins &margin,
-		int align,
-		int width,
-		int top) const {
-	const auto available = width - margin.left() - margin.right();
-	if (available > 0) {
-		if (align == kAlignJustify) {
-			child->resizeToWidth(available);
-		} else {
-			child->resizeToNaturalWidth(available);
-		}
-	}
-	moveChild(margins, child, margin, align, width, top);
-}
-
-void VerticalLayout::moveChild(
-		const style::margins &margins,
-		RpWidget *child,
-		const style::margins &margin,
-		int align,
-		int width,
-		int top) const {
-	const auto outer = width + margins.left() + margins.right();
+int VerticalLayout::moveChildGetSkip(
+		const Row &row,
+		int top,
+		int outerWidth,
+		const style::margins &margins) const {
+	const auto align = row.align;
+	const auto widget = row.widget.data();
+	const auto wmargins = widget->getMargins();
+	const auto &margin = row.margin;
+	const auto full = margins + margin;
+	top += margin.top() + row.verticalShift;
 	if (align == kAlignLeft || align == kAlignJustify) {
-		child->moveToLeft(
-			margins.left() + margin.left(),
-			margins.top() + margin.top() + top,
-			outer);
+		widget->moveToLeft(full.left(), top, outerWidth);
 	} else if (align == kAlignCenter) {
-		const auto available = width - margin.left() - margin.right();
-		const auto shift = (available - child->widthNoMargins()) / 2;
-		child->moveToLeft(
-			margins.left() + margin.left() + shift,
-			margins.top() + margin.top() + top,
-			outer);
+		const auto available = outerWidth - full.left() - full.right();
+		const auto free = available
+			- widget->width()
+			- wmargins.left()
+			- wmargins.right();
+		widget->moveToLeft(full.left() + (free / 2), top, outerWidth);
 	} else if (align == kAlignRight) {
-		child->moveToRight(
-			margins.right() + margin.right(),
-			margins.top() + margin.top() + top,
-			outer);
+		widget->moveToRight(full.right(), top, outerWidth);
 	}
+	return margin.top()
+		- wmargins.top()
+		+ widget->height()
+		- wmargins.bottom()
+		+ margin.bottom();
 }
 
 RpWidget *VerticalLayout::insertChild(
@@ -223,11 +209,12 @@ void VerticalLayout::childWidthUpdated(RpWidget *child) {
 		return (row.widget == child);
 	});
 	const auto &row = *it;
-	const auto margin = row.margin;
-	const auto width = widthNoMargins();
 	const auto margins = getMargins();
-	const auto top = child->y() - margin.top() - margins.top();
-	moveChild(margins, child, margin, row.align, width, top);
+	const auto top = child->y()
+		+ child->getMargins().top()
+		- row.margin.top()
+		- row.verticalShift;
+	moveChildGetSkip(row, top, width(), margins);
 }
 
 void VerticalLayout::childHeightUpdated(RpWidget *child) {
@@ -235,25 +222,24 @@ void VerticalLayout::childHeightUpdated(RpWidget *child) {
 		return (row.widget == child);
 	});
 
-	const auto width = widthNoMargins();
+	const auto width = this->width();
 	const auto margins = getMargins();
 	auto top = [&] {
 		if (it == _rows.begin()) {
 			return margins.top();
 		}
 		auto prev = it - 1;
-		return prev->widget->bottomNoMargins() + prev->margin.bottom();
-	}() - margins.top();
+		const auto widget = prev->widget.data();
+		return widget->y()
+			+ widget->height()
+			- widget->getMargins().bottom()
+			+ prev->margin.bottom();
+	}();
 	for (auto end = _rows.end(); it != end; ++it) {
 		const auto &row = *it;
-		const auto margin = row.margin;
-		const auto widget = row.widget.data();
-		moveChild(margins, widget, margin, row.align, width, top);
-		top += margin.top()
-			+ widget->heightNoMargins()
-			+ margin.bottom();
+		top += moveChildGetSkip(row, top, width, margins);
 	}
-	resize(this->width(), margins.top() + top + margins.bottom());
+	resize(width, top + margins.bottom());
 }
 
 void VerticalLayout::removeChild(RpWidget *child) {
@@ -263,29 +249,27 @@ void VerticalLayout::removeChild(RpWidget *child) {
 	auto end = _rows.end();
 	Assert(it != end);
 
-	auto margins = getMargins();
+	const auto width = this->width();
+	const auto margins = getMargins();
 	auto top = [&] {
 		if (it == _rows.begin()) {
 			return margins.top();
 		}
 		auto prev = it - 1;
-		return prev->widget->bottomNoMargins() + prev->margin.bottom();
-	}() - margins.top();
+		const auto widget = prev->widget.data();
+		return widget->y()
+			+ widget->height()
+			- widget->getMargins().bottom()
+			+ prev->margin.bottom();
+	}();
 	for (auto next = it + 1; next != end; ++next) {
-		auto &row = *next;
-		auto margin = row.margin;
-		auto widget = row.widget.data();
-		widget->moveToLeft(
-			margins.left() + margin.left(),
-			margins.top() + top + margin.top());
-		top += margin.top()
-			+ widget->heightNoMargins()
-			+ margin.bottom();
+		const auto &row = *next;
+		top += moveChildGetSkip(row, top, width, margins);
 	}
 	it->widget = nullptr;
 	_rows.erase(it);
 
-	resize(width(), margins.top() + top + margins.bottom());
+	resize(width, top + margins.bottom());
 }
 
 void VerticalLayout::clear() {
