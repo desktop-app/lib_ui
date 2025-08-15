@@ -94,9 +94,11 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
-	static QString GetBefore(const StringWithNumbers &value);
-	static QString GetAfter(const StringWithNumbers &value);
-	static QString GetNumbers(const StringWithNumbers &value);
+	[[nodiscard]] static QString GetBefore(const StringWithNumbers &value);
+	[[nodiscard]] static QString GetAfter(const StringWithNumbers &value);
+	[[nodiscard]] static QString GetNumbers(const StringWithNumbers &value);
+
+	void updateNaturalWidth();
 
 	const style::FlatLabel &_st;
 	int _textTop;

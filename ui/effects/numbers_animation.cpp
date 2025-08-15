@@ -187,7 +187,7 @@ LabelWithNumbers::LabelWithNumbers(
 	Expects((value.offset < 0) == (value.length == 0));
 
 	_numbers.setWidthChangedCallback([=] {
-		setNaturalWidth(_beforeWidth + _numbers.maxWidth() + _afterWidth);
+		updateNaturalWidth();
 	});
 
 	const auto numbers = GetNumbers(value);
@@ -228,6 +228,12 @@ void LabelWithNumbers::setValue(const StringWithNumbers &value) {
 		anim::easeOutCirc);
 
 	_afterWidth = _st.style.font->width(_after);
+
+	updateNaturalWidth();
+}
+
+void LabelWithNumbers::updateNaturalWidth() {
+	setNaturalWidth(_beforeWidth + _numbers.maxWidth() + _afterWidth);
 }
 
 void LabelWithNumbers::finishAnimating() {
