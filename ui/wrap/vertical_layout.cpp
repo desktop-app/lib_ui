@@ -108,8 +108,8 @@ int VerticalLayout::moveChildGetSkip(
 		const auto available = outerWidth - full.left() - full.right();
 		const auto free = available
 			- widget->width()
-			- wmargins.left()
-			- wmargins.right();
+			+ wmargins.left()
+			+ wmargins.right();
 		widget->moveToLeft(full.left() + (free / 2), top, outerWidth);
 	} else if (align == kAlignRight) {
 		widget->moveToRight(full.right(), top, outerWidth);
