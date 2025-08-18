@@ -62,38 +62,4 @@ int PaddingWrap<RpWidget>::resizeGetHeight(int newWidth) {
 	return heightNoMargins();
 }
 
-CenterWrap<RpWidget>::CenterWrap(
-	QWidget *parent,
-	object_ptr<RpWidget> &&child)
-: Parent(parent, std::move(child)) {
-	if (const auto weak = wrapped()) {
-		wrappedSizeUpdated(weak->size());
-		setNaturalWidth(-1);
-	}
-}
-
-int CenterWrap<RpWidget>::resizeGetHeight(int newWidth) {
-	const auto margins = getMargins();
-	updateWrappedPosition(newWidth + margins.left() + margins.right());
-	return heightNoMargins();
-}
-
-void CenterWrap<RpWidget>::wrappedSizeUpdated(QSize size) {
-	resize(width(), size.height());
-	updateWrappedPosition(width());
-}
-
-void CenterWrap<RpWidget>::wrappedNaturalWidthUpdated(int width) {
-}
-
-void CenterWrap<RpWidget>::updateWrappedPosition(int forWidth) {
-	if (const auto weak = wrapped()) {
-		const auto margins = weak->getMargins();
-		weak->moveToLeft(
-			(forWidth - weak->width()) / 2 + margins.left(),
-			margins.top(),
-			forWidth);
-	}
-}
-
 } // namespace Ui

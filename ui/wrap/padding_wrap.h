@@ -52,41 +52,6 @@ public:
 
 };
 
-template <typename Widget = RpWidget>
-class CenterWrap;
-
-template <>
-class CenterWrap<RpWidget> : public Wrap<RpWidget> {
-	using Parent = Wrap<RpWidget>;
-
-public:
-	CenterWrap(
-		QWidget *parent,
-		object_ptr<RpWidget> &&child);
-
-protected:
-	int resizeGetHeight(int newWidth) override;
-	void wrappedSizeUpdated(QSize size) override;
-	void wrappedNaturalWidthUpdated(int width) override;
-
-private:
-	void updateWrappedPosition(int forWidth);
-
-};
-
-template <typename Widget>
-class CenterWrap : public Wrap<Widget, CenterWrap<RpWidget>> {
-	using Parent = Wrap<Widget, CenterWrap<RpWidget>>;
-
-public:
-	CenterWrap(
-		QWidget *parent,
-		object_ptr<Widget> &&child)
-	: Parent(parent, std::move(child)) {
-	}
-
-};
-
 class FixedHeightWidget : public RpWidget {
 public:
 	explicit FixedHeightWidget(QWidget *parent, int height = 0)
