@@ -1527,6 +1527,9 @@ InputField::InputField(
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
 	_inner->setAcceptRichText(false);
 	resize(_st.width, _minHeight);
+	if (_st.width > 0) {
+		setNaturalWidth(_st.width);
+	}
 
 	{ // In case of default fonts all those should be zero.
 		const auto metrics = QFontMetricsF(_st.style.font->f);

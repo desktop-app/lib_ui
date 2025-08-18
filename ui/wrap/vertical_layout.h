@@ -44,11 +44,34 @@ public:
 		typename Widget,
 		typename = std::enable_if_t<
 			std::is_base_of_v<RpWidget, Widget>>>
+	Widget *insert(
+			int atPosition,
+			object_ptr<Widget> &&child,
+			style::align align) {
+		return static_cast<Widget*>(insertChild(
+			atPosition,
+			std::move(child),
+			style::margins(),
+			align));
+	}
+
+	template <
+		typename Widget,
+		typename = std::enable_if_t<
+			std::is_base_of_v<RpWidget, Widget>>>
 	Widget *add(
 			object_ptr<Widget> &&child,
 			const style::margins &margin = style::margins(),
 			style::align align = style::al_left) {
 		return insert(count(), std::move(child), margin, align);
+	}
+
+	template <
+		typename Widget,
+		typename = std::enable_if_t<
+			std::is_base_of_v<RpWidget, Widget>>>
+	Widget *add(object_ptr<Widget> &&child, style::align align) {
+		return insert(count(), std::move(child), align);
 	}
 
 	QMargins getMargins() const override;

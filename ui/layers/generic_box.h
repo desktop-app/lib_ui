@@ -54,7 +54,7 @@ public:
 	template <
 		typename Widget,
 		typename = std::enable_if_t<
-		std::is_base_of_v<RpWidget, Widget>>>
+			std::is_base_of_v<RpWidget, Widget>>>
 	Widget *insertRow(
 			int atPosition,
 			object_ptr<Widget> &&child,
@@ -70,12 +70,35 @@ public:
 	template <
 		typename Widget,
 		typename = std::enable_if_t<
-		std::is_base_of_v<RpWidget, Widget>>>
+			std::is_base_of_v<RpWidget, Widget>>>
+	Widget *insertRow(
+			int atPosition,
+			object_ptr<Widget> &&child,
+			style::align align) {
+		return _content->insert(
+			atPosition,
+			std::move(child),
+			st::boxRowPadding,
+			align);
+	}
+
+	template <
+		typename Widget,
+		typename = std::enable_if_t<
+			std::is_base_of_v<RpWidget, Widget>>>
 	Widget *addRow(
 			object_ptr<Widget> &&child,
 			const style::margins &margin = st::boxRowPadding,
 			style::align align = style::al_left) {
 		return _content->add(std::move(child), margin, align);
+	}
+
+	template <
+		typename Widget,
+		typename = std::enable_if_t<
+			std::is_base_of_v<RpWidget, Widget>>>
+	Widget *addRow(object_ptr<Widget> &&child, style::align align) {
+		return _content->add(std::move(child), st::boxRowPadding, align);
 	}
 
 	void addSkip(int height);
