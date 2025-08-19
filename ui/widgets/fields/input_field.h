@@ -648,6 +648,9 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 
 [[nodiscard]] int ComputeRealUnicodeCharactersCount(const QString &text);
 [[nodiscard]] int ComputeFieldCharacterCount(not_null<InputField*> field);
+[[nodiscard]] bool ShouldSubmit(
+	QKeyEvent *event,
+	InputSubmitSettings settings);
 
 void AddLengthLimitLabel(
 	not_null<InputField*> field,

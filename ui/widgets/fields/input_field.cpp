@@ -5397,4 +5397,22 @@ void AddLengthLimitLabel(
 	warning->setAttribute(Qt::WA_TransparentForMouseEvents);
 }
 
+bool ShouldSubmit(QKeyEvent *event, InputSubmitSettings settings) {
+	if (event == nullptr || settings == InputSubmitSettings::None) {
+		return false;
+	}
+
+	const int key = event->key();
+	const bool isEnter = (key == Qt::Key_Enter || key == Qt::Key_Return);
+	const bool hasCtrl = event->modifiers().testFlag(Qt::ControlModifier);
+
+	switch (settings) {
+	case InputSubmitSettings::Enter: return isEnter && !hasCtrl;
+	case InputSubmitSettings::CtrlEnter: return isEnter && hasCtrl;
+	case InputSubmitSettings::Both: return isEnter;
+	case InputSubmitSettings::None:
+	default: return false;
+	}
+}
+
 } // namespace Ui
