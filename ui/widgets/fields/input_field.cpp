@@ -4317,7 +4317,7 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 		startPlaceholderAnimation();
 	}
 	if (!e->commitString().isEmpty()) {
-		if (const auto emoji = Emoji::Find(e->commitString(), nullptr)) {
+		if (Emoji::Find(e->commitString(), nullptr)) {
 			auto mimeData = QMimeData();
 			mimeData.setText(e->commitString());
 			InputField::insertFromMimeDataInner(&mimeData);
