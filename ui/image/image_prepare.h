@@ -111,6 +111,7 @@ inline constexpr auto kReadMaxArea = 12'032 * 9'024;
 struct ReadArgs {
 	QString path;
 	QByteArray content;
+	QByteArray svgCutOutId;
 	QSize maxSize;
 	bool gzipSvg = false;
 	bool forceOpaque = false;
@@ -119,7 +120,9 @@ struct ReadArgs {
 struct ReadResult {
 	QImage image;
 	QByteArray content;
+	QByteArray svgCutOutContent;
 	QByteArray format;
+	float64 scale = 1.;
 	bool animated = false;
 };
 [[nodiscard]] ReadResult Read(ReadArgs &&args);

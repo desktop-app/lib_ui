@@ -394,17 +394,29 @@ std::array<QImage, 4> PrepareCorners(
 }
 
 [[nodiscard]] ReadResult ReadGzipSvg(const ReadArgs &args) {
-	const auto bytes = UnpackGzip(args.content);
+	auto bytes = UnpackGzip(args.content);
 	if (bytes.isEmpty()) {
 		LOG(("Svg Error: Couldn't unpack gzip-ed content."));
 		return {};
+	}
+	auto result = ReadResult();
+	if (const auto &id = args.svgCutOutId; !id.isEmpty()) {
+		const auto start = bytes.indexOf("<g id=\""_q + id + "\">"_q);
+		if (start > 0) {
+			const auto end = bytes.indexOf("</g>"_q, start);
+			if (end > start) {
+				result.svgCutOutContent = bytes.mid(start, end + 4 - start);
+				bytes.remove(start, end + 4 - start);
+			}
+		}
 	}
 	auto renderer = QSvgRenderer(bytes);
 	if (!renderer.isValid()) {
 		LOG(("Svg Error: Invalid data."));
 		return {};
 	}
-	auto size = renderer.defaultSize();
+	const auto original = renderer.defaultSize();
+	auto size = original;
 	if (!args.maxSize.isEmpty()
 		&& (size.width() > args.maxSize.width()
 			|| size.height() > args.maxSize.height())) {
@@ -416,7 +428,11 @@ std::array<QImage, 4> PrepareCorners(
 			).arg(renderer.defaultSize().height()));
 		return {};
 	}
-	auto result = ReadResult();
+	if (size != original) {
+		result.scale = (size.width() > size.height())
+			? float64(size.width()) / original.width()
+			: float64(size.height()) / original.height();
+	}
 	result.image = QImage(size, QImage::Format_ARGB32_Premultiplied);
 	result.image.fill(Qt::transparent);
 	{
@@ -474,13 +490,17 @@ ReadResult Read(ReadArgs &&args) {
 	} else {
 		args.content = QByteArray();
 	}
+	const auto original = result.image.size();
 	if (!args.maxSize.isEmpty()
-		&& (result.image.width() > args.maxSize.width()
-			|| result.image.height() > args.maxSize.height())) {
+		&& (original.width() > args.maxSize.width()
+			|| original.height() > args.maxSize.height())) {
 		result.image = result.image.scaled(
 			args.maxSize,
 			Qt::KeepAspectRatio,
 			Qt::SmoothTransformation);
+		result.scale *= (original.width() > original.height())
+			? float64(result.image.width()) / original.width()
+			: float64(result.image.height()) / original.height();
 	}
 	if (args.forceOpaque && result.format != qstr("jpeg")) {
 		result.image = Opaque(std::move(result.image));
