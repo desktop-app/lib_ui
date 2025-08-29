@@ -401,7 +401,7 @@ std::array<QImage, 4> PrepareCorners(
 	}
 	auto result = ReadResult();
 	if (const auto &id = args.svgCutOutId; !id.isEmpty()) {
-		const auto start = bytes.indexOf("<g id=\""_q + id + "\">"_q);
+		const auto start = bytes.indexOf("<g id=\""_q + id + '"');
 		if (start > 0) {
 			const auto end = bytes.indexOf("</g>"_q, start);
 			if (end > start) {
