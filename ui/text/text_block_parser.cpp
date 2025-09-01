@@ -231,6 +231,9 @@ void BlockParser::ensureAtNewline(QuoteDetails quote) {
 		createNewlineBlock(false);
 		_customEmojiData = base::take(saved);
 	}
+	if (_quoteIndex) {
+		closeQuote();
+	}
 	_quoteStartPosition = _tText.size();
 	auto &quotes = _t->ensureQuotes()->list;
 	quotes.push_back(std::move(quote));
@@ -242,6 +245,27 @@ void BlockParser::ensureAtNewline(QuoteDetails quote) {
 		Assert(last->type() == TextBlockType::Newline);
 		last.unsafe<NewlineBlock>().setQuoteIndex(index);
 	}
+}
+
+void BlockParser::closeQuote() {
+	if (!_quoteIndex) {
+		return;
+	}
+	auto &quotes = _t->ensureQuotes()->list;
+	auto &quote = quotes[_quoteIndex - 1];
+	const auto from = _quoteStartPosition;
+	const auto till = _tText.size();
+	if (quote.pre && till > from) {
+		quote.copy = std::make_shared<PreClickHandler>(
+			_t,
+			from,
+			till - from);
+	} else if (quote.blockquote && quote.collapsed) {
+		quote.toggle = std::make_shared<BlockquoteClickHandler>(
+			_t,
+			_quoteIndex);
+	}
+	_quoteIndex = 0;
 }
 
 void BlockParser::finishEntities() {
@@ -262,23 +286,7 @@ void BlockParser::finishEntities() {
 						: _tBlocks.back()->type();
 					if ((*flags)
 						& (TextBlockFlag::Pre | TextBlockFlag::Blockquote)) {
-						if (_quoteIndex) {
-							auto &quotes = _t->ensureQuotes()->list;
-							auto &quote = quotes[_quoteIndex - 1];
-							const auto from = _quoteStartPosition;
-							const auto till = _tText.size();
-							if (quote.pre && till > from) {
-								quote.copy = std::make_shared<PreClickHandler>(
-									_t,
-									from,
-									till - from);
-							} else if (quote.blockquote && quote.collapsed) {
-								quote.toggle = std::make_shared<BlockquoteClickHandler>(
-									_t,
-									_quoteIndex);
-							}
-						}
-						_quoteIndex = 0;
+						closeQuote();
 						if (lastType != TextBlockType::Newline) {
 							_newlineAwaited = true;
 						} else if (_tBlocks.empty()) {

@@ -67,6 +67,7 @@ private:
 	void parseEmojiFromCurrent();
 	void finalize(const TextParseOptions &options);
 
+	void closeQuote();
 	void finishEntities();
 	void skipPassedEntities();
 	void skipBadEntities();
