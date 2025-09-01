@@ -282,9 +282,6 @@ void ImportantTooltip::countApproachSide(RectParts preferSide) {
 }
 
 void ImportantTooltip::toggleAnimated(bool visible) {
-	if (_visible == isHidden()) {
-		setVisible(_visible);
-	}
 	if (_visible != visible) {
 		updateGeometry();
 		_visible = visible;
@@ -296,6 +293,8 @@ void ImportantTooltip::toggleAnimated(bool visible) {
 		}
 		hideChildren();
 		_visibleAnimation.start([this] { animationCallback(); }, _visible ? 0. : 1., _visible ? 1. : 0., _st.duration, anim::easeOutCirc);
+	} else if (visible && isHidden()) {
+		show();
 	}
 }
 
