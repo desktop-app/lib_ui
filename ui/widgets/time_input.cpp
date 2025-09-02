@@ -68,10 +68,7 @@ TimeInput::TimeInput(
 	GetHour(value))
 , _separator1(
 	this,
-	object_ptr<FlatLabel>(
-		this,
-		QString(":"),
-		_stSeparator),
+	object_ptr<FlatLabel>(this, u":"_q, _stSeparator),
 	_stSeparatorPadding)
 , _minute(
 	this,

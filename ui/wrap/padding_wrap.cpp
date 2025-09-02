@@ -16,6 +16,9 @@ PaddingWrap<RpWidget>::PaddingWrap(
 	const style::margins &padding)
 : Parent(parent, std::move(child)) {
 	setPadding(padding);
+	if (auto weak = wrapped()) {
+		wrappedNaturalWidthUpdated(weak->naturalWidth());
+	}
 }
 
 void PaddingWrap<RpWidget>::setPadding(const style::margins &padding) {
