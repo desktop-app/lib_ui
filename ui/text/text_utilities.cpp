@@ -277,5 +277,13 @@ QList<QStringView> Words(QStringView lower) {
 	return lower.split(kRegWords, Qt::SkipEmptyParts);
 }
 
+QString StripUrlProtocol(const QString &link) {
+	return link.startsWith(u"https://"_q)
+		? link.mid(8)
+		: link.startsWith(u"http://"_q)
+		? link.mid(7)
+		: link;
+}
+
 } // namespace Text
 } // namespace Ui
