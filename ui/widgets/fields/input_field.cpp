@@ -2544,14 +2544,18 @@ void InputField::editPreLanguage(int quoteId, QStringView tag) {
 		return;
 	}
 	const auto apply = crl::guard(this, [=](QString language) {
-		auto block = FindBlock(document(), quoteId);
+		const auto block = FindBlock(document(), quoteId);
 		if (block.isValid()) {
 			const auto id = kTagPre + language;
-			_insertedTags = { { block.position(), block.length() - 1, id } };
 			auto cursor = QTextCursor(document());
 			cursor.setPosition(block.position());
-			cursor.setBlockFormat(PrepareBlockFormat(_st, id));
-			_insertedTags.clear();
+			cursor.movePosition(QTextCursor::StartOfBlock);
+			cursor.movePosition(
+				QTextCursor::EndOfBlock,
+				QTextCursor::KeepAnchor);
+			const auto savedCursor = textCursor();
+			cursor.setBlockFormat(PrepareBlockFormat(_st, id, quoteId));
+			setTextCursor(savedCursor);
 		}
 	});
 	_editLanguageCallback(tag.mid(kTagPre.size()).toString(), apply);
