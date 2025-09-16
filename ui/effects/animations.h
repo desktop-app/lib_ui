@@ -22,6 +22,8 @@ public:
 	Basic() = default;
 	Basic(const Basic &other) = delete;
 	Basic &operator=(const Basic &other) = delete;
+	Basic(Basic &&other);
+	Basic &operator=(Basic &&other);
 
 	template <typename Callback>
 	explicit Basic(Callback &&callback);
@@ -276,6 +278,29 @@ TG_FORCE_INLINE bool Basic::call(crl::time now) const {
 	// _started may be greater than now if we called restart while iterating.
 	const auto onstack = _callback;
 	return onstack(std::max(_started, now));
+}
+
+inline Basic::Basic(Basic &&other) : _callback(base::take(other._callback)) {
+	if (other.animating()) {
+		const auto started = other._started;
+		other.stop();
+		start();
+		other._started = started;
+	}
+}
+
+inline Basic &Basic::operator=(Basic &&other) {
+	_callback = base::take(other._callback);
+	if (animating()) {
+		stop();
+	}
+	if (other.animating()) {
+		const auto started = other._started;
+		other.stop();
+		start();
+		other._started = started;
+	}
+	return *this;
 }
 
 inline Basic::~Basic() {
