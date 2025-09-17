@@ -517,6 +517,11 @@ private:
 [[nodiscard]] bool IsReplacedBySpace(QChar ch);
 [[nodiscard]] bool IsTrimmed(QChar ch);
 
+[[nodiscard]] QSize CountOptimalTextSize(
+	const String &text,
+	int minWidth,
+	int maxWidth);
+
 } // namespace Ui::Text
 
 inline TextSelection snapSelection(int from, int to) {
