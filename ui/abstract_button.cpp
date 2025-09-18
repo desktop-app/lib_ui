@@ -23,6 +23,7 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	shownValue()
 		| rpl::filter(_1 == false)
 		| rpl::start_with_next([this] { clearState(); }, lifetime());
+	setFocusPolicy(Qt::StrongFocus);
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {
