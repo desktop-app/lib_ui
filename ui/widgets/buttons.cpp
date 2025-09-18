@@ -15,6 +15,8 @@
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
 
+#include "base/platform/base_accessibility.h"
+
 #include <QtGui/QtEvents>
 
 namespace Ui {
@@ -68,6 +70,8 @@ LinkButton::LinkButton(
 , _textWidth(st.font->width(_text)) {
 	resizeToText();
 	setCursor(style::cur_pointer);
+	Accessibility::SetName(this, _text);
+	Accessibility::SetRole(this, QAccessible::Role::Link);
 }
 
 void LinkButton::paintEvent(QPaintEvent *e) {
@@ -96,6 +100,7 @@ void LinkButton::setText(const QString &text) {
 	_textWidth = _st.font->width(_text);
 	resizeToText();
 	update();
+	Accessibility::SetName(this, _text);
 }
 
 void LinkButton::resizeToText() {
@@ -232,11 +237,14 @@ FlatButton::FlatButton(
 		_width = _st.width;
 	}
 	resize(_width, _st.height);
+	Accessibility::SetName(this, _text);
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 void FlatButton::setText(const QString &text) {
 	_text = text;
 	update();
+	Accessibility::SetName(this, _text);
 }
 
 void FlatButton::setWidth(int w) {
@@ -304,7 +312,9 @@ RoundButton::RoundButton(
 	_textFull.value(
 	) | rpl::start_with_next([=](const TextWithEntities &text) {
 		resizeToText(text);
+		Accessibility::SetName(this, text.text);
 	}, lifetime());
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 void RoundButton::setTextTransform(TextTransform transform) {
@@ -551,6 +561,7 @@ RoundButton::~RoundButton() = default;
 IconButton::IconButton(QWidget *parent, const style::IconButton &st) : RippleButton(parent, st.ripple)
 , _st(st) {
 	resize(_st.width, _st.height);
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 const style::IconButton &IconButton::st() const {
@@ -648,6 +659,7 @@ CrossButton::CrossButton(QWidget *parent, const style::CrossButton &st) : Ripple
 	resize(_st.width, _st.height);
 	setCursor(style::cur_pointer);
 	setVisible(false);
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 bool CrossButton::loadingCallback(crl::time now) {
@@ -798,6 +810,7 @@ SettingsButton::SettingsButton(
 	) | rpl::start_with_next([this](TextWithEntities &&value) {
 		setText(std::move(value));
 	}, lifetime());
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 SettingsButton::SettingsButton(
@@ -807,6 +820,7 @@ SettingsButton::SettingsButton(
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _padding(_st.padding) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 SettingsButton::~SettingsButton() = default;
@@ -964,6 +978,7 @@ void SettingsButton::onStateChanged(
 void SettingsButton::setText(TextWithEntities &&text) {
 	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
 	update();
+	Accessibility::SetName(this, text.text);
 }
 
 not_null<RippleButton*> CreateSimpleRectButton(
