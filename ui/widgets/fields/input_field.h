@@ -652,10 +652,15 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 	QKeyEvent *event,
 	InputSubmitSettings settings);
 
+struct LengthLimitLabelOptions {
+	RpWidget *customParent = nullptr;
+	std::optional<int> customThreshold = std::nullopt;
+	Fn<QPoint(QSize parent, QSize label)> customUpdatePosition;
+	int limitLabelTop = 0;
+};
 void AddLengthLimitLabel(
 	not_null<InputField*> field,
 	int limit,
-	std::optional<uint> customThreshold = std::nullopt,
-	int limitLabelTop = 0);
+	LengthLimitLabelOptions options = {});
 
 } // namespace Ui

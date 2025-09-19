@@ -5341,12 +5341,14 @@ int ComputeFieldCharacterCount(not_null<InputField*> field) {
 void AddLengthLimitLabel(
 		not_null<InputField*> field,
 		int limit,
-		std::optional<uint> customThreshold,
-		int limitLabelTop) {
+		LengthLimitLabelOptions options) {
 	struct State {
 		rpl::variable<int> length;
 	};
 	constexpr auto kMinus = QChar(0x2212);
+	const auto parent = options.customParent
+		? options.customParent
+		: field.get();
 	const auto state = field->lifetime().make_state<State>();
 	state->length = rpl::single(
 		rpl::empty
@@ -5355,9 +5357,8 @@ void AddLengthLimitLabel(
 	});
 	const auto allowExceed = std::max(limit / 2, 9);
 	field->setMaxLength(limit + allowExceed);
-	const auto threshold = !customThreshold
-		? std::min(limit / 2, 9)
-		: int(*customThreshold);
+	const auto threshold = options.customThreshold.value_or(
+		std::min(limit / 2, 9));
 	auto warningText = state->length.value() | rpl::map([=](int count) {
 		const auto left = limit - count;
 		return (left >= threshold)
@@ -5367,15 +5368,17 @@ void AddLengthLimitLabel(
 			: QString::number(left);
 	});
 	const auto warning = CreateChild<FlatLabel>(
-		field.get(),
+		parent,
 		std::move(warningText),
 		st::defaultInputFieldLimit);
 
 	const auto maxSize = st::defaultInputFieldLimit.style.font->width(
 		kMinus + QString::number(allowExceed));
-	const auto add = std::max(maxSize - field->st().textMargins.right(), 0);
-	if (add) {
-		field->setAdditionalMargins({ 0, 0, add, 0 });
+	if (parent == field) {
+		const auto add = maxSize - field->st().textMargins.right();
+		if (add > 0) {
+			field->setAdditionalMargins({ 0, 0, std::max(add, 0), 0 });
+		}
 	}
 	state->length.value() | rpl::map(
 		rpl::mappers::_1 > limit
@@ -5384,15 +5387,20 @@ void AddLengthLimitLabel(
 			? st::attentionButtonFg->c
 			: std::optional<QColor>());
 	}, warning->lifetime());
+	const auto updatePosition = options.customUpdatePosition
+		? options.customUpdatePosition
+		: [=, added = options.limitLabelTop](QSize parent, QSize label) {
+			// Baseline alignment.
+			const auto top = field->st().textMargins.top()
+				+ field->st().style.font->ascent
+				- st::defaultInputFieldLimit.style.font->ascent;
+			return QPoint(parent.width() - label.width(), top + added);
+		};
 	rpl::combine(
-		field->sizeValue(),
+		parent->sizeValue(),
 		warning->sizeValue()
-	) | rpl::start_with_next([=] {
-		// Baseline alignment.
-		const auto top = field->st().textMargins.top()
-			+ field->st().style.font->ascent
-			- st::defaultInputFieldLimit.style.font->ascent;
-		warning->moveToRight(0, top + limitLabelTop);
+	) | rpl::start_with_next([warning, updatePosition](QSize a, QSize b) {
+		warning->move(updatePosition(a, b));
 	}, warning->lifetime());
 	warning->setAttribute(Qt::WA_TransparentForMouseEvents);
 }
