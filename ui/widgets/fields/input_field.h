@@ -77,6 +77,11 @@ enum class InputSubmitSettings {
 	None,
 };
 
+enum class MarkdownSet {
+	All,
+	Notes,
+};
+
 class CustomFieldObject;
 
 struct MarkdownEnabled {
@@ -288,6 +293,8 @@ public:
 		return _markdownEnabledState;
 	}
 
+	void setMarkdownSet(MarkdownSet set);
+
 	using SubmitSettings = InputSubmitSettings;
 	void setSubmitSettings(SubmitSettings settings);
 	static bool ShouldSubmit(
@@ -391,6 +398,7 @@ private:
 	int placeholderSkipWidth() const;
 
 	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActions();
+	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActionsNotes();
 	void setupMarkdownShortcuts();
 	bool executeMarkdownAction(MarkdownAction action);
 
@@ -583,6 +591,7 @@ private:
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
+	MarkdownSet _markdownSet = MarkdownSet::All;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
 	bool _insertedTagsDelayClear = false;

@@ -1675,8 +1675,19 @@ std::vector<InputField::MarkdownAction> InputField::MarkdownActions() {
 	};
 }
 
+std::vector<InputField::MarkdownAction> InputField::MarkdownActionsNotes() {
+	return {
+		{ QKeySequence::Bold, kTagBold },
+		{ QKeySequence::Italic, kTagItalic },
+		{ QKeySequence::Underline, kTagUnderline },
+		{ kStrikeOutSequence, kTagStrikeOut },
+		{ kSpoilerSequence, kTagSpoiler },
+		{ kClearFormatSequence, QString() },
+	};
+}
+
 void InputField::setupMarkdownShortcuts() {
-	for (const auto &action : MarkdownActions()) {
+	for (const auto &action : (_markdownSet == MarkdownSet::Notes ? MarkdownActionsNotes() : MarkdownActions())) {
 		auto shortcut = std::make_unique<QShortcut>(
 			action.sequence,
 			_inner.get(),
@@ -1688,6 +1699,13 @@ void InputField::setupMarkdownShortcuts() {
 		});
 		_markdownShortcuts.push_back(std::move(shortcut));
 	}
+}
+
+void InputField::setMarkdownSet(MarkdownSet set) {
+	_markdownSet = set;
+
+	_markdownShortcuts.clear();
+	setupMarkdownShortcuts();
 }
 
 bool InputField::executeMarkdownAction(MarkdownAction action) {
@@ -4149,7 +4167,7 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 		const auto events = QKeySequence(searchKey);
 		return sequence.matches(events) == QKeySequence::ExactMatch;
 	};
-	for (const auto &action : MarkdownActions()) {
+	for (const auto &action : (_markdownSet == MarkdownSet::Notes ? MarkdownActionsNotes() : MarkdownActions())) {
 		if (matches(action.sequence)) {
 			return executeMarkdownAction(action);
 		}
@@ -5117,17 +5135,25 @@ void InputField::addMarkdownActions(
 		});
 	};
 
-	addtag(integration.phraseFormattingBold(), QKeySequence::Bold, kTagBold);
-	addtag(integration.phraseFormattingItalic(), QKeySequence::Italic, kTagItalic);
-	addtag(integration.phraseFormattingUnderline(), QKeySequence::Underline, kTagUnderline);
-	addtag(integration.phraseFormattingStrikeOut(), kStrikeOutSequence, kTagStrikeOut);
-	addtag(integration.phraseFormattingBlockquote(), kBlockquoteSequence, kTagBlockquote);
-	addtag(integration.phraseFormattingMonospace(), kMonospaceSequence, kTagCode);
-	addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
+	if (_markdownSet == MarkdownSet::Notes) {
+		addtag(integration.phraseFormattingBold(), QKeySequence::Bold, kTagBold);
+		addtag(integration.phraseFormattingItalic(), QKeySequence::Italic, kTagItalic);
+		addtag(integration.phraseFormattingUnderline(), QKeySequence::Underline, kTagUnderline);
+		addtag(integration.phraseFormattingStrikeOut(), kStrikeOutSequence, kTagStrikeOut);
+		addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
+	} else {
+		addtag(integration.phraseFormattingBold(), QKeySequence::Bold, kTagBold);
+		addtag(integration.phraseFormattingItalic(), QKeySequence::Italic, kTagItalic);
+		addtag(integration.phraseFormattingUnderline(), QKeySequence::Underline, kTagUnderline);
+		addtag(integration.phraseFormattingStrikeOut(), kStrikeOutSequence, kTagStrikeOut);
+		addtag(integration.phraseFormattingBlockquote(), kBlockquoteSequence, kTagBlockquote);
+		addtag(integration.phraseFormattingMonospace(), kMonospaceSequence, kTagCode);
+		addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
 
-	if (_editLinkCallback) {
-		submenu->addSeparator();
-		addlink();
+		if (_editLinkCallback) {
+			submenu->addSeparator();
+			addlink();
+		}
 	}
 
 	submenu->addSeparator();
