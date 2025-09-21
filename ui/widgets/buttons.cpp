@@ -70,8 +70,8 @@ LinkButton::LinkButton(
 , _textWidth(st.font->width(_text)) {
 	resizeToText();
 	setCursor(style::cur_pointer);
-	Accessibility::SetName(this, _text);
 	Accessibility::SetRole(this, QAccessible::Role::Link);
+	setAccessibleName(text);
 }
 
 void LinkButton::paintEvent(QPaintEvent *e) {
@@ -98,9 +98,9 @@ void LinkButton::paintEvent(QPaintEvent *e) {
 void LinkButton::setText(const QString &text) {
 	_text = text;
 	_textWidth = _st.font->width(_text);
+	setAccessibleName(text);
 	resizeToText();
 	update();
-	Accessibility::SetName(this, _text);
 }
 
 void LinkButton::resizeToText() {
@@ -237,14 +237,14 @@ FlatButton::FlatButton(
 		_width = _st.width;
 	}
 	resize(_width, _st.height);
-	Accessibility::SetName(this, _text);
 	Accessibility::SetRole(this, QAccessible::Role::PushButton);
+	setAccessibleName(text);
 }
 
 void FlatButton::setText(const QString &text) {
 	_text = text;
+	setAccessibleName(text);
 	update();
-	Accessibility::SetName(this, _text);
 }
 
 void FlatButton::setWidth(int w) {
@@ -309,12 +309,12 @@ RoundButton::RoundButton(
 , _st(st)
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
 , _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	_textFull.value(
 	) | rpl::start_with_next([=](const TextWithEntities &text) {
 		resizeToText(text);
-		Accessibility::SetName(this, text.text);
+		setAccessibleName(text.text);
 	}, lifetime());
-	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 void RoundButton::setTextTransform(TextTransform transform) {
@@ -805,12 +805,12 @@ SettingsButton::SettingsButton(
 , _st(st)
 , _padding(_st.padding)
 , _context(context) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	std::move(
 		text
 	) | rpl::start_with_next([this](TextWithEntities &&value) {
 		setText(std::move(value));
 	}, lifetime());
-	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 SettingsButton::SettingsButton(
@@ -977,8 +977,8 @@ void SettingsButton::onStateChanged(
 
 void SettingsButton::setText(TextWithEntities &&text) {
 	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
+	setAccessibleName(text.text);
 	update();
-	Accessibility::SetName(this, text.text);
 }
 
 not_null<RippleButton*> CreateSimpleRectButton(

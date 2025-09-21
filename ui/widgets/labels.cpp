@@ -7,6 +7,7 @@
 #include "ui/widgets/labels.h"
 
 #include "base/invoke_queued.h"
+#include "base/platform/base_accessibility.h"
 #include "ui/text/text_entity.h"
 #include "ui/effects/animation_value.h"
 #include "ui/widgets/popup_menu.h"
@@ -205,6 +206,7 @@ FlatLabel::FlatLabel(
 , _st(st)
 , _stMenu(stMenu) {
 	init();
+	Accessibility::SetRole(this, QAccessible::Role::StaticText);
 }
 
 FlatLabel::FlatLabel(
@@ -218,6 +220,8 @@ FlatLabel::FlatLabel(
 , _stMenu(stMenu) {
 	setText(text);
 	init();
+	Accessibility::SetRole(this, QAccessible::Role::StaticText);
+	setAccessibleName(text);
 }
 
 FlatLabel::FlatLabel(
@@ -230,10 +234,12 @@ FlatLabel::FlatLabel(
 , _st(st)
 , _stMenu(stMenu) {
 	textUpdated();
+	Accessibility::SetRole(this, QAccessible::Role::StaticText);
 	std::move(
 		text
 	) | rpl::start_with_next([this](const QString &value) {
 		setText(value);
+		setAccessibleName(value);
 	}, lifetime());
 	init();
 }
@@ -251,10 +257,12 @@ FlatLabel::FlatLabel(
 , _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
 
+	Accessibility::SetRole(this, QAccessible::Role::StaticText);
 	std::move(
 		text
 	) | rpl::start_with_next([=](const TextWithEntities &value) {
 		setMarkedText(value, context);
+		setAccessibleName(value.text);
 	}, lifetime());
 	init();
 }
@@ -277,6 +285,7 @@ void FlatLabel::textUpdated() {
 
 void FlatLabel::setText(const QString &text) {
 	_text.setText(_st.style, text, _labelOptions);
+	setAccessibleName(text);
 	textUpdated();
 }
 
@@ -289,6 +298,7 @@ void FlatLabel::setMarkedText(
 		textWithEntities,
 		_labelMarkedOptions,
 		context);
+	setAccessibleName(textWithEntities.text);
 	textUpdated();
 }
 
