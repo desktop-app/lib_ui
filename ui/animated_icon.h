@@ -56,6 +56,8 @@ public:
 
 	void animate(Fn<void()> update);
 	void jumpToStart(Fn<void()> update);
+	void setCustomEndFrame(int frame);
+	void setCustomStartFrame(int frame);
 
 	void paint(QPainter &p, int x, int y);
 	void paintInCenter(QPainter &p, QRect rect);
@@ -77,6 +79,7 @@ private:
 		QSize updatedDesiredSize = QSize()) const;
 	void frameJumpFinished();
 	void continueAnimation(crl::time now);
+	[[nodiscard]] int effectiveFramesCount() const;
 
 	std::shared_ptr<Impl> _impl;
 	crl::time _animationStartTime = 0;
@@ -88,6 +91,8 @@ private:
 	mutable crl::time _animationNextStart = 0;
 	mutable int _animationCurrentIndex = 0;
 	bool _colorized = false;
+	int _customEndFrame = -1;
+	int _customStartFrame = -1;
 
 };
 
