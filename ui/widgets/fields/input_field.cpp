@@ -3498,9 +3498,14 @@ void InputField::documentContentsChanged(
 	QTextCursor(document).joinPreviousEditBlock();
 
 	chopByMaxLength(insertPosition, insertLength);
+	const auto inserted = (_maxLength > 0)
+		? (std::max(
+			std::min(insertPosition + insertLength, _maxLength),
+			insertPosition) - insertPosition)
+		: insertLength;
 	if (document->availableRedoSteps() == 0) {
 		const auto pageSize = document->pageSize();
-		processFormatting(insertPosition, insertPosition + insertLength);
+		processFormatting(insertPosition, insertPosition + inserted);
 		if (document->pageSize() != pageSize) {
 			document->setPageSize(pageSize);
 		}
