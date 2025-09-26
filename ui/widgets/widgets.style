@@ -1600,6 +1600,10 @@ menuWithIconsAttention: Menu(menuWithIcons) {
 	itemFg: attentionButtonFg;
 	itemFgOver: attentionButtonFgOver;
 }
+menuAttention: Menu(defaultMenu) {
+	itemFg: attentionButtonFg;
+	itemFgOver: attentionButtonFgOver;
+}
 popupMenuWithIcons: PopupMenu(defaultPopupMenu) {
 	scrollPadding: margins(0px, 5px, 0px, 5px);
 	menu: menuWithIcons;
