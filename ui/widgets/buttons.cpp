@@ -70,17 +70,8 @@ namespace Ui {
 		, _textWidth(st.font->width(_text)) {
 		resizeToText();
 		setCursor(style::cur_pointer);
-
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::Link);
-		setAccessibleName(text);
+		Accessibility::SetName(this, text);
 	}
 
 	void LinkButton::paintEvent(QPaintEvent* e) {
@@ -108,7 +99,7 @@ namespace Ui {
 	void LinkButton::setText(const QString& text) {
 		_text = text;
 		_textWidth = _st.font->width(_text);
-		setAccessibleName(text);
+		Accessibility::SetName(this, text);
 		resizeToText();
 		update();
 	}
@@ -252,21 +243,13 @@ namespace Ui {
 			_width = _st.width;
 		}
 		resize(_width, _st.height);
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::PushButton);
-		setAccessibleName(text);
+		Accessibility::SetName(this, text);
 	}
 
 	void FlatButton::setText(const QString& text) {
 		_text = text;
-		setAccessibleName(text);
+		Accessibility::SetName(this, text);
 		update();
 	}
 
@@ -334,19 +317,11 @@ namespace Ui {
 		, _st(st)
 		, _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
 		, _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::PushButton);
 		_textFull.value(
 		) | rpl::start_with_next([=](const TextWithEntities& text) {
 			resizeToText(text);
-			setAccessibleName(text.text);
+			Accessibility::SetName(this, text.text);
 			}, lifetime());
 	}
 
@@ -602,14 +577,6 @@ namespace Ui {
 	IconButton::IconButton(QWidget* parent, const style::IconButton& st) : RippleButton(parent, st.ripple)
 		, _st(st) {
 		resize(_st.width, _st.height);
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	}
 
@@ -711,14 +678,6 @@ namespace Ui {
 		resize(_st.width, _st.height);
 		setCursor(style::cur_pointer);
 		setVisible(false);
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	}
 
@@ -868,14 +827,6 @@ namespace Ui {
 		, _st(st)
 		, _padding(_st.padding)
 		, _context(context) {
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::PushButton);
 		std::move(
 			text
@@ -891,14 +842,6 @@ namespace Ui {
 		: RippleButton(parent, st.ripple)
 		, _st(st)
 		, _padding(_st.padding) {
-		Accessibility::ObserveScreenReaderState(this, [this](bool isActive) {
-			if (isActive) {
-				setFocusPolicy(Qt::StrongFocus);
-			}
-			else {
-				setFocusPolicy(Qt::NoFocus);
-			}
-			});
 		Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	}
 
@@ -1056,7 +999,7 @@ namespace Ui {
 
 	void SettingsButton::setText(TextWithEntities&& text) {
 		_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
-		setAccessibleName(text.text);
+		Accessibility::SetName(this, text.text);
 		update();
 	}
 
