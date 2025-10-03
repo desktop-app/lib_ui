@@ -66,6 +66,7 @@ protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
+	void keyPressEvent(QKeyEvent* e) override;
 
 protected:
 	enum class StateFlag {

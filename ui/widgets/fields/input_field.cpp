@@ -1568,6 +1568,7 @@ InputField::InputField(
 	_placeholderFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
 		refreshPlaceholder(text);
+		setAccessibleName(text);
 	}, lifetime());
 
 	style::PaletteChanged(
