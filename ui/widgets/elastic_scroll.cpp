@@ -117,6 +117,10 @@ bool ElasticScrollBar::barHighlighted() const {
 }
 
 void ElasticScrollBar::toggle(bool shown, anim::type animated) {
+	if (_st.barHidden) {
+		shown = false;
+		animated = anim::type::instant;
+	}
 	const auto instant = (animated == anim::type::instant);
 	const auto changed = (_shown != shown);
 	_shown = shown;

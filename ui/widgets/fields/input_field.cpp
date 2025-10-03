@@ -1676,8 +1676,19 @@ std::vector<InputField::MarkdownAction> InputField::MarkdownActions() {
 	};
 }
 
+std::vector<InputField::MarkdownAction> InputField::MarkdownActionsNotes() {
+	return {
+		{ QKeySequence::Bold, kTagBold },
+		{ QKeySequence::Italic, kTagItalic },
+		{ QKeySequence::Underline, kTagUnderline },
+		{ kStrikeOutSequence, kTagStrikeOut },
+		{ kSpoilerSequence, kTagSpoiler },
+		{ kClearFormatSequence, QString() },
+	};
+}
+
 void InputField::setupMarkdownShortcuts() {
-	for (const auto &action : MarkdownActions()) {
+	for (const auto &action : (_markdownSet == MarkdownSet::Notes ? MarkdownActionsNotes() : MarkdownActions())) {
 		auto shortcut = std::make_unique<QShortcut>(
 			action.sequence,
 			_inner.get(),
@@ -1689,6 +1700,13 @@ void InputField::setupMarkdownShortcuts() {
 		});
 		_markdownShortcuts.push_back(std::move(shortcut));
 	}
+}
+
+void InputField::setMarkdownSet(MarkdownSet set) {
+	_markdownSet = set;
+
+	_markdownShortcuts.clear();
+	setupMarkdownShortcuts();
 }
 
 bool InputField::executeMarkdownAction(MarkdownAction action) {
@@ -3481,9 +3499,14 @@ void InputField::documentContentsChanged(
 	QTextCursor(document).joinPreviousEditBlock();
 
 	chopByMaxLength(insertPosition, insertLength);
+	const auto inserted = (_maxLength > 0)
+		? (std::max(
+			std::min(insertPosition + insertLength, _maxLength),
+			insertPosition) - insertPosition)
+		: insertLength;
 	if (document->availableRedoSteps() == 0) {
 		const auto pageSize = document->pageSize();
-		processFormatting(insertPosition, insertPosition + insertLength);
+		processFormatting(insertPosition, insertPosition + inserted);
 		if (document->pageSize() != pageSize) {
 			document->setPageSize(pageSize);
 		}
@@ -4150,7 +4173,7 @@ bool InputField::handleMarkdownKey(QKeyEvent *e) {
 		const auto events = QKeySequence(searchKey);
 		return sequence.matches(events) == QKeySequence::ExactMatch;
 	};
-	for (const auto &action : MarkdownActions()) {
+	for (const auto &action : (_markdownSet == MarkdownSet::Notes ? MarkdownActionsNotes() : MarkdownActions())) {
 		if (matches(action.sequence)) {
 			return executeMarkdownAction(action);
 		}
@@ -5118,17 +5141,25 @@ void InputField::addMarkdownActions(
 		});
 	};
 
-	addtag(integration.phraseFormattingBold(), QKeySequence::Bold, kTagBold);
-	addtag(integration.phraseFormattingItalic(), QKeySequence::Italic, kTagItalic);
-	addtag(integration.phraseFormattingUnderline(), QKeySequence::Underline, kTagUnderline);
-	addtag(integration.phraseFormattingStrikeOut(), kStrikeOutSequence, kTagStrikeOut);
-	addtag(integration.phraseFormattingBlockquote(), kBlockquoteSequence, kTagBlockquote);
-	addtag(integration.phraseFormattingMonospace(), kMonospaceSequence, kTagCode);
-	addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
+	if (_markdownSet == MarkdownSet::Notes) {
+		addtag(integration.phraseFormattingBold(), QKeySequence::Bold, kTagBold);
+		addtag(integration.phraseFormattingItalic(), QKeySequence::Italic, kTagItalic);
+		addtag(integration.phraseFormattingUnderline(), QKeySequence::Underline, kTagUnderline);
+		addtag(integration.phraseFormattingStrikeOut(), kStrikeOutSequence, kTagStrikeOut);
+		addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
+	} else {
+		addtag(integration.phraseFormattingBold(), QKeySequence::Bold, kTagBold);
+		addtag(integration.phraseFormattingItalic(), QKeySequence::Italic, kTagItalic);
+		addtag(integration.phraseFormattingUnderline(), QKeySequence::Underline, kTagUnderline);
+		addtag(integration.phraseFormattingStrikeOut(), kStrikeOutSequence, kTagStrikeOut);
+		addtag(integration.phraseFormattingBlockquote(), kBlockquoteSequence, kTagBlockquote);
+		addtag(integration.phraseFormattingMonospace(), kMonospaceSequence, kTagCode);
+		addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
 
-	if (_editLinkCallback) {
-		submenu->addSeparator();
-		addlink();
+		if (_editLinkCallback) {
+			submenu->addSeparator();
+			addlink();
+		}
 	}
 
 	submenu->addSeparator();
@@ -5342,12 +5373,14 @@ int ComputeFieldCharacterCount(not_null<InputField*> field) {
 void AddLengthLimitLabel(
 		not_null<InputField*> field,
 		int limit,
-		std::optional<uint> customThreshold,
-		int limitLabelTop) {
+		LengthLimitLabelOptions options) {
 	struct State {
 		rpl::variable<int> length;
 	};
 	constexpr auto kMinus = QChar(0x2212);
+	const auto parent = options.customParent
+		? options.customParent
+		: field.get();
 	const auto state = field->lifetime().make_state<State>();
 	state->length = rpl::single(
 		rpl::empty
@@ -5356,9 +5389,8 @@ void AddLengthLimitLabel(
 	});
 	const auto allowExceed = std::max(limit / 2, 9);
 	field->setMaxLength(limit + allowExceed);
-	const auto threshold = !customThreshold
-		? std::min(limit / 2, 9)
-		: int(*customThreshold);
+	const auto threshold = options.customThreshold.value_or(
+		std::min(limit / 2, 9));
 	auto warningText = state->length.value() | rpl::map([=](int count) {
 		const auto left = limit - count;
 		return (left >= threshold)
@@ -5368,15 +5400,17 @@ void AddLengthLimitLabel(
 			: QString::number(left);
 	});
 	const auto warning = CreateChild<FlatLabel>(
-		field.get(),
+		parent,
 		std::move(warningText),
 		st::defaultInputFieldLimit);
 
 	const auto maxSize = st::defaultInputFieldLimit.style.font->width(
 		kMinus + QString::number(allowExceed));
-	const auto add = std::max(maxSize - field->st().textMargins.right(), 0);
-	if (add) {
-		field->setAdditionalMargins({ 0, 0, add, 0 });
+	if (parent == field) {
+		const auto add = maxSize - field->st().textMargins.right();
+		if (add > 0) {
+			field->setAdditionalMargins({ 0, 0, std::max(add, 0), 0 });
+		}
 	}
 	state->length.value() | rpl::map(
 		rpl::mappers::_1 > limit
@@ -5385,15 +5419,20 @@ void AddLengthLimitLabel(
 			? st::attentionButtonFg->c
 			: std::optional<QColor>());
 	}, warning->lifetime());
+	const auto updatePosition = options.customUpdatePosition
+		? options.customUpdatePosition
+		: [=, added = options.limitLabelTop](QSize parent, QSize label) {
+			// Baseline alignment.
+			const auto top = field->st().textMargins.top()
+				+ field->st().style.font->ascent
+				- st::defaultInputFieldLimit.style.font->ascent;
+			return QPoint(parent.width() - label.width(), top + added);
+		};
 	rpl::combine(
-		field->sizeValue(),
+		parent->sizeValue(),
 		warning->sizeValue()
-	) | rpl::start_with_next([=] {
-		// Baseline alignment.
-		const auto top = field->st().textMargins.top()
-			+ field->st().style.font->ascent
-			- st::defaultInputFieldLimit.style.font->ascent;
-		warning->moveToRight(0, top + limitLabelTop);
+	) | rpl::start_with_next([warning, updatePosition](QSize a, QSize b) {
+		warning->move(updatePosition(a, b));
 	}, warning->lifetime());
 	warning->setAttribute(Qt::WA_TransparentForMouseEvents);
 }

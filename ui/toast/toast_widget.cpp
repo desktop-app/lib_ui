@@ -84,7 +84,7 @@ namespace {
 Widget::Widget(QWidget *parent, Config &&config)
 : RpWidget(parent)
 , _st(config.st)
-, _roundRect(ImageRoundRadius::Large, st::toastBg)
+, _roundRect(_st->radius, st::toastBg)
 , _attach(config.attach)
 , _content(MakeContent(this, config))
 , _padding(config.padding

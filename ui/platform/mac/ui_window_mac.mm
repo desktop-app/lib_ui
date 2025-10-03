@@ -287,7 +287,7 @@ void WindowHelper::Private::enforceStyle() {
 }
 
 void WindowHelper::Private::initOpenGL() {
-	auto forceOpenGL = std::make_unique<QOpenGLWidget>(_owner->window());
+	//auto forceOpenGL = std::make_unique<QOpenGLWidget>(_owner->window());
 }
 
 void WindowHelper::Private::resolveWeakPointers() {

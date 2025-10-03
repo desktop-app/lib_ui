@@ -11,6 +11,7 @@
 
 #include <rpl/event_stream.h>
 #include <rpl/map.h>
+#include <rpl/variable.h>
 #include <rpl/distinct_until_changed.h>
 
 #include <QtWidgets/QWidget>
@@ -400,6 +401,30 @@ protected:
 
 	template <typename OtherWidget, typename OtherTraits>
 	friend class RpWidgetBase;
+
+};
+
+struct VisibleRange {
+	int top = 0;
+	int bottom = 0;
+
+	friend inline bool operator==(VisibleRange, VisibleRange) = default;
+};
+class VisibleRangeWidget final : public RpWidget {
+public:
+	using RpWidget::RpWidget;
+
+	[[nodiscard]] rpl::producer<VisibleRange> visibleRange() const {
+		return _visibleRange.value();
+	}
+private:
+	void visibleTopBottomUpdated(
+			int visibleTop,
+			int visibleBottom) override {
+		_visibleRange = VisibleRange{ visibleTop, visibleBottom };
+	}
+
+	rpl::variable<VisibleRange> _visibleRange;
 
 };
 

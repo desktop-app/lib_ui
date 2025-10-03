@@ -613,6 +613,7 @@ Toast {
 	margin: margins;
 	minWidth: pixels;
 	maxWidth: pixels;
+	radius: pixels;
 	durationFadeIn: int;
 	durationFadeOut: int;
 	durationSlide: int;
@@ -1453,6 +1454,7 @@ defaultToast: Toast {
 	padding: margins(19px, 13px, 19px, 12px);
 	margin: margins(13px, 13px, 13px, 13px);
 	maxWidth: 480px;
+	radius: 6px;
 	durationFadeIn: 200;
 	durationFadeOut: 1000;
 	durationSlide: 160;
@@ -1564,6 +1566,7 @@ windowShadow: icon {{ "window_shadow", windowShadowFg }};
 windowShadowShift: 1px;
 
 callRadius: 6px;
+callShadowExtend: margins(9px, 8px, 9px, 10px);
 callShadow: Shadow {
 	left: icon {{ "calls/call_shadow_left", windowShadowFg }};
 	topLeft: icon {{ "calls/call_shadow_top_left", windowShadowFg }};
@@ -1573,7 +1576,7 @@ callShadow: Shadow {
 	bottomRight: icon {{ "calls/call_shadow_top_left-flip_vertical-flip_horizontal", windowShadowFg }};
 	bottom: icon {{ "calls/call_shadow_top-flip_vertical", windowShadowFg }};
 	bottomLeft: icon {{ "calls/call_shadow_top_left-flip_vertical", windowShadowFg }};
-	extend: margins(9px, 8px, 9px, 10px);
+	extend: callShadowExtend;
 	fallback: windowShadowFgFallback;
 }
 
@@ -1596,6 +1599,10 @@ menuWithIcons: Menu(defaultMenu) {
 	arrow: menuIconSubmenuArrow;
 }
 menuWithIconsAttention: Menu(menuWithIcons) {
+	itemFg: attentionButtonFg;
+	itemFgOver: attentionButtonFgOver;
+}
+menuAttention: Menu(defaultMenu) {
 	itemFg: attentionButtonFg;
 	itemFgOver: attentionButtonFgOver;
 }

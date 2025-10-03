@@ -77,6 +77,11 @@ enum class InputSubmitSettings {
 	None,
 };
 
+enum class MarkdownSet {
+	All,
+	Notes,
+};
+
 class CustomFieldObject;
 
 struct MarkdownEnabled {
@@ -288,6 +293,8 @@ public:
 		return _markdownEnabledState;
 	}
 
+	void setMarkdownSet(MarkdownSet set);
+
 	using SubmitSettings = InputSubmitSettings;
 	void setSubmitSettings(SubmitSettings settings);
 	static bool ShouldSubmit(
@@ -391,6 +398,7 @@ private:
 	int placeholderSkipWidth() const;
 
 	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActions();
+	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActionsNotes();
 	void setupMarkdownShortcuts();
 	bool executeMarkdownAction(MarkdownAction action);
 
@@ -583,6 +591,7 @@ private:
 
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
+	MarkdownSet _markdownSet = MarkdownSet::All;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
 	bool _insertedTagsDelayClear = false;
@@ -652,10 +661,15 @@ void PrepareFormattingOptimization(not_null<QTextDocument*> document);
 	QKeyEvent *event,
 	InputSubmitSettings settings);
 
+struct LengthLimitLabelOptions {
+	RpWidget *customParent = nullptr;
+	std::optional<int> customThreshold = std::nullopt;
+	Fn<QPoint(QSize parent, QSize label)> customUpdatePosition;
+	int limitLabelTop = 0;
+};
 void AddLengthLimitLabel(
 	not_null<InputField*> field,
 	int limit,
-	std::optional<uint> customThreshold = std::nullopt,
-	int limitLabelTop = 0);
+	LengthLimitLabelOptions options = {});
 
 } // namespace Ui

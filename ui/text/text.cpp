@@ -12,6 +12,7 @@
 #include "ui/text/text_isolated_emoji.h"
 #include "ui/text/text_renderer.h"
 #include "ui/text/text_word_parser.h"
+#include "ui/widgets/tooltip.h" // FindNiceTooltipWidth.
 #include "ui/basic_click_handlers.h"
 #include "ui/integration.h"
 #include "ui/painter.h"
@@ -1966,6 +1967,19 @@ bool IsTrimmed(QChar ch) {
 	return IsSpace(ch)
 		|| IsBad(ch)
 		|| (ch == QChar(8203)); // zero width space
+}
+
+QSize CountOptimalTextSize(
+		const String &text,
+		int minWidth,
+		int maxWidth) {
+	if (text.maxWidth() <= maxWidth) {
+		return { text.maxWidth(), text.minHeight() };
+	}
+	const auto height = text.countHeight(maxWidth);
+	return { FindNiceTooltipWidth(minWidth, maxWidth, [&](int width) {
+		return text.countHeight(width);
+	}), height };
 }
 
 } // namespace Ui::Text

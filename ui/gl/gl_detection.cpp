@@ -85,9 +85,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	});
 
 	auto tester = QOpenGLWidget(widget);
-	auto format = tester.format();
-	format.setAlphaBufferSize(8);
-	tester.setFormat(format);
+	tester.setAttribute(Qt::WA_TranslucentBackground);
+	if (tester.window()->testAttribute(Qt::WA_TranslucentBackground)) {
+		auto format = tester.format();
+		format.setAlphaBufferSize(8);
+		tester.setFormat(format);
+	}
 	const auto guard2 = [&]() -> std::optional<gsl::final_action<Fn<void()>>> {
 		if (!tester.window()->windowHandle()) {
 			tester.window()->createWinId();

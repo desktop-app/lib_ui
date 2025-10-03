@@ -308,9 +308,21 @@ void AnimatedIcon::paintInCenter(QPainter &p, QRect rect) {
 }
 
 void AnimatedIcon::animate(Fn<void()> update) {
-	if (framesCount() != 1 && !anim::Disabled()) {
-		jumpToStart(std::move(update));
+	if (effectiveFramesCount() != 1 && !anim::Disabled()) {
+		_repaint = std::move(update);
+		_animation.stop();
+		_animationCurrentIndex = (_customStartFrame >= 0)
+			? _customStartFrame
+			: 0;
+		_impl->moveToFrame(_animationCurrentIndex, QSize());
 		_animationDuration = _impl->animationDuration();
+		if (_customEndFrame >= 0) {
+			const auto rate = frameRate();
+			if (rate > 0) {
+				_animationDuration = crl::time(base::SafeRound(
+					effectiveFramesCount() / rate * 1000.));
+			}
+		}
 		_animationCurrentStart = _animationStarted = crl::now();
 		continueAnimation(_animationCurrentStart);
 	}
@@ -344,6 +356,21 @@ void AnimatedIcon::jumpToStart(Fn<void()> update) {
 	_impl->moveToFrame(0, QSize());
 }
 
+void AnimatedIcon::setCustomEndFrame(int frame) {
+	_customEndFrame = (frame >= 0 && frame < framesCount()) ? frame : -1;
+}
+
+void AnimatedIcon::setCustomStartFrame(int frame) {
+	_customStartFrame = (frame >= 0 && frame < framesCount()) ? frame : -1;
+}
+
+int AnimatedIcon::effectiveFramesCount() const {
+	const auto total = framesCount();
+	return (_customEndFrame >= 0 && _customEndFrame < total)
+		? (_customEndFrame + 1)
+		: total;
+}
+
 void AnimatedIcon::frameJumpFinished() {
 	if (_repaint && !animating()) {
 		_repaint();
@@ -365,7 +392,9 @@ int AnimatedIcon::wantedFrameIndex(
 	if (frame->index == _animationCurrentIndex) {
 		const auto duration = frame->generated.duration;
 		const auto next = _animationCurrentStart + duration;
-		if (frame->generated.last) {
+		const auto effectiveCount = effectiveFramesCount();
+		const auto isLastFrame = (_animationCurrentIndex >= effectiveCount - 1);
+		if (isLastFrame) {
 			_animation.stop();
 			if (_repaint) _repaint();
 			return _animationCurrentIndex;
