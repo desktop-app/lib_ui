@@ -7,12 +7,14 @@
 #include "ui/widgets/dropdown_menu.h"
 
 #include <QtGui/QtEvents>
+#include "base/platform/base_accessibility.h"
 
 namespace Ui {
 
 DropdownMenu::DropdownMenu(QWidget *parent, const style::DropdownMenu &st) : InnerDropdown(parent, st.wrap)
 , _st(st) {
 	_menu = setOwnedWidget(object_ptr<Menu::Menu>(this, _st.menu));
+	Accessibility::SetRole(this, QAccessible::Role::PopupMenu);
 	init();
 }
 
