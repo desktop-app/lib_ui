@@ -14,6 +14,7 @@
 #include "ui/widgets/checkbox.h"
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
+#include "base/platform/base_accessibility.h"
 
 #include <QtGui/QtEvents>
 
@@ -68,6 +69,8 @@ LinkButton::LinkButton(
 , _textWidth(st.font->width(_text)) {
 	resizeToText();
 	setCursor(style::cur_pointer);
+	Accessibility::SetRole(this, QAccessible::Role::Link);
+	Accessibility::SetName(this, text);
 }
 
 void LinkButton::paintEvent(QPaintEvent *e) {
@@ -94,6 +97,7 @@ void LinkButton::paintEvent(QPaintEvent *e) {
 void LinkButton::setText(const QString &text) {
 	_text = text;
 	_textWidth = _st.font->width(_text);
+	Accessibility::SetName(this, text);
 	resizeToText();
 	update();
 }
@@ -232,10 +236,13 @@ FlatButton::FlatButton(
 		_width = _st.width;
 	}
 	resize(_width, _st.height);
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
+	Accessibility::SetName(this, text);
 }
 
 void FlatButton::setText(const QString &text) {
 	_text = text;
+	Accessibility::SetName(this, text);
 	update();
 }
 
@@ -301,9 +308,11 @@ RoundButton::RoundButton(
 , _st(st)
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
 , _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	_textFull.value(
 	) | rpl::start_with_next([=](const TextWithEntities &text) {
 		resizeToText(text);
+		Accessibility::SetName(this, text.text);
 	}, lifetime());
 }
 
@@ -551,6 +560,7 @@ RoundButton::~RoundButton() = default;
 IconButton::IconButton(QWidget *parent, const style::IconButton &st) : RippleButton(parent, st.ripple)
 , _st(st) {
 	resize(_st.width, _st.height);
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 const style::IconButton &IconButton::st() const {
@@ -648,6 +658,7 @@ CrossButton::CrossButton(QWidget *parent, const style::CrossButton &st) : Ripple
 	resize(_st.width, _st.height);
 	setCursor(style::cur_pointer);
 	setVisible(false);
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 bool CrossButton::loadingCallback(crl::time now) {
@@ -793,6 +804,7 @@ SettingsButton::SettingsButton(
 , _st(st)
 , _padding(_st.padding)
 , _context(context) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	std::move(
 		text
 	) | rpl::start_with_next([this](TextWithEntities &&value) {
@@ -807,6 +819,7 @@ SettingsButton::SettingsButton(
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _padding(_st.padding) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 }
 
 SettingsButton::~SettingsButton() = default;
@@ -963,6 +976,7 @@ void SettingsButton::onStateChanged(
 
 void SettingsButton::setText(TextWithEntities &&text) {
 	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
+	Accessibility::SetName(this, text.text);
 	update();
 }
 

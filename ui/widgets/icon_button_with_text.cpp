@@ -5,6 +5,7 @@
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
 #include "ui/widgets/icon_button_with_text.h"
+#include "base/platform/base_accessibility.h"
 
 namespace Ui {
 
@@ -36,6 +37,7 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 void IconButtonWithText::setText(const QString &text) {
 	if (_text != text) {
 		_text = text;
+		Accessibility::SetName(this, _text);
 		update();
 	}
 }
