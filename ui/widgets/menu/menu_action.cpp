@@ -8,6 +8,7 @@
 
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
+#include "base/platform/base_accessibility.h"
 
 #include <QtGui/QtEvents>
 
@@ -62,6 +63,8 @@ Action::Action(
 , _height(_st.itemPadding.top()
 	+ _st.itemStyle.font->height
 	+ _st.itemPadding.bottom()) {
+	Accessibility::SetRole(this, QAccessible::Role::MenuItem);
+	Accessibility::SetName(this, _action->text());
 
 	setAcceptBoth(true);
 
@@ -139,6 +142,8 @@ void Action::paint(Painter &p) {
 }
 
 void Action::processAction() {
+	Accessibility::SetName(this, _action->text());
+
 	setPointerCursor(isEnabled());
 	if (_action->text().isEmpty()) {
 		_shortcut = QString();

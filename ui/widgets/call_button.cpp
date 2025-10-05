@@ -13,6 +13,7 @@
 #include "ui/ui_utility.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
+#include "base/platform/base_accessibility.h"
 
 namespace Ui {
 namespace {
@@ -28,6 +29,7 @@ CallButton::CallButton(
 : RippleButton(parent, stFrom.button.ripple)
 , _stFrom(&stFrom)
 , _stTo(stTo) {
+	Accessibility::SetRole(this, QAccessible::Role::PushButton);
 	init();
 }
 
