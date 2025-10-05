@@ -12,6 +12,7 @@
 #include "ui/integration.h"
 #include "styles/palette.h"
 #include "styles/style_widgets.h"
+#include "base/platform/base_accessibility.h"
 
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QApplication>
@@ -65,6 +66,7 @@ MaskedInputField::MaskedInputField(
 , _st(st)
 , _oldtext(val)
 , _placeholderFull(std::move(placeholder)) {
+	Accessibility::SetRole(this, QAccessible::Role::EditableText);
 	resize(_st.width, _st.heightMin);
 
 	setFont(_st.style.font);
@@ -72,6 +74,7 @@ MaskedInputField::MaskedInputField(
 
 	_placeholderFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
+		Accessibility::SetName(this, text);
 		refreshPlaceholder(text);
 	}, lifetime());
 
