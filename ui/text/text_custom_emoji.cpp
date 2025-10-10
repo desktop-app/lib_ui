@@ -9,6 +9,35 @@
 #include "ui/style/style_core.h"
 #include "ui/text/text_utilities.h"
 #include "ui/text/text.h"
+#include "ui/emoji_config.h"
+
+namespace Ui::Emoji {
+
+int GetCustomSizeNormal() {
+	const auto full = GetSizeNormal();
+	const auto esize = full / style::DevicePixelRatio();
+	return Ui::Text::AdjustCustomEmojiSize(esize);
+}
+
+int GetCustomSizeLarge() {
+	const auto full = GetSizeLarge();
+	const auto esize = full / style::DevicePixelRatio();
+	return Ui::Text::AdjustCustomEmojiSize(esize);
+}
+
+int GetCustomSkipNormal() {
+	const auto full = GetSizeNormal();
+	const auto esize = full / style::DevicePixelRatio();
+	return (esize - GetCustomSizeNormal()) / 2;
+}
+
+int GetCustomSkipLarge() {
+	const auto full = GetSizeLarge();
+	const auto esize = full / style::DevicePixelRatio();
+	return (esize - GetCustomSizeLarge()) / 2;
+}
+
+} // namespace Ui::Emoji
 
 namespace Ui::Text {
 

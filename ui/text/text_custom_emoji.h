@@ -17,6 +17,15 @@
 
 class QPainter;
 
+namespace Ui::Emoji {
+
+[[nodiscard]] int GetCustomSizeNormal();
+[[nodiscard]] int GetCustomSkipNormal();
+[[nodiscard]] int GetCustomSizeLarge();
+[[nodiscard]] int GetCustomSkipLarge();
+
+} // namespace Ui::Emoji
+
 namespace Ui::Text {
 
 struct MarkedContext;
