@@ -3705,10 +3705,11 @@ QMimeData *InputField::createMimeDataFromSelectionInner() const {
 	const auto cursor = _inner->textCursor();
 	const auto start = cursor.selectionStart();
 	const auto end = cursor.selectionEnd();
-	return TextUtilities::MimeDataFromText((end > start)
+	const auto result = TextUtilities::MimeDataFromText((end > start)
 		? getTextWithTagsPart(start, end)
 		: TextWithTags()
 	).release();
+	return result ? result : new QMimeData;
 }
 
 void InputField::customUpDown(bool isCustom) {
