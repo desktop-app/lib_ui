@@ -12,11 +12,11 @@
 #include "ui/widgets/labels.h"
 #include "base/invoke_queued.h"
 #include "styles/style_widgets.h"
-#include "base/platform/base_accessibility.h"
 
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <ui/accessibility.h>
 
 namespace Ui {
 
@@ -36,7 +36,7 @@ Tooltip::Tooltip() : RpWidget(nullptr) {
 	TooltipInstance = this;
 
 	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint) | Qt::BypassWindowManagerHint | Qt::NoDropShadowWindowHint | Qt::ToolTip);
-	Accessibility::SetRole(this, QAccessible::Role::ToolTip);
+	setAccessibleRole(this, QAccessible::Role::ToolTip);
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	setAttribute(Qt::WA_TranslucentBackground, true);
 
@@ -77,7 +77,7 @@ Tooltip::~Tooltip() {
 }
 
 void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *st) {
-	Accessibility::SetName(this, text);
+	Ui::setAccessibleName(this, text);
 
 	if (!_isEventFilter) {
 		_isEventFilter = true;
@@ -204,7 +204,7 @@ ImportantTooltip::ImportantTooltip(
 : RpWidget(parent)
 , _st(st)
 , _content(std::move(content)) {
-	Accessibility::SetRole(this, QAccessible::Role::ToolTip);
+	setAccessibleRole(this, QAccessible::Role::ToolTip);
 
 	_content->setParent(this);
 	_hideTimer.setCallback([this] { toggleAnimated(false); });

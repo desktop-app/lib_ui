@@ -7,7 +7,7 @@
 #include "ui/widgets/labels.h"
 
 #include "base/invoke_queued.h"
-#include "base/platform/base_accessibility.h"
+#include "ui/accessibility.h"
 #include "ui/text/text_entity.h"
 #include "ui/effects/animation_value.h"
 #include "ui/widgets/popup_menu.h"
@@ -161,7 +161,7 @@ LabelSimple::LabelSimple(
 	const QString &value)
 : RpWidget(parent)
 , _st(st) {
-	Accessibility::SetRole(this, QAccessible::Role::StaticText);
+	setAccessibleRole(this, QAccessible::Role::StaticText);
 	setText(value);
 }
 
@@ -170,7 +170,7 @@ void LabelSimple::setText(const QString &value, bool *outTextChanged) {
 		if (outTextChanged) *outTextChanged = false;
 		return;
 	}
-	Accessibility::SetName(this, value);
+	Ui::setAccessibleName(this, value);
 
 	_fullText = value;
 	_fullTextWidth = _st.font->width(_fullText);
@@ -208,7 +208,7 @@ FlatLabel::FlatLabel(
 , _st(st)
 , _stMenu(stMenu) {
 	init();
-	Accessibility::SetRole(this, QAccessible::Role::StaticText);
+	setAccessibleRole(this, QAccessible::Role::StaticText);
 }
 
 FlatLabel::FlatLabel(
@@ -222,7 +222,7 @@ FlatLabel::FlatLabel(
 , _stMenu(stMenu) {
 	setText(text);
 	init();
-	Accessibility::SetRole(this, QAccessible::Role::StaticText);
+	setAccessibleRole(this, QAccessible::Role::StaticText);
 }
 
 FlatLabel::FlatLabel(
@@ -235,7 +235,7 @@ FlatLabel::FlatLabel(
 , _st(st)
 , _stMenu(stMenu) {
 	textUpdated();
-	Accessibility::SetRole(this, QAccessible::Role::StaticText);
+	setAccessibleRole(this, QAccessible::Role::StaticText);
 	std::move(
 		text
 	) | rpl::start_with_next([this](const QString &value) {
@@ -256,7 +256,7 @@ FlatLabel::FlatLabel(
 , _stMenu(stMenu)
 , _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
-	Accessibility::SetRole(this, QAccessible::Role::StaticText);
+	setAccessibleRole(this, QAccessible::Role::StaticText);
 
 	std::move(
 		text
@@ -284,7 +284,7 @@ void FlatLabel::textUpdated() {
 
 void FlatLabel::setText(const QString &text) {
 	_text.setText(_st.style, text, _labelOptions);
-	Accessibility::SetName(this, text);
+	Ui::setAccessibleName(this, text);
 	textUpdated();
 }
 
@@ -297,7 +297,7 @@ void FlatLabel::setMarkedText(
 		textWithEntities,
 		_labelMarkedOptions,
 		context);
-	Accessibility::SetName(this, textWithEntities.text);
+	Ui::setAccessibleName(this, textWithEntities.text);
 	textUpdated();
 }
 

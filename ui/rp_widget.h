@@ -17,6 +17,7 @@
 #include <QtWidgets/QWidget>
 #include <QtCore/QPointer>
 #include <QtGui/QtEvents>
+#include <QAccessible>
 
 namespace Ui {
 
@@ -155,6 +156,27 @@ class RpWidgetBase : public Widget, public RpWidgetWrap {
 
 public:
 	using Widget::Widget;
+
+	void setA11yName(const QString& name) {
+		_a11yName = name;
+	}
+	QString a11yName() const {
+		return _a11yName;
+	}
+
+	void setA11yDescription(const QString& description) {
+		_a11yDescription = description;
+	}
+	QString a11yDescription() const {
+		return _a11yDescription;
+	}
+
+	void setA11yRole(QAccessible::Role role) {
+		_a11yRole = role;
+	}
+	QAccessible::Role a11yRole() const {
+		return _a11yRole;
+	}
 
 	~RpWidgetBase() {
 		base::take(_lifetime);
@@ -350,7 +372,11 @@ private:
 
 	Initer _initer = { this, Traits::kSetZeroGeometry };
 
-};
+	QString _a11yName;
+	QString _a11yDescription;
+	QAccessible::Role _a11yRole = QAccessible::Role::NoRole;
+
+	};
 
 class RpWidget : public RpWidgetBase<QWidget> {
 	// The Q_OBJECT meta info is used for qobject_cast above!

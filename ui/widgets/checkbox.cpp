@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/checkbox.h"
 
+#include "ui/accessibility.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
@@ -517,7 +518,7 @@ Checkbox::Checkbox(
 		QString(),
 		_checkboxOptions,
 		_st.style.font->elidew) {
-	Accessibility::SetRole(this, QAccessible::Role::CheckBox);
+	setAccessibleRole(this, QAccessible::Role::CheckBox);
 
 	_check->setUpdateCallback([=] { update(); });
 	resizeToText();
@@ -528,7 +529,7 @@ Checkbox::Checkbox(
 		if (value.entities.empty()) {
 			setText(base::take(value.text));
 		} else {
-			Accessibility::SetName(this, value.text);
+			Ui::setAccessibleName(this, value.text);
 			_text.setMarkedText(
 				_st.style,
 				std::move(value),
@@ -569,7 +570,7 @@ QRect Checkbox::checkRect() const {
 
 void Checkbox::setText(const QString &text, bool rich) {
 	_text.setText(_st.style, text, rich ? _checkboxRichOptions : _checkboxOptions);
-	Accessibility::SetName(this, text);
+	Ui::setAccessibleName(this, text);
 	resizeToText();
 	update();
 }
@@ -962,7 +963,7 @@ Radiobutton::Radiobutton(
 	std::move(check))
 , _group(group)
 , _value(value) {
-	Accessibility::SetRole(this, QAccessible::Role::RadioButton);
+	setAccessibleRole(this, QAccessible::Role::RadioButton);
 
 	using namespace rpl::mappers;
 

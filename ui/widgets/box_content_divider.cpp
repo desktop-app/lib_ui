@@ -12,6 +12,7 @@
 
 #include <QtGui/QPainter>
 #include <QtGui/QtEvents>
+#include "ui/accessibility.h"
 
 namespace Ui {
 
@@ -31,7 +32,7 @@ BoxContentDivider::BoxContentDivider(
 : RpWidget(parent)
 , _bg(bg)
 , _parts(parts) {
-	Accessibility::SetRole(this, QAccessible::Role::Separator);
+	setAccessibleRole(this, QAccessible::Role::Separator);
 	resize(width(), height);
 }
 
