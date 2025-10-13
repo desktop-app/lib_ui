@@ -14,7 +14,7 @@ namespace Ui {
 		};
 
 		void SetupFocusManagementIfNeeded(not_null<RpWidget*> widget) {
-			const auto role = widget->a11yRole();
+			const auto role = widget->accessibleRole();
 
 			if (role != QAccessible::Role::PushButton
 				&& role != QAccessible::Role::Link
@@ -37,7 +37,7 @@ namespace Ui {
 
 			QAccessible::Role role() const override {
 				if (const auto rpWidget = qobject_cast<const Ui::RpWidget*>(widget())) {
-					const auto customRole = rpWidget->a11yRole();
+					const auto customRole = rpWidget->accessibleRole();
 					if (customRole != QAccessible::Role::NoRole) {
 						return customRole;
 					}
@@ -47,17 +47,17 @@ namespace Ui {
 
 			QString text(QAccessible::Text t) const override {
 				if (const auto rpWidget = qobject_cast<const Ui::RpWidget*>(widget())) {
-					if (t == QAccessible::Name && !rpWidget->a11yName().isEmpty()) {
-						return rpWidget->a11yName();
+					if (t == QAccessible::Name && !rpWidget->accessibleName().isEmpty()) {
+						return rpWidget->accessibleName();
 					}
-					else if (t == QAccessible::Description && !rpWidget->a11yDescription().isEmpty()) {
-						return rpWidget->a11yDescription();
+					else if (t == QAccessible::Description && !rpWidget->accessibleDescription().isEmpty()) {
+						return rpWidget->accessibleDescription();
 					}
 				}
 
 				if (t == QAccessible::Value) {
 					if (const auto rpWidget = qobject_cast<const Ui::RpWidget*>(widget())) {
-						if (rpWidget->a11yRole() == QAccessible::Role::EditableText) {
+						if (rpWidget->accessibleRole() == QAccessible::Role::EditableText) {
 							return this->value();
 						}
 					}
@@ -139,8 +139,8 @@ namespace Ui {
 					}
 				}
 				if (const auto rpWidget = qobject_cast<const Ui::RpWidget*>(w)) {
-					if (!rpWidget->a11yName().isEmpty()) {
-						return rpWidget->a11yName().mid(startOffset, endOffset - startOffset);
+					if (!rpWidget->accessibleName().isEmpty()) {
+						return rpWidget->accessibleName().mid(startOffset, endOffset - startOffset);
 					}
 				}
 				if (const auto lineEdit = qobject_cast<const QLineEdit*>(w)) {
@@ -157,8 +157,8 @@ namespace Ui {
 					}
 				}
 				if (const auto rpWidget = qobject_cast<const Ui::RpWidget*>(w)) {
-					if (!rpWidget->a11yName().isEmpty()) {
-						return rpWidget->a11yName().length();
+					if (!rpWidget->accessibleName().isEmpty()) {
+						return rpWidget->accessibleName().length();
 					}
 				}
 				if (const auto lineEdit = qobject_cast<const QLineEdit*>(w)) {
@@ -207,9 +207,9 @@ namespace Ui {
 			if (object && object->isWidgetType()) {
 				auto widget = static_cast<QWidget*>(object);
 				if (auto rpWidget = qobject_cast<Ui::RpWidget*>(widget)) {
-					if (rpWidget->a11yRole() != QAccessible::Role::NoRole
-						|| !rpWidget->a11yName().isEmpty()
-						|| !rpWidget->a11yDescription().isEmpty()) {
+					if (rpWidget->accessibleRole() != QAccessible::Role::NoRole
+						|| !rpWidget->accessibleName().isEmpty()
+						|| !rpWidget->accessibleDescription().isEmpty()) {
 
 						SetupFocusManagementIfNeeded(rpWidget);
 						auto interface = new CustomAccessibilityInterface(widget);
@@ -251,16 +251,16 @@ namespace Ui {
 		base::Platform::Accessibility::ScreenReaderState::instance();
 	}
 
-	void setAccessibleName(not_null<RpWidget*> widget, const QString& name) {
-		widget->setA11yName(name);
+	void SetAccessibleName(not_null<RpWidget*> widget, const QString& name) {
+		widget->setAccessibleName(name);
 	}
 
-	void setAccessibleDescription(not_null<RpWidget*> widget, const QString& description) {
-		widget->setA11yDescription(description);
+	void SetAccessibleDescription(not_null<RpWidget*> widget, const QString& description) {
+		widget->setAccessibleDescription(description);
 	}
 
-	void setAccessibleRole(not_null<RpWidget*> widget, QAccessible::Role role) {
-		widget->setA11yRole(role);
+	void SetAccessibleRole(not_null<RpWidget*> widget, QAccessible::Role role) {
+		widget->setAccessibleRole(role);
 	}
 
 } // namespace Ui

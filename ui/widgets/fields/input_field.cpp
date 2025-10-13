@@ -1525,7 +1525,7 @@ InputField::InputField(
 , _inner(std::make_unique<Inner>(this))
 , _lastTextWithTags(value)
 , _placeholderFull(std::move(placeholder)) {
-	setAccessibleRole(this, QAccessible::Role::EditableText);
+	SetAccessibleRole(this, QAccessible::Role::EditableText);
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
 	_inner->setAcceptRichText(false);
 	resize(_st.width, _minHeight);
@@ -1569,7 +1569,7 @@ InputField::InputField(
 
 	_placeholderFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
-		Ui::setAccessibleName(this, text);
+		Ui::SetAccessibleName(this, text);
 		_inner->setAccessibleName(text);
 		refreshPlaceholder(text);
 	}, lifetime());

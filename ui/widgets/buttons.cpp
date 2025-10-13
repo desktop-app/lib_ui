@@ -69,8 +69,8 @@ LinkButton::LinkButton(
 , _textWidth(st.font->width(_text)) {
 	resizeToText();
 	setCursor(style::cur_pointer);
-	setAccessibleRole(this, QAccessible::Role::Link);
-	Ui::setAccessibleName(this, text);
+	SetAccessibleRole(this, QAccessible::Role::Link);
+	Ui::SetAccessibleName(this, text);
 }
 
 void LinkButton::paintEvent(QPaintEvent *e) {
@@ -97,7 +97,7 @@ void LinkButton::paintEvent(QPaintEvent *e) {
 void LinkButton::setText(const QString &text) {
 	_text = text;
 	_textWidth = _st.font->width(_text);
-	Ui::setAccessibleName(this, text);
+	Ui::SetAccessibleName(this, text);
 	resizeToText();
 	update();
 }
@@ -236,13 +236,13 @@ FlatButton::FlatButton(
 		_width = _st.width;
 	}
 	resize(_width, _st.height);
-	setAccessibleRole(this, QAccessible::Role::PushButton);
-	Ui::setAccessibleName(this, text);
+	SetAccessibleRole(this, QAccessible::Role::PushButton);
+	Ui::SetAccessibleName(this, text);
 }
 
 void FlatButton::setText(const QString &text) {
 	_text = text;
-	Ui::setAccessibleName(this, text);
+	Ui::SetAccessibleName(this, text);
 	update();
 }
 
@@ -308,11 +308,11 @@ RoundButton::RoundButton(
 , _st(st)
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
 , _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
-	setAccessibleRole(this, QAccessible::Role::PushButton);
+	SetAccessibleRole(this, QAccessible::Role::PushButton);
 	_textFull.value(
 	) | rpl::start_with_next([=](const TextWithEntities &text) {
 		resizeToText(text);
-		Ui::setAccessibleName(this, text.text);
+		Ui::SetAccessibleName(this, text.text);
 	}, lifetime());
 }
 
@@ -560,7 +560,7 @@ RoundButton::~RoundButton() = default;
 IconButton::IconButton(QWidget *parent, const style::IconButton &st) : RippleButton(parent, st.ripple)
 , _st(st) {
 	resize(_st.width, _st.height);
-	setAccessibleRole(this, QAccessible::Role::PushButton);
+	SetAccessibleRole(this, QAccessible::Role::PushButton);
 }
 
 const style::IconButton &IconButton::st() const {
@@ -658,7 +658,7 @@ CrossButton::CrossButton(QWidget *parent, const style::CrossButton &st) : Ripple
 	resize(_st.width, _st.height);
 	setCursor(style::cur_pointer);
 	setVisible(false);
-	setAccessibleRole(this, QAccessible::Role::PushButton);
+	SetAccessibleRole(this, QAccessible::Role::PushButton);
 }
 
 bool CrossButton::loadingCallback(crl::time now) {
@@ -804,7 +804,7 @@ SettingsButton::SettingsButton(
 , _st(st)
 , _padding(_st.padding)
 , _context(context) {
-	setAccessibleRole(this, QAccessible::Role::PushButton);
+	SetAccessibleRole(this, QAccessible::Role::PushButton);
 	std::move(
 		text
 	) | rpl::start_with_next([this](TextWithEntities &&value) {
@@ -819,7 +819,7 @@ SettingsButton::SettingsButton(
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _padding(_st.padding) {
-	setAccessibleRole(this, QAccessible::Role::PushButton);
+	SetAccessibleRole(this, QAccessible::Role::PushButton);
 }
 
 SettingsButton::~SettingsButton() = default;
@@ -976,7 +976,7 @@ void SettingsButton::onStateChanged(
 
 void SettingsButton::setText(TextWithEntities &&text) {
 	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
-	Ui::setAccessibleName(this, text.text);
+	Ui::SetAccessibleName(this, text.text);
 	update();
 }
 

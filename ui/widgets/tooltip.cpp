@@ -36,7 +36,7 @@ Tooltip::Tooltip() : RpWidget(nullptr) {
 	TooltipInstance = this;
 
 	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint) | Qt::BypassWindowManagerHint | Qt::NoDropShadowWindowHint | Qt::ToolTip);
-	setAccessibleRole(this, QAccessible::Role::ToolTip);
+	SetAccessibleRole(this, QAccessible::Role::ToolTip);
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	setAttribute(Qt::WA_TranslucentBackground, true);
 
@@ -77,7 +77,7 @@ Tooltip::~Tooltip() {
 }
 
 void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *st) {
-	Ui::setAccessibleName(this, text);
+	Ui::SetAccessibleName(this, text);
 
 	if (!_isEventFilter) {
 		_isEventFilter = true;
@@ -204,7 +204,7 @@ ImportantTooltip::ImportantTooltip(
 : RpWidget(parent)
 , _st(st)
 , _content(std::move(content)) {
-	setAccessibleRole(this, QAccessible::Role::ToolTip);
+	SetAccessibleRole(this, QAccessible::Role::ToolTip);
 
 	_content->setParent(this);
 	_hideTimer.setCallback([this] { toggleAnimated(false); });

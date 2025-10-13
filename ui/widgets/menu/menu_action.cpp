@@ -63,8 +63,8 @@ Action::Action(
 , _height(_st.itemPadding.top()
 	+ _st.itemStyle.font->height
 	+ _st.itemPadding.bottom()) {
-	setAccessibleRole(this, QAccessible::Role::MenuItem);
-	Ui::setAccessibleName(this, _action->text());
+	SetAccessibleRole(this, QAccessible::Role::MenuItem);
+	Ui::SetAccessibleName(this, _action->text());
 
 	setAcceptBoth(true);
 
@@ -142,7 +142,7 @@ void Action::paint(Painter &p) {
 }
 
 void Action::processAction() {
-	Ui::setAccessibleName(this, _action->text());
+	Ui::SetAccessibleName(this, _action->text());
 
 	setPointerCursor(isEnabled());
 	if (_action->text().isEmpty()) {

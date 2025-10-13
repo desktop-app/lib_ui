@@ -518,7 +518,7 @@ Checkbox::Checkbox(
 		QString(),
 		_checkboxOptions,
 		_st.style.font->elidew) {
-	setAccessibleRole(this, QAccessible::Role::CheckBox);
+	SetAccessibleRole(this, QAccessible::Role::CheckBox);
 
 	_check->setUpdateCallback([=] { update(); });
 	resizeToText();
@@ -529,7 +529,7 @@ Checkbox::Checkbox(
 		if (value.entities.empty()) {
 			setText(base::take(value.text));
 		} else {
-			Ui::setAccessibleName(this, value.text);
+			Ui::SetAccessibleName(this, value.text);
 			_text.setMarkedText(
 				_st.style,
 				std::move(value),
@@ -570,7 +570,7 @@ QRect Checkbox::checkRect() const {
 
 void Checkbox::setText(const QString &text, bool rich) {
 	_text.setText(_st.style, text, rich ? _checkboxRichOptions : _checkboxOptions);
-	Ui::setAccessibleName(this, text);
+	Ui::SetAccessibleName(this, text);
 	resizeToText();
 	update();
 }
@@ -963,7 +963,7 @@ Radiobutton::Radiobutton(
 	std::move(check))
 , _group(group)
 , _value(value) {
-	setAccessibleRole(this, QAccessible::Role::RadioButton);
+	SetAccessibleRole(this, QAccessible::Role::RadioButton);
 
 	using namespace rpl::mappers;
 

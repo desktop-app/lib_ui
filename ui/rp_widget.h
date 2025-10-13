@@ -157,25 +157,25 @@ class RpWidgetBase : public Widget, public RpWidgetWrap {
 public:
 	using Widget::Widget;
 
-	void setA11yName(const QString& name) {
-		_a11yName = name;
+	void setAccessibleName(const QString& name) {
+		_accessibleName = name;
 	}
-	QString a11yName() const {
-		return _a11yName;
-	}
-
-	void setA11yDescription(const QString& description) {
-		_a11yDescription = description;
-	}
-	QString a11yDescription() const {
-		return _a11yDescription;
+	QString accessibleName() const {
+		return _accessibleName;
 	}
 
-	void setA11yRole(QAccessible::Role role) {
-		_a11yRole = role;
+	void setAccessibleDescription(const QString& description) {
+		_accessibleDescription = description;
 	}
-	QAccessible::Role a11yRole() const {
-		return _a11yRole;
+	QString accessibleDescription() const {
+		return _accessibleDescription;
+	}
+
+	void setAccessibleRole(QAccessible::Role role) {
+		_accessibleRole = role;
+	}
+	QAccessible::Role accessibleRole() const {
+		return _accessibleRole;
 	}
 
 	~RpWidgetBase() {
@@ -372,9 +372,9 @@ private:
 
 	Initer _initer = { this, Traits::kSetZeroGeometry };
 
-	QString _a11yName;
-	QString _a11yDescription;
-	QAccessible::Role _a11yRole = QAccessible::Role::NoRole;
+	QString _accessibleName;
+	QString _accessibleDescription;
+	QAccessible::Role _accessibleRole = QAccessible::Role::NoRole;
 
 	};
 

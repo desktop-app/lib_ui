@@ -32,7 +32,7 @@ BoxContentDivider::BoxContentDivider(
 : RpWidget(parent)
 , _bg(bg)
 , _parts(parts) {
-	setAccessibleRole(this, QAccessible::Role::Separator);
+	SetAccessibleRole(this, QAccessible::Role::Separator);
 	resize(width(), height);
 }
 
