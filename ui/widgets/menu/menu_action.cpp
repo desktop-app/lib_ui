@@ -6,7 +6,6 @@
 //
 #include "ui/widgets/menu/menu_action.h"
 
-#include "ui/accessibility.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 
@@ -63,8 +62,8 @@ Action::Action(
 , _height(_st.itemPadding.top()
 	+ _st.itemStyle.font->height
 	+ _st.itemPadding.bottom()) {
-	SetAccessibleRole(this, QAccessible::Role::MenuItem);
-	Ui::SetAccessibleName(this, _action->text());
+	setAccessibleRole(QAccessible::Role::MenuItem);
+	setAccessibleName(_action->text());
 
 	setAcceptBoth(true);
 
@@ -142,7 +141,7 @@ void Action::paint(Painter &p) {
 }
 
 void Action::processAction() {
-	Ui::SetAccessibleName(this, _action->text());
+	setAccessibleName(_action->text());
 
 	setPointerCursor(isEnabled());
 	if (_action->text().isEmpty()) {

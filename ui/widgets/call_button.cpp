@@ -6,7 +6,6 @@
 //
 #include "ui/widgets/call_button.h"
 
-#include "ui/accessibility.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 #include "ui/widgets/labels.h"
@@ -29,7 +28,7 @@ CallButton::CallButton(
 : RippleButton(parent, stFrom.button.ripple)
 , _stFrom(&stFrom)
 , _stTo(stTo) {
-	SetAccessibleRole(this, QAccessible::Role::PushButton);
+	setAccessibleRole(QAccessible::Role::PushButton);
 	init();
 }
 

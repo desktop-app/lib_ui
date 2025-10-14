@@ -6,7 +6,6 @@
 //
 #include "ui/widgets/popup_menu.h"
 
-#include "ui/accessibility.h"
 #include "ui/image/image_prepare.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/shadow.h"
@@ -173,7 +172,7 @@ PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 		_scroll.data(),
 		object_ptr<Menu::Menu>(_scroll.data(), _st.menu),
 		_st.scrollPadding))->entity()) {
-	SetAccessibleRole(this, QAccessible::Role::PopupMenu);
+	setAccessibleRole(QAccessible::Role::PopupMenu);
 	init();
 }
 
@@ -187,7 +186,7 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 		_scroll.data(),
 		object_ptr<Menu::Menu>(_scroll.data(), menu, _st.menu),
 		_st.scrollPadding))->entity()) {
-	SetAccessibleRole(this, QAccessible::Role::PopupMenu);
+	setAccessibleRole(QAccessible::Role::PopupMenu);
 	init();
 
 	for (const auto &action : actions()) {

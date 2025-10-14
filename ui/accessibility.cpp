@@ -250,17 +250,4 @@ namespace Ui {
 		QAccessible::installFactory(Factory);
 		base::Platform::Accessibility::ScreenReaderState::instance();
 	}
-
-	void SetAccessibleName(not_null<RpWidget*> widget, const QString& name) {
-		widget->setAccessibleName(name);
-	}
-
-	void SetAccessibleDescription(not_null<RpWidget*> widget, const QString& description) {
-		widget->setAccessibleDescription(description);
-	}
-
-	void SetAccessibleRole(not_null<RpWidget*> widget, QAccessible::Role role) {
-		widget->setAccessibleRole(role);
-	}
-
 } // namespace Ui

@@ -6,7 +6,6 @@
 //
 #include "ui/widgets/menu/menu_separator.h"
 
-#include "ui/accessibility.h"
 #include "ui/painter.h"
 #include "styles/style_widgets.h"
 #include "base/platform/base_accessibility.h"
@@ -25,7 +24,7 @@ Separator::Separator(
 , _bg(st.itemBg)
 , _height(_padding.top() + _lineWidth + _padding.bottom())
 , _action(action) {
-	SetAccessibleRole(this, QAccessible::Role::Separator);
+	setAccessibleRole(QAccessible::Role::Separator);
 
 	initResizeHook(parent->sizeValue());
 	paintRequest(

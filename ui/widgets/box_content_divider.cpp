@@ -8,11 +8,9 @@
 
 #include "styles/style_layers.h"
 #include "styles/palette.h"
-#include "base/platform/base_accessibility.h"
 
 #include <QtGui/QPainter>
 #include <QtGui/QtEvents>
-#include "ui/accessibility.h"
 
 namespace Ui {
 
@@ -32,7 +30,7 @@ BoxContentDivider::BoxContentDivider(
 : RpWidget(parent)
 , _bg(bg)
 , _parts(parts) {
-	SetAccessibleRole(this, QAccessible::Role::Separator);
+	setAccessibleRole(QAccessible::Role::Separator);
 	resize(width(), height);
 }
 

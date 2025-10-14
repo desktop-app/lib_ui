@@ -8,10 +8,5 @@ namespace Ui {
 } // namespace Ui
 
 namespace Ui {
-
 	void InstallFactory();
-	void SetAccessibleName(not_null<RpWidget*> widget, const QString& name);
-	void SetAccessibleRole(not_null<RpWidget*> widget, QAccessible::Role role);
-	void SetAccessibleDescription(not_null<RpWidget*> widget, const QString& description);
-
 } // namespace Ui

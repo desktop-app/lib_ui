@@ -13,7 +13,6 @@
 #include "base/qthelp_regex.h"
 #include "base/random.h"
 #include "emoji_suggestions_helper.h"
-#include "ui/accessibility.h"
 #include "ui/text/text.h"
 #include "ui/text/text_renderer.h" // kQuoteCollapsedLines
 #include "ui/widgets/fields/custom_field_object.h"
@@ -1525,7 +1524,7 @@ InputField::InputField(
 , _inner(std::make_unique<Inner>(this))
 , _lastTextWithTags(value)
 , _placeholderFull(std::move(placeholder)) {
-	SetAccessibleRole(this, QAccessible::Role::EditableText);
+	setAccessibleRole(QAccessible::Role::EditableText);
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
 	_inner->setAcceptRichText(false);
 	resize(_st.width, _minHeight);
@@ -1569,7 +1568,7 @@ InputField::InputField(
 
 	_placeholderFull.value(
 	) | rpl::start_with_next([=](const QString &text) {
-		Ui::SetAccessibleName(this, text);
+		setAccessibleName(text);
 		_inner->setAccessibleName(text);
 		refreshPlaceholder(text);
 	}, lifetime());
