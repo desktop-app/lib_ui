@@ -25,7 +25,7 @@ namespace Ui {
 
 			const auto holder = new LifetimeHolder(widget);
 
-			base::Platform::Accessibility::ScreenReaderState::instance()->activeValue(
+			base::Platform::Accessibility::ScreenReaderState::Instance()->activeValue(
 			) | rpl::start_with_next([widget](bool screenReaderIsActive) {
 				widget->setFocusPolicy(screenReaderIsActive ? Qt::StrongFocus : Qt::NoFocus);
 				}, holder->lifetime);
@@ -248,6 +248,6 @@ namespace Ui {
 
 	void InstallFactory() {
 		QAccessible::installFactory(Factory);
-		base::Platform::Accessibility::ScreenReaderState::instance();
+		base::Platform::Accessibility::ScreenReaderState::Instance();
 	}
 } // namespace Ui
