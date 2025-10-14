@@ -140,4 +140,6 @@ void SetGeometryAndScreen(
 	not_null<QWheelEvent*> e,
 	bool touch = false);
 
+[[nodiscard]] QColor BlendColors(QColor color1, QColor color2, float64 ratio);
+
 } // namespace Ui

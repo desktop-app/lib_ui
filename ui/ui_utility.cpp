@@ -303,4 +303,15 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
 	return ScrollDeltaF(e, touch).toPoint();
 }
 
+QColor BlendColors(QColor color1, QColor color2, float64 ratio) {
+	const auto clampedRatio = std::clamp(ratio, 0.0, 1.0);
+	const auto invRatio = 1.0 - clampedRatio;
+
+	return QColor(
+		int(color1.red() * invRatio + color2.red() * clampedRatio),
+		int(color1.green() * invRatio + color2.green() * clampedRatio),
+		int(color1.blue() * invRatio + color2.blue() * clampedRatio),
+		int(color1.alpha() * invRatio + color2.alpha() * clampedRatio));
+}
+
 } // namespace Ui
