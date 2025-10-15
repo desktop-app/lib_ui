@@ -1,12 +1,11 @@
 #include "ui/accessibility.h"
 
 #include "ui/rp_widget.h"
-#include "base/accessibility.h"
+#include "base/screen_reader_state.h"
 #include <QAccessibleWidget>
 #include <QLineEdit>
 
 namespace Ui {
-
 	namespace {
 		void SetupFocusManagementIfNeeded(not_null<RpWidget*> widget) {
 			const auto role = widget->accessibleRole();
@@ -18,7 +17,7 @@ namespace Ui {
 				return;
 			}
 
-			base::Accessibility::ScreenReaderState::Instance()->activeValue(
+			base::ScreenReaderState::Instance()->activeValue(
 			) | rpl::start_with_next([widget](bool screenReaderIsActive) {
 				widget->setFocusPolicy(screenReaderIsActive ? Qt::StrongFocus : Qt::NoFocus);
 				}, widget->lifetime());
