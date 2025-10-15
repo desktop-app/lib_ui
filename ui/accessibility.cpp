@@ -1,18 +1,13 @@
 #include "ui/accessibility.h"
 
 #include "ui/rp_widget.h"
-#include "base/platform/base_accessibility.h"
+#include "base/accessibility.h"
 #include <QAccessibleWidget>
 #include <QLineEdit>
 
 namespace Ui {
 
 	namespace {
-		struct LifetimeHolder final : QObject {
-			using QObject::QObject;
-			rpl::lifetime lifetime;
-		};
-
 		void SetupFocusManagementIfNeeded(not_null<RpWidget*> widget) {
 			const auto role = widget->accessibleRole();
 
@@ -23,12 +18,10 @@ namespace Ui {
 				return;
 			}
 
-			const auto holder = new LifetimeHolder(widget);
-
-			base::Platform::Accessibility::ScreenReaderState::Instance()->activeValue(
+			base::Accessibility::ScreenReaderState::Instance()->activeValue(
 			) | rpl::start_with_next([widget](bool screenReaderIsActive) {
 				widget->setFocusPolicy(screenReaderIsActive ? Qt::StrongFocus : Qt::NoFocus);
-				}, holder->lifetime);
+				}, widget->lifetime());
 		}
 
 		class CustomAccessibilityInterface final : public QAccessibleWidget, public QAccessibleTextInterface {
@@ -248,6 +241,5 @@ namespace Ui {
 
 	void InstallFactory() {
 		QAccessible::installFactory(Factory);
-		base::Platform::Accessibility::ScreenReaderState::Instance();
 	}
 } // namespace Ui
