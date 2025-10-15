@@ -8,7 +8,6 @@
 
 #include "ui/painter.h"
 #include "styles/style_widgets.h"
-#include "base/platform/base_accessibility.h"
 
 namespace Ui::Menu {
 
