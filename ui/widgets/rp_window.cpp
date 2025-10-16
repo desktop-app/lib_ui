@@ -15,6 +15,7 @@ RpWindow::RpWindow(QWidget *parent)
 , _helper(Platform::CreateWindowHelper(this)) {
 	Expects(_helper != nullptr);
 
+	setAccessibleRole(QAccessible::Window);
 	_helper->initInWindow(this);
 	hide();
 }
@@ -64,6 +65,7 @@ void RpWindow::overrideSystemButtonDown(Platform::HitTestResult button) {
 
 void RpWindow::setTitle(const QString &title) {
 	_helper->setTitle(title);
+	setAccessibleName(title);
 }
 
 void RpWindow::setTitleStyle(const style::WindowTitle &st) {
