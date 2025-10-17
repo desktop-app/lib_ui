@@ -15,12 +15,12 @@
 #include "styles/palette.h"
 #include "base/algorithm.h"
 #include "base/event_filter.h"
+#include "ui/integration.h"
 #include "base/platform/base_platform_info.h"
 
 #include <QtGui/QPainter>
 #include <QtGui/QtEvents>
 #include <QtGui/QWindow>
-#include <ui/integration.h>
 
 namespace Ui {
 namespace Platform {
