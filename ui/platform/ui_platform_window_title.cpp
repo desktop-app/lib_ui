@@ -417,6 +417,14 @@ void TitleControls::handleWindowStateChanged(Qt::WindowStates state) {
 		|| (state & Qt::WindowFullScreen);
 	if (_maximizedState != maximized) {
 		_maximizedState = maximized;
+
+		if (_maximizedState) {
+			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseRestore());
+		}
+		else {
+			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseMaximize());
+		}
+
 		updateButtonsState();
 	}
 }
