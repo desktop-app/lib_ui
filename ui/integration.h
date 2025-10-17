@@ -96,6 +96,9 @@ public:
 	[[nodiscard]] virtual QString phraseBotAllowWriteTitle();
 	[[nodiscard]] virtual QString phraseBotAllowWriteConfirm();
 	[[nodiscard]] virtual QString phraseQuoteHeaderCopy();
+	[[nodiscard]] virtual QString phraseMinimize();
+	[[nodiscard]] virtual QString phraseMaximize();
+	[[nodiscard]] virtual QString phraseRestore();
 
 };
 
