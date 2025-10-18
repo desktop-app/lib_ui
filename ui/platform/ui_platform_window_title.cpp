@@ -151,8 +151,7 @@ TitleControls::TitleControls(
 
 	if (_maximizedState) {
 		_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseRestore());
-	}
-	else {
+	} else {
 		_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseMaximize());
 	}
 
