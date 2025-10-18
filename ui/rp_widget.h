@@ -17,6 +17,7 @@
 #include <QtWidgets/QWidget>
 #include <QtCore/QPointer>
 #include <QtGui/QtEvents>
+#include <QAccessible>
 
 namespace Ui {
 
@@ -155,6 +156,13 @@ class RpWidgetBase : public Widget, public RpWidgetWrap {
 
 public:
 	using Widget::Widget;
+
+	void setAccessibleRole(QAccessible::Role role) {
+		_accessibleRole = role;
+	}
+	QAccessible::Role accessibleRole() const {
+		return _accessibleRole;
+	}
 
 	~RpWidgetBase() {
 		base::take(_lifetime);
@@ -350,7 +358,9 @@ private:
 
 	Initer _initer = { this, Traits::kSetZeroGeometry };
 
-};
+	QAccessible::Role _accessibleRole = QAccessible::Role::NoRole;
+
+	};
 
 class RpWidget : public RpWidgetBase<QWidget> {
 	// The Q_OBJECT meta info is used for qobject_cast above!

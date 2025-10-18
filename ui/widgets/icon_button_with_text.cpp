@@ -36,6 +36,7 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 void IconButtonWithText::setText(const QString &text) {
 	if (_text != text) {
 		_text = text;
+		setAccessibleName(_text);
 		update();
 	}
 }

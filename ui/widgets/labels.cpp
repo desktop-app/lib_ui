@@ -160,6 +160,7 @@ LabelSimple::LabelSimple(
 	const QString &value)
 : RpWidget(parent)
 , _st(st) {
+	setAccessibleRole(QAccessible::Role::StaticText);
 	setText(value);
 }
 
@@ -168,6 +169,7 @@ void LabelSimple::setText(const QString &value, bool *outTextChanged) {
 		if (outTextChanged) *outTextChanged = false;
 		return;
 	}
+	setAccessibleName(value);
 
 	_fullText = value;
 	_fullTextWidth = _st.font->width(_fullText);
@@ -205,6 +207,7 @@ FlatLabel::FlatLabel(
 , _st(st)
 , _stMenu(stMenu) {
 	init();
+	setAccessibleRole(QAccessible::Role::StaticText);
 }
 
 FlatLabel::FlatLabel(
@@ -218,6 +221,7 @@ FlatLabel::FlatLabel(
 , _stMenu(stMenu) {
 	setText(text);
 	init();
+	setAccessibleRole(QAccessible::Role::StaticText);
 }
 
 FlatLabel::FlatLabel(
@@ -230,6 +234,7 @@ FlatLabel::FlatLabel(
 , _st(st)
 , _stMenu(stMenu) {
 	textUpdated();
+	setAccessibleRole(QAccessible::Role::StaticText);
 	std::move(
 		text
 	) | rpl::start_with_next([this](const QString &value) {
@@ -250,6 +255,7 @@ FlatLabel::FlatLabel(
 , _stMenu(stMenu)
 , _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
+	setAccessibleRole(QAccessible::Role::StaticText);
 
 	std::move(
 		text
@@ -277,6 +283,7 @@ void FlatLabel::textUpdated() {
 
 void FlatLabel::setText(const QString &text) {
 	_text.setText(_st.style, text, _labelOptions);
+	setAccessibleName(text);
 	textUpdated();
 }
 
@@ -289,6 +296,7 @@ void FlatLabel::setMarkedText(
 		textWithEntities,
 		_labelMarkedOptions,
 		context);
+	setAccessibleName(textWithEntities.text);
 	textUpdated();
 }
 
