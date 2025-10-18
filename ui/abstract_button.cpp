@@ -98,8 +98,7 @@ void AbstractButton::keyReleaseEvent(QKeyEvent* e) {
 
 			clicked(e->modifiers(), Qt::LeftButton);
 		}
-	}
-	else {
+	} else {
 		RpWidget::keyReleaseEvent(e);
 	}
 }
