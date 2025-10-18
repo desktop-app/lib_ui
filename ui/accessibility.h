@@ -8,5 +8,5 @@ namespace Ui {
 } // namespace Ui
 
 namespace Ui {
-	void InstallFactory();
+	void InstallAccessibleFactory();
 } // namespace Ui

@@ -50,7 +50,7 @@ namespace Ui {
 		}
 	} // namespace
 
-	void InstallFactory() {
+	void InstallAccessibleFactory() {
 		QAccessible::installFactory(Factory);
 	}
 } // namespace Ui
