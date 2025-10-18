@@ -89,6 +89,7 @@ void IconTitleButtons::updateState(
 			? &st.minimizeIconActiveOver
 			: &st.minimize.iconOver;
 		_minimize->setIconOverride(minimize, minimizeOver);
+		_minimize->setAccessibleName(Ui::Integration::Instance().phraseMinimize());
 	}
 	if (_maximizeRestore) {
 		if (maximized) {
@@ -99,6 +100,7 @@ void IconTitleButtons::updateState(
 				? &st.restoreIconActiveOver
 				: &st.restoreIconOver;
 			_maximizeRestore->setIconOverride(restore, restoreOver);
+			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseRestore());
 		} else {
 			const auto maximize = active
 				? &st.maximizeIconActive
@@ -107,6 +109,7 @@ void IconTitleButtons::updateState(
 				? &st.maximizeIconActiveOver
 				: &st.maximize.iconOver;
 			_maximizeRestore->setIconOverride(maximize, maximizeOver);
+			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseMaximize());
 		}
 	}
 	if (_close) {
@@ -117,6 +120,7 @@ void IconTitleButtons::updateState(
 			? &st.closeIconActiveOver
 			: &st.close.iconOver;
 		_close->setIconOverride(close, closeOver);
+		_close->setAccessibleName(Ui::Integration::Instance().phraseButtonClose());
 	}
 }
 
@@ -145,16 +149,6 @@ TitleControls::TitleControls(
 , _maximizedState(parent->windowState()
 	& (Qt::WindowMaximized | Qt::WindowFullScreen))
 , _activeState(parent->isActiveWindow()) {
-
-	_close->setAccessibleName(Ui::Integration::Instance().phraseButtonClose());
-	_minimize->setAccessibleName(Ui::Integration::Instance().phraseMinimize());
-
-	if (_maximizedState) {
-		_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseRestore());
-	} else {
-		_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseMaximize());
-	}
-
 	init(std::move(maximize));
 
 	_close->paintRequest(
@@ -416,13 +410,6 @@ void TitleControls::handleWindowStateChanged(Qt::WindowStates state) {
 		|| (state & Qt::WindowFullScreen);
 	if (_maximizedState != maximized) {
 		_maximizedState = maximized;
-
-		if (_maximizedState) {
-			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseRestore());
-		} else {
-			_maximizeRestore->setAccessibleName(Ui::Integration::Instance().phraseMaximize());
-		}
-
 		updateButtonsState();
 	}
 }
