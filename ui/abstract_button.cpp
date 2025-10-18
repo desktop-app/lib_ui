@@ -85,8 +85,7 @@ void AbstractButton::keyPressEvent(QKeyEvent* e) {
 	if (!e->isAutoRepeat() && (e->key() == Qt::Key_Space || e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)) {
 		setDown(true, StateChangeSource::ByPress, e->modifiers(), Qt::LeftButton);
 		e->accept();
-	}
-	else {
+	} else {
 		RpWidget::keyPressEvent(e);
 	}
 }
