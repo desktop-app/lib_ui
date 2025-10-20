@@ -21,14 +21,10 @@ namespace Ui::GL {
 
 class Renderer {
 public:
-	virtual void init(
-		not_null<QOpenGLWidget*> widget,
-		QOpenGLFunctions &f) {
+	virtual void init(QOpenGLFunctions &f) {
 	}
 
-	virtual void deinit(
-		not_null<QOpenGLWidget*> widget,
-		QOpenGLFunctions *f) {
+	virtual void deinit(QOpenGLFunctions *f) {
 	}
 
 	virtual void resize(
@@ -47,7 +43,7 @@ public:
 	}
 
 	virtual void paintFallback(
-		Painter &&p,
+		Painter &p,
 		const QRegion &clip,
 		Backend backend) {
 	}
