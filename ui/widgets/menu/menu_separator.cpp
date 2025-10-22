@@ -23,6 +23,7 @@ Separator::Separator(
 , _bg(st.itemBg)
 , _height(_padding.top() + _lineWidth + _padding.bottom())
 , _action(action) {
+	setAccessibleRole(QAccessible::Role::Separator);
 
 	initResizeHook(parent->sizeValue());
 	paintRequest(
