@@ -7,6 +7,7 @@
 #include "ui/rp_widget.h"
 
 #include "base/qt_signal_producer.h"
+#include "ui/accessible/ui_accessible_widget.h"
 #include "ui/gl/gl_detection.h"
 
 #include <QtGui/QWindow>
@@ -329,6 +330,34 @@ RpWidget::RpWidget(QWidget *parent)
 		QSurfaceFormat::setDefaultFormat(format);
 		return true;
 	}();
+}
+
+QAccessibleInterface *RpWidget::accessibilityCreate() {
+	return (accessibilityRole() != QAccessible::Role::NoRole)
+		? new Accessible::Widget(this)
+		: nullptr;
+}
+
+QAccessible::Role RpWidget::accessibilityRole() {
+	return QAccessible::Role::NoRole;
+}
+
+QString RpWidget::accessibilityName() {
+	return QWidget::accessibleName();
+}
+
+void RpWidget::accessibilityNameChanged() {
+	QAccessibleEvent event(this, QAccessible::NameChanged);
+	QAccessible::updateAccessibility(&event);
+}
+
+QString RpWidget::accessibilityDescription() {
+	return QWidget::accessibleDescription();
+}
+
+void RpWidget::accessibilityDescriptionChanged() {
+	QAccessibleEvent event(this, QAccessible::DescriptionChanged);
+	QAccessible::updateAccessibility(&event);
 }
 
 } // namespace Ui

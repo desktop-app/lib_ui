@@ -36,6 +36,10 @@ PRIVATE
     fonts/fonts.qrc
     qt_conf/win.qrc
 
+    ui/accessible/ui_accessible_factory.cpp
+    ui/accessible/ui_accessible_factory.h
+    ui/accessible/ui_accessible_widget.cpp
+    ui/accessible/ui_accessible_widget.h
     ui/dpr/dpr_icon.cpp
     ui/dpr/dpr_icon.h
     ui/dpr/dpr_image.h
@@ -273,8 +277,6 @@ PRIVATE
     ui/wrap/wrap.h
     ui/abstract_button.cpp
     ui/abstract_button.h
-    ui/accessibility.cpp
-    ui/accessibility.h
     ui/animated_icon.cpp
     ui/animated_icon.h
     ui/arc_angles.h

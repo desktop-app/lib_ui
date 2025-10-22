@@ -178,6 +178,13 @@ public:
 		rpl::producer<QString> placeholder = nullptr,
 		const TextWithTags &value = TextWithTags());
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::EditableText;
+	}
+	QString accessibilityName() override {
+		return _placeholderFull.current();
+	}
+
 	[[nodiscard]] const style::InputField &st() const {
 		return _st;
 	}

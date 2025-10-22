@@ -60,6 +60,10 @@ public:
 
 	void clicked(Qt::KeyboardModifiers modifiers, Qt::MouseButton button);
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::Button;
+	}
+
 protected:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;

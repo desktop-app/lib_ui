@@ -34,6 +34,13 @@ public:
 	void setText(const QString &text);
 	void setColorOverride(std::optional<QColor> textFg);
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::Link;
+	}
+	QString accessibilityName() override {
+		return _text;
+	}
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
@@ -102,6 +109,10 @@ class FlatButton : public RippleButton {
 public:
 	FlatButton(QWidget *parent, const QString &text, const style::FlatButton &st);
 
+	QString accessibilityName() override {
+		return _text;
+	}
+
 	void setText(const QString &text);
 	void setWidth(int w);
 	void setColorOverride(std::optional<QColor> color);
@@ -130,6 +141,10 @@ public:
 		QWidget *parent,
 		rpl::producer<QString> text,
 		const style::RoundButton &st);
+
+	QString accessibilityName() override {
+		return _textFull.current().text;
+	}
 
 	void setText(rpl::producer<QString> text);
 	void setText(rpl::producer<TextWithEntities> text);
@@ -194,6 +209,11 @@ class IconButton : public RippleButton {
 public:
 	IconButton(QWidget *parent, const style::IconButton &st);
 
+	QString accessibilityName() override {
+		return _accessibilityName;
+	}
+	void accessibilitySetName(QString name);
+
 	[[nodiscard]] const style::IconButton &st() const;
 
 	// Pass nullptr to restore the default icon.
@@ -217,6 +237,8 @@ private:
 	const style::color *_rippleColorOverride = nullptr;
 
 	Ui::Animations::Simple _a_over;
+
+	QString _accessibilityName;
 
 };
 
@@ -280,6 +302,10 @@ public:
 		std::nullptr_t,
 		const style::SettingsButton &st = st::defaultSettingsButton);
 	~SettingsButton();
+
+	QString accessibilityName() override {
+		return _text.toString();
+	}
 
 	SettingsButton *toggleOn(
 		rpl::producer<bool> &&toggled,

@@ -25,6 +25,10 @@ public:
 		const style::MenuSeparator &separator,
 		not_null<QAction*> action);
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::Separator;
+	}
+
 	not_null<QAction*> action() const override;
 	bool isEnabled() const override;
 

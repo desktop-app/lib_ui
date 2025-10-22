@@ -23,8 +23,6 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	shownValue()
 		| rpl::filter(_1 == false)
 		| rpl::start_with_next([this] { clearState(); }, lifetime());
-
-	setAccessibleRole(QAccessible::Role::Button);
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {

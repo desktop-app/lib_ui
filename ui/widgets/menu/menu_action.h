@@ -23,6 +23,13 @@ public:
 		const style::icon *icon,
 		const style::icon *iconOver);
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::MenuItem;
+	}
+	QString accessibilityName() override {
+		return _action->text();
+	}
+
 	[[nodiscard]] const style::Menu &st() const;
 
 	bool isEnabled() const override;

@@ -180,6 +180,13 @@ public:
 		const style::Checkbox &st,
 		std::unique_ptr<AbstractCheckView> check);
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::CheckBox;
+	}
+	QString accessibilityName() override {
+		return _text.toString();
+	}
+
 	void setText(const QString &text, bool rich = false);
 	void setCheckAlignment(style::align alignment);
 	void setAllowTextLines(int lines = 0);
@@ -314,6 +321,10 @@ public:
 		const style::Checkbox &st,
 		std::unique_ptr<AbstractCheckView> check);
 	~Radiobutton();
+
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::RadioButton;
+	}
 
 protected:
 	void handlePress() override;

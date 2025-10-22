@@ -172,7 +172,6 @@ PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 		_scroll.data(),
 		object_ptr<Menu::Menu>(_scroll.data(), _st.menu),
 		_st.scrollPadding))->entity()) {
-	setAccessibleRole(QAccessible::Role::PopupMenu);
 	init();
 }
 
@@ -186,7 +185,6 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 		_scroll.data(),
 		object_ptr<Menu::Menu>(_scroll.data(), menu, _st.menu),
 		_st.scrollPadding))->entity()) {
-	setAccessibleRole(QAccessible::Role::PopupMenu);
 	init();
 
 	for (const auto &action : actions()) {

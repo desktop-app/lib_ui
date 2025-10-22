@@ -23,6 +23,10 @@ public:
 
 	[[nodiscard]] const style::color &color() const;
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::Separator;
+	}
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 

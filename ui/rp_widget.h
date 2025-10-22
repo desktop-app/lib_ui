@@ -21,13 +21,9 @@
 
 namespace Ui {
 
-void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible);
-
-} // namespace Ui
-
-namespace Ui {
-
 class RpWidget;
+
+void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible);
 
 void ResizeFitChild(
 	not_null<RpWidget*> parent,
@@ -156,13 +152,6 @@ class RpWidgetBase : public Widget, public RpWidgetWrap {
 
 public:
 	using Widget::Widget;
-
-	void setAccessibleRole(QAccessible::Role role) {
-		_accessibleRole = role;
-	}
-	QAccessible::Role accessibleRole() const {
-		return _accessibleRole;
-	}
 
 	~RpWidgetBase() {
 		base::take(_lifetime);
@@ -358,8 +347,6 @@ private:
 
 	Initer _initer = { this, Traits::kSetZeroGeometry };
 
-	QAccessible::Role _accessibleRole = QAccessible::Role::NoRole;
-
 };
 
 class RpWidget : public RpWidgetBase<QWidget> {
@@ -382,6 +369,13 @@ public:
 			std::clamp(visibleTop, 0, max),
 			std::clamp(visibleBottom, 0, max));
 	}
+
+	[[nodiscard]] virtual QAccessibleInterface *accessibilityCreate();
+	[[nodiscard]] virtual QAccessible::Role accessibilityRole();
+	[[nodiscard]] virtual QString accessibilityName();
+	void accessibilityNameChanged();
+	[[nodiscard]] virtual QString accessibilityDescription();
+	void accessibilityDescriptionChanged();
 
 protected:
 	// e - from enterEvent() of child RpWidget

@@ -76,6 +76,13 @@ public:
 		const style::LabelSimple &st = st::defaultLabelSimple,
 		const QString &value = QString());
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::StaticText;
+	}
+	QString accessibilityName() override {
+		return _fullText;
+	}
+
 	// This method also resizes the label.
 	void setText(const QString &newText, bool *outTextChanged = nullptr);
 
@@ -117,6 +124,13 @@ public:
 		const style::FlatLabel &st = st::defaultFlatLabel,
 		const style::PopupMenu &stMenu = st::defaultPopupMenu,
 		const Text::MarkedContext &context = {});
+
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::StaticText;
+	}
+	QString accessibilityName() override {
+		return _text.toString();
+	}
 
 	[[nodiscard]] const style::FlatLabel &st() const {
 		return _st;

@@ -41,6 +41,13 @@ public:
 
 class Tooltip : public RpWidget {
 public:
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::ToolTip;
+	}
+	QString accessibilityName() override {
+		return _text.toString();
+	}
+
 	static void Show(int32 delay, const AbstractTooltipShower *shower);
 	static void Hide();
 
@@ -79,6 +86,10 @@ public:
 		QWidget *parent,
 		object_ptr<RpWidget> content,
 		const style::ImportantTooltip &st);
+
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::ToolTip;
+	}
 
 	void pointAt(
 		QRect area,
