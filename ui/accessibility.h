@@ -1,5 +1,7 @@
 #pragma once
 
 namespace Ui {
-	void InstallAccessibleFactory();
+
+void InstallAccessibleFactory();
+
 } // namespace Ui

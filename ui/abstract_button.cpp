@@ -23,6 +23,8 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	shownValue()
 		| rpl::filter(_1 == false)
 		| rpl::start_with_next([this] { clearState(); }, lifetime());
+
+	setAccessibleRole(QAccessible::Role::Button);
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {
@@ -81,20 +83,35 @@ void AbstractButton::mouseReleaseEvent(QMouseEvent *e) {
 	}
 }
 
-void AbstractButton::keyPressEvent(QKeyEvent* e) {
-	if (!e->isAutoRepeat() && (e->key() == Qt::Key_Space || e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)) {
-		setDown(true, StateChangeSource::ByPress, e->modifiers(), Qt::LeftButton);
+bool AbstractButton::isSubmitEvent(not_null<QKeyEvent*> e) const {
+	return !e->isAutoRepeat()
+		&& (e->key() == Qt::Key_Space
+			|| e->key() == Qt::Key_Return
+			|| e->key() == Qt::Key_Enter);
+}
+
+void AbstractButton::keyPressEvent(QKeyEvent *e) {
+	if (isSubmitEvent(e)) {
+		setDown(
+			true,
+			StateChangeSource::ByPress,
+			e->modifiers(),
+			Qt::LeftButton);
 		e->accept();
 	} else {
 		RpWidget::keyPressEvent(e);
 	}
 }
 
-void AbstractButton::keyReleaseEvent(QKeyEvent* e) {
-	if (!e->isAutoRepeat() && (e->key() == Qt::Key_Space || e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)) {
+void AbstractButton::keyReleaseEvent(QKeyEvent *e) {
+	if (isSubmitEvent(e)) {
 		e->accept();
 		if (isDown()) {
-			setDown(false, StateChangeSource::ByPress, e->modifiers(), Qt::LeftButton);
+			setDown(
+				false,
+				StateChangeSource::ByPress,
+				e->modifiers(),
+				Qt::LeftButton);
 
 			clicked(e->modifiers(), Qt::LeftButton);
 		}

@@ -235,7 +235,6 @@ FlatButton::FlatButton(
 		_width = _st.width;
 	}
 	resize(_width, _st.height);
-	setAccessibleRole(QAccessible::Role::Button);
 	setAccessibleName(text);
 }
 
@@ -307,7 +306,6 @@ RoundButton::RoundButton(
 , _st(st)
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
 , _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
-	setAccessibleRole(QAccessible::Role::Button);
 	_textFull.value(
 	) | rpl::start_with_next([=](const TextWithEntities &text) {
 		resizeToText(text);
@@ -559,7 +557,6 @@ RoundButton::~RoundButton() = default;
 IconButton::IconButton(QWidget *parent, const style::IconButton &st) : RippleButton(parent, st.ripple)
 , _st(st) {
 	resize(_st.width, _st.height);
-	setAccessibleRole(QAccessible::Role::Button);
 }
 
 const style::IconButton &IconButton::st() const {
@@ -657,7 +654,6 @@ CrossButton::CrossButton(QWidget *parent, const style::CrossButton &st) : Ripple
 	resize(_st.width, _st.height);
 	setCursor(style::cur_pointer);
 	setVisible(false);
-	setAccessibleRole(QAccessible::Role::Button);
 }
 
 bool CrossButton::loadingCallback(crl::time now) {
@@ -803,7 +799,6 @@ SettingsButton::SettingsButton(
 , _st(st)
 , _padding(_st.padding)
 , _context(context) {
-	setAccessibleRole(QAccessible::Role::Button);
 	std::move(
 		text
 	) | rpl::start_with_next([this](TextWithEntities &&value) {
@@ -818,7 +813,6 @@ SettingsButton::SettingsButton(
 : RippleButton(parent, st.ripple)
 , _st(st)
 , _padding(_st.padding) {
-	setAccessibleRole(QAccessible::Role::Button);
 }
 
 SettingsButton::~SettingsButton() = default;
