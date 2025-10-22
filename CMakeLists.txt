@@ -309,6 +309,8 @@ PRIVATE
     ui/ui_rpl_filter.h
     ui/ui_utility.cpp
     ui/ui_utility.h
+    ui/accessibility.cpp
+    ui/accessibility.h
 
     ui/ui_pch.h
 
