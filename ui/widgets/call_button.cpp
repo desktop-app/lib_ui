@@ -28,6 +28,7 @@ CallButton::CallButton(
 : RippleButton(parent, stFrom.button.ripple)
 , _stFrom(&stFrom)
 , _stTo(stTo) {
+	setAccessibleRole(QAccessible::Role::PushButton);
 	init();
 }
 

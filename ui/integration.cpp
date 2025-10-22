@@ -208,4 +208,16 @@ QString Integration::phraseQuoteHeaderCopy() {
 	return "copy";
 }
 
+QString Integration::phraseMinimize() {
+	return "Minimize";
+}
+
+QString Integration::phraseMaximize() {
+	return "Maximize";
+}
+
+QString Integration::phraseRestore() {
+	return "Restore";
+}
+
 } // namespace Ui
