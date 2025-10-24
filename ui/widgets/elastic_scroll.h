@@ -141,10 +141,24 @@ public:
 	void updateBars();
 
 	auto scrollTopValue() const {
-		return _scrollTopUpdated.events_starting_with(scrollTop());
+		return _vertical
+			? _scrollValueUpdated.events_starting_with(scrollTop())
+			: (rpl::single(0) | rpl::type_erased());
 	}
 	auto scrollTopChanges() const {
-		return _scrollTopUpdated.events();
+		return _vertical
+			? _scrollValueUpdated.events()
+			: (rpl::never<int>() | rpl::type_erased());
+	}
+	auto scrollLeftValue() const {
+		return _vertical
+			? (rpl::single(0) | rpl::type_erased())
+			: _scrollValueUpdated.events_starting_with(scrollLeft());
+	}
+	auto scrollLeftChanges() const {
+		return _vertical
+			? (rpl::never<int>() | rpl::type_erased())
+			: _scrollValueUpdated.events();
 	}
 
 	void scrollTo(ScrollToRequest request);
@@ -272,7 +286,7 @@ private:
 
 	object_ptr<QWidget> _widget = { nullptr };
 
-	rpl::event_stream<int> _scrollTopUpdated;
+	rpl::event_stream<int> _scrollValueUpdated;
 	rpl::event_stream<> _scrolls;
 	rpl::event_stream<> _innerResizes;
 	rpl::event_stream<> _geometryChanged;

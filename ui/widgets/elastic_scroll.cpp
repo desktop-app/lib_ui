@@ -67,6 +67,10 @@ ElasticScrollBar::ElasticScrollBar(
 }
 
 void ElasticScrollBar::refreshGeometry() {
+	if (_st.barHidden) {
+		hide();
+		return;
+	}
 	update();
 	const auto skip = _st.deltax;
 	const auto fullSkip = _st.deltat + _st.deltab;
@@ -117,10 +121,6 @@ bool ElasticScrollBar::barHighlighted() const {
 }
 
 void ElasticScrollBar::toggle(bool shown, anim::type animated) {
-	if (_st.barHidden) {
-		shown = false;
-		animated = anim::type::instant;
-	}
 	const auto instant = (animated == anim::type::instant);
 	const auto changed = (_shown != shown);
 	_shown = shown;
@@ -206,7 +206,7 @@ void ElasticScrollBar::updateState(ScrollState state) {
 }
 
 void ElasticScrollBar::paintEvent(QPaintEvent *e) {
-	if (_bar.isEmpty()) {
+	if (_bar.isEmpty() || _st.barHidden) {
 		hide();
 		return;
 	}
@@ -683,7 +683,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			(unmultiplied.y() * std::max(height(), 120) / 120.))
 		: unmultiplied;
 	auto ignore = false;
-	auto delta = _vertical ? -pixels.y() : pixels.x();
+	auto delta = _vertical ? -pixels.y() : -pixels.x();
 	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
 		ignore = true;
 		delta = 0;
@@ -974,9 +974,7 @@ void ElasticScroll::setState(ScrollState state) {
 		_position = Position{ _state.visibleFrom, _overscroll };
 	}
 	if (weak && _state.visibleFrom != old) {
-		if (_vertical) {
-			_scrollTopUpdated.fire_copy(_state.visibleFrom);
-		}
+		_scrollValueUpdated.fire_copy(_state.visibleFrom);
 		if (weak) {
 			_scrolls.fire({});
 		}
