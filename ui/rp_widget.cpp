@@ -360,4 +360,28 @@ void RpWidget::accessibilityDescriptionChanged() {
 	QAccessible::updateAccessibility(&event);
 }
 
+QAccessible::State RpWidget::accessibilityState() const {
+	QAccessible::State state;
+
+	if (!isEnabled()) {
+		state.disabled = 1;
+	}
+	if (isHidden()) {
+		state.invisible = 1;
+	}
+	if (hasFocus()) {
+		state.focused = 1;
+	}
+	if (focusPolicy() != Qt::NoFocus) {
+		state.focusable = 1;
+	}
+
+	return state;
+}
+
+void RpWidget::accessibilityStateChanged() {
+	QAccessibleStateChangeEvent event(this, accessibilityState());
+	QAccessible::updateAccessibility(&event);
+}
+
 } // namespace Ui
