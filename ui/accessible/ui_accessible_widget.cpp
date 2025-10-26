@@ -88,6 +88,10 @@ QAccessible::Role Widget::role() const {
 	return rp()->accessibilityRole();
 }
 
+QAccessible::State Widget::state() const {
+	return rp()->accessibilityState();
+}
+
 QString Widget::text(QAccessible::Text t) const {
 	switch (t) {
 	case QAccessible::Name: {
