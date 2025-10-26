@@ -186,6 +186,7 @@ public:
 	QString accessibilityName() override {
 		return _text.toString();
 	}
+		[[nodiscard]] QAccessible::State accessibilityState() const override;
 
 	void setText(const QString &text, bool rich = false);
 	void setCheckAlignment(style::align alignment);
@@ -232,6 +233,9 @@ protected:
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 
+	void keyPressEvent(QKeyEvent* e) override;
+	void keyReleaseEvent(QKeyEvent* e) override;
+
 	void onStateChanged(State was, StateChangeSource source) override;
 	int resizeGetHeight(int newWidth) override;
 
@@ -259,6 +263,7 @@ private:
 	Text::String _text;
 	int _allowTextLines = 1;
 	bool _textBreakEverywhere = false;
+	[[nodiscard]] bool isSubmitEvent(not_null<QKeyEvent*> e) const;
 
 };
 

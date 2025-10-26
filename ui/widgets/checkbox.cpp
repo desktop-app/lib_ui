@@ -529,7 +529,6 @@ Checkbox::Checkbox(
 				_st.style,
 				std::move(value),
 				_checkboxRichOptions);
-			accessibilityNameChanged();
 			resizeToText();
 			if (_text.hasLinks()) {
 				setMouseTracking(true);
@@ -630,6 +629,7 @@ void Checkbox::resizeToText() {
 void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
 	if (_check->checked() != checked) {
 		_check->setChecked(checked, anim::type::normal);
+		accessibilityStateChanged();
 		if (notify == NotifyAboutChange::Notify) {
 			_checkedChanges.fire_copy(checked);
 		}
@@ -988,6 +988,42 @@ void Radiobutton::handlePress() {
 
 Radiobutton::~Radiobutton() {
 	_group->unregisterButton(this);
+}
+
+QAccessible::State Checkbox::accessibilityState() const {
+	auto state = RippleButton::accessibilityState();
+
+	state.checkable = 1;
+
+	if (checked()) {
+		state.checked = 1;
+	}
+
+	return state;
+}
+
+bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
+	return !e->isAutoRepeat()
+		&& (e->key() == Qt::Key_Space
+			|| e->key() == Qt::Key_Return
+			|| e->key() == Qt::Key_Enter);
+}
+
+void Checkbox::keyPressEvent(QKeyEvent* e) {
+	if (isSubmitEvent(e)) {
+		e->accept();
+	} else {
+		RippleButton::keyPressEvent(e);
+	}
+}
+
+void Checkbox::keyReleaseEvent(QKeyEvent* e) {
+	if (isSubmitEvent(e)) {
+		e->accept();
+		handlePress();
+	} else {
+		RippleButton::keyReleaseEvent(e);
+	}
 }
 
 } // namespace Ui
