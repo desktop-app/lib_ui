@@ -186,6 +186,7 @@ public:
 	QString accessibilityName() override {
 		return _text.toString();
 	}
+	void accessibilityState(QAccessible::State &state) const override;
 
 	void setText(const QString &text, bool rich = false);
 	void setCheckAlignment(style::align alignment);
@@ -232,6 +233,9 @@ protected:
 	void mouseReleaseEvent(QMouseEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 
+	void keyPressEvent(QKeyEvent *e) override;
+	void keyReleaseEvent(QKeyEvent *e) override;
+
 	void onStateChanged(State was, StateChangeSource source) override;
 	int resizeGetHeight(int newWidth) override;
 
@@ -246,6 +250,7 @@ private:
 	QPixmap grabCheckCache() const;
 	int countTextMinWidth() const;
 	Text::StateResult getTextState(const QPoint &m) const;
+	[[nodiscard]] bool isSubmitEvent(not_null<QKeyEvent*> e) const;
 
 	const style::Checkbox &_st;
 	std::unique_ptr<AbstractCheckView> _check;
@@ -328,6 +333,7 @@ public:
 
 protected:
 	void handlePress() override;
+	void keyPressEvent(QKeyEvent *e) override;
 
 private:
 	// Hide the names from Checkbox.
