@@ -49,7 +49,7 @@ void FocusManager::registerWidget(not_null<RpWidget*> widget) {
 	if (role != QAccessible::Role::Button
 		&& role != QAccessible::Role::Link
 		&& role != QAccessible::Role::CheckBox
-		&& role != QAccessible::Role::RadioButton) {
+		&& role != QAccessible::Role::Slider) {
 		return;
 	}
 	if (_active) {
