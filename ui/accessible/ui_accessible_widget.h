@@ -22,6 +22,7 @@ public:
 
 	QString text(QAccessible::Text t) const override;
 	QAccessible::Role role() const override;
+	QAccessible::State state() const override;
 
 };
 
