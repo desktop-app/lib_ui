@@ -360,4 +360,21 @@ void RpWidget::accessibilityDescriptionChanged() {
 	QAccessible::updateAccessibility(&event);
 }
 
+void RpWidget::accessibilityState(QAccessible::State &state) const {
+}
+
+void RpWidget::accessibilityStateChanged(QAccessible::State state) {
+	QAccessibleStateChangeEvent event(this, state);
+	QAccessible::updateAccessibility(&event);
+}
+
+[[nodiscard]] QString RpWidget::accessibilityValue() const {
+	return QString();
+}
+
+void RpWidget::accessibilityValueChanged() {
+	QAccessibleValueChangeEvent event(this, accessibilityValue());
+	QAccessible::updateAccessibility(&event);
+}
+
 } // namespace Ui
