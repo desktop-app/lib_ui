@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/checkbox.h"
 
+#include "base/screen_reader_state.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
@@ -908,6 +909,14 @@ void RadiobuttonGroup::setValue(int value) {
 	for (const auto button : _buttons) {
 		button->handleNewGroupValue(_value);
 	}
+	if (base::ScreenReaderState::Instance()->isActive()) {
+		for (const auto button : _buttons) {
+			button->setFocusPolicy((button->_value == _value)
+				? Qt::StrongFocus
+				: Qt::NoFocus);
+		}
+	}
+
 	const auto guard = weak_from_this();
 	_changes.fire_copy(value);
 	if (guard.lock()) {
@@ -963,6 +972,10 @@ Radiobutton::Radiobutton(
 
 	checkbox()->setChecked(group->hasValue() && group->current() == value);
 	_group->registerButton(this);
+	if (base::ScreenReaderState::Instance()->isActive()) {
+		setFocusPolicy((checkbox()->checked()) ? Qt::StrongFocus : Qt::NoFocus);
+	}
+
 	checkbox()->checkedChanges(
 	) | rpl::filter(
 		_1
@@ -983,6 +996,36 @@ void Radiobutton::handleNewGroupValue(int value) {
 void Radiobutton::handlePress() {
 	if (!checkbox()->checked()) {
 		checkbox()->setChecked(true);
+	}
+}
+
+void Radiobutton::keyPressEvent(QKeyEvent* e) {
+	if (e->key() != Qt::Key_Up && e->key() != Qt::Key_Down) {
+		Checkbox::keyPressEvent(e);
+		return;
+	}
+
+	e->accept();
+
+	const auto& buttons = _group->_buttons;
+	if (buttons.size() < 2) {
+		return;
+	}
+
+	const auto i = ranges::find(buttons, this);
+	if (i == buttons.end()) {
+		return;
+	}
+
+	const auto currentIndex = std::distance(buttons.begin(), i);
+	const auto step = (e->key() == Qt::Key_Down) ? 1 : -1;
+	const auto nextIndex = (currentIndex + step + buttons.size()) % buttons.size();
+
+	auto nextButton = buttons[nextIndex];
+	if (nextButton) {
+		_group->setValue(nextButton->_value);
+
+		nextButton->setFocus(Qt::OtherFocusReason);
 	}
 }
 

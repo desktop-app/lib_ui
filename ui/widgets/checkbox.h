@@ -333,6 +333,7 @@ public:
 
 protected:
 	void handlePress() override;
+	void keyPressEvent(QKeyEvent* e) override;
 
 private:
 	// Hide the names from Checkbox.
