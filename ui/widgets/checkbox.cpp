@@ -909,7 +909,7 @@ void RadiobuttonGroup::setValue(int value) {
 	for (const auto button : _buttons) {
 		button->handleNewGroupValue(_value);
 	}
-	if (base::ScreenReaderState::Instance()->isActive()) {
+	if (base::ScreenReaderState::Instance()->activeValue()) {
 		for (const auto button : _buttons) {
 			button->setFocusPolicy((button->_value == _value)
 				? Qt::StrongFocus
@@ -972,7 +972,7 @@ Radiobutton::Radiobutton(
 
 	checkbox()->setChecked(group->hasValue() && group->current() == value);
 	_group->registerButton(this);
-	if (base::ScreenReaderState::Instance()->isActive()) {
+	if (base::ScreenReaderState::Instance()->activeValue()) {
 		setFocusPolicy((checkbox()->checked()) ? Qt::StrongFocus : Qt::NoFocus);
 	}
 
