@@ -1000,12 +1000,14 @@ void Radiobutton::handlePress() {
 }
 
 void Radiobutton::keyPressEvent(QKeyEvent* e) {
-	if (e->key() != Qt::Key_Up && e->key() != Qt::Key_Down) {
+	const auto key = e->key();
+	const auto isVerticalKey = (key == Qt::Key_Up || key == Qt::Key_Down);
+	const auto isHorizontalKey = (key == Qt::Key_Left || key == Qt::Key_Right);
+
+	if (!isVerticalKey && !isHorizontalKey) {
 		Checkbox::keyPressEvent(e);
 		return;
 	}
-
-	e->accept();
 
 	const auto& buttons = _group->_buttons;
 	if (buttons.size() < 2) {
@@ -1017,15 +1019,40 @@ void Radiobutton::keyPressEvent(QKeyEvent* e) {
 		return;
 	}
 
+	enum class Orientation { Unknown, Vertical, Horizontal };
+	auto orientation = Orientation::Unknown;
+
 	const auto currentIndex = std::distance(buttons.begin(), i);
-	const auto step = (e->key() == Qt::Key_Down) ? 1 : -1;
-	const auto nextIndex = (currentIndex + step + buttons.size()) % buttons.size();
+	const QWidget* neighbor = nullptr;
+	if (currentIndex > 0) {
+		neighbor = buttons[currentIndex - 1];
+	}
+	else {
+		neighbor = buttons[currentIndex + 1];
+	}
 
-	auto nextButton = buttons[nextIndex];
-	if (nextButton) {
-		_group->setValue(nextButton->_value);
+	if (neighbor) {
+		const auto deltaY = std::abs(neighbor->y() - this->y());
+		const auto deltaX = std::abs(neighbor->x() - this->x());
+		orientation = (deltaY > deltaX) ? Orientation::Vertical : Orientation::Horizontal;
+	}
 
-		nextButton->setFocus(Qt::OtherFocusReason);
+	if ((orientation == Orientation::Vertical && !isVerticalKey) ||
+		(orientation == Orientation::Horizontal && !isHorizontalKey)) {
+		return;
+	}
+
+	e->accept();
+
+	const auto step = (key == Qt::Key_Down || key == Qt::Key_Right) ? 1 : -1;
+	const auto nextIndex = currentIndex + step;
+
+	if (nextIndex >= 0 && nextIndex < buttons.size()) {
+		auto nextButton = buttons[nextIndex];
+		if (nextButton) {
+			_group->setValue(nextButton->_value);
+			nextButton->setFocus(Qt::OtherFocusReason);
+		}
 	}
 }
 
