@@ -48,7 +48,7 @@ void FocusManager::registerWidget(not_null<RpWidget*> widget) {
 	const auto role = widget->accessibilityRole();
 	if (role != QAccessible::Role::Button
 		&& role != QAccessible::Role::Link
-		&& role != QAccessible::Role::CheckBox) {
+		&& role != QAccessible::Role::CheckBox && role != QAccessible::Role::Slider) {
 		return;
 	}
 	if (_active) {
