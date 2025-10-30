@@ -1060,16 +1060,10 @@ Radiobutton::~Radiobutton() {
 	_group->unregisterButton(this);
 }
 
-QAccessible::State Checkbox::accessibilityState() const {
-	auto state = RippleButton::accessibilityState();
-
-	state.checkable = 1;
-
-	if (checked()) {
-		state.checked = 1;
-	}
-
-	return state;
+void Checkbox::accessibilityState(QAccessible::State &state) const {
+	RippleButton::accessibilityState(state);
+	state.checkable = true;
+	state.checked = checked();
 }
 
 bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
