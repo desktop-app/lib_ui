@@ -630,7 +630,9 @@ void Checkbox::resizeToText() {
 void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
 	if (_check->checked() != checked) {
 		_check->setChecked(checked, anim::type::normal);
-		accessibilityStateChanged({ .checkStateMixed = true });
+		QAccessible::State s;
+		s.checked = true;
+		accessibilityStateChanged(s);
 		if (notify == NotifyAboutChange::Notify) {
 			_checkedChanges.fire_copy(checked);
 		}
