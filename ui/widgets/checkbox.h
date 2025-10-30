@@ -186,7 +186,7 @@ public:
 	QString accessibilityName() override {
 		return _text.toString();
 	}
-	[[nodiscard]] void accessibilityState(QAccessible::State &state) const override;
+	void accessibilityState(QAccessible::State &state) const override;
 
 	void setText(const QString &text, bool rich = false);
 	void setCheckAlignment(style::align alignment);
