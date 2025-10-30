@@ -363,8 +363,8 @@ void RpWidget::accessibilityDescriptionChanged() {
 void RpWidget::accessibilityState(QAccessible::State &state) const {
 }
 
-void RpWidget::accessibilityStateChanged() {
-	QAccessibleStateChangeEvent event(this, accessibilityState());
+void RpWidget::accessibilityStateChanged(QAccessible::State state) {
+	QAccessibleStateChangeEvent event(this, state);
 	QAccessible::updateAccessibility(&event);
 }
 
