@@ -376,7 +376,7 @@ public:
 	void accessibilityNameChanged();
 	[[nodiscard]] virtual QString accessibilityDescription();
 	void accessibilityDescriptionChanged();
-	[[nodiscard]] virtual QAccessible::State accessibilityState() const;
+	virtual void accessibilityState(QAccessible::State &state) const;
 	void accessibilityStateChanged();
 	[[nodiscard]] virtual QString accessibilityValue() const;
 	void accessibilityValueChanged(const QVariant& newValue);
