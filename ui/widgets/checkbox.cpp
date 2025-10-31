@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/checkbox.h"
 
+#include "base/screen_reader_state.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
@@ -529,7 +530,6 @@ Checkbox::Checkbox(
 				_st.style,
 				std::move(value),
 				_checkboxRichOptions);
-			accessibilityNameChanged();
 			resizeToText();
 			if (_text.hasLinks()) {
 				setMouseTracking(true);
@@ -630,6 +630,9 @@ void Checkbox::resizeToText() {
 void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
 	if (_check->checked() != checked) {
 		_check->setChecked(checked, anim::type::normal);
+		QAccessible::State s;
+		s.checked = true;
+		accessibilityStateChanged(s);
 		if (notify == NotifyAboutChange::Notify) {
 			_checkedChanges.fire_copy(checked);
 		}
@@ -908,6 +911,14 @@ void RadiobuttonGroup::setValue(int value) {
 	for (const auto button : _buttons) {
 		button->handleNewGroupValue(_value);
 	}
+	if (base::ScreenReaderState::Instance()->activeValue()) {
+		for (const auto button : _buttons) {
+			button->setFocusPolicy((button->_value == _value)
+				? Qt::StrongFocus
+				: Qt::NoFocus);
+		}
+	}
+
 	const auto guard = weak_from_this();
 	_changes.fire_copy(value);
 	if (guard.lock()) {
@@ -963,6 +974,10 @@ Radiobutton::Radiobutton(
 
 	checkbox()->setChecked(group->hasValue() && group->current() == value);
 	_group->registerButton(this);
+	if (base::ScreenReaderState::Instance()->activeValue()) {
+		setFocusPolicy((checkbox()->checked()) ? Qt::StrongFocus : Qt::NoFocus);
+	}
+
 	checkbox()->checkedChanges(
 	) | rpl::filter(
 		_1
@@ -986,8 +1001,95 @@ void Radiobutton::handlePress() {
 	}
 }
 
+void Radiobutton::keyPressEvent(QKeyEvent* e) {
+	const auto key = e->key();
+	const auto isVerticalKey = (key == Qt::Key_Up || key == Qt::Key_Down);
+	const auto isHorizontalKey = (key == Qt::Key_Left || key == Qt::Key_Right);
+
+	if (!isVerticalKey && !isHorizontalKey) {
+		Checkbox::keyPressEvent(e);
+		return;
+	}
+
+	const auto& buttons = _group->_buttons;
+	if (buttons.size() < 2) {
+		return;
+	}
+
+	const auto i = ranges::find(buttons, this);
+	if (i == buttons.end()) {
+		return;
+	}
+
+	enum class Orientation { Unknown, Vertical, Horizontal };
+	auto orientation = Orientation::Unknown;
+
+	const auto currentIndex = std::distance(buttons.begin(), i);
+	const QWidget* neighbor = nullptr;
+	if (currentIndex > 0) {
+		neighbor = buttons[currentIndex - 1];
+	}
+	else {
+		neighbor = buttons[currentIndex + 1];
+	}
+
+	if (neighbor) {
+		const auto deltaY = std::abs(neighbor->y() - this->y());
+		const auto deltaX = std::abs(neighbor->x() - this->x());
+		orientation = (deltaY > deltaX) ? Orientation::Vertical : Orientation::Horizontal;
+	}
+
+	if ((orientation == Orientation::Vertical && !isVerticalKey) ||
+		(orientation == Orientation::Horizontal && !isHorizontalKey)) {
+		return;
+	}
+
+	e->accept();
+
+	const auto step = (key == Qt::Key_Down || key == Qt::Key_Right) ? 1 : -1;
+	const auto nextIndex = currentIndex + step;
+
+	if (nextIndex >= 0 && nextIndex < buttons.size()) {
+		auto nextButton = buttons[nextIndex];
+		if (nextButton) {
+			_group->setValue(nextButton->_value);
+			nextButton->setFocus(Qt::OtherFocusReason);
+		}
+	}
+}
+
 Radiobutton::~Radiobutton() {
 	_group->unregisterButton(this);
+}
+
+void Checkbox::accessibilityState(QAccessible::State &state) const {
+	RippleButton::accessibilityState(state);
+	state.checkable = true;
+	state.checked = checked();
+}
+
+bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
+	return !e->isAutoRepeat()
+		&& (e->key() == Qt::Key_Space
+			|| e->key() == Qt::Key_Return
+			|| e->key() == Qt::Key_Enter);
+}
+
+void Checkbox::keyPressEvent(QKeyEvent* e) {
+	if (isSubmitEvent(e)) {
+		e->accept();
+	} else {
+		RippleButton::keyPressEvent(e);
+	}
+}
+
+void Checkbox::keyReleaseEvent(QKeyEvent* e) {
+	if (isSubmitEvent(e)) {
+		e->accept();
+		handlePress();
+	} else {
+		RippleButton::keyReleaseEvent(e);
+	}
 }
 
 } // namespace Ui

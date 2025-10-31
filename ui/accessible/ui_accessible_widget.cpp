@@ -48,8 +48,7 @@ void FocusManager::registerWidget(not_null<RpWidget*> widget) {
 	const auto role = widget->accessibilityRole();
 	if (role != QAccessible::Role::Button
 		&& role != QAccessible::Role::Link
-		&& role != QAccessible::Role::CheckBox
-		&& role != QAccessible::Role::RadioButton) {
+		&& role != QAccessible::Role::CheckBox && role != QAccessible::Role::Slider) {
 		return;
 	}
 	if (_active) {
@@ -88,6 +87,12 @@ QAccessible::Role Widget::role() const {
 	return rp()->accessibilityRole();
 }
 
+QAccessible::State Widget::state() const {
+	auto state = QAccessibleWidget::state();
+	rp()->accessibilityState(state);
+	return state;
+}
+
 QString Widget::text(QAccessible::Text t) const {
 	switch (t) {
 	case QAccessible::Name: {
@@ -96,6 +101,10 @@ QString Widget::text(QAccessible::Text t) const {
 	}
 	case QAccessible::Description: {
 		const auto result = rp()->accessibilityDescription();
+		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
+	}
+	case QAccessible::Value: {
+		const auto result = rp()->accessibilityValue();
 		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
 	}
 	}
