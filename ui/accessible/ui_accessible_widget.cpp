@@ -104,7 +104,8 @@ QString Widget::text(QAccessible::Text t) const {
 		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
 	}
 	case QAccessible::Value: {
-		return rp()->accessibilityValue();
+		const auto result = rp()->accessibilityValue();
+		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
 	}
 	}
 	return QAccessibleWidget::text(t);
