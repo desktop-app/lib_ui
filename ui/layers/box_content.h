@@ -114,6 +114,10 @@ public:
 		setAttribute(Qt::WA_OpaquePaintEvent);
 	}
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::Dialog;
+	}
+
 	bool isBoxShown() const {
 		return getDelegate()->isBoxShown();
 	}
