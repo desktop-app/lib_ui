@@ -672,6 +672,7 @@ struct LengthLimitLabelOptions {
 	RpWidget *customParent = nullptr;
 	std::optional<int> customThreshold = std::nullopt;
 	Fn<QPoint(QSize parent, QSize label)> customUpdatePosition;
+	Fn<int()> customCharactersCount;
 	int limitLabelTop = 0;
 };
 void AddLengthLimitLabel(
