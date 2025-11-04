@@ -1001,9 +1001,10 @@ DividerLabel::DividerLabel(
 	QWidget *parent,
 	object_ptr<RpWidget> &&child,
 	const style::margins &padding,
+	const style::DividerBar &st,
 	RectParts parts)
 : PaddingWrap(parent, std::move(child), padding)
-, _background(this, st::boxDividerHeight, st::boxDividerBg, parts) {
+, _background(this, st::boxDividerHeight, st, parts) {
 	setNaturalWidth(-1);
 }
 

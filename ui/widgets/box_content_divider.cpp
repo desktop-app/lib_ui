@@ -7,6 +7,7 @@
 #include "ui/widgets/box_content_divider.h"
 
 #include "styles/style_layers.h"
+#include "styles/style_widgets.h"
 #include "styles/palette.h"
 
 #include <QtGui/QPainter>
@@ -14,21 +15,13 @@
 
 namespace Ui {
 
-BoxContentDivider::BoxContentDivider(QWidget *parent)
-: BoxContentDivider(parent, st::boxDividerHeight) {
-}
-
-BoxContentDivider::BoxContentDivider(QWidget *parent, int height)
-: BoxContentDivider(parent, height, st::boxDividerBg) {
-}
-
 BoxContentDivider::BoxContentDivider(
 	QWidget *parent,
 	int height,
-	const style::color &bg,
+	const style::DividerBar &st,
 	RectParts parts)
 : RpWidget(parent)
-, _bg(bg)
+, _st(st)
 , _parts(parts) {
 	resize(width(), height);
 }
@@ -36,7 +29,7 @@ BoxContentDivider::BoxContentDivider(
 void BoxContentDivider::paintEvent(QPaintEvent *e) {
 	QPainter p(this);
 
-	p.fillRect(e->rect(), _bg);
+	p.fillRect(e->rect(), _st.bg);
 	if (_parts & RectPart::Top) {
 		paintTop(p);
 	}
@@ -50,21 +43,21 @@ void BoxContentDivider::paintTop(QPainter &p, int skip) {
 		0,
 		skip,
 		width(),
-		st::boxDividerTop.height());
-	st::boxDividerTop.fill(p, dividerFillTop);
+		_st.top.height());
+	_st.top.fill(p, dividerFillTop);
 }
 
 void BoxContentDivider::paintBottom(QPainter &p, int skip) {
 	const auto dividerFillBottom = myrtlrect(
 		0,
-		height() - skip - st::boxDividerBottom.height(),
+		height() - skip - _st.bottom.height(),
 		width(),
-		st::boxDividerBottom.height());
-	st::boxDividerBottom.fill(p, dividerFillBottom);
+		_st.bottom.height());
+	_st.bottom.fill(p, dividerFillBottom);
 }
 
 const style::color &BoxContentDivider::color() const {
-	return _bg;
+	return _st.bg;
 }
 
 } // namespace Ui

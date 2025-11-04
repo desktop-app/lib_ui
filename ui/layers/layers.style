@@ -145,23 +145,12 @@ boxLabel: FlatLabel(defaultFlatLabel) {
 	align: align(topleft);
 	style: boxLabelStyle;
 }
-boxDividerLabel: FlatLabel(boxLabel) {
-	minWidth: 245px;
-	align: align(topleft);
-	textFg: windowSubTextFg;
-	style: defaultTextStyle;
-}
-defaultBoxDividerLabelPadding: margins(22px, 8px, 22px, 16px);
 
 boxLoadingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
 	color: windowSubTextFg;
 	thickness: 2px;
 }
 boxLoadingSize: 20px;
-
-boxDividerTop: icon {{ "box_divider_top", boxDividerFg }};
-boxDividerBottom: icon {{ "box_divider_bottom", boxDividerFg }};
-boxDividerHeight: 8px;
 
 defaultSubsectionTitle: FlatLabel(defaultFlatLabel) {
 	style: TextStyle(semiboldTextStyle) {

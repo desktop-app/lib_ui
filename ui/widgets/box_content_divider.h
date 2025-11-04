@@ -9,16 +9,23 @@
 #include "ui/rp_widget.h"
 #include "ui/rect_part.h"
 
+namespace style {
+struct DividerBar;
+} // namespace style
+
+namespace st {
+extern const style::DividerBar &defaultDividerBar;
+extern const int &boxDividerHeight;
+} // namespace st
+
 namespace Ui {
 
 class BoxContentDivider : public Ui::RpWidget {
 public:
-	BoxContentDivider(QWidget *parent);
-	BoxContentDivider(QWidget *parent, int height);
 	BoxContentDivider(
 		QWidget *parent,
-		int height,
-		const style::color &bg,
+		int height = st::boxDividerHeight,
+		const style::DividerBar &st = st::defaultDividerBar,
 		RectParts parts = RectPart::Top | RectPart::Bottom);
 
 	[[nodiscard]] const style::color &color() const;
@@ -34,7 +41,7 @@ protected:
 	void paintBottom(QPainter &p, int skip = 0);
 
 private:
-	const style::color &_bg;
+	const style::DividerBar &_st;
 	const RectParts _parts;
 
 };
