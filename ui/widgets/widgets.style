@@ -348,6 +348,8 @@ MediaSlider {
 	receivedTillFg: color;
 	seekSize: size;
 	duration: int;
+	borderFg: color;
+	borderWidth: pixels;
 }
 
 FilledSlider {
@@ -1131,6 +1133,8 @@ defaultContinuousSlider: MediaSlider {
 	receivedTillFg: mediaPlayerInactiveFg;
 	seekSize: size(9px, 9px);
 	duration: 150;
+	borderFg: transparent;
+	borderWidth: 0px;
 }
 
 defaultRoundCheckbox: RoundCheckbox {
