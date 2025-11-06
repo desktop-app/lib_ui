@@ -363,6 +363,11 @@ void RoundButton::setPenOverride(std::optional<QPen> pen) {
 	update();
 }
 
+void RoundButton::setTextFgOverride(std::optional<QColor> textFg) {
+	_textFgOverride = std::move(textFg);
+	update();
+}
+
 void RoundButton::finishNumbersAnimation() {
 	if (_numbers) {
 		_numbers->finishAnimating();
@@ -509,7 +514,11 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		: (textTop + _st.iconPosition.y());
 	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
 	if (!_text.isEmpty()) {
-		p.setPen((over || down) ? _st.textFgOver : _st.textFg);
+		if (_textFgOverride) {
+			p.setPen(*_textFgOverride);
+		} else {
+			p.setPen((over || down) ? _st.textFgOver : _st.textFg);
+		}
 		_text.draw(p, {
 			.position = { textLeft, textTop },
 			.availableWidth = widthForText,
