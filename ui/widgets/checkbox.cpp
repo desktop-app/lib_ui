@@ -17,23 +17,6 @@
 #include <QtCore/QtMath>
 
 namespace Ui {
-namespace {
-
-TextParseOptions _checkboxOptions = {
-	TextParseMultiline, // flags
-	0, // maxw
-	0, // maxh
-	Qt::LayoutDirectionAuto, // dir
-};
-
-TextParseOptions _checkboxRichOptions = {
-	TextParseMultiline, // flags
-	0, // maxw
-	0, // maxh
-	Qt::LayoutDirectionAuto, // dir
-};
-
-} // namespace
 
 AbstractCheckView::AbstractCheckView(int duration, bool checked, Fn<void()> updateCallback)
 : _duration(duration)
@@ -515,27 +498,15 @@ Checkbox::Checkbox(
 , _text(
 		_st.style,
 		QString(),
-		_checkboxOptions,
+		kDefaultTextOptions,
 		_st.style.font->elidew) {
 	_check->setUpdateCallback([=] { update(); });
 	resizeToText();
 	setCursor(style::cur_pointer);
 	std::move(
 		text
-	) | rpl::start_with_next([=](TextWithEntities &&value) {
-		if (value.entities.empty()) {
-			setText(base::take(value.text));
-		} else {
-			_text.setMarkedText(
-				_st.style,
-				std::move(value),
-				_checkboxRichOptions);
-			resizeToText();
-			if (_text.hasLinks()) {
-				setMouseTracking(true);
-			}
-			update();
-		}
+	) | rpl::start_with_next([=](const TextWithEntities &value) {
+		setMarkedText(value);
 	}, lifetime());
 }
 
@@ -564,10 +535,15 @@ QRect Checkbox::checkRect() const {
 	}, size);
 }
 
-void Checkbox::setText(const QString &text, bool rich) {
-	_text.setText(_st.style, text, rich ? _checkboxRichOptions : _checkboxOptions);
+void Checkbox::setText(const QString &text) {
+	setMarkedText({ text });
+}
+
+void Checkbox::setMarkedText(const TextWithEntities &text) {
+	_text.setMarkedText(_st.style, text);
 	accessibilityNameChanged();
 	resizeToText();
+	setMouseTracking(_text.hasLinks());
 	update();
 }
 
@@ -630,9 +606,7 @@ void Checkbox::resizeToText() {
 void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
 	if (_check->checked() != checked) {
 		_check->setChecked(checked, anim::type::normal);
-		QAccessible::State s;
-		s.checked = true;
-		accessibilityStateChanged(s);
+		accessibilityStateChanged({ .checked = checked });
 		if (notify == NotifyAboutChange::Notify) {
 			_checkedChanges.fire_copy(checked);
 		}
@@ -920,13 +894,13 @@ void RadiobuttonGroup::setValue(int value) {
 	}
 }
 
-void RadiobuttonGroup::registerButton(Radiobutton *button) {
+void RadiobuttonGroup::registerButton(not_null<Radiobutton*> button) {
 	if (!base::contains(_buttons, button)) {
 		_buttons.push_back(button);
 	}
 }
 
-void RadiobuttonGroup::unregisterButton(Radiobutton *button) {
+void RadiobuttonGroup::unregisterButton(not_null<Radiobutton*> button) {
 	_buttons.erase(ranges::remove(_buttons, button), _buttons.end());
 }
 
@@ -973,15 +947,48 @@ Radiobutton::Radiobutton(
 		_group->setValue(_value);
 	}, lifetime());
 
-	rpl::combine(
-		base::ScreenReaderState::Instance()->activeValue(),
-		checkView()->checkedValue()
-	) | rpl::start_with_next([=](bool screenReaderActive, bool isChecked) {
-		setFocusPolicy(screenReaderActive && isChecked
-			? Qt::StrongFocus
-			: Qt::NoFocus);
-	}, lifetime());
+	trackScreenReaderState();
+}
 
+void Radiobutton::trackScreenReaderState() {
+	const auto reader = base::ScreenReaderState::Instance();
+	if (checkbox()->checked() && reader->active()) {
+		// We had a group without checked item before,
+		// so they all wrongfully have StrongFocus policy.
+		for (const auto &button : _group->_buttons) {
+			if (button != this) {
+				button->setFocusPolicy(Qt::NoFocus);
+			}
+		}
+	}
+
+	auto maybeValue = _group->value() | rpl::map([=](int v) {
+		return std::make_optional(v);
+	});
+	rpl::combine(
+		reader->activeValue(),
+		(_group->hasValue()
+			? std::move(maybeValue) | rpl::type_erased()
+			: rpl::single(
+				std::optional<int>()
+			) | rpl::then(std::move(maybeValue)))
+	) | rpl::map([=](bool screenReaderActive, std::optional<int> value) {
+		if (!screenReaderActive || !value.has_value()) {
+			return Qt::NoFocus;
+		} else if (value == _value) {
+			return Qt::StrongFocus;
+		}
+		for (const auto &button : _group->_buttons) {
+			if (button->_value == value) {
+				return Qt::NoFocus;
+			}
+		}
+		return Qt::StrongFocus;
+	}) | rpl::start_with_next([=](Qt::FocusPolicy value) {
+		if (focusPolicy() != value) {
+			setFocusPolicy(value);
+		}
+	}, lifetime());
 }
 
 void Radiobutton::handleNewGroupValue(int value) {
@@ -1001,53 +1008,51 @@ void Radiobutton::handlePress() {
 
 void Radiobutton::keyPressEvent(QKeyEvent *e) {
 	const auto key = e->key();
-	const auto isVerticalKey = (key == Qt::Key_Up || key == Qt::Key_Down);
-	const auto isHorizontalKey = (key == Qt::Key_Left || key == Qt::Key_Right);
+	const auto vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
+	const auto horizontal = (key == Qt::Key_Left || key == Qt::Key_Right);
 
-	if (!isVerticalKey && !isHorizontalKey) {
-		Checkbox::keyPressEvent(e);
-		return;
+	if (!vertical && !horizontal) {
+		return Checkbox::keyPressEvent(e);
 	}
 
-	const auto& buttons = _group->_buttons;
+	const auto &buttons = _group->_buttons;
 	if (buttons.size() < 2) {
+		e->ignore();
 		return;
 	}
 
-	const auto i = ranges::find(buttons, this);
-	if (i == buttons.end()) {
+	const auto i = ranges::find(buttons, not_null(this));
+	if (i == end(buttons)) {
+		e->ignore();
 		return;
 	}
 
-	enum class Orientation { Unknown, Vertical, Horizontal };
-	auto orientation = Orientation::Unknown;
-
-	const auto currentIndex = std::distance(buttons.begin(), i);
-	const auto neighbor = currentIndex > 0
+	const auto currentIndex = std::distance(begin(buttons), i);
+	const auto neighbor = (currentIndex > 0)
 		? buttons[currentIndex - 1]
 		: buttons[currentIndex + 1];
 
-	if (neighbor) {
-		const auto deltaY = std::abs(neighbor->y() - this->y());
-		const auto deltaX = std::abs(neighbor->x() - this->x());
-		orientation = (deltaY > deltaX) ? Orientation::Vertical : Orientation::Horizontal;
-	}
+	const auto deltaY = std::abs(neighbor->y() - y());
+	const auto deltaX = std::abs(neighbor->x() - x());
+	const auto orientation = (deltaY > deltaX)
+		? Qt::Vertical
+		: Qt::Horizontal;
 
-	if ((orientation == Orientation::Vertical && !isVerticalKey)
-		|| (orientation == Orientation::Horizontal && !isHorizontalKey)) {
+	if ((orientation == Qt::Vertical && !vertical)
+		|| (orientation == Qt::Horizontal && !horizontal)) {
+		e->ignore();
 		return;
 	}
-
-	e->accept();
 
 	const auto step = (key == Qt::Key_Down || key == Qt::Key_Right) ? 1 : -1;
 	const auto nextIndex = currentIndex + step;
 
 	if (nextIndex >= 0 && nextIndex < buttons.size()) {
-		auto nextButton = buttons[nextIndex];
-		if (nextButton) {
-			_group->setValue(nextButton->_value);
-			nextButton->setFocus(Qt::OtherFocusReason);
+		const auto nextButton = buttons[nextIndex];
+		const auto weak = base::make_weak(nextButton);
+		_group->setValue(nextButton->_value);
+		if (const auto strong = weak.get()) {
+			strong->setFocus(Qt::OtherFocusReason);
 		}
 	}
 }
@@ -1056,10 +1061,8 @@ Radiobutton::~Radiobutton() {
 	_group->unregisterButton(this);
 }
 
-void Checkbox::accessibilityState(QAccessible::State &state) const {
-	RippleButton::accessibilityState(state);
-	state.checkable = true;
-	state.checked = checked();
+AccessibilityState Checkbox::accessibilityState() const {
+	return { .checkable = true, .checked = checked() };
 }
 
 bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
@@ -1070,16 +1073,13 @@ bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
 }
 
 void Checkbox::keyPressEvent(QKeyEvent *e) {
-	if (isSubmitEvent(e)) {
-		e->accept();
-	} else {
+	if (!isSubmitEvent(e)) {
 		RippleButton::keyPressEvent(e);
 	}
 }
 
 void Checkbox::keyReleaseEvent(QKeyEvent *e) {
 	if (isSubmitEvent(e)) {
-		e->accept();
 		handlePress();
 	} else {
 		RippleButton::keyReleaseEvent(e);
