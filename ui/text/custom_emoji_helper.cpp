@@ -84,12 +84,12 @@ TextWithEntities CustomEmojiHelper::paletteDependent(
 }
 
 MarkedContext CustomEmojiHelper::context(Fn<void()> repaint) {
-	if (!_data) {
-		return _parent;
-	}
 	auto result = _parent;
 	if (repaint) {
 		result.repaint = std::move(repaint);
+	}
+	if (!_data) {
+		return result;
 	}
 	auto factory = [map = _data](
 		QStringView data,
