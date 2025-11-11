@@ -168,6 +168,7 @@ bool AbstractButton::setDown(
 		auto was = _state;
 		_state |= StateFlag::Down;
 		onStateChanged(was, source);
+		accessibilityStateChanged({ .pressed = true });
 		return true;
 	} else if (!down && (_state & StateFlag::Down)) {
 		const auto was = _state;
@@ -175,6 +176,7 @@ bool AbstractButton::setDown(
 
 		const auto weak = base::make_weak(this);
 		onStateChanged(was, source);
+		accessibilityStateChanged({ .pressed = true });
 		if (weak) {
 			if (was & StateFlag::Over) {
 				clicked(modifiers, button);
@@ -211,5 +213,9 @@ void AbstractButton::clearState() {
 	_state = StateFlag::None;
 	onStateChanged(was, StateChangeSource::ByUser);
 }
+
+AccessibilityState AbstractButton::accessibilityState() const {
+	return { .pressed = isDown() };
+	}
 
 } // namespace Ui
