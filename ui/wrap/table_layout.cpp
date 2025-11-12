@@ -19,6 +19,16 @@ TableLayout::TableLayout(QWidget *parent, const style::Table &st)
 , _st(st) {
 }
 
+TableLayout::~TableLayout() {
+	_rowsLifetime.destroy();
+
+	auto taken = std::move(_rows);
+	for (auto &row : taken) {
+		row.label.destroy();
+		row.value.destroy();
+	}
+}
+
 void TableLayout::paintEvent(QPaintEvent *e) {
 	if (_rows.empty()) {
 		return;
@@ -256,24 +266,27 @@ void TableLayout::childHeightUpdated(RpWidget *child) {
 }
 
 void TableLayout::removeChild(RpWidget *child) {
-	auto it = ranges::find_if(_rows, [child](const Row &row) {
+	const auto it = ranges::find_if(_rows, [child](const Row &row) {
 		return (row.label == child) || (row.value == child);
 	});
-	const auto end = _rows.end();
-	Assert(it != end);
+	if (auto e = end(_rows); it != e) {
+		auto top = it->top;
+		auto removed = std::move(*it);
+		auto next = _rows.erase(it);
+		const auto outer = width();
+		for (e = end(_rows); next != e; ++next) {
+			auto &row = *next;
+			updateRowPosition(row, outer, top);
+			top += rowVerticalSkip(row);
+		}
+		resize(width(), _rows.empty() ? 0 : top);
 
-	auto top = it->top;
-	const auto outer = width();
-	for (auto next = it + 1; next != end; ++next) {
-		auto &row = *next;
-		updateRowPosition(row, outer, top);
-		top += rowVerticalSkip(row);
+		if (removed.label.data() == child) {
+			removed.value.destroy();
+		} else {
+			removed.label.destroy();
+		}
 	}
-	it->label = nullptr;
-	it->value = nullptr;
-	_rows.erase(it);
-
-	resize(width(), _rows.empty() ? 0 : top);
 }
 
 int TableLayout::rowVerticalSkip(const Row &row) const {
