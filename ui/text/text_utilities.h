@@ -33,6 +33,8 @@ inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] TextWithEntities Bold(const QString &text);
 [[nodiscard]] TextWithEntities Semibold(const QString &text);
 [[nodiscard]] TextWithEntities Italic(const QString &text);
+[[nodiscard]] TextWithEntities Underline(const QString &text);
+[[nodiscard]] TextWithEntities StrikeOut(const QString &text);
 [[nodiscard]] TextWithEntities Link(
 	const QString &text,
 	const QString &url = u"internal:action"_q);
