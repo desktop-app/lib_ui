@@ -146,6 +146,10 @@ public:
 		return _textFull.current().text;
 	}
 
+	[[nodiscard]] const style::RoundButton &st() const {
+		return _st;
+	}
+
 	void setText(rpl::producer<QString> text);
 	void setText(rpl::producer<TextWithEntities> text);
 	void setContext(const Text::MarkedContext &context);
