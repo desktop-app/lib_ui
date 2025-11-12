@@ -452,7 +452,8 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		rpl::producer<TextWithEntities> &&text,
 		int maxWidth,
 		const style::FlatLabel &st,
-		const style::PopupMenu &stMenu) {
+		const style::PopupMenu &stMenu,
+		const Text::MarkedContext &context) {
 	Expects(st.minWidth > 0);
 	Expects(st.minWidth < maxWidth);
 
@@ -460,7 +461,8 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		parent,
 		rpl::duplicate(text),
 		st,
-		stMenu);
+		stMenu,
+		context);
 	const auto raw = result.data();
 	std::move(text) | rpl::start_with_next([=, &st] {
 		raw->resizeToWidth(qMin(maxWidth, raw->textMaxWidth()));

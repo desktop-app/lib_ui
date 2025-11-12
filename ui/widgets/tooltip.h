@@ -143,6 +143,7 @@ private:
 	rpl::producer<TextWithEntities> &&text,
 	int maxWidth,
 	const style::FlatLabel &st = st::defaultFlatLabel,
-	const style::PopupMenu &stMenu = st::defaultPopupMenu);
+	const style::PopupMenu &stMenu = st::defaultPopupMenu,
+	const Text::MarkedContext &context = {});
 
 } // namespace Ui
