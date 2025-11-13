@@ -53,6 +53,7 @@ public:
 	[[nodiscard]] rpl::producer<not_null<QScreen*>> screenValue() const;
 	[[nodiscard]] rpl::producer<bool> windowActiveValue() const;
 	[[nodiscard]] rpl::producer<QRect> paintRequest() const;
+	void paintOn(Fn<void(QPainter&)> callback);
 	[[nodiscard]] rpl::producer<> alive() const;
 	[[nodiscard]] rpl::producer<> death() const;
 	[[nodiscard]] rpl::producer<> macWindowDeactivateEvents() const;
