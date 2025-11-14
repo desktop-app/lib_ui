@@ -40,7 +40,10 @@ namespace Ui::Text {
 
 		const auto x = (full.width() - size.width()) / 2;
 		p.setPen(st.textFg);
-		string.draw(p, { .position = { x, st.textTop } });
+		string.draw(p, {
+			.position = { x, st.textTop },
+			.availableWidth = size.width(),
+		});
 
 		p.end();
 		return result;
