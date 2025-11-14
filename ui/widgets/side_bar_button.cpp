@@ -68,6 +68,7 @@ void SideBarButton::setBadge(const QString &badge, bool muted) {
 		_iconCacheBadgeWidth = width;
 		_iconCache = _iconCacheActive = QImage();
 	}
+	accessibilityNameChanged();
 	update();
 }
 

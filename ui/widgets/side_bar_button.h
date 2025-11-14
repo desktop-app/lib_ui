@@ -39,6 +39,12 @@ public:
 
 	[[nodiscard]] bool locked() const;
 
+	QString accessibilityName() override {
+		return !_badge.isEmpty()
+			? u"%1 (%2)"_q.arg(_text.toString(), _badge.toString())
+			: _text.toString();
+	}
+
 private:
 	void paintEvent(QPaintEvent *e) override;
 
