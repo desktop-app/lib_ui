@@ -316,9 +316,4 @@ QImage SideBarLockIcon(const style::color &fg) {
 	return image;
 }
 
-void SideBarButton::accessibilitySetName(QString name) {
-	_accessibilityName = std::move(name);
-	accessibilityNameChanged();
-}
-
 } // namespace Ui
