@@ -38,6 +38,13 @@ public:
 	int resizeGetHeight(int newWidth) override;
 
 	[[nodiscard]] bool locked() const;
+	void accessibilitySetName(QString name);
+
+	QString accessibilityName() override {
+		return !_accessibilityName.isEmpty()
+			? _accessibilityName
+			: _text.toString();
+	}
 
 private:
 	void paintEvent(QPaintEvent *e) override;
@@ -65,6 +72,7 @@ private:
 		QImage iconCache;
 		QImage iconCacheActive;
 	} _lock;
+	QString _accessibilityName;
 
 };
 //
