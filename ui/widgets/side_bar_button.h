@@ -41,8 +41,8 @@ public:
 	void accessibilitySetName(QString name);
 
 	QString accessibilityName() override {
-		return !_accessibilityName.isEmpty()
-			? _accessibilityName
+		return !_badge.isEmpty()
+			? u"%1 (%2)"_q.arg(_text.toString(), _badge.toString())
 			: _text.toString();
 	}
 
