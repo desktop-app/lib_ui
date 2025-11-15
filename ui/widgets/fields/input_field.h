@@ -196,6 +196,7 @@ public:
 	void setMaxLength(int maxLength);
 	void setMinHeight(int minHeight);
 	void setMaxHeight(int maxHeight);
+	void setMode(Mode mode);
 
 	[[nodiscard]] const TextWithTags &getTextWithTags() const {
 		return _lastTextWithTags;

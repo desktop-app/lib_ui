@@ -2193,6 +2193,14 @@ void InputField::setMaxHeight(int height) {
 	_maxHeight = height;
 }
 
+void InputField::setMode(Mode mode) {
+	Expects(_mode == mode // Not supported.
+		|| (_mode != Mode::SingleLine && mode != Mode::SingleLine));
+
+	_mode = mode;
+	forceProcessContentsChanges();
+}
+
 void InputField::insertTag(const QString &text, QString tagId) {
 	auto cursor = textCursor();
 	const auto position = cursor.position();
