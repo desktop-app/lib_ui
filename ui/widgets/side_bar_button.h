@@ -38,6 +38,16 @@ public:
 	int resizeGetHeight(int newWidth) override;
 
 	[[nodiscard]] bool locked() const;
+	void accessibilitySetName(QString name);
+
+	QString accessibilityName() override {
+		if (!_accessibilityName.isEmpty()) {
+			return _accessibilityName;
+		}
+		return !_badge.isEmpty()
+			? u"%1 (%2)"_q.arg(_text.toString(), _badge.toString())
+			: _text.toString();
+	}
 
 private:
 	void paintEvent(QPaintEvent *e) override;
@@ -65,6 +75,7 @@ private:
 		QImage iconCache;
 		QImage iconCacheActive;
 	} _lock;
+	QString _accessibilityName;
 
 };
 //
