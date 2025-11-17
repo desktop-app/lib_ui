@@ -44,14 +44,12 @@ public:
 	MonoIcon(MonoIcon &&other) = default;
 	MonoIcon &operator=(MonoIcon &&other) = default;
 	MonoIcon(const MonoIcon &other, const style::palette &palette);
-	MonoIcon(const IconMask *mask, Color color, QPoint offset);
+	MonoIcon(const IconMask *mask, Color color, QMargins padding);
 
 	void reset() const;
-	int width() const;
-	int height() const;
-	QSize size() const;
-
-	QPoint offset() const;
+	[[nodiscard]] int width() const;
+	[[nodiscard]] int height() const;
+	[[nodiscard]] QSize size() const;
 
 	void paint(QPainter &p, const QPoint &pos, int outerw) const;
 	void fill(QPainter &p, const QRect &rect) const;
@@ -85,10 +83,11 @@ private:
 	void ensureLoaded() const;
 	void createCachedPixmap() const;
 	void ensureColorizedImage(QColor color) const;
+	[[nodiscard]] QSize inner() const;
 
 	const IconMask *_mask = nullptr;
 	Color _color;
-	QPoint _offset = { 0, 0 };
+	QMargins _padding = { 0, 0, 0, 0 };
 	mutable QImage _maskImage, _colorizedImage;
 	mutable QPixmap _pixmap; // for pixmaps
 	mutable QSize _size; // for rects
