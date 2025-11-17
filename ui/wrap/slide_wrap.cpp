@@ -174,5 +174,11 @@ rpl::producer<bool> MultiSlideTracker::atLeastOneShownValue() const {
 		});
 }
 
+rpl::producer<bool> MultiSlideTracker::atLeastOneShownValueLater() const {
+	return _widgetAdded.events() | rpl::map([=] {
+		return atLeastOneShownValue();
+	}) | rpl::flatten_latest();
+}
+
 } // namespace Ui
 

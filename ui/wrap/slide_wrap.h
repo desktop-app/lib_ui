@@ -139,12 +139,15 @@ public:
 	template <typename Widget>
 	void track(const SlideWrap<Widget> *wrap) {
 		_widgets.push_back(wrap);
+		_widgetAdded.fire({});
 	}
 
 	rpl::producer<bool> atLeastOneShownValue() const;
+	rpl::producer<bool> atLeastOneShownValueLater() const;
 
 private:
 	std::vector<const SlideWrap<Ui::RpWidget>*> _widgets;
+	rpl::event_stream<> _widgetAdded;
 
 };
 
