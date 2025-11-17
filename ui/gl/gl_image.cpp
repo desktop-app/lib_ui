@@ -48,7 +48,7 @@ void DestroyFramebuffers(QOpenGLFunctions *f, gsl::span<GLuint> values) {
 	Expects(!values.empty());
 
 	if (f) {
-		f->glDeleteTextures(values.size(), values.data());
+		f->glDeleteFramebuffers(values.size(), values.data());
 	}
 	ranges::fill(values, 0);
 }
