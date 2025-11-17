@@ -128,12 +128,15 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_yTo = context.clip.isNull()
 		? -1
 		: (context.clip.y() + context.clip.height());
+	const auto available = context.availableWidth
+		? context.availableWidth
+		: _t->maxWidth();
 	_geometry = context.geometry.layout
 		? context.geometry
 		: SimpleGeometry(
 			((context.useFullWidth || !(context.align & Qt::AlignLeft))
-				? context.availableWidth
-				: std::min(context.availableWidth, _t->maxWidth())),
+				? available
+				: std::min(available, _t->maxWidth())),
 			(context.elisionLines
 				? context.elisionLines
 				: (context.elisionHeight / _t->_st->font->height)),
