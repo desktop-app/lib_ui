@@ -95,21 +95,22 @@ QAccessible::State Widget::state() const {
 }
 
 QString Widget::text(QAccessible::Text t) const {
+	const auto result = QAccessibleWidget::text(t);
+	if (!result.isEmpty()) {
+		return result;
+	}
 	switch (t) {
 	case QAccessible::Name: {
-		const auto result = rp()->accessibilityName();
-		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
+		return rp()->accessibilityName();
 	}
 	case QAccessible::Description: {
-		const auto result = rp()->accessibilityDescription();
-		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
+		return rp()->accessibilityDescription();
 	}
 	case QAccessible::Value: {
-		const auto result = rp()->accessibilityValue();
-		return result.isEmpty() ? QAccessibleWidget::text(t) : result;
+		return rp()->accessibilityValue();
 	}
 	}
-	return QAccessibleWidget::text(t);
+	return result;
 }
 
 } // namespace Ui::Accessible
