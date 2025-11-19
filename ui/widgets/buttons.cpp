@@ -565,11 +565,6 @@ IconButton::IconButton(QWidget *parent, const style::IconButton &st) : RippleBut
 	resize(_st.width, _st.height);
 }
 
-void IconButton::accessibilitySetName(QString name) {
-	_accessibilityName = std::move(name);
-	accessibilityNameChanged();
-}
-
 const style::IconButton &IconButton::st() const {
 	return _st;
 }

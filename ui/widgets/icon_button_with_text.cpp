@@ -36,7 +36,7 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 void IconButtonWithText::setText(const QString &text) {
 	if (_text != text) {
 		_text = text;
-		accessibilitySetName(_text);
+		accessibilityNameChanged();
 		update();
 	}
 }

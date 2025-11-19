@@ -215,11 +215,6 @@ class IconButton : public RippleButton {
 public:
 	IconButton(QWidget *parent, const style::IconButton &st);
 
-	QString accessibilityName() override {
-		return _accessibilityName;
-	}
-	void accessibilitySetName(QString name);
-
 	[[nodiscard]] const style::IconButton &st() const;
 
 	// Pass nullptr to restore the default icon.
@@ -243,8 +238,6 @@ private:
 	const style::color *_rippleColorOverride = nullptr;
 
 	Ui::Animations::Simple _a_over;
-
-	QString _accessibilityName;
 
 };
 

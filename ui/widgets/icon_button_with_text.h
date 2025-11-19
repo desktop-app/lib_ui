@@ -18,6 +18,10 @@ public:
 
 	void setText(const QString &text);
 
+	QString accessibilityName() override {
+		return _text;
+	}
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
