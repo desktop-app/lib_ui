@@ -412,7 +412,7 @@ void WindowHelper::setStaysOnTop(bool enabled) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	SetGeometryAndScreen(window(), rect.marginsAdded(frameMargins()));
+	window()->setGeometry(rect.marginsAdded(frameMargins()));
 }
 
 void WindowHelper::setupBodyTitleAreaEvents() {
