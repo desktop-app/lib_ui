@@ -112,6 +112,10 @@ boxTitleClose: IconButton(defaultIconButton) {
 	rippleAreaSize: 40px;
 	ripple: defaultRippleAnimationBgOver;
 }
+boxTitleMenu: IconButton(boxTitleClose) {
+	icon: icon {{ "title_menu_dots", boxTitleCloseFg }};
+	iconOver: icon {{ "title_menu_dots", boxTitleCloseFgOver }};
+}
 
 boxLinkButton: LinkButton(defaultLinkButton) {
 	font: boxTextFont;
