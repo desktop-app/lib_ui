@@ -183,7 +183,7 @@ void BasicWindowHelper::setStaysOnTop(bool enabled) {
 }
 
 void BasicWindowHelper::setGeometry(QRect rect) {
-	SetGeometryAndScreen(_window, rect);
+	_window->setGeometry(rect);
 }
 
 void BasicWindowHelper::showFullScreen() {
@@ -601,7 +601,7 @@ void DefaultWindowHelper::setFixedSize(QSize size) {
 }
 
 void DefaultWindowHelper::setGeometry(QRect rect) {
-	SetGeometryAndScreen(window(), rect.marginsAdded(bodyPadding()));
+	window()->setGeometry(rect.marginsAdded(bodyPadding()));
 }
 
 int DefaultWindowHelper::manualRoundingRadius() const {
