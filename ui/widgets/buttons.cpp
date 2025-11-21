@@ -519,9 +519,14 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		} else {
 			p.setPen((over || down) ? _st.textFgOver : _st.textFg);
 		}
+		auto local = st::defaultTextPalette;
+		local.linkFg = (over || down)
+			? _st.numbersTextFgOver
+			: _st.numbersTextFg;
 		_text.draw(p, {
 			.position = { textLeft, textTop },
 			.availableWidth = widthForText,
+			.palette = &local,
 			.elisionLines = 1,
 		});
 	}
