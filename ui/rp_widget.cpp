@@ -395,4 +395,11 @@ void RpWidget::accessibilityValueChanged() {
 	QAccessible::updateAccessibility(&event);
 }
 
+QStringList RpWidget::accessibilityActionNames() {
+	return QStringList();
+}
+
+void RpWidget::accessibilityDoAction(const QString& actionName) {
+}
+
 } // namespace Ui

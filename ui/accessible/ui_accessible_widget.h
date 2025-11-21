@@ -24,6 +24,11 @@ public:
 	QAccessible::Role role() const override;
 	QAccessible::State state() const override;
 
+	void* interface_cast(QAccessible::InterfaceType t) override;
+	QStringList actionNames() const override;
+	void doAction(const QString& actionName) override;
+	QStringList keyBindingsForAction(const QString& actionName) const override;
+
 };
 
 } // namespace Ui::Accessible

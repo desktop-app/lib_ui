@@ -94,6 +94,28 @@ QAccessible::State Widget::state() const {
 	return result;
 }
 
+void* Widget::interface_cast(QAccessible::InterfaceType t) {
+	if (t == QAccessible::ActionInterface) {
+		return static_cast<QAccessibleActionInterface*>(this);
+	}
+	return QAccessibleWidget::interface_cast(t);
+}
+
+QStringList Widget::actionNames() const
+{
+	return rp()->accessibilityActionNames();
+}
+
+void Widget::doAction(const QString& actionName)
+{
+	rp()->accessibilityDoAction(actionName);
+}
+
+QStringList Widget::keyBindingsForAction(const QString& actionName) const
+{
+	return QStringList();
+}
+
 QString Widget::text(QAccessible::Text t) const {
 	const auto result = QAccessibleWidget::text(t);
 	if (!result.isEmpty()) {
