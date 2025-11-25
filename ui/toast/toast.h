@@ -47,10 +47,12 @@ struct Config {
 	// Custom way of composing any content.
 	object_ptr<RpWidget> content = { nullptr };
 
-	rpl::producer<QMargins> padding = nullptr;
+	rpl::producer<QMargins> padding;
 
 	not_null<const style::Toast*> st = &st::defaultMultilineToast;
 	RectPart attach = RectPart::None;
+	rpl::producer<int> addToAttachSide;
+
 	bool dark = false;
 	bool adaptive = false;
 	bool acceptinput = false;

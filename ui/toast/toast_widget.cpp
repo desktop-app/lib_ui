@@ -86,6 +86,9 @@ Widget::Widget(QWidget *parent, Config &&config)
 , _st(config.st)
 , _roundRect(_st->radius, st::toastBg)
 , _attach(config.attach)
+, _addToAttach(config.addToAttachSide
+	? std::move(config.addToAttachSide)
+	: rpl::single(0))
 , _content(MakeContent(this, config))
 , _padding(config.padding
 	? std::move(config.padding) | rpl::map(rpl::mappers::_1 + _st->padding)
@@ -97,7 +100,10 @@ Widget::Widget(QWidget *parent, Config &&config)
 		setAttribute(Qt::WA_TransparentForMouseEvents);
 	}
 
-	_padding.value() | rpl::start_with_next([=] {
+	rpl::combine(
+		_addToAttach.value(),
+		_padding.value()
+	) | rpl::start_with_next([=] {
 		parentResized();
 	}, lifetime());
 
@@ -153,25 +159,30 @@ void Widget::updateGeometry() {
 			return anim::interpolate(from, to, level);
 		};
 		setGeometry(rect.translated([&] {
+			const auto add = _addToAttach.current();
 			switch (_attach) {
 			case RectPart::None:
 				return middle;
 			case RectPart::Left:
 				return QPoint(
-					interpolated(-width, _st->margin.left()),
+					interpolated(-width, _st->margin.left() + add),
 					middle.y());
 			case RectPart::Top:
 				return QPoint(
 					middle.x(),
-					interpolated(-height, _st->margin.top()));
+					interpolated(-height, _st->margin.top() + add));
 			case RectPart::Right:
 				return QPoint(
-					full.x() - interpolated(0, width + _st->margin.right()),
+					full.x() - interpolated(
+						0,
+						width + _st->margin.right() + add),
 					middle.y());
 			case RectPart::Bottom:
 				return QPoint(
 					middle.x(),
-					full.y() - interpolated(0, height + _st->margin.bottom()));
+					full.y() - interpolated(
+						0,
+						height + _st->margin.bottom() + add));
 			}
 			Unexpected("Slide side in Toast::Widget::updateGeometry.");
 		}()));

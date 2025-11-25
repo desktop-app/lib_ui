@@ -34,6 +34,7 @@ private:
 	const not_null<const style::Toast*> _st;
 	RoundRect _roundRect;
 	RectPart _attach = RectPart::None;
+	rpl::variable<int> _addToAttach;
 
 	float64 _shownLevel = 0;
 	QImage _shownProxy;
