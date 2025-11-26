@@ -41,7 +41,7 @@ FocusManager::FocusManager() : _cleanupTimer([=] { cleanup(); }) {
 
 		cleanup();
 		for (const auto &widget : _widgets) {
-			widget->setFocusPolicy(active ? Qt::StrongFocus : Qt::NoFocus);
+			widget->setFocusPolicy(active ? Qt::TabFocus : Qt::NoFocus);
 		}
 	}, _lifetime);
 }
@@ -55,7 +55,7 @@ void FocusManager::registerWidget(not_null<RpWidget*> widget) {
 		return;
 	}
 	if (_active) {
-		widget->setFocusPolicy(Qt::StrongFocus);
+		widget->setFocusPolicy(Qt::TabFocus);
 	}
 	_widgets.push_back(widget.get());
 	if (!_cleanupTimer.isActive()) {
