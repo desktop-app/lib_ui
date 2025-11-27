@@ -392,6 +392,8 @@ public:
 	void accessibilityStateChanged(AccessibilityState changes);
 	[[nodiscard]] virtual QString accessibilityValue() const;
 	void accessibilityValueChanged();
+	[[nodiscard]] virtual QStringList accessibilityActionNames();
+	virtual void accessibilityDoAction(const QString& actionName);
 
 protected:
 	// e - from enterEvent() of child RpWidget
