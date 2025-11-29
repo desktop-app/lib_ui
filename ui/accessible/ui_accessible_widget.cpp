@@ -96,6 +96,15 @@ QAccessible::State Widget::state() const {
 	return result;
 }
 
+QStringList Widget::actionNames() const {
+	return QAccessibleWidget::actionNames() + rp()->accessibilityActionNames();
+}
+
+void Widget::doAction(const QString& actionName) {
+	QAccessibleWidget::doAction(actionName);
+	rp()->accessibilityDoAction(actionName);
+}
+
 QString Widget::text(QAccessible::Text t) const {
 	const auto result = QAccessibleWidget::text(t);
 	if (!result.isEmpty()) {
