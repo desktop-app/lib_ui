@@ -15,6 +15,7 @@
 
 #include <QtGui/QtEvents>
 #include <QtCore/QtMath>
+#include <QtCore/QTimer>
 
 namespace Ui {
 
@@ -1063,6 +1064,26 @@ Radiobutton::~Radiobutton() {
 
 AccessibilityState Checkbox::accessibilityState() const {
 	return { .checkable = true, .checked = checked() };
+}
+
+void Checkbox::accessibilityDoAction(const QString& actionName) {
+	if (actionName == QAccessibleActionInterface::pressAction()) {
+		if (isDisabled()) {
+			return;
+		}
+
+		const auto weak = base::make_weak(this);
+
+		QTimer::singleShot(0, this, [weak] {
+			const auto strong = weak.get();
+			if (!strong || strong->isDisabled()) {
+				return;
+			}
+			strong->handlePress();
+			});
+
+		return;
+	}
 }
 
 bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
