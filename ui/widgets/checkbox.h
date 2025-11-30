@@ -187,6 +187,7 @@ public:
 		return _text.toString();
 	}
 	AccessibilityState accessibilityState() const override;
+	void accessibilityDoAction(const QString& actionName) override;
 
 	void setText(const QString &text);
 	void setCheckAlignment(style::align alignment);
