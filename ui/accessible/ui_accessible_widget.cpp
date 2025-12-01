@@ -7,6 +7,7 @@
 #include "ui/accessible/ui_accessible_widget.h"
 
 #include "base/debug_log.h"
+#include "base/integration.h"
 #include "base/screen_reader_state.h"
 #include "base/timer.h"
 #include "ui/rp_widget.h"
@@ -97,12 +98,15 @@ QAccessible::State Widget::state() const {
 }
 
 QStringList Widget::actionNames() const {
-	return QAccessibleWidget::actionNames() + rp()->accessibilityActionNames();
+	return QAccessibleWidget::actionNames()
+		+ rp()->accessibilityActionNames();
 }
 
-void Widget::doAction(const QString& actionName) {
+void Widget::doAction(const QString &actionName) {
 	QAccessibleWidget::doAction(actionName);
-	rp()->accessibilityDoAction(actionName);
+	base::Integration::Instance().enterFromEventLoop([&] {
+		rp()->accessibilityDoAction(actionName);
+	});
 }
 
 QString Widget::text(QAccessible::Text t) const {

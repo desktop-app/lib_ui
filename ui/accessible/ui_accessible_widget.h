@@ -24,7 +24,7 @@ public:
 	QAccessible::Role role() const override;
 	QAccessible::State state() const override;
 	QStringList actionNames() const override;
-	void doAction(const QString& actionName) override;
+	void doAction(const QString &actionName) override;
 
 };
 

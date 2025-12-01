@@ -399,7 +399,7 @@ QStringList RpWidget::accessibilityActionNames() {
 	return QStringList();
 }
 
-void RpWidget::accessibilityDoAction(const QString& actionName) {
+void RpWidget::accessibilityDoAction(const QString &name) {
 }
 
 } // namespace Ui

@@ -64,7 +64,7 @@ public:
 		return QAccessible::Role::Button;
 	}
 	AccessibilityState accessibilityState() const override;
-	void accessibilityDoAction(const QString& actionName) override;
+	void accessibilityDoAction(const QString &name) override;
 
 protected:
 	void enterEventHook(QEnterEvent *e) override;

@@ -13,7 +13,6 @@
 
 #include <rpl/filter.h>
 #include <rpl/mappers.h>
-#include <QtCore/QTimer>
 
 namespace Ui {
 
@@ -223,22 +222,11 @@ AccessibilityState AbstractButton::accessibilityState() const {
 	return { .pressed = isDown() };
 	}
 
-void AbstractButton::accessibilityDoAction(const QString& actionName) {
-	if (actionName == QAccessibleActionInterface::pressAction()) {
-		if (isDisabled()) {
-			return;
+void AbstractButton::accessibilityDoAction(const QString &name) {
+	if (name == QAccessibleActionInterface::pressAction()) {
+		if (!isDisabled()) {
+			clicked(Qt::NoModifier, Qt::LeftButton);
 		}
-
-		const auto weak = base::make_weak(this);
-
-		QTimer::singleShot(0, this, [weak] {
-			if (!weak) {
-				return;
-			}
-			weak->clicked(Qt::NoModifier, Qt::LeftButton);
-			});
-
-		return;
 	}
 }
 
