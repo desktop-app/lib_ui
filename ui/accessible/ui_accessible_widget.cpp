@@ -11,6 +11,8 @@
 #include "base/screen_reader_state.h"
 #include "base/timer.h"
 #include "ui/rp_widget.h"
+#include "ui_accessible_item.h"
+#include <algorithm>
 
 namespace Ui::Accessible {
 namespace {
@@ -126,6 +128,74 @@ QString Widget::text(QAccessible::Text t) const {
 	}
 	}
 	return result;
+}
+
+int Widget::childCount() const {
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0) {
+		return count;
+	}
+	return QAccessibleWidget::childCount();
+}
+
+QAccessibleInterface* Widget::child(int index) const {
+	if (index < 0) {
+		return nullptr;
+	}
+
+	if (const auto customInterface = rp()->accessibilityChildInterface(index)) {
+		return customInterface;
+	}
+
+	return QAccessibleWidget::child(index);
+}
+
+int Widget::indexOfChild(const QAccessibleInterface* child) const {
+	if (const auto item = dynamic_cast<const Ui::Accessible::Item*>(child)) {
+		return item->indexInParent();
+	}
+
+	return QAccessibleWidget::indexOfChild(child);
+}
+
+QAccessibleInterface* Widget::childAt(int x, int y) const {
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0) {
+		const QPoint p(x, y);
+		for (int i = 0; i < count; ++i) {
+			if (const auto iface = rp()->accessibilityChildInterface(i)) {
+				if (iface->rect().contains(p)) {
+					return iface;
+				}
+			}
+		}
+		return nullptr;
+	}
+	return QAccessibleWidget::childAt(x, y);
+}
+
+QAccessibleInterface* Widget::focusChild() const {
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0 && rp()->hasFocus()) {
+		for (int i = 0; i < count; ++i) {
+			if (const auto iface = rp()->accessibilityChildInterface(i)) {
+				const auto s = iface->state();
+				if (s.focused || s.selected) {
+					return iface;
+				}
+			}
+		}
+	}
+	return QAccessibleWidget::focusChild();
+}
+
+QAccessibleInterface *Widget::parent() const {
+	if (const auto parentRp = rp()->accessibilityParent()) {
+		if (auto iface = parentRp->accessibilityCreate()) {
+			return iface;
+		}
+	}
+	return QAccessibleWidget::parent();
 }
 
 } // namespace Ui::Accessible
