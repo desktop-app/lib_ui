@@ -128,4 +128,53 @@ QString Widget::text(QAccessible::Text t) const {
 	return result;
 }
 
+int Widget::childCount() const {
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0) {
+		return count;
+	}
+	return QAccessibleWidget::childCount();
+}
+
+QAccessibleInterface *Widget::child(int index) const {
+	if (index < 0) {
+		return nullptr;
+	}
+	if (const auto rpChild = rp()->accessibilityChildAt(index)) {
+		if (auto iface = rpChild->accessibilityCreate()) {
+			return iface;
+		}
+	}
+	return QAccessibleWidget::child(index);
+}
+
+int Widget::indexOfChild(const QAccessibleInterface *child) const {
+	if (const auto childWidget = dynamic_cast<const Widget*>(child)) {
+		const auto childRp = childWidget->rp().get();
+		const auto index = rp()->accessibilityIndexOfChild(childRp);
+		if (index >= 0) {
+			return index;
+		}
+	}
+	return QAccessibleWidget::indexOfChild(child);
+}
+
+QAccessibleInterface *Widget::focusChild() const {
+	if (const auto childRp = rp()->accessibilityFocusChild()) {
+		if (auto iface = childRp->accessibilityCreate()) {
+			return iface;
+		}
+	}
+	return QAccessibleWidget::focusChild();
+}
+
+QAccessibleInterface *Widget::parent() const {
+	if (const auto parentRp = rp()->accessibilityParent()) {
+		if (auto iface = parentRp->accessibilityCreate()) {
+			return iface;
+		}
+	}
+	return QAccessibleWidget::parent();
+}
+
 } // namespace Ui::Accessible
