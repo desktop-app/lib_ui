@@ -164,6 +164,7 @@ public:
 	void setBrushOverride(std::optional<QBrush> brush);
 	void setPenOverride(std::optional<QPen> pen);
 	void setTextFgOverride(std::optional<QColor> textFg);
+	void setIconOverride(const style::icon *icon);
 	void finishNumbersAnimation();
 
 	[[nodiscard]] int contentWidth() const;
@@ -202,6 +203,7 @@ private:
 	std::optional<QBrush> _brushOverride;
 	std::optional<QPen> _penOverride;
 	std::optional<QColor> _textFgOverride;
+	const style::icon *_iconOverride = nullptr;
 	RoundRect _roundRect;
 	RoundRect _roundRectOver;
 	Text::MarkedContext _context;

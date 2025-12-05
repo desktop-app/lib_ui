@@ -368,6 +368,11 @@ void RoundButton::setTextFgOverride(std::optional<QColor> textFg) {
 	update();
 }
 
+void RoundButton::setIconOverride(const style::icon *icon) {
+	_iconOverride = icon;
+	update();
+}
+
 void RoundButton::finishNumbersAnimation() {
 	if (_numbers) {
 		_numbers->finishAnimating();
@@ -537,7 +542,9 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 		_numbers->paint(p, textLeft, textTop, width());
 	}
 	if (!_st.icon.empty()) {
-		const auto &current = ((over || down) && !_st.iconOver.empty())
+		const auto &current = _iconOverride
+			? *_iconOverride
+			: ((over || down) && !_st.iconOver.empty())
 			? _st.iconOver
 			: _st.icon;
 		current.paint(p, QPoint(iconLeft, iconTop), width());
