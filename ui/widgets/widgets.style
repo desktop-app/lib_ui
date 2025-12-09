@@ -900,6 +900,18 @@ defaultRoundShadow: Shadow {
 defaultEmptyShadow: Shadow {
 	fallback: windowBg;
 }
+roundShadowRadius8px: Shadow {
+	left: icon {{ "round_shadow_box_left", windowShadowFg }};
+	topLeft: icon {{ "round_shadow_box_top_left", windowShadowFg }};
+	top: icon {{ "round_shadow_box_top", windowShadowFg }};
+	topRight: icon {{ "round_shadow_box_top_left-flip_horizontal", windowShadowFg }};
+	right: icon {{ "round_shadow_box_left-flip_horizontal", windowShadowFg }};
+	bottomRight: icon {{ "round_shadow_box_bottom_left-flip_horizontal", windowShadowFg }};
+	bottom: icon {{ "round_shadow_box_bottom", windowShadowFg }};
+	bottomLeft: icon {{ "round_shadow_box_bottom_left", windowShadowFg }};
+	extend: margins(10px, 10px, 10px, 10px);
+	fallback: windowShadowFgFallback;
+}
 
 defaultPanelAnimation: PanelAnimation {
 	startWidth: 0.5;
@@ -912,7 +924,7 @@ defaultPanelAnimation: PanelAnimation {
 	fadeHeight: 0.2;
 	fadeOpacity: 1.0;
 	fadeBg: menuBg;
-	shadow: defaultRoundShadow;
+	shadow: roundShadowRadius8px;
 }
 
 defaultMenuArrow: icon {{ "menu/submenu_arrow", windowBoldFg }};
@@ -956,7 +968,7 @@ defaultMenu: Menu {
 	ripple: defaultRippleAnimation;
 }
 defaultPopupMenu: PopupMenu {
-	shadow: defaultRoundShadow;
+	shadow: roundShadowRadius8px;
 	animation: defaultPanelAnimation;
 
 	scrollPadding: margins(0px, 8px, 0px, 8px);
@@ -964,7 +976,7 @@ defaultPopupMenu: PopupMenu {
 
 	menu: defaultMenu;
 
-	radius: 3px;
+	radius: 8px;
 	duration: 150;
 	showDuration: 200;
 }
@@ -1201,7 +1213,7 @@ defaultPeerListCheckbox: RoundImageCheckbox {
 
 defaultInnerDropdown: InnerDropdown {
 	padding: margins(10px, 10px, 10px, 10px);
-	shadow: defaultRoundShadow;
+	shadow: roundShadowRadius8px;
 	animation: defaultPanelAnimation;
 
 	duration: 150;

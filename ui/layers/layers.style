@@ -68,18 +68,7 @@ defaultBoxCheckbox: Checkbox(defaultCheckbox) {
 	style: boxTextStyle;
 }
 
-boxRoundShadow: Shadow {
-	left: icon {{ "round_shadow_box_left", windowShadowFg }};
-	topLeft: icon {{ "round_shadow_box_top_left", windowShadowFg }};
-	top: icon {{ "round_shadow_box_top", windowShadowFg }};
-	topRight: icon {{ "round_shadow_box_top_left-flip_horizontal", windowShadowFg }};
-	right: icon {{ "round_shadow_box_left-flip_horizontal", windowShadowFg }};
-	bottomRight: icon {{ "round_shadow_box_bottom_left-flip_horizontal", windowShadowFg }};
-	bottom: icon {{ "round_shadow_box_bottom", windowShadowFg }};
-	bottomLeft: icon {{ "round_shadow_box_bottom_left", windowShadowFg }};
-	extend: margins(10px, 10px, 10px, 10px);
-	fallback: windowShadowFgFallback;
-}
+boxRoundShadow: roundShadowRadius8px;
 
 boxTitleFont: font(16px semibold);
 boxTitle: FlatLabel(defaultFlatLabel) {
