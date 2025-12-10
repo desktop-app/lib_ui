@@ -141,9 +141,7 @@ QAccessibleInterface *Widget::child(int index) const {
 		return nullptr;
 	}
 	if (const auto rpChild = rp()->accessibilityChildAt(index)) {
-		if (auto iface = rpChild->accessibilityCreate()) {
-			return iface;
-		}
+		return QAccessible::queryAccessibleInterface(rpChild);
 	}
 	return QAccessibleWidget::child(index);
 }
@@ -161,9 +159,7 @@ int Widget::indexOfChild(const QAccessibleInterface *child) const {
 
 QAccessibleInterface *Widget::focusChild() const {
 	if (const auto childRp = rp()->accessibilityFocusChild()) {
-		if (auto iface = childRp->accessibilityCreate()) {
-			return iface;
-		}
+		return QAccessible::queryAccessibleInterface(childRp);
 	}
 	return QAccessibleWidget::focusChild();
 }
