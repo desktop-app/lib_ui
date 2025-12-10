@@ -94,7 +94,7 @@ InputDocument::InputDocument(QObject *parent, const style::InputField &st)
 : QTextDocument(parent)
 , _st(st) {
 	Emoji::Updated(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_emojiCache.clear();
 	}, _lifetime);
 }
@@ -1566,14 +1566,14 @@ InputField::InputField(
 	}
 
 	_placeholderFull.value(
-	) | rpl::start_with_next([=](const QString &text) {
+	) | rpl::on_next([=](const QString &text) {
 		accessibilityNameChanged();
 		_inner->setAccessibleName(text);
 		refreshPlaceholder(text);
 	}, lifetime());
 
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updatePalette();
 	}, lifetime());
 	{
@@ -1603,27 +1603,27 @@ InputField::InputField(
 	base::qt_signal_producer(
 		_inner->document(),
 		&QTextDocument::contentsChange
-	) | rpl::start_with_next([=](int position, int removed, int added) {
+	) | rpl::on_next([=](int position, int removed, int added) {
 		documentContentsChanged(position, removed, added);
 	}, lifetime());
 	base::qt_signal_producer(
 		_inner.get(),
 		&QTextEdit::undoAvailable
-	) | rpl::start_with_next([=](bool undoAvailable) {
+	) | rpl::on_next([=](bool undoAvailable) {
 		_undoAvailable = undoAvailable;
 		Integration::Instance().textActionsUpdated();
 	}, lifetime());
 	base::qt_signal_producer(
 		_inner.get(),
 		&QTextEdit::redoAvailable
-	) | rpl::start_with_next([=](bool redoAvailable) {
+	) | rpl::on_next([=](bool redoAvailable) {
 		_redoAvailable = redoAvailable;
 		Integration::Instance().textActionsUpdated();
 	}, lifetime());
 	base::qt_signal_producer(
 		_inner.get(),
 		&QTextEdit::cursorPositionChanged
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		auto cursor = textCursor();
 		if (!cursor.hasSelection() && !cursor.position()) {
 			cursor.setCharFormat(_defaultCharFormat);
@@ -1639,7 +1639,7 @@ InputField::InputField(
 	base::qt_signal_producer(
 		_inner.get(),
 		&Inner::selectionChanged
-	) | rpl::start_with_next([] {
+	) | rpl::on_next([] {
 		Integration::Instance().textActionsUpdated();
 	}, lifetime());
 
@@ -1835,7 +1835,7 @@ void InputField::setExtendedContextMenu(
 		rpl::producer<ExtendedContextMenu> value) {
 	std::move(
 		value
-	) | rpl::start_with_next([=](auto pair) {
+	) | rpl::on_next([=](auto pair) {
 		auto &[menu, e] = pair;
 		contextMenuEventInner(e.get(), std::move(menu));
 	}, lifetime());
@@ -1848,7 +1848,7 @@ void InputField::setInstantReplaces(const InstantReplaces &replaces) {
 void InputField::setInstantReplacesEnabled(rpl::producer<bool> enabled) {
 	std::move(
 		enabled
-	) | rpl::start_with_next([=](bool value) {
+	) | rpl::on_next([=](bool value) {
 		_instantReplacesEnabled = value;
 	}, lifetime());
 }
@@ -1862,7 +1862,7 @@ void InputField::setMarkdownReplacesEnabled(
 		rpl::producer<MarkdownEnabledState> enabled) {
 	std::move(
 		enabled
-	) | rpl::start_with_next([=](MarkdownEnabledState state) {
+	) | rpl::on_next([=](MarkdownEnabledState state) {
 		if (_markdownEnabledState != state) {
 			_markdownEnabledState = state;
 			if (_markdownEnabledState.disabled()) {
@@ -5425,7 +5425,7 @@ void AddLengthLimitLabel(
 	}
 	state->length.value() | rpl::map(
 		rpl::mappers::_1 > limit
-	) | rpl::start_with_next([=](bool exceeded) {
+	) | rpl::on_next([=](bool exceeded) {
 		warning->setTextColorOverride(exceeded
 			? st::attentionButtonFg->c
 			: std::optional<QColor>());
@@ -5442,7 +5442,7 @@ void AddLengthLimitLabel(
 	rpl::combine(
 		parent->sizeValue(),
 		warning->sizeValue()
-	) | rpl::start_with_next([warning, updatePosition](QSize a, QSize b) {
+	) | rpl::on_next([warning, updatePosition](QSize a, QSize b) {
 		warning->move(updatePosition(a, b));
 	}, warning->lifetime());
 	warning->setAttribute(Qt::WA_TransparentForMouseEvents);

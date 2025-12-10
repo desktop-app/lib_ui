@@ -85,7 +85,7 @@ MainQueueProcessor::MainQueueProcessor() {
 	}
 
 	crl::on_main_update_requests(
-	) | rpl::start_with_next([] {
+	) | rpl::on_next([] {
 		if constexpr (Platform::UseMainQueueGeneric()) {
 			DrainMainQueueGeneric();
 		} else {

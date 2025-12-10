@@ -206,7 +206,7 @@ ImportantTooltip::ImportantTooltip(
 	hide();
 
 	_content->widthValue(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		resizeToContent();
 	}, lifetime());
 }
@@ -464,7 +464,7 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		stMenu,
 		context);
 	const auto raw = result.data();
-	std::move(text) | rpl::start_with_next([=, &st] {
+	std::move(text) | rpl::on_next([=, &st] {
 		raw->resizeToWidth(qMin(maxWidth, raw->textMaxWidth()));
 		const auto desired = raw->textMaxWidth();
 		if (desired <= maxWidth) {

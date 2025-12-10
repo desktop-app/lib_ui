@@ -131,7 +131,7 @@ RoundRect::RoundRect(
 , _refresh([=] { _corners = Images::PrepareCorners(radius, _color); }) {
 	_refresh();
 	style::PaletteChanged(
-	) | rpl::start_with_next(_refresh, _lifetime);
+	) | rpl::on_next(_refresh, _lifetime);
 }
 
 RoundRect::RoundRect(
@@ -141,7 +141,7 @@ RoundRect::RoundRect(
 , _refresh([=] { _corners = Images::PrepareCorners(radius, _color); }) {
 	_refresh();
 	style::PaletteChanged(
-	) | rpl::start_with_next(_refresh, _lifetime);
+	) | rpl::on_next(_refresh, _lifetime);
 }
 
 void RoundRect::setColor(const style::color &color) {

@@ -146,7 +146,7 @@ RpWidget *VerticalLayout::insertChild(
 		}
 
 		weak->heightValue(
-		) | rpl::start_with_next_done([=] {
+		) | rpl::on_next_done([=] {
 			if (!_inResize) {
 				childHeightUpdated(weak);
 			}
@@ -163,7 +163,7 @@ void VerticalLayout::subscribeToWidth(
 		not_null<RpWidget*> child,
 		const style::margins &margin) {
 	child->naturalWidthValue(
-	) | rpl::start_with_next([=](int naturalWidth) {
+	) | rpl::on_next([=](int naturalWidth) {
 		setNaturalWidth([&] {
 			if (naturalWidth < 0) {
 				return -1;
@@ -196,7 +196,7 @@ void VerticalLayout::subscribeToWidth(
 
 	const auto taken = std::exchange(_inResize, true);
 	child->widthValue(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		if (!_inResize) {
 			childWidthUpdated(child);
 		}

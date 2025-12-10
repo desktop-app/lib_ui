@@ -32,7 +32,7 @@ MultilineAction::MultilineAction(
 	ItemBase::enableMouseSelecting();
 	_text->setAttribute(Qt::WA_TransparentForMouseEvents);
 	updateMinWidth();
-	parent->widthValue() | rpl::start_with_next([=](int width) {
+	parent->widthValue() | rpl::on_next([=](int width) {
 		const auto top = _labelPosition.y();
 		const auto skip = _labelPosition.x();
 		const auto rightSkip = _icon ? _st.itemIconPosition.x() : skip;

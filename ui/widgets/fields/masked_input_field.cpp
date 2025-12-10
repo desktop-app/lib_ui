@@ -71,13 +71,13 @@ MaskedInputField::MaskedInputField(
 	setAlignment(_st.textAlign);
 
 	_placeholderFull.value(
-	) | rpl::start_with_next([=](const QString &text) {
+	) | rpl::on_next([=](const QString &text) {
 		refreshPlaceholder(text);
 		setAccessibleName(text);
 	}, lifetime());
 
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updatePalette();
 	}, lifetime());
 	updatePalette();

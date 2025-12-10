@@ -47,12 +47,12 @@ void ResizeFitChild(
 		not_null<RpWidget*> child,
 		int heightMin) {
 	parent->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		child->resizeToWidth(width);
 	}, child->lifetime());
 
 	child->heightValue(
-	) | rpl::start_with_next([=](int height) {
+	) | rpl::on_next([=](int height) {
 		parent->resize(parent->width(), std::max(height, heightMin));
 	}, child->lifetime());
 }
@@ -131,7 +131,7 @@ rpl::producer<QRect> RpWidgetWrap::paintRequest() const {
 
 void RpWidgetWrap::paintOn(Fn<void(QPainter&)> callback) {
 	const auto widget = rpWidget();
-	paintRequest() | rpl::start_with_next([=] {
+	paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(widget);
 		callback(p);
 	}, lifetime());

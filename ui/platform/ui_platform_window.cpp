@@ -232,7 +232,7 @@ QMargins BasicWindowHelper::nativeFrameMargins() const {
 void BasicWindowHelper::setupBodyTitleAreaEvents() {
 	// This is not done on macOS, because startSystemMove
 	// doesn't work from event handler there.
-	body()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
+	body()->events() | rpl::on_next([=](not_null<QEvent*> e) {
 		const auto hitTest = [&] {
 			return bodyTitleAreaHit(
 				static_cast<QMouseEvent*>(e.get())->pos());
@@ -321,7 +321,7 @@ void DefaultWindowHelper::init() {
 			bool titleShown,
 			Qt::WindowStates windowState) {
 		return shown;
-	}) | rpl::start_with_next([=](
+	}) | rpl::on_next([=](
 			bool shown,
 			bool titleShown,
 			Qt::WindowStates windowState) {
@@ -340,7 +340,7 @@ void DefaultWindowHelper::init() {
 		return !window()->isHidden()
 			&& !window()->isMaximized()
 			&& !window()->isFullScreen();
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		setGeometry(_lastGeometry);
 	}, window()->lifetime());
 
@@ -349,7 +349,7 @@ void DefaultWindowHelper::init() {
 		_windowState.value(),
 		_title->shownValue(),
 		_title->layout().value()
-	) | rpl::start_with_next([=](
+	) | rpl::on_next([=](
 			int width,
 			Qt::WindowStates windowState,
 			bool shown,
@@ -370,7 +370,7 @@ void DefaultWindowHelper::init() {
 		_title->heightValue(),
 		_title->shownValue(),
 		_title->layout().value()
-	) | rpl::start_with_next([=](
+	) | rpl::on_next([=](
 			QSize size,
 			Qt::WindowStates windowState,
 			int titleHeight,
@@ -393,12 +393,12 @@ void DefaultWindowHelper::init() {
 	window()->paintRequest(
 	) | rpl::filter([=] {
 		return !hasShadow() && !resizeArea().isNull();
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		Painter p(window());
 		paintBorders(p);
 	}, window()->lifetime());
 
-	window()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
+	window()->events() | rpl::on_next([=](not_null<QEvent*> e) {
 		if (e->type() == QEvent::MouseButtonPress) {
 			const auto mouseEvent = static_cast<QMouseEvent*>(e.get());
 			const auto currentPoint = mouseEvent->windowPos().toPoint();
@@ -432,7 +432,7 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 	_roundingOverlay->show();
 
 	window()->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_roundingOverlay->setGeometry(QRect(QPoint(), size));
 	}, _roundingOverlay->lifetime());
 
@@ -455,7 +455,7 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 				rect.bottomRight() - QPoint(radiusWithFix, radiusWithFix),
 				radiusSize
 			)) || !rect.contains(clip);
-	}) | rpl::start_with_next([=](QRect clip) {
+	}) | rpl::on_next([=](QRect clip) {
 		Painter p(_roundingOverlay);
 		const auto skip = resizeArea();
 		const auto outer = window()->rect();

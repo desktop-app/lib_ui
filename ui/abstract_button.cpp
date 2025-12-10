@@ -22,7 +22,7 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
 	using namespace rpl::mappers;
 	shownValue()
 		| rpl::filter(_1 == false)
-		| rpl::start_with_next([this] { clearState(); }, lifetime());
+		| rpl::on_next([this] { clearState(); }, lifetime());
 }
 
 void AbstractButton::leaveEventHook(QEvent *e) {

@@ -54,7 +54,7 @@ void VerticalLayoutReorder::start() {
 			? _proxyWidgetCallback(i)
 			: widget;
 		eventsProducer->events(
-		) | rpl::start_with_next_done([=](not_null<QEvent*> e) {
+		) | rpl::on_next_done([=](not_null<QEvent*> e) {
 			switch (e->type()) {
 			case QEvent::MouseMove:
 				mouseMove(

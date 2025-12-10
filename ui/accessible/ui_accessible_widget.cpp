@@ -36,7 +36,7 @@ private:
 
 FocusManager::FocusManager() : _cleanupTimer([=] { cleanup(); }) {
 	base::ScreenReaderState::Instance()->activeValue(
-	) | rpl::start_with_next([=](bool active) {
+	) | rpl::on_next([=](bool active) {
 		_active = active;
 		LOG(("Screen Reader: %1").arg(active ? "active" : "inactive"));
 

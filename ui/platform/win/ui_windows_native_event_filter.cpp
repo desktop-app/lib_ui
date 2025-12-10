@@ -142,7 +142,7 @@ bool NativeEventFilter::FilterSingleton::nativeEventFilter(
 }
 
 NativeEventFilter::NativeEventFilter(not_null<RpWidget*> that) {
-	that->winIdValue() | rpl::start_with_next([=](WId winId) {
+	that->winIdValue() | rpl::on_next([=](WId winId) {
 		if (_hwnd) {
 			Singleton()->unregisterFilter(_hwnd, this);
 		}

@@ -79,7 +79,7 @@ void TitleWidget::init(int height) {
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
 	window()->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		setGeometry(0, 0, width, height);
 	}, lifetime());
 

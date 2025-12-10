@@ -63,7 +63,7 @@ void LinearBlobs::setRadiusesAt(
 	Expects(index >= 0 && index < size());
 	std::move(
 		radiuses
-	) | rpl::start_with_next([=](Blob::Radiuses r) {
+	) | rpl::on_next([=](Blob::Radiuses r) {
 		_blobs[index].setRadiuses(std::move(r));
 	}, _lifetime);
 }

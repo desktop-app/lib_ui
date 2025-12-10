@@ -400,7 +400,7 @@ ScrollArea::ScrollArea(
 	setFocusPolicy(Qt::NoFocus);
 
 	_verticalBar->shadowVisibilityChanged(
-	) | rpl::start_with_next([=](const ScrollBar::ShadowVisibility &data) {
+	) | rpl::on_next([=](const ScrollBar::ShadowVisibility &data) {
 		((data.type == ScrollShadow::Type::Top)
 			? _topShadow
 			: _bottomShadow)->changeVisibility(data.visible);

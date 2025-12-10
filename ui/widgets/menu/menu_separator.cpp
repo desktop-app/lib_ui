@@ -25,7 +25,7 @@ Separator::Separator(
 , _action(action) {
 	initResizeHook(parent->sizeValue());
 	paintRequest(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		Painter p(this);
 
 		p.fillRect(0, 0, width(), _height, _bg);

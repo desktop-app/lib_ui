@@ -233,7 +233,7 @@ FlatLabel::FlatLabel(
 	textUpdated();
 	std::move(
 		text
-	) | rpl::start_with_next([this](const QString &value) {
+	) | rpl::on_next([this](const QString &value) {
 		setText(value);
 	}, lifetime());
 	init();
@@ -253,7 +253,7 @@ FlatLabel::FlatLabel(
 	textUpdated();
 	std::move(
 		text
-	) | rpl::start_with_next([=](const TextWithEntities &value) {
+	) | rpl::on_next([=](const TextWithEntities &value) {
 		setMarkedText(value, context);
 	}, lifetime());
 	init();

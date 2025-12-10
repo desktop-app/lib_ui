@@ -46,7 +46,7 @@ WindowShadow::WindowShadow(not_null<RpWidget*> window, QColor color)
 	setColor(color);
 
 	window->winIdValue(
-	) | rpl::start_with_next([=](WId id) {
+	) | rpl::on_next([=](WId id) {
 		destroy();
 		_handle = reinterpret_cast<HWND>(id);
 		create();

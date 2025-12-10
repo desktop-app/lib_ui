@@ -113,7 +113,7 @@ RadialState RadialAnimation::computeState() const {
 void InfiniteRadialAnimation::init() {
 	anim::Disables() | rpl::filter([=] {
 		return animating();
-	}) | rpl::start_with_next([=](bool disabled) {
+	}) | rpl::on_next([=](bool disabled) {
 		if (!disabled && !_animation.animating()) {
 			_animation.start();
 		} else if (disabled && _animation.animating()) {

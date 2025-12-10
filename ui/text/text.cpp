@@ -131,7 +131,7 @@ void SpoilerMessCache::reset() {
 not_null<SpoilerMessCache*> DefaultSpoilerCache() {
 	struct Data {
 		Data() : cache(kDefaultSpoilerCacheCapacity) {
-			style::PaletteChanged() | rpl::start_with_next([=] {
+			style::PaletteChanged() | rpl::on_next([=] {
 				cache.reset();
 			}, lifetime);
 		}

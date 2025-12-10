@@ -59,7 +59,7 @@ BoxShow::BoxShow(base::weak_qptr<BoxContent> weak, ShowPtr wrapped)
 	if (!resolve()) {
 		if (const auto box = _weak.get()) {
 			box->boxClosing(
-			) | rpl::start_with_next([=] {
+			) | rpl::on_next([=] {
 				resolve();
 				_lifetime.destroy();
 			}, _lifetime);
@@ -236,17 +236,17 @@ void BoxContent::finishScrollCreate() {
 	}
 	updateScrollAreaGeometry();
 	_scroll->scrolls(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updateInnerVisibleTopBottom();
 		updateShadowsVisibility();
 	}, lifetime());
 	_scroll->innerResizes(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updateInnerVisibleTopBottom();
 		updateShadowsVisibility();
 	}, lifetime());
 	_draggingScroll.scrolls(
-	) | rpl::start_with_next([=](int delta) {
+	) | rpl::on_next([=](int delta) {
 		if (_scroll) {
 			_scroll->scrollToY(_scroll->scrollTop() + delta);
 		}
@@ -354,7 +354,7 @@ void BoxContent::setDimensionsToContent(
 		not_null<RpWidget*> content) {
 	content->resizeToWidth(newWidth);
 	content->heightValue(
-	) | rpl::start_with_next([=](int height) {
+	) | rpl::on_next([=](int height) {
 		setDimensions(newWidth, height);
 	}, content->lifetime());
 }

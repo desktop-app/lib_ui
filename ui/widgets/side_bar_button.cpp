@@ -40,7 +40,7 @@ SideBarButton::SideBarButton(
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
 	style::PaletteChanged(
-	) | rpl::start_with_next([this] {
+	) | rpl::on_next([this] {
 		_iconCache = _iconCacheActive = QImage();
 		_lock.iconCache = _lock.iconCacheActive = QImage();
 		update();

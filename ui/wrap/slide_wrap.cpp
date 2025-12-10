@@ -90,7 +90,7 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggleOn(
 		anim::type animated) {
 	std::move(
 		shown
-	) | rpl::start_with_next([=](bool shown) {
+	) | rpl::on_next([=](bool shown) {
 		toggle(shown, animated);
 	}, lifetime());
 	finishAnimating();

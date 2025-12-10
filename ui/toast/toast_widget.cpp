@@ -103,12 +103,12 @@ Widget::Widget(QWidget *parent, Config &&config)
 	rpl::combine(
 		_addToAttach.value(),
 		_padding.value()
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		parentResized();
 	}, lifetime());
 
 	crl::on_main_update_requests(
-	) | rpl::start_with_next([=] {//const auto filter = [=](not_null<QEvent*> e) {
+	) | rpl::on_next([=] {//const auto filter = [=](not_null<QEvent*> e) {
 		if (_attach == RectPart::None && _shownLevel < 1.) {
 			scheduleChildrenPaintRestore();
 		}

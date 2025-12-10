@@ -44,7 +44,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
 		const auto raw = state->objects.back().container.get();
 
 		raw->paintRequest(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			QPainter p(raw);
 
 			p.setOpacity(state->animation.value(to));
@@ -52,7 +52,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
 		}, raw->lifetime());
 
 		target->geometryValue(
-		) | rpl::start_with_next([=](const QRect &r) {
+		) | rpl::on_next([=](const QRect &r) {
 			raw->setGeometry(r);
 		}, raw->lifetime());
 
@@ -66,7 +66,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
 	state->destroy.events(
 	) | rpl::take(
 		1
-	) | rpl::start_with_next([=](Finish type) mutable {
+	) | rpl::on_next([=](Finish type) mutable {
 		if (type == Finish::Good && show) {
 			for (const auto &object : state->objects) {
 				if (object.weakTarget) {

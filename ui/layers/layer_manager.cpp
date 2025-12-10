@@ -160,13 +160,13 @@ void LayerManager::ensureLayerCreated() {
 	_layer->hideFinishEvents(
 	) | rpl::filter([=] {
 		return _layer != nullptr; // Last hide finish is sent from destructor.
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		destroyLayer();
 	}, _layer->lifetime());
 
 	_layer->move(0, 0);
 	_widget->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_layer->resize(size);
 	}, _layer->lifetime());
 

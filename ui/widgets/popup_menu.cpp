@@ -56,7 +56,7 @@ constexpr auto kShadowCornerMultiplier = 3;
 	};
 	render();
 	style::PaletteChanged(
-	) | rpl::start_with_next(render, lifetime);
+	) | rpl::on_next(render, lifetime);
 	return result;
 }
 
@@ -201,7 +201,7 @@ void PopupMenu::init() {
 	using namespace rpl::mappers;
 
 	Integration::Instance().forcePopupMenuHideRequests(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		hideMenu(true);
 	}, lifetime());
 
@@ -210,7 +210,7 @@ void PopupMenu::init() {
 	const auto paddingWrap = static_cast<PaddingWrap<Menu::Menu>*>(
 		_menu->parentWidget());
 	paddingWrap->paintRequest(
-	) | rpl::start_with_next([=](QRect clip) {
+	) | rpl::on_next([=](QRect clip) {
 		const auto top = clip.intersected(
 			QRect(0, 0, paddingWrap->width(), _st.scrollPadding.top()));
 		const auto bottom = clip.intersected(QRect(
@@ -228,7 +228,7 @@ void PopupMenu::init() {
 	}, paddingWrap->lifetime());
 
 	_menu->scrollToRequests(
-	) | rpl::start_with_next([=](ScrollToRequest request) {
+	) | rpl::on_next([=](ScrollToRequest request) {
 		_scroll->scrollTo({
 			request.ymin ? (_st.scrollPadding.top() + request.ymin) : 0,
 			(request.ymax == _menu->height()
@@ -238,7 +238,7 @@ void PopupMenu::init() {
 	}, _menu->lifetime());
 
 	_menu->resizesFromInner(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		handleMenuResize();
 	}, _menu->lifetime());
 	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
@@ -340,7 +340,7 @@ void PopupMenu::updateRoundingOverlay() {
 	_roundingOverlay.create(this);
 
 	sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_roundingOverlay->setGeometry(QRect(QPoint(), size));
 	}, _roundingOverlay->lifetime());
 
@@ -352,7 +352,7 @@ void PopupMenu::updateRoundingOverlay() {
 		_roundingOverlay->lifetime());
 
 	_roundingOverlay->paintRequest(
-	) | rpl::start_with_next([=](QRect clip) {
+	) | rpl::on_next([=](QRect clip) {
 		auto p = QPainter(_roundingOverlay.data());
 		auto hq = PainterHighQualityEnabler(p);
 		p.setCompositionMode(QPainter::CompositionMode_DestinationIn);

@@ -99,15 +99,15 @@ TimeInput::TimeInput(
 	connect(_minute, &MaskedInputField::changed, changed);
 	_hour->setMaxValue(23);
 	_hour->setWheelStep(1);
-	_hour->putNext() | rpl::start_with_next([=](QChar ch) {
+	_hour->putNext() | rpl::on_next([=](QChar ch) {
 		putNext(_minute, ch);
 	}, lifetime());
 	_minute->setMaxValue(59);
 	_minute->setWheelStep(10);
-	_minute->erasePrevious() | rpl::start_with_next([=] {
+	_minute->erasePrevious() | rpl::on_next([=] {
 		erasePrevious(_hour);
 	}, lifetime());
-	_minute->jumpToPrevious() | rpl::start_with_next([=] {
+	_minute->jumpToPrevious() | rpl::on_next([=] {
 		_hour->setCursorPosition(_hour->getLastText().size());
 		_hour->setFocus();
 	}, lifetime());
@@ -115,7 +115,7 @@ TimeInput::TimeInput(
 	setMouseTracking(true);
 
 	_value.changes(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		setErrorShown(false);
 	}, lifetime());
 

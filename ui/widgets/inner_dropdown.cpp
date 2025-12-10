@@ -23,7 +23,7 @@ InnerDropdown::InnerDropdown(
 , _hideTimer([=] { hideAnimated(); })
 , _scroll(this, _st.scroll) {
 	_scroll->scrolls(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		scrolled();
 	}, lifetime());
 
@@ -39,7 +39,7 @@ InnerDropdown::InnerDropdown(
 	}) | rpl::flatten_latest(
 	) | rpl::filter([=] {
 		return !isHidden();
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		leaveEvent(nullptr);
 	}, lifetime());
 }
@@ -48,7 +48,7 @@ QPointer<RpWidget> InnerDropdown::doSetOwnedWidget(
 		object_ptr<RpWidget> widget) {
 	auto result = QPointer<RpWidget>(widget);
 	widget->heightValue(
-	) | rpl::skip(1) | rpl::start_with_next([=] {
+	) | rpl::skip(1) | rpl::on_next([=] {
 		resizeToContent();
 	}, widget->lifetime());
 	auto container = _scroll->setOwnedWidget(

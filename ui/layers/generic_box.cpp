@@ -32,7 +32,7 @@ void GenericBox::prepare() {
 		pinnedToTop ? pinnedToTop->heightValue() : rpl::single(0),
 		wrap->heightValue(),
 		pinnedToBottom ? pinnedToBottom->heightValue() : rpl::single(0)
-	) | rpl::start_with_next([=](int top, int height, int bottom) {
+	) | rpl::on_next([=](int top, int height, int bottom) {
 		Expects(_minHeight >= 0);
 		Expects(!_maxHeight || _minHeight <= _maxHeight);
 
@@ -58,7 +58,7 @@ void GenericBox::prepare() {
 		rpl::combine(
 			heightValue(),
 			pinnedToBottom->heightValue()
-		) | rpl::start_with_next([=](int outer, int height) {
+		) | rpl::on_next([=](int outer, int height) {
 			pinnedToBottom->move(0, outer - height);
 		}, pinnedToBottom->lifetime());
 	}

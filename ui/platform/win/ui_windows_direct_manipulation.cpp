@@ -339,11 +339,11 @@ HRESULT DirectManipulation::Handler::OnInteraction(
 DirectManipulation::DirectManipulation(not_null<RpWidget*> widget)
 : NativeEventFilter(widget)
 , _interacting([=] { _updateManager->Update(nullptr); }) {
-	widget->sizeValue() | rpl::start_with_next([=](QSize size) {
+	widget->sizeValue() | rpl::on_next([=](QSize size) {
 		sizeUpdated(size * widget->devicePixelRatio());
 	}, _lifetime);
 
-	widget->winIdValue() | rpl::start_with_next([=](WId winId) {
+	widget->winIdValue() | rpl::on_next([=](WId winId) {
 		destroy();
 
 		if (const auto hwnd = reinterpret_cast<HWND>(winId)) {
@@ -414,7 +414,7 @@ bool DirectManipulation::init(HWND hwnd) {
 
 	_handler.attach(new Handler());
 	_handler->interacting(
-	) | rpl::start_with_next([=](bool interacting) {
+	) | rpl::on_next([=](bool interacting) {
 		base::Integration::Instance().enterFromEventLoop([&] {
 			if (interacting) {
 				_interacting.start();
@@ -423,7 +423,7 @@ bool DirectManipulation::init(HWND hwnd) {
 			}
 		});
 	}, _handler->lifetime());
-	_handler->events() | rpl::start_with_next([=](Event &&event) {
+	_handler->events() | rpl::on_next([=](Event &&event) {
 		base::Integration::Instance().enterFromEventLoop([&] {
 			_events.fire(std::move(event));
 		});
@@ -517,7 +517,7 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
 	auto dm = std::make_unique<DirectManipulation>(window);
 
 	dm->events(
-	) | rpl::start_with_next([=](const DirectManipulationEvent &event) {
+	) | rpl::on_next([=](const DirectManipulationEvent &event) {
 		using Type = DirectManipulationEventType;
 		const auto send = [&](Qt::ScrollPhase phase) {
 			const auto windowHandle = window->windowHandle();

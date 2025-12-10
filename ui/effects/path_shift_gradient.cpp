@@ -40,7 +40,7 @@ PathShiftGradient::PathShiftGradient(
 	}
 	std::move(
 		paletteUpdated
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		refreshColors();
 	}, _lifetime);
 }

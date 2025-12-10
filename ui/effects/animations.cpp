@@ -78,7 +78,7 @@ Manager::Manager() {
 	crl::on_main_update_requests(
 	) | rpl::filter([=] {
 		return (_lastUpdateTime + kIgnoreUpdatesTimeout < crl::now());
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		update();
 	}, _lifetime);
 }

@@ -34,7 +34,7 @@ void DropdownMenu::init() {
 	InnerDropdown::setHiddenCallback([this] { hideFinish(); });
 
 	_menu->resizesFromInner(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		resizeToContent();
 	}, _menu->lifetime());
 	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {

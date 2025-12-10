@@ -80,7 +80,7 @@ int ItemBase::minWidth() const {
 void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
 	std::move(
 		size
-	) | rpl::start_with_next([=](QSize s) {
+	) | rpl::on_next([=](QSize s) {
 		resize(s.width(), contentHeight());
 	}, lifetime());
 }
@@ -99,7 +99,7 @@ void ItemBase::enableMouseSelecting() {
 
 void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 	widget->events(
-	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+	) | rpl::on_next([=](not_null<QEvent*> e) {
 		const auto type = e->type();
 		if (((type == QEvent::Leave)
 			|| (type == QEvent::Enter)

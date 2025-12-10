@@ -227,7 +227,7 @@ void TableLayout::insertRow(
 		});
 		if (wlabel) {
 			wlabel->heightValue(
-			) | rpl::start_with_next_done([=] {
+			) | rpl::on_next_done([=] {
 				if (!_inResize) {
 					childHeightUpdated(wlabel);
 				}
@@ -237,7 +237,7 @@ void TableLayout::insertRow(
 		}
 		if (wvalue) {
 			wvalue->heightValue(
-			) | rpl::start_with_next_done([=] {
+			) | rpl::on_next_done([=] {
 				if (!_inResize) {
 					childHeightUpdated(wvalue);
 				}
