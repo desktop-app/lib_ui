@@ -968,7 +968,7 @@ void Radiobutton::trackScreenReaderState() {
 	rpl::combine(
 		reader->activeValue(),
 		(_group->hasValue()
-			? std::move(maybeValue) | rpl::type_erased()
+			? (std::move(maybeValue) | rpl::type_erased)
 			: rpl::single(
 				std::optional<int>()
 			) | rpl::then(std::move(maybeValue)))
