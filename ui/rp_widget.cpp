@@ -402,4 +402,24 @@ QStringList RpWidget::accessibilityActionNames() {
 void RpWidget::accessibilityDoAction(const QString &name) {
 }
 
+int RpWidget::accessibilityChildCount() const {
+	return -1;
+}
+
+RpWidget *RpWidget::accessibilityChildAt(int) const {
+	return nullptr;
+}
+
+int RpWidget::accessibilityIndexOfChild(const RpWidget *) const {
+	return -1;
+}
+
+RpWidget *RpWidget::accessibilityFocusChild() const {
+	return nullptr;
+}
+
+RpWidget *RpWidget::accessibilityParent() const {
+	return nullptr;
+}
+
 } // namespace Ui
