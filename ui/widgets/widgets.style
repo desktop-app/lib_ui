@@ -1213,8 +1213,10 @@ defaultPeerListCheckbox: RoundImageCheckbox {
 
 defaultInnerDropdown: InnerDropdown {
 	padding: margins(10px, 10px, 10px, 10px);
-	shadow: roundShadowRadius8px;
-	animation: defaultPanelAnimation;
+	shadow: defaultRoundShadow;//roundShadowRadius8px;
+	animation: PanelAnimation(defaultPanelAnimation) {
+		shadow: defaultRoundShadow;
+	}
 
 	duration: 150;
 	showDuration: 200;
