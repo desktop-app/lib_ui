@@ -967,11 +967,6 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 		}
 	}
 
-	if (!parent
-			&& ::Platform::IsMac()
-			&& !Platform::IsApplicationActive()) {
-		return false;
-	}
 	_parent = parent;
 	const auto screen = QGuiApplication::screenAt(p);
 
