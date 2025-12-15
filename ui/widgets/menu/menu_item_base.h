@@ -52,6 +52,10 @@ protected:
 
 	virtual int contentHeight() const = 0;
 
+#ifdef Q_OS_UNIX
+	void mouseReleaseEvent(QMouseEvent *e) override;
+#endif // Q_OS_UNIX
+
 private:
 	int _index = -1;
 

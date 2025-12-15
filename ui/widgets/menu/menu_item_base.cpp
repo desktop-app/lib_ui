@@ -116,4 +116,14 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 	}, lifetime());
 }
 
+#ifdef Q_OS_UNIX
+void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
+	RippleButton::mouseReleaseEvent(e);
+	if (isEnabled() && e->button() == Qt::RightButton) {
+		setClicked(TriggeredSource::Mouse);
+		return;
+	}
+}
+#endif // Q_OS_UNIX
+
 } // namespace Ui::Menu
