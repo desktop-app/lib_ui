@@ -111,7 +111,7 @@ BoxShow::operator bool() const {
 } // namespace
 
 void BoxContent::setTitle(rpl::producer<QString> title) {
-	getDelegate()->setTitle(std::move(title) | Text::ToWithEntities());
+	getDelegate()->setTitle(std::move(title) | rpl::map(Text::WithEntities));
 }
 
 QPointer<AbstractButton> BoxContent::addButton(

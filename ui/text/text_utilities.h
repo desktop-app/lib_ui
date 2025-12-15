@@ -12,24 +12,10 @@ namespace style {
 struct IconEmoji;
 } // namespace style
 
-namespace Ui {
-namespace Text {
-namespace details {
-
-struct ToUpperType {
-	inline QString operator()(const QString &text) const {
-		return text.toUpper();
-	}
-	inline QString operator()(QString &&text) const {
-		return std::move(text).toUpper();
-	}
-};
-
-} // namespace details
+namespace Ui::Text {
 
 class CustomEmoji;
 
-inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] TextWithEntities Bold(const QString &text);
 [[nodiscard]] TextWithEntities Semibold(const QString &text);
 [[nodiscard]] TextWithEntities Italic(const QString &text);
@@ -69,36 +55,6 @@ inline constexpr auto Upper = details::ToUpperType{};
 [[nodiscard]] std::unique_ptr<CustomEmoji> TryMakeSimpleEmoji(
 	QStringView data);
 
-[[nodiscard]] inline auto ToUpper() {
-	return rpl::map(Upper);
-}
-
-[[nodiscard]] inline auto ToBold() {
-	return rpl::map(Bold);
-}
-
-[[nodiscard]] inline auto ToSemibold() {
-	return rpl::map(Semibold);
-}
-
-[[nodiscard]] inline auto ToItalic() {
-	return rpl::map(Italic);
-}
-
-[[nodiscard]] inline auto ToLink(const QString &url = "internal:action") {
-	return rpl::map([=](const auto &text) {
-		return Link(text, url);
-	});
-}
-
-[[nodiscard]] inline auto ToRichLangValue() {
-	return rpl::map(RichLangValue);
-}
-
-[[nodiscard]] inline auto ToWithEntities() {
-	return rpl::map(WithEntities);
-}
-
 [[nodiscard]] TextWithEntities Mid(
 	const TextWithEntities &text,
 	int position,
@@ -115,5 +71,4 @@ inline constexpr auto Upper = details::ToUpperType{};
 
 [[nodiscard]] QString StripUrlProtocol(const QString &link);
 
-} // namespace Text
-} // namespace Ui
+} // namespace Ui::Text
