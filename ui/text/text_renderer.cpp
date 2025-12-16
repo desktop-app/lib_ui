@@ -21,6 +21,7 @@ namespace Ui::Text {
 namespace {
 
 constexpr auto kMaxItemLength = 4096;
+constexpr auto kQuoteHeaderTextLarge = 25;
 
 void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
 	// explicitly initialize flags so that initFontAttributes can be called
@@ -372,9 +373,24 @@ void Renderer::fillParagraphBg(int paddingBottom) {
 				const auto topleft = rect.topLeft();
 				const auto position = topleft + st.headerPosition;
 				const auto lbaseline = position + QPoint(0, font->ascent);
+				const auto headerText = _t->quoteHeaderText(_quote);
 				_p->setFont(font);
 				_p->setPen(_palette->monoFg->p);
-				_p->drawText(lbaseline, _t->quoteHeaderText(_quote));
+				if (headerText.size() > kQuoteHeaderTextLarge) {
+					const auto availableWidth = _startLineWidth
+						- st.headerPosition.x()
+						- st.iconPosition.x()
+						- (!st.icon.empty() ? st.icon.width() : 0);
+					if (font->width(headerText) > availableWidth) {
+						_p->drawText(
+							lbaseline,
+							font->elided(headerText, availableWidth));
+					} else {
+						_p->drawText(lbaseline, headerText);
+					}
+				} else {
+					_p->drawText(lbaseline, headerText);
+				}
 			} else if (_lookupX >= left
 				&& _lookupX < left + _startLineWidth
 				&& _lookupY >= top
