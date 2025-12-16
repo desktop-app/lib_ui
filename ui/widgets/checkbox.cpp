@@ -1000,6 +1000,37 @@ void Radiobutton::handleNewGroupValue(int value) {
 	}
 }
 
+bool Radiobutton::accessibilityGroupPosition(int *groupLevel, int *similarItemsInGroup, int *positionInGroup) const {
+	if (!groupLevel || !similarItemsInGroup || !positionInGroup) {
+		return false;
+	}
+	if (!_group) {
+		return false;
+	}
+
+	const auto& buttons = _group->_buttons;
+	const auto count = int(buttons.size());
+	if (count <= 0) {
+		return false;
+	}
+
+	auto index = -1;
+	for (auto i = 0; i != count; ++i) {
+		if (buttons[i] == this) {
+			index = i;
+			break;
+		}
+	}
+	if (index < 0) {
+		return false;
+	}
+
+	*groupLevel = 0;
+	*similarItemsInGroup = count;
+	*positionInGroup = index + 1;
+	return true;
+}
+
 void Radiobutton::handlePress() {
 	if (!checkbox()->checked()) {
 		checkbox()->setChecked(true);

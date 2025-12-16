@@ -332,6 +332,7 @@ public:
 	QAccessible::Role accessibilityRole() override {
 		return QAccessible::Role::RadioButton;
 	}
+	bool accessibilityGroupPosition(int *groupLevel, int *similarItemsInGroup, int *positionInGroup) const override;
 
 protected:
 	void handlePress() override;
