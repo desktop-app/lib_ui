@@ -422,4 +422,8 @@ RpWidget *RpWidget::accessibilityParent() const {
 	return nullptr;
 }
 
+bool RpWidget::accessibilityGroupPosition(int *groupLevel, int *similarItemsInGroup, int *positionInGroup) const {
+	return false;
+}
+
 } // namespace Ui

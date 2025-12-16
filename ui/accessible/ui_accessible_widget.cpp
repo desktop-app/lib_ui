@@ -173,4 +173,17 @@ QAccessibleInterface *Widget::parent() const {
 	return QAccessibleWidget::parent();
 }
 
+void Widget::groupPosition(int* groupLevel, int* similarItemsInGroup, int* positionInGroup) const {
+	int level = 0, setSize = 0, posInSet = 0;
+
+	if (rp()->accessibilityGroupPosition(&level, &setSize, &posInSet)) {
+		if (groupLevel) *groupLevel = level;
+		if (similarItemsInGroup) *similarItemsInGroup = setSize;
+		if (positionInGroup) *positionInGroup = posInSet;
+		return;
+	}
+	QAccessibleWidget::groupPosition(groupLevel, similarItemsInGroup, positionInGroup);
+}
+
+
 } // namespace Ui::Accessible

@@ -399,6 +399,7 @@ public:
 	virtual int accessibilityIndexOfChild(const RpWidget *child) const;
 	virtual RpWidget *accessibilityFocusChild() const;
 	virtual RpWidget *accessibilityParent() const;
+	virtual bool accessibilityGroupPosition(int *groupLevel, int *similarItemsInGroup, int *positionInGroup) const;
 
 protected:
 	// e - from enterEvent() of child RpWidget

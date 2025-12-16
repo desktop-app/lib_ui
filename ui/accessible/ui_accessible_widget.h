@@ -30,6 +30,7 @@ public:
 	int indexOfChild(const QAccessibleInterface *child) const override;
 	QAccessibleInterface *focusChild() const override;
 	QAccessibleInterface *parent() const override;
+	void groupPosition( int *groupLevel, int *similarItemsInGroup, int *positionInGroup) const override;
 
 };
 
