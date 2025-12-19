@@ -102,6 +102,8 @@ public:
 	}
 	void handleMouseRelease(QPoint globalPosition);
 
+	void handlePressedOutside(QPoint globalPosition);
+
 	void setSelected(int selected, bool isMouseSelection);
 
 	[[nodiscard]] rpl::producer<> resizesFromInner() const;
@@ -145,6 +147,7 @@ private:
 
 	int _forceWidth = 0;
 	bool _lastSelectedByMouse = false;
+	bool _pressedOutside = false;
 
 	QPointer<QAction> _childShownAction;
 

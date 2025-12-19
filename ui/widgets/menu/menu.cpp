@@ -106,7 +106,7 @@ not_null<QAction*> Menu::insertAction(
 	const auto action = raw->action();
 	_actions.insert(begin(_actions) + position, action);
 
-	raw->setParent(this);
+	raw->setMenuAsParent(this);
 	raw->show();
 	raw->setIndex(position);
 	for (auto i = position, to = int(_actionWidgets.size()); i != to; ++i) {
@@ -438,10 +438,23 @@ void Menu::handleMousePress(QPoint globalPosition) {
 }
 
 void Menu::handleMouseRelease(QPoint globalPosition) {
+	if (_pressedOutside) {
+		_pressedOutside = false;
+		updateSelected(globalPosition);
+		if (const auto selected = findSelectedAction()) {
+			selected->setClicked(TriggeredSource::Mouse);
+		}
+		return;
+	}
 	if (!rect().contains(mapFromGlobal(globalPosition))
 			&& _mouseReleaseDelegate) {
 		_mouseReleaseDelegate(globalPosition);
 	}
+}
+
+void Menu::handlePressedOutside(QPoint globalPosition) {
+	_pressedOutside = true;
+	updateSelected(globalPosition);
 }
 
 } // namespace Ui::Menu
