@@ -116,6 +116,14 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 	}, lifetime());
 }
 
+void ItemBase::setClickedCallback(Fn<void()> callback) {
+	Ui::AbstractButton::setClickedCallback(callback);
+	_connection = QObject::connect(
+		action(),
+		&QAction::triggered,
+		std::move(callback));
+}
+
 #ifdef Q_OS_UNIX
 void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 	if (isEnabled() && e->button() == Qt::RightButton) {

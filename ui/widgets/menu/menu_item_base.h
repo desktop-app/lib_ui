@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/qt_connection.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/menu/menu.h"
 #include "ui/widgets/menu/menu_common.h"
@@ -31,6 +32,8 @@ public:
 	void setClicked(TriggeredSource source = TriggeredSource::Mouse);
 
 	rpl::producer<CallbackData> clicks() const;
+
+	void setClickedCallback(Fn<void()> callback);
 
 	rpl::producer<int> minWidthValue() const;
 	int minWidth() const;
@@ -65,6 +68,8 @@ private:
 	rpl::variable<int> _minWidth = 0;
 
 	TriggeredSource _lastTriggeredSource = TriggeredSource::Mouse;
+
+	base::qt_connection _connection;
 
 };
 
