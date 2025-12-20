@@ -400,6 +400,13 @@ public:
 	virtual RpWidget *accessibilityFocusChild() const;
 	virtual RpWidget *accessibilityParent() const;
 	virtual bool accessibilityGroupPosition(int *groupLevel, int *similarItemsInGroup, int *positionInGroup) const;
+	void accessibilityRegisterChild(not_null<RpWidget*> child);
+	void accessibilityUnregisterChild(RpWidget* child);
+	void accessibilitySetFocusChild(RpWidget* child);
+
+private:
+	struct AccessibilityChildrenManager;
+	mutable std::unique_ptr<AccessibilityChildrenManager> _accessibilityChildrenManager;
 
 protected:
 	// e - from enterEvent() of child RpWidget

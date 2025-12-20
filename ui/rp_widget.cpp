@@ -402,20 +402,142 @@ QStringList RpWidget::accessibilityActionNames() {
 void RpWidget::accessibilityDoAction(const QString &name) {
 }
 
+struct RpWidget::AccessibilityChildrenManager {
+	std::vector<QPointer<RpWidget>> children;
+	QPointer<RpWidget> focusedChild;
+
+	void cleanup() {
+		children.erase(
+			std::remove_if(
+				begin(children),
+				end(children),
+				[](const QPointer<RpWidget>& child) { return !child; }),
+			end(children));
+
+		if (focusedChild
+			&& std::find(begin(children), end(children), focusedChild) == end(children)) {
+			focusedChild = nullptr;
+		}
+	}
+
+	bool contains(const RpWidget* child) const {
+		for (const auto& p : children) {
+			if (p.data() == child) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	int indexOf(const RpWidget* child) const {
+		auto index = 0;
+		for (const auto& p : children) {
+			if (p.data() == child) {
+				return index;
+			}
+			++index;
+		}
+		return -1;
+	}
+};
+
+void RpWidget::accessibilityRegisterChild(not_null<RpWidget*> child) {
+	if (!_accessibilityChildrenManager) {
+		_accessibilityChildrenManager = std::make_unique<AccessibilityChildrenManager>();
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+
+	if (manager.contains(child.get())) {
+		return;
+	}
+	manager.children.push_back(child.get());
+
+	QAccessibleEvent event(this, QAccessible::ObjectReorder);
+	QAccessible::updateAccessibility(&event);
+}
+
+void RpWidget::accessibilityUnregisterChild(RpWidget* child) {
+	if (!_accessibilityChildrenManager || !child) {
+		return;
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+
+	manager.children.erase(
+		std::remove_if(
+			begin(manager.children),
+			end(manager.children),
+			[&](const QPointer<RpWidget>& p) { return p.data() == child; }),
+		end(manager.children));
+
+	if (manager.focusedChild.data() == child) {
+		manager.focusedChild = nullptr;
+	}
+
+	QAccessibleEvent event(this, QAccessible::ObjectReorder);
+	QAccessible::updateAccessibility(&event);
+}
+
+void RpWidget::accessibilitySetFocusChild(RpWidget* child) {
+	if (!_accessibilityChildrenManager) {
+		_accessibilityChildrenManager = std::make_unique<AccessibilityChildrenManager>();
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+
+	if (manager.focusedChild.data() == child) {
+		return;
+	}
+	manager.focusedChild = child;
+
+	QAccessibleEvent event(this, QAccessible::ActiveDescendantChanged);
+	if (child) {
+		const auto index = manager.indexOf(child);
+		if (index >= 0) {
+			event.setChild(index);
+		}
+	}
+	QAccessible::updateAccessibility(&event);
+}
+
 int RpWidget::accessibilityChildCount() const {
-	return -1;
+	if (!_accessibilityChildrenManager) {
+		return -1;
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+	return manager.children.empty() ? -1 : int(manager.children.size());
 }
 
-RpWidget *RpWidget::accessibilityChildAt(int) const {
-	return nullptr;
+RpWidget* RpWidget::accessibilityChildAt(int index) const {
+	if (!_accessibilityChildrenManager || index < 0) {
+		return nullptr;
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+	if (index >= int(manager.children.size())) {
+		return nullptr;
+	}
+	return manager.children[index].data();
 }
 
-int RpWidget::accessibilityIndexOfChild(const RpWidget *) const {
-	return -1;
+int RpWidget::accessibilityIndexOfChild(const RpWidget* child) const {
+	if (!_accessibilityChildrenManager || !child) {
+		return -1;
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+	return manager.indexOf(child);
 }
 
-RpWidget *RpWidget::accessibilityFocusChild() const {
-	return nullptr;
+RpWidget* RpWidget::accessibilityFocusChild() const {
+	if (!_accessibilityChildrenManager) {
+		return nullptr;
+	}
+	auto& manager = *_accessibilityChildrenManager;
+	manager.cleanup();
+	return manager.focusedChild.data();
 }
 
 RpWidget *RpWidget::accessibilityParent() const {
