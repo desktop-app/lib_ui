@@ -15,6 +15,7 @@
 #include <QtGui/QColorSpace>
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
+#include <algorithm>
 
 namespace Ui {
 namespace {
@@ -500,6 +501,8 @@ void RpWidget::accessibilitySetFocusChild(RpWidget* child) {
 	}
 	QAccessible::updateAccessibility(&event);
 }
+
+RpWidget::~RpWidget() = default;
 
 int RpWidget::accessibilityChildCount() const {
 	if (!_accessibilityChildrenManager) {

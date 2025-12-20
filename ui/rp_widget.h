@@ -367,6 +367,7 @@ class RpWidget : public RpWidgetBase<QWidget> {
 
 public:
 	explicit RpWidget(QWidget *parent = nullptr);
+	~RpWidget() override;
 
 	// Resize to minimum of natural width and available width.
 	void resizeToNaturalWidth(int newWidth) {
