@@ -21,7 +21,7 @@ namespace Ui::Accessible {
 			if (!owner || !manager) return;
 			auto& map = registry();
 			// If this triggers, something is creating multiple managers for the same widget.
-			Q_ASSERT(!map.contains(owner) || map.value(owner) == manager);
+			Assert(!map.contains(owner) || map.value(owner) == manager);
 			map.insert(owner, manager);
 
 			// Make sure we don't keep a stale key if the widget is destroyed before the manager.
@@ -49,11 +49,11 @@ namespace Ui::Accessible {
 
 	AccessibilityChildrenManager::AccessibilityChildrenManager(Ui::RpWidget* owner)
 		: _owner(owner) {
-		registerManager(_owner, this);
+		registerManager(_owner.data(), this);
 	}
 
 	AccessibilityChildrenManager::~AccessibilityChildrenManager() {
-		unregisterManager(_owner, this);
+		unregisterManager(_owner.data(), this);
 	}
 
 	AccessibilityChildrenManager* AccessibilityChildrenManager::lookup(const Ui::RpWidget* owner) {
@@ -106,13 +106,13 @@ namespace Ui::Accessible {
 
 	void AccessibilityChildrenManager::notifyReorder() {
 		if (!_owner) return;
-		QAccessibleEvent e(_owner, QAccessible::ObjectReorder);
+		QAccessibleEvent e(_owner.data(), QAccessible::ObjectReorder);
 		QAccessible::updateAccessibility(&e);
 	}
 
 	void AccessibilityChildrenManager::notifyActiveDescendantChanged(Ui::RpWidget* child) {
 		if (!_owner) return;
-		QAccessibleEvent e(_owner, QAccessible::ActiveDescendantChanged);
+		QAccessibleEvent e(_owner.data(), QAccessible::ActiveDescendantChanged);
 		const auto index = child ? indexOf(child) : -1;
 		if (index >= 0) {
 			e.setChild(index);
@@ -163,32 +163,49 @@ namespace Ui::Accessible {
 	// -------- AccessibilityChild (RAII wrapper) --------
 
 	AccessibilityChild::AccessibilityChild(
-		AccessibilityChildrenManager* manager,
-		Ui::RpWidget* child)
-		: _manager(manager)
-		, _child(child) {
-		if (_manager && _child) {
-			_manager->registerChild(_child);
+		not_null<Ui::RpWidget*> parent,
+		not_null<Ui::RpWidget*> child)
+		: _parent(parent.get())
+		, _child(child.get()) {
+
+		const auto manager = AccessibilityChildrenManager::lookup(_parent.data());
+		Assert(manager != nullptr);
+		if (manager) {
+			manager->registerChild(_child.data());
 		}
 	}
 
 	AccessibilityChild::~AccessibilityChild() {
-		if (_manager && _child) {
-			_manager->unregisterChild(_child);
+		const auto parent = _parent.data();
+		const auto child = _child.data();
+		if (!parent || !child) {
+			return;
+		}
+		if (const auto manager = AccessibilityChildrenManager::lookup(parent)) {
+			manager->unregisterChild(child);
 		}
 	}
 
 	void AccessibilityChild::setFocus() {
-		if (_manager && _child) {
-			_manager->setFocusedChild(_child);
+		const auto parent = _parent.data();
+		const auto child = _child.data();
+		if (!parent || !child) {
+			return;
+		}
+		if (const auto manager = AccessibilityChildrenManager::lookup(parent)) {
+			manager->setFocusedChild(child);
 		}
 	}
 
 	void AccessibilityChild::reset() {
-		if (_manager && _child) {
-			_manager->unregisterChild(_child);
+		const auto parent = _parent.data();
+		const auto child = _child.data();
+		if (parent && child) {
+			if (const auto manager = AccessibilityChildrenManager::lookup(parent)) {
+				manager->unregisterChild(child);
+			}
 		}
-		_manager = nullptr;
+		_parent = nullptr;
 		_child = nullptr;
 	}
 

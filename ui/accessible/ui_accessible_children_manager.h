@@ -35,7 +35,7 @@ namespace Ui::Accessible {
 		void notifyReorder();
 		void notifyActiveDescendantChanged(Ui::RpWidget* child);
 
-		Ui::RpWidget* _owner = nullptr;
+		QPointer<Ui::RpWidget> _owner;
 
 		mutable std::vector<QPointer<Ui::RpWidget>> _children;
 		mutable QPointer<Ui::RpWidget> _focusedChild;
@@ -44,20 +44,17 @@ namespace Ui::Accessible {
 	class AccessibilityChild final {
 	public:
 		AccessibilityChild() = default;
-		AccessibilityChild(AccessibilityChildrenManager* manager, Ui::RpWidget* child);
+		AccessibilityChild(not_null<Ui::RpWidget*> parent, not_null<Ui::RpWidget*> child);
 		~AccessibilityChild();
 
 		AccessibilityChild(const AccessibilityChild&) = delete;
 		AccessibilityChild& operator=(const AccessibilityChild&) = delete;
 
-		// Child can call this like a real widget focus.
 		void setFocus();
-
-		// Optional if you want to rebind.
 		void reset();
 
 	private:
-		AccessibilityChildrenManager* _manager = nullptr;
+		QPointer<Ui::RpWidget> _parent;
 		QPointer<Ui::RpWidget> _child;
 	};
 
