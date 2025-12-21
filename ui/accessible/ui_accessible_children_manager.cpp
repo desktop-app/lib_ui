@@ -3,48 +3,61 @@
 #include "ui/rp_widget.h"
 
 #include <QAccessible>
+#include <QHash>
+#include <QObject>
 #include <algorithm>
 
 namespace Ui::Accessible {
 	namespace {
 
-		constexpr auto kManagerProperty = "_ui_accessibility_children_manager_ptr";
+		using Registry = QHash<const Ui::RpWidget*, AccessibilityChildrenManager*>;
 
-		AccessibilityChildrenManager* fromProperty(const Ui::RpWidget* owner) {
+		Registry& registry() {
+			static Registry map;
+			return map;
+		}
+
+		void registerManager(Ui::RpWidget* owner, AccessibilityChildrenManager* manager) {
+			if (!owner || !manager) return;
+			auto& map = registry();
+			// If this triggers, something is creating multiple managers for the same widget.
+			Q_ASSERT(!map.contains(owner) || map.value(owner) == manager);
+			map.insert(owner, manager);
+
+			// Make sure we don't keep a stale key if the widget is destroyed before the manager.
+			QObject::connect(owner, &QObject::destroyed, owner, [](QObject* obj) {
+				registry().remove(static_cast<Ui::RpWidget*>(obj));
+				});
+		}
+
+		void unregisterManager(const Ui::RpWidget* owner, const AccessibilityChildrenManager* manager) {
+			if (!owner || !manager) return;
+			auto& map = registry();
+			const auto it = map.find(owner);
+			if (it != map.end() && it.value() == manager) {
+				map.erase(it);
+			}
+		}
+
+		AccessibilityChildrenManager* lookupManager(const Ui::RpWidget* owner) {
 			if (!owner) return nullptr;
-			const auto v = owner->property(kManagerProperty);
-			if (!v.isValid()) return nullptr;
-			const auto raw = static_cast<quintptr>(v.toULongLong());
-			return reinterpret_cast<AccessibilityChildrenManager*>(raw);
-		}
-
-		void setProperty(Ui::RpWidget* owner, AccessibilityChildrenManager* ptr) {
-			if (!owner) return;
-			const auto raw = static_cast<quintptr>(reinterpret_cast<quintptr>(ptr));
-			owner->setProperty(kManagerProperty, QVariant::fromValue<qulonglong>(raw));
-		}
-
-		void clearProperty(Ui::RpWidget* owner) {
-			if (!owner) return;
-			owner->setProperty(kManagerProperty, QVariant());
+			const auto it = registry().constFind(owner);
+			return (it == registry().constEnd()) ? nullptr : it.value();
 		}
 
 	} // namespace
 
 	AccessibilityChildrenManager::AccessibilityChildrenManager(Ui::RpWidget* owner)
 		: _owner(owner) {
-		setProperty(_owner, this);
+		registerManager(_owner, this);
 	}
 
 	AccessibilityChildrenManager::~AccessibilityChildrenManager() {
-		// Clear only if we still own the property.
-		if (fromProperty(_owner) == this) {
-			clearProperty(_owner);
-		}
+		unregisterManager(_owner, this);
 	}
 
 	AccessibilityChildrenManager* AccessibilityChildrenManager::lookup(const Ui::RpWidget* owner) {
-		return fromProperty(owner);
+		return lookupManager(owner);
 	}
 
 	void AccessibilityChildrenManager::cleanup() const {
