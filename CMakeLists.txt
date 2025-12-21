@@ -36,6 +36,8 @@ PRIVATE
     fonts/fonts.qrc
     qt_conf/win.qrc
 
+    ui/accessible/ui_accessible_children_manager.cpp
+    ui/accessible/ui_accessible_children_manager.h
     ui/accessible/ui_accessible_factory.cpp
     ui/accessible/ui_accessible_factory.h
     ui/accessible/ui_accessible_widget.cpp
