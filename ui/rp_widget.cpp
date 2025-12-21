@@ -15,6 +15,7 @@
 #include <QtGui/QColorSpace>
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
+#include "ui/accessible/ui_accessible_children_manager.h"
 
 namespace Ui {
 namespace {
