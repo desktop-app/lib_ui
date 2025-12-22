@@ -44,12 +44,13 @@ namespace Ui::Accessible {
 	class AccessibilityChild final {
 	public:
 		AccessibilityChild() = default;
-		AccessibilityChild(not_null<Ui::RpWidget*> parent, not_null<Ui::RpWidget*> child);
+		explicit AccessibilityChild(not_null<Ui::RpWidget*> parent);
 		~AccessibilityChild();
 
 		AccessibilityChild(const AccessibilityChild&) = delete;
 		AccessibilityChild& operator=(const AccessibilityChild&) = delete;
 
+		void registerChild(not_null<Ui::RpWidget*> child);
 		void setFocus();
 		void reset();
 

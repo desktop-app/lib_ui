@@ -160,18 +160,14 @@ namespace Ui::Accessible {
 		notifyActiveDescendantChanged(child);
 	}
 
-	// -------- AccessibilityChild (RAII wrapper) --------
+	AccessibilityChild::AccessibilityChild(not_null<Ui::RpWidget*> parent)
+		: _parent(parent.get()) {
+	}
 
-	AccessibilityChild::AccessibilityChild(
-		not_null<Ui::RpWidget*> parent,
-		not_null<Ui::RpWidget*> child)
-		: _parent(parent.get())
-		, _child(child.get()) {
-
-		const auto manager = AccessibilityChildrenManager::lookup(_parent.data());
-		Assert(manager != nullptr);
-		if (manager) {
-			manager->registerChild(_child.data());
+	void AccessibilityChild::registerChild(not_null<Ui::RpWidget*> child) {
+		_child = child.get();
+		if (const auto manager = AccessibilityChildrenManager::lookup(_parent)) {
+			manager->registerChild(_child);
 		}
 	}
 
