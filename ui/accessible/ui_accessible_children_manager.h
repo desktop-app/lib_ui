@@ -45,18 +45,15 @@ namespace Ui::Accessible {
 	public:
 		AccessibilityChild() = default;
 		explicit AccessibilityChild(not_null<Ui::RpWidget*> parent);
-		~AccessibilityChild();
 
 		AccessibilityChild(const AccessibilityChild&) = delete;
 		AccessibilityChild& operator=(const AccessibilityChild&) = delete;
 
-		void registerChild(not_null<Ui::RpWidget*> child);
-		void setFocus();
+		void setFocus(not_null<Ui::RpWidget*> child);
 		void reset();
 
 	private:
 		QPointer<Ui::RpWidget> _parent;
-		QPointer<Ui::RpWidget> _child;
 	};
 
 } // namespace Ui::Accessible

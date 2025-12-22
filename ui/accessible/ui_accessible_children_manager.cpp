@@ -20,11 +20,9 @@ namespace Ui::Accessible {
 		void registerManager(Ui::RpWidget* owner, AccessibilityChildrenManager* manager) {
 			if (!owner || !manager) return;
 			auto& map = registry();
-			// If this triggers, something is creating multiple managers for the same widget.
 			Assert(!map.contains(owner) || map.value(owner) == manager);
 			map.insert(owner, manager);
 
-			// Make sure we don't keep a stale key if the widget is destroyed before the manager.
 			QObject::connect(owner, &QObject::destroyed, owner, [](QObject* obj) {
 				registry().remove(static_cast<Ui::RpWidget*>(obj));
 				});
@@ -164,45 +162,18 @@ namespace Ui::Accessible {
 		: _parent(parent.get()) {
 	}
 
-	void AccessibilityChild::registerChild(not_null<Ui::RpWidget*> child) {
-		_child = child.get();
-		if (const auto manager = AccessibilityChildrenManager::lookup(_parent)) {
-			manager->registerChild(_child);
-		}
-	}
-
-	AccessibilityChild::~AccessibilityChild() {
+	void AccessibilityChild::setFocus(not_null<Ui::RpWidget*> child) {
 		const auto parent = _parent.data();
-		const auto child = _child.data();
-		if (!parent || !child) {
+		if (!parent) {
 			return;
 		}
 		if (const auto manager = AccessibilityChildrenManager::lookup(parent)) {
-			manager->unregisterChild(child);
-		}
-	}
-
-	void AccessibilityChild::setFocus() {
-		const auto parent = _parent.data();
-		const auto child = _child.data();
-		if (!parent || !child) {
-			return;
-		}
-		if (const auto manager = AccessibilityChildrenManager::lookup(parent)) {
-			manager->setFocusedChild(child);
+			manager->setFocusedChild(child.get());
 		}
 	}
 
 	void AccessibilityChild::reset() {
-		const auto parent = _parent.data();
-		const auto child = _child.data();
-		if (parent && child) {
-			if (const auto manager = AccessibilityChildrenManager::lookup(parent)) {
-				manager->unregisterChild(child);
-			}
-		}
 		_parent = nullptr;
-		_child = nullptr;
 	}
 
 } // namespace Ui::Accessible
