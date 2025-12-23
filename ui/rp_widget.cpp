@@ -404,30 +404,18 @@ void RpWidget::accessibilityDoAction(const QString &name) {
 }
 
 int RpWidget::accessibilityChildCount() const {
-	if (const auto manager = Ui::Accessible::AccessibilityChildrenManager::lookup(this)) {
-		return manager->childCount();
-	}
 	return -1;
 }
 
 RpWidget* RpWidget::accessibilityChildAt(int index) const {
-	if (const auto manager = Ui::Accessible::AccessibilityChildrenManager::lookup(this)) {
-		return manager->childAt(index);
-	}
 	return nullptr;
 }
 
 int RpWidget::accessibilityIndexOfChild(const RpWidget* child) const {
-	if (const auto manager = Ui::Accessible::AccessibilityChildrenManager::lookup(this)) {
-		return manager->indexOf(child);
-	}
 	return -1;
 }
 
 RpWidget* RpWidget::accessibilityFocusChild() const {
-	if (const auto manager = Ui::Accessible::AccessibilityChildrenManager::lookup(this)) {
-		return manager->focusedChild();
-	}
 	return nullptr;
 }
 

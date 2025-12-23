@@ -7,6 +7,7 @@
 #include "ui/accessible/ui_accessible_factory.h"
 
 #include "ui/rp_widget.h"
+#include "ui/accessible/ui_accessible_children_manager.h"
 #include "base/screen_reader_state.h"
 #include <QAccessibleWidget>
 
@@ -14,8 +15,13 @@ namespace Ui::Accessible {
 namespace {
 
 [[nodiscard]] QAccessibleInterface *Method(const QString&, QObject *object) {
-	const auto rpWidget = qobject_cast<Ui::RpWidget*>(object);
-	return rpWidget ? rpWidget->accessibilityCreate() : nullptr;
+	if (const auto child = qobject_cast<Ui::Accessible::AccessibilityChild*>(object)) {
+		return child->accessibilityCreate();
+	}
+	if (const auto rpWidget = qobject_cast<Ui::RpWidget*>(object)) {
+		return rpWidget->accessibilityCreate();
+	}
+	return nullptr;
 }
 
 } // namespace

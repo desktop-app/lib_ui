@@ -5,6 +5,7 @@
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
 #include "ui/accessible/ui_accessible_widget.h"
+#include "ui/accessible/ui_accessible_children_manager.h"
 
 #include "base/debug_log.h"
 #include "base/integration.h"
@@ -129,37 +130,57 @@ QString Widget::text(QAccessible::Text t) const {
 }
 
 int Widget::childCount() const {
-	const auto count = rp()->accessibilityChildCount();
-	if (count >= 0) {
-		return count;
+	const auto baseCount = QAccessibleWidget::childCount();
+	if (const auto manager = AccessibilityChildrenManager::lookup(rp().get())) {
+		return baseCount + manager->childCount();
 	}
-	return QAccessibleWidget::childCount();
+	return baseCount;
 }
 
-QAccessibleInterface *Widget::child(int index) const {
+QAccessibleInterface* Widget::child(int index) const {
 	if (index < 0) {
 		return nullptr;
 	}
-	if (const auto rpChild = rp()->accessibilityChildAt(index)) {
-		return QAccessible::queryAccessibleInterface(rpChild);
-	}
-	return QAccessibleWidget::child(index);
-}
+	const auto baseCount = QAccessibleWidget::childCount();
 
-int Widget::indexOfChild(const QAccessibleInterface *child) const {
-	if (const auto childWidget = dynamic_cast<const Widget*>(child)) {
-		const auto childRp = childWidget->rp().get();
-		const auto index = rp()->accessibilityIndexOfChild(childRp);
-		if (index >= 0) {
-			return index;
+	if (index < baseCount) {
+		return QAccessibleWidget::child(index);
+	}
+
+	if (const auto manager = AccessibilityChildrenManager::lookup(rp().get())) {
+		if (const auto virtualChild = manager->childAt(index - baseCount)) {
+			return QAccessible::queryAccessibleInterface(virtualChild);
 		}
 	}
-	return QAccessibleWidget::indexOfChild(child);
+	return nullptr;
 }
 
-QAccessibleInterface *Widget::focusChild() const {
-	if (const auto childRp = rp()->accessibilityFocusChild()) {
-		return QAccessible::queryAccessibleInterface(childRp);
+int Widget::indexOfChild(const QAccessibleInterface* child) const {
+	const auto baseCount = QAccessibleWidget::childCount();
+
+	const auto baseIndex = QAccessibleWidget::indexOfChild(child);
+	if (baseIndex >= 0) {
+		return baseIndex;
+	}
+
+	if (const auto manager = AccessibilityChildrenManager::lookup(rp().get())) {
+		if (child) {
+			if (const auto obj = child->object()) {
+				if (const auto virtualChild = qobject_cast<AccessibilityChild*>(obj)) {
+					const auto idx = manager->indexOf(virtualChild);
+					return (idx >= 0) ? (baseCount + idx) : -1;
+				}
+			}
+		}
+	}
+	return -1;
+}
+
+QAccessibleInterface* Widget::focusChild() const {
+	if (const auto manager = AccessibilityChildrenManager::lookup(rp().get())) {
+		if (const auto focused = manager->focusedChild()) {
+			return QAccessible::queryAccessibleInterface(focused);
+		}
 	}
 	return QAccessibleWidget::focusChild();
 }
