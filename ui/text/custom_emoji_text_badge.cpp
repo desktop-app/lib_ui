@@ -17,7 +17,7 @@ namespace Ui::Text {
 		const style::RoundButton &st,
 		const style::margins &margin) {
 	return { .factory = [=, &st] {
-		auto string = Ui::Text::String(st.style, text.toUpper());
+		auto string = Ui::Text::String(st.style, text);
 		const auto size = QSize(string.maxWidth(), string.minHeight());
 		const auto full = QSize(
 			(st.width < 0) ? (size.width() - st.width) : st.width,
@@ -50,4 +50,4 @@ namespace Ui::Text {
 	}, .margin = margin };
 }
 
-}
+} // namespace Ui::Text
