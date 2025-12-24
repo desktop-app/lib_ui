@@ -65,6 +65,7 @@ protected:
 
 private:
 	bool _mousePressed = false;
+	bool _mouseMovedAfterLeftPress = false;
 	int _index = -1;
 
 	rpl::variable<bool> _selected = false;
