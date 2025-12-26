@@ -19,6 +19,26 @@ MultilineAction::MultilineAction(
 	TextWithEntities &&about,
 	const style::icon *icon,
 	const style::icon *iconOver)
+: MultilineAction(
+	parent,
+	st,
+	stLabel,
+	labelPosition,
+	std::move(about),
+	Text::MarkedContext(),
+	icon,
+	iconOver) {
+}
+
+MultilineAction::MultilineAction(
+	not_null<Ui::RpWidget*> parent,
+	const style::Menu &st,
+	const style::FlatLabel &stLabel,
+	QPoint labelPosition,
+	TextWithEntities &&about,
+	const Text::MarkedContext &context,
+	const style::icon *icon,
+	const style::icon *iconOver)
 : ItemBase(parent, st)
 , _st(st)
 , _icon(icon)
@@ -27,7 +47,9 @@ MultilineAction::MultilineAction(
 , _text(base::make_unique_q<Ui::FlatLabel>(
 	this,
 	rpl::single(std::move(about)),
-	stLabel))
+	stLabel,
+	st::defaultPopupMenu,
+	context))
 , _dummyAction(Ui::CreateChild<QAction>(parent.get())) {
 	ItemBase::enableMouseSelecting();
 	_text->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -53,7 +75,7 @@ bool MultilineAction::isEnabled() const {
 int MultilineAction::contentHeight() const {
 	const auto skip = _labelPosition.y();
 	return skip
-		+ std::max(_text->height(), _icon ? _icon->height() : 0)
+		+ std::max(_text->heightNoMargins(), _icon ? _icon->height() : 0)
 		+ skip;
 }
 
@@ -75,14 +97,14 @@ void MultilineAction::updateMinWidth() {
 	_text->resizeToWidth(max);
 	const auto height = _icon
 		? ((_st.itemIconPosition.y() * 2) + _icon->height())
-		: _text->height();
+		: _text->heightNoMargins();
 	_text->resizeToWidth(min);
-	const auto heightMax = _text->height();
+	const auto heightMax = _text->heightNoMargins();
 	if (heightMax > height) {
 		while (min + 1 < max) {
 			const auto middle = (max + min) / 2;
 			_text->resizeToWidth(middle);
-			if (_text->height() > height) {
+			if (_text->heightNoMargins() > height) {
 				min = middle;
 			} else {
 				max = middle;
