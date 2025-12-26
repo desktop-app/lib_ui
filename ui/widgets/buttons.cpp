@@ -861,12 +861,22 @@ SettingsButton *SettingsButton::toggleOn(
 	) | rpl::on_next([this](bool toggled) {
 		_toggle->setChecked(toggled, anim::type::normal);
 	}, lifetime());
+	_toggle->checkedChanges() | rpl::on_next([this] {
+		accessibilityStateChanged({ .checked = true });
+	}, lifetime());
 	_toggle->finishAnimating();
 	return this;
 }
 
 bool SettingsButton::toggled() const {
 	return _toggle ? _toggle->checked() : false;
+}
+
+AccessibilityState SettingsButton::accessibilityState() const {
+	if (!_toggle) {
+		return {};
+	}
+	return { .checkable = true, .checked = _toggle->checked() };
 }
 
 void SettingsButton::setToggleLocked(bool locked) {

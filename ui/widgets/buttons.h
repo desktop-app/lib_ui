@@ -307,6 +307,7 @@ public:
 	QString accessibilityName() override {
 		return _text.toString();
 	}
+	AccessibilityState accessibilityState() const override;
 
 	SettingsButton *toggleOn(
 		rpl::producer<bool> &&toggled,
