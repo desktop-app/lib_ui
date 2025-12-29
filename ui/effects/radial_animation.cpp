@@ -127,6 +127,7 @@ void InfiniteRadialAnimation::start(crl::time skip) {
 		const auto now = crl::now();
 		_workStarted = std::max(now + _st.sineDuration - skip, crl::time(1));
 		_workFinished = 0;
+		_fade = {};
 	}
 	if (!anim::Disabled() && !_animation.animating()) {
 		_animation.start();
@@ -135,6 +136,7 @@ void InfiniteRadialAnimation::start(crl::time skip) {
 
 void InfiniteRadialAnimation::stop(anim::type animated) {
 	const auto now = crl::now();
+	_fade = {};
 	if (anim::Disabled() || animated == anim::type::instant) {
 		_workFinished = now;
 	}
@@ -148,6 +150,20 @@ void InfiniteRadialAnimation::stop(anim::type animated) {
 			+ _st.sineDuration;
 	} else if (_workFinished <= now) {
 		_animation.stop();
+	}
+}
+
+void InfiniteRadialAnimation::stopWithFade() {
+	if (!animating() || _fade.started) {
+		return;
+	}
+	const auto state = computeState();
+	_fade.started = crl::now();
+	_fade.fromLength = state.arcLength;
+	_fade.fromPosition = state.arcFrom;
+	_workFinished = 0;
+	if (!anim::Disabled() && !_animation.animating()) {
+		_animation.start();
 	}
 }
 
@@ -223,6 +239,22 @@ RadialState InfiniteRadialAnimation::computeState() {
 	const auto now = crl::now();
 	const auto linear = kFullArcLength
 		- int(((now * kFullArcLength) / _st.linearPeriod) % kFullArcLength);
+
+	if (_fade.started) {
+		const auto fadeDuration = _st.sineDuration;
+		const auto elapsed = now - _fade.started;
+		if (elapsed >= fadeDuration) {
+			_animation.stop();
+			return { 0., _fade.fromPosition, 0 };
+		}
+		const auto progress = elapsed / float64(fadeDuration);
+		const auto length = anim::interpolate(
+			_fade.fromLength,
+			0,
+			anim::easeOutQuint(1., progress));
+		return { 1. - progress, _fade.fromPosition, length };
+	}
+
 	if (!animating()) {
 		const auto shown = 0.;
 		_animation.stop();

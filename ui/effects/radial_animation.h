@@ -78,6 +78,7 @@ public:
 
 	void start(crl::time skip = 0);
 	void stop(anim::type animated = anim::type::normal);
+	void stopWithFade();
 
 	void draw(
 		QPainter &p,
@@ -106,6 +107,11 @@ private:
 	const style::InfiniteRadialAnimation &_st;
 	crl::time _workStarted = 0;
 	crl::time _workFinished = 0;
+	struct {
+		crl::time started = 0;
+		int fromLength = 0;
+		int fromPosition = 0;
+	} _fade;
 	Ui::Animations::Basic _animation;
 	rpl::lifetime _lifetime;
 
