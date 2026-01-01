@@ -1211,11 +1211,13 @@ defaultPeerListCheckbox: RoundImageCheckbox {
 	check: defaultPeerListCheck;
 }
 
+innerDropdownRadius: 8px;
 defaultInnerDropdown: InnerDropdown {
 	padding: margins(10px, 10px, 10px, 10px);
-	shadow: defaultRoundShadow;//roundShadowRadius8px;
+	shadow: roundShadowRadius8px;
 	animation: PanelAnimation(defaultPanelAnimation) {
-		shadow: defaultRoundShadow;
+		startHeight: 0.5;
+		shadow: roundShadowRadius8px;
 	}
 
 	duration: 150;
@@ -1226,7 +1228,7 @@ defaultInnerDropdown: InnerDropdown {
 }
 defaultDropdownMenu: DropdownMenu {
 	wrap: InnerDropdown(defaultInnerDropdown) {
-		scrollPadding: margins(0px, 8px, 0px, 8px);
+		scrollPadding: margins(0px, 10px, 0px, 10px);
 	}
 	menu: defaultMenu;
 }
@@ -1662,7 +1664,7 @@ popupMenuWithIcons: PopupMenu(defaultPopupMenu) {
 }
 dropdownMenuWithIcons: DropdownMenu(defaultDropdownMenu) {
 	wrap: InnerDropdown(defaultInnerDropdown) {
-		scrollPadding: margins(0px, 5px, 0px, 5px);
+		scrollPadding: margins(0px, 6px, 0px, 6px);
 	}
 	menu: menuWithIcons;
 }
