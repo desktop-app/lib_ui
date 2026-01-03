@@ -267,11 +267,12 @@ protected:
 			object_ptr<Widget> inner,
 			const style::ScrollArea &st,
 			int topSkip = 0,
-			int bottomSkip = 0) {
+			int bottomSkip = 0,
+			bool alwaysKeepDimensionsToInner = false) {
 		auto result = QPointer<Widget>(inner.data());
 		setInnerTopSkip(topSkip);
 		setInnerBottomSkip(bottomSkip);
-		setInner(std::move(inner), st);
+		setInner(std::move(inner), st, alwaysKeepDimensionsToInner);
 		return result;
 	}
 
@@ -303,7 +304,10 @@ protected:
 private:
 	void finishPrepare();
 	void finishScrollCreate();
-	void setInner(object_ptr<RpWidget> inner, const style::ScrollArea &st);
+	void setInner(
+		object_ptr<RpWidget> inner,
+		const style::ScrollArea &st,
+		bool alwaysKeepDimensionsToInner);
 	void updateScrollAreaGeometry();
 	void updateInnerVisibleTopBottom();
 	void updateShadowsVisibility(anim::type animated = anim::type::normal);
