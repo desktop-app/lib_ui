@@ -195,25 +195,12 @@ QPointer<IconButton> BoxContent::addTopButton(
 
 void BoxContent::setInner(
 		object_ptr<RpWidget> inner,
-		const style::ScrollArea &st,
-		bool alwaysKeepDimensionsToInner) {
+		const style::ScrollArea &st) {
 	if (inner) {
 		getDelegate()->setLayerType(true);
 		_scroll.create(this, st);
 		_scroll->setGeometryToLeft(0, _innerTopSkip, width(), 0);
-		if (!alwaysKeepDimensionsToInner) {
-			_scroll->setOwnedWidget(std::move(inner));
-		} else {
-			const auto raw = _scroll->setOwnedWidget(std::move(inner));
-			crl::on_main(raw, [=] {
-				raw->sizeValue() | rpl::on_next([=](QSize size) {
-					const auto height = std::max(
-						_innerTopSkip + size.height() + _innerBottomSkip,
-						st::boxMaxListHeight);
-					setDimensions(size.width(), height);
-				}, lifetime());
-			});
-		}
+		_scroll->setOwnedWidget(std::move(inner));
 		if (_topShadow) {
 			_topShadow->raise();
 			_bottomShadow->raise();
