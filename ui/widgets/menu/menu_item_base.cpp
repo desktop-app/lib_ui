@@ -156,7 +156,8 @@ void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 	}
 #endif // Q_OS_UNIX
 	const auto isInRect = rect().contains(e->pos());
-	if (isInRect
+	if (!wasPressed
+		&& isInRect
 		&& isEnabled()
 		&& e->button() == Qt::LeftButton
 		&& _mouseMovedAfterLeftPress) {
