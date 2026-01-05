@@ -160,11 +160,6 @@ void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 		&& isEnabled()
 		&& e->button() == Qt::LeftButton
 		&& _mouseMovedAfterLeftPress) {
-		Ui::AbstractButton::setDown(
-			false,
-			StateChangeSource::ByPress,
-			e->modifiers(),
-			e->button());
 		setClicked(TriggeredSource::Mouse);
 		return;
 	}
