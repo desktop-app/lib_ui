@@ -125,10 +125,14 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 
 void ItemBase::setClickedCallback(Fn<void()> callback) {
 	Ui::AbstractButton::setClickedCallback(callback);
-	_connection = QObject::connect(
-		action(),
-		&QAction::triggered,
-		std::move(callback));
+	if (callback) {
+		_connection = QObject::connect(
+			action(),
+			&QAction::triggered,
+			std::move(callback));
+	} else {
+		_connection.reset();
+	}
 }
 
 void ItemBase::mousePressEvent(QMouseEvent *e) {
