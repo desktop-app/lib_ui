@@ -210,7 +210,9 @@ void Action::handleKeyPress(not_null<QKeyEvent*> e) {
 		return;
 	}
 	const auto key = e->key();
-	if (key == Qt::Key_Enter || key == Qt::Key_Return) {
+	if (key == Qt::Key_Enter
+		|| key == Qt::Key_Return
+		|| key == Qt::Key_Space) {
 		setClicked(TriggeredSource::Keyboard);
 		return;
 	}
