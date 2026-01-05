@@ -14,11 +14,12 @@ enum class TriggeredSource {
 };
 
 struct CallbackData {
-	QAction *action;
+	QAction *action = nullptr;
 	int actionTop = 0;
 	TriggeredSource source;
 	int index = 0;
 	bool selected = false;
+	bool preventClose = false;
 };
 
 not_null<QAction*> CreateAction(

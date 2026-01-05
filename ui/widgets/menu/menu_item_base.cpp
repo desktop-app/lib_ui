@@ -42,7 +42,14 @@ bool ItemBase::isSelected() const {
 rpl::producer<CallbackData> ItemBase::selects() const {
 	return _selected.changes(
 	) | rpl::map([=](bool selected) -> CallbackData {
-		return { action(), y(), _lastTriggeredSource, _index, selected };
+		return {
+			action(),
+			y(),
+			_lastTriggeredSource,
+			_index,
+			selected,
+			_preventClose,
+		};
 	});
 }
 
@@ -72,7 +79,14 @@ rpl::producer<CallbackData> ItemBase::clicks() const {
 	) | rpl::filter([=] {
 		return isEnabled() && !AbstractButton::isDisabled();
 	}) | rpl::map([=]() -> CallbackData {
-		return { action(), y(), _lastTriggeredSource, _index, true };
+		return {
+			action(),
+			y(),
+			_lastTriggeredSource,
+			_index,
+			true,
+			_preventClose,
+		};
 	});
 }
 
@@ -94,6 +108,14 @@ void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
 
 void ItemBase::setMinWidth(int w) {
 	_minWidth = w;
+}
+
+void ItemBase::setPreventClose(bool prevent) {
+	_preventClose = prevent;
+}
+
+bool ItemBase::preventClose() const {
+	return _preventClose;
 }
 
 void ItemBase::finishAnimating() {

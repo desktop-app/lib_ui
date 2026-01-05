@@ -530,7 +530,9 @@ void PopupMenu::handleActivated(const Menu::CallbackData &data) {
 void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
 	if (!popupSubmenuFromAction(data)) {
 		_triggering = true;
-		hideMenu();
+		if (!data.preventClose) {
+			hideMenu();
+		}
 		data.action->trigger();
 		_triggering = false;
 		if (_deleteLater) {

@@ -37,6 +37,9 @@ public:
 
 	void setClickedCallback(Fn<void()> callback);
 
+	void setPreventClose(bool prevent);
+	bool preventClose() const;
+
 	rpl::producer<int> minWidthValue() const;
 	int minWidth() const;
 	void setMinWidth(int w);
@@ -73,6 +76,8 @@ private:
 	rpl::variable<int> _minWidth = 0;
 
 	TriggeredSource _lastTriggeredSource = TriggeredSource::Mouse;
+
+	bool _preventClose = false;
 
 	base::qt_connection _connection;
 
