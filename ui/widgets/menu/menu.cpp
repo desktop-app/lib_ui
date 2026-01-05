@@ -265,6 +265,19 @@ void Menu::resizeFromInner(int w, int h) {
 	}
 }
 
+QRect Menu::visibleRect() const {
+	return (_visibleBottom > _visibleTop)
+		? QRect(0, _visibleTop, width(), _visibleBottom - _visibleTop)
+		: rect();
+}
+
+void Menu::visibleTopBottomUpdated(
+		int visibleTop,
+		int visibleBottom) {
+	_visibleTop = visibleTop;
+	_visibleBottom = visibleBottom;
+}
+
 rpl::producer<> Menu::resizesFromInner() const {
 	return _resizesFromInner.events();
 }
@@ -399,7 +412,8 @@ void Menu::mouseMoveEvent(QMouseEvent *e) {
 
 void Menu::handleMouseMove(QPoint globalPosition) {
 	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
-	const auto inner = rect().marginsRemoved(margins);
+	const auto visible = visibleRect();
+	const auto inner = rect().marginsRemoved(margins).intersected(visible);
 	const auto localPosition = mapFromGlobal(globalPosition);
 	if (inner.contains(localPosition)) {
 		updateSelected(globalPosition);
@@ -422,7 +436,8 @@ void Menu::mouseReleaseEvent(QMouseEvent *e) {
 void Menu::handleMousePress(QPoint globalPosition) {
 	handleMouseMove(globalPosition);
 	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
-	const auto inner = rect().marginsRemoved(margins);
+	const auto visible = visibleRect();
+	const auto inner = rect().marginsRemoved(margins).intersected(visible);
 	const auto localPosition = mapFromGlobal(globalPosition);
 	const auto pressed = (inner.contains(localPosition)
 		&& _lastSelectedByMouse)
@@ -446,8 +461,11 @@ void Menu::handleMouseRelease(QPoint globalPosition) {
 		}
 		return;
 	}
-	if (!rect().contains(mapFromGlobal(globalPosition))
-			&& _mouseReleaseDelegate) {
+	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
+	const auto visible = visibleRect();
+	const auto inner = rect().marginsRemoved(margins).intersected(visible);
+	if (!inner.contains(mapFromGlobal(globalPosition))
+		&& _mouseReleaseDelegate) {
 		_mouseReleaseDelegate(globalPosition);
 	}
 }
