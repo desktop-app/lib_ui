@@ -53,7 +53,7 @@ public:
 	virtual void finishAnimating();
 
 protected:
-	void initResizeHook(rpl::producer<QSize> &&size);
+	void fitToMenuWidth();
 
 	void enableMouseSelecting();
 	void enableMouseSelecting(not_null<RpWidget*> widget);

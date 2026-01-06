@@ -94,11 +94,11 @@ int ItemBase::minWidth() const {
 	return _minWidth.current();
 }
 
-void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
-	std::move(
-		size
-	) | rpl::on_next([=](QSize s) {
-		resize(s.width(), contentHeight());
+void ItemBase::fitToMenuWidth() {
+	_menu->widthValue() | rpl::on_next([=](int w) {
+		if (w > 0) {
+			resize(w, contentHeight());
+		}
 	}, lifetime());
 }
 

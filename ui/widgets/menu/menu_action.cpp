@@ -64,7 +64,7 @@ Action::Action(
 	+ _st.itemPadding.bottom()) {
 	setAcceptBoth(true);
 
-	initResizeHook(parent->sizeValue());
+	fitToMenuWidth();
 	processAction();
 
 	enableMouseSelecting();
