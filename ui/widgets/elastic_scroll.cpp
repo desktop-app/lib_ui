@@ -1205,6 +1205,10 @@ void ElasticScroll::updateBars() {
 	_bar->update();
 }
 
+QWidget *ElasticScroll::widget() const {
+	return _widget.data();
+}
+
 void ElasticScroll::setOverscrollTypes(
 		OverscrollType from,
 		OverscrollType till) {

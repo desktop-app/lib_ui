@@ -137,6 +137,7 @@ public:
 		return object_ptr<Widget>::fromRaw(
 			static_cast<Widget*>(doTakeWidget().release()));
 	}
+	[[nodiscard]] QWidget *widget() const;
 
 	void updateBars();
 
