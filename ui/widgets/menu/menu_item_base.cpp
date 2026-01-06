@@ -11,14 +11,10 @@
 namespace Ui::Menu {
 
 ItemBase::ItemBase(
-	not_null<RpWidget*> parent,
+	not_null<Menu*> parent,
 	const style::Menu &st)
-: RippleButton(parent, st.ripple) {
-}
-
-void ItemBase::setMenuAsParent(not_null<Menu*> menu) {
-	QWidget::setParent(menu);
-	_menu = menu;
+: RippleButton(parent, st.ripple)
+, _menu(parent) {
 }
 
 void ItemBase::setSelected(

@@ -12,7 +12,7 @@
 namespace Ui::Menu {
 
 Separator::Separator(
-	not_null<RpWidget*> parent,
+	not_null<Menu*> parent,
 	const style::Menu &st,
 	const style::MenuSeparator &separator,
 	not_null<QAction*> action)

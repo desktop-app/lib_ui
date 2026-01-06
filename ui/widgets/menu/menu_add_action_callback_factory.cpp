@@ -55,7 +55,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 			return menu->addSeparator(a.separatorSt);
 		} else if (a.isAttention) {
 			auto owned = base::make_unique_q<Ui::Menu::Action>(
-				menu,
+				menu->menu(),
 				a.icon ? st::menuWithIconsAttention : st::menuAttention,
 				Ui::Menu::CreateAction(
 					menu->menu().get(),
@@ -67,7 +67,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 			return menu->addAction(std::move(owned));
 		} else if (a.triggerFilter) {
 			auto owned = base::make_unique_q<Ui::Menu::Action>(
-				menu,
+				menu->menu(),
 				menu->st().menu,
 				Ui::Menu::CreateAction(
 					menu->menu().get(),
@@ -126,7 +126,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::DropdownMenu*> menu) {
 			return menu->addSeparator(a.separatorSt);
 		} else if (a.isAttention) {
 			auto owned = base::make_unique_q<Ui::Menu::Action>(
-				menu,
+				menu->menu(),
 				a.icon ? st::menuWithIconsAttention : st::menuAttention,
 				Ui::Menu::CreateAction(
 					menu->menu().get(),

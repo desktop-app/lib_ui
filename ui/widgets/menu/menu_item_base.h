@@ -18,7 +18,7 @@ class Menu;
 
 class ItemBase : public RippleButton {
 public:
-	ItemBase(not_null<RpWidget*> parent, const style::Menu &st);
+	ItemBase(not_null<Menu*> parent, const style::Menu &st);
 
 	TriggeredSource lastTriggeredSource() const;
 
@@ -46,8 +46,6 @@ public:
 
 	virtual void handleKeyPress(not_null<QKeyEvent*> e) {
 	}
-
-	void setMenuAsParent(not_null<Menu*> menu);
 
 	virtual not_null<QAction*> action() const = 0;
 	virtual bool isEnabled() const = 0;

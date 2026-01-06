@@ -12,7 +12,7 @@
 namespace Ui::Menu {
 
 MultilineAction::MultilineAction(
-	not_null<Ui::RpWidget*> parent,
+	not_null<Menu*> parent,
 	const style::Menu &st,
 	const style::FlatLabel &stLabel,
 	QPoint labelPosition,
@@ -31,7 +31,7 @@ MultilineAction::MultilineAction(
 }
 
 MultilineAction::MultilineAction(
-	not_null<Ui::RpWidget*> parent,
+	not_null<Menu*> parent,
 	const style::Menu &st,
 	const style::FlatLabel &stLabel,
 	QPoint labelPosition,

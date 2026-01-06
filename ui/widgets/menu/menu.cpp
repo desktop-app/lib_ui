@@ -106,7 +106,6 @@ not_null<QAction*> Menu::insertAction(
 	const auto action = raw->action();
 	_actions.insert(begin(_actions) + position, action);
 
-	raw->setMenuAsParent(this);
 	raw->show();
 	raw->setIndex(position);
 	for (auto i = position, to = int(_actionWidgets.size()); i != to; ++i) {

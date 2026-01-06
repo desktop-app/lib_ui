@@ -39,7 +39,7 @@ public:
 		const style::icon *icon;
 		const style::MenuSeparator *separatorSt = nullptr;
 		FnMut<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
-		FnMut<base::unique_qptr<ItemBase>(not_null<RpWidget*>)> make;
+		FnMut<base::unique_qptr<ItemBase>(not_null<PopupMenu*>)> make;
 		const style::PopupMenu *submenuSt = nullptr;
 		Fn<bool()> triggerFilter;
 		rpl::producer<anim::type> hideRequests;

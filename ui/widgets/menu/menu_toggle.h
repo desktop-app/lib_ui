@@ -18,7 +18,7 @@ namespace Ui::Menu {
 class Toggle : public Action {
 public:
 	Toggle(
-		not_null<RpWidget*> parent,
+		not_null<Menu*> parent,
 		const style::Menu &st,
 		const QString &text,
 		Fn<void()> &&callback,

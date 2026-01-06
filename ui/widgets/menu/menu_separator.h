@@ -20,7 +20,7 @@ namespace Ui::Menu {
 class Separator : public ItemBase {
 public:
 	Separator(
-		not_null<RpWidget*> parent,
+		not_null<Menu*> parent,
 		const style::Menu &st,
 		const style::MenuSeparator &separator,
 		not_null<QAction*> action);
