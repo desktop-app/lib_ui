@@ -71,7 +71,8 @@ public:
 	void setShowSource(TriggeredSource source);
 	void setForceWidth(int forceWidth);
 
-	const std::vector<not_null<QAction*>> &actions() const;
+	[[nodiscard]] const std::vector<not_null<QAction*>> &actions() const;
+	[[nodiscard]] ItemBase *itemForAction(not_null<QAction*> action) const;
 
 	void setActivatedCallback(Fn<void(const CallbackData &data)> callback) {
 		_activatedCallback = std::move(callback);

@@ -296,6 +296,13 @@ const std::vector<not_null<QAction*>> &Menu::actions() const {
 	return _actions;
 }
 
+ItemBase *Menu::itemForAction(not_null<QAction*> action) const {
+	const auto i = ranges::find(_actions, action);
+	return (i != end(_actions))
+		? _actionWidgets[std::distance(begin(_actions), i)].get()
+		: nullptr;
+}
+
 void Menu::setForceWidth(int forceWidth) {
 	_forceWidth = forceWidth;
 	resizeFromInner(_forceWidth, height());
