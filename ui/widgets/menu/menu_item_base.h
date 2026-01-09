@@ -36,6 +36,7 @@ public:
 	rpl::producer<CallbackData> clicks() const;
 
 	void setActionTriggered(Fn<void()> callback);
+	void setClickedCallback(Fn<void()> callback) = delete;
 
 	void setPreventClose(bool prevent);
 	bool preventClose() const;
