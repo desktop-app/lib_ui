@@ -381,7 +381,14 @@ void StartFonts() {
 
 	QFont::insertSubstitution(name, u"Vazirmatn UI NL"_q);
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_WIN
+	QFont::insertSubstitutions(name, {
+		// https://qt-project.atlassian.net/browse/QTBUG-134052
+		u"Ebrima"_q,
+		// https://qt-project.atlassian.net/browse/QTBUG-94756
+		u"Nirmala UI"_q,
+	});
+#elif defined Q_OS_MAC // Q_OS_WIN
 	const auto list = QStringList{
 		u"STIXGeneral"_q,
 		u".SF NS Text"_q,
