@@ -304,7 +304,9 @@ void WindowHelper::setFixedSize(QSize size) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
-	window()->setGeometry(rect.marginsAdded({ 0, titleHeight(), 0, 0 }));
+	SetGeometryAndScreen(
+		window(),
+		rect.marginsAdded({ 0, titleHeight(), 0, 0 }));
 }
 
 void WindowHelper::showFullScreen() {
