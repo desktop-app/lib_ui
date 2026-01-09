@@ -41,7 +41,6 @@ public:
 		FnMut<void(not_null<Ui::PopupMenu*>)> fillSubmenu;
 		FnMut<base::unique_qptr<ItemBase>(not_null<PopupMenu*>)> make;
 		const style::PopupMenu *submenuSt = nullptr;
-		Fn<bool()> triggerFilter;
 		rpl::producer<anim::type> hideRequests;
 		int addTopShift = 0;
 		bool isSeparator = false;
