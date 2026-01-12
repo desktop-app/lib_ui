@@ -24,6 +24,7 @@
 namespace Ui {
 
 const QString kQEllipsis = u"..."_q;
+const QString kQBullet = QString::fromUtf8("\xE2\x80\xA2");
 
 } // namespace Ui
 

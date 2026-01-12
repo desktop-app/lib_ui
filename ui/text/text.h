@@ -32,6 +32,7 @@ namespace Ui {
 class SpoilerMessCached;
 
 extern const QString kQEllipsis;
+extern const QString kQBullet;
 
 inline constexpr auto kQFixedMax = (INT_MAX / 256);
 
