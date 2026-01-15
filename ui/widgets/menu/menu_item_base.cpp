@@ -28,11 +28,24 @@ void ItemBase::setSelected(
 		_lastTriggeredSource = source;
 		_selected = selected;
 		update();
+		if (selected && QAccessible::isActive()) {
+			accessibilityStateChanged({ .focused = true });
+		}
 	}
 }
 
 bool ItemBase::isSelected() const {
 	return _selected.current();
+}
+
+QString ItemBase::accessibilityName() {
+	if (const auto act = action()) {
+		if (!act->isSeparator()) {
+			QString text = act->text();
+			return text;
+		}
+	}
+	return QString();
 }
 
 rpl::producer<CallbackData> ItemBase::selects() const {
@@ -197,6 +210,13 @@ void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 		_menu->handleMouseRelease(e->globalPos());
 	}
 	RippleButton::mouseReleaseEvent(e);
+}
+
+AccessibilityState ItemBase::accessibilityState() const {
+	auto result = RippleButton::accessibilityState();
+	result.focused = isSelected();
+	result.disabled = !isEnabled();
+	return result;
 }
 
 } // namespace Ui::Menu

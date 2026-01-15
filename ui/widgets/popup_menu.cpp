@@ -777,6 +777,10 @@ void PopupMenu::hideFinished() {
 	_cache = QPixmap();
 	_animatePhase = AnimatePhase::Hidden;
 	if (!isHidden()) {
+		if (QAccessible::isActive()) {
+			QAccessibleEvent event(this, QAccessible::PopupMenuEnd);
+			QAccessible::updateAccessibility(&event);
+		}
 		hide();
 	}
 }
