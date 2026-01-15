@@ -53,6 +53,8 @@ public:
 
 	virtual void finishAnimating();
 
+	[[nodiscard]] QString accessibilityName() override;
+
 protected:
 	void fitToMenuWidth();
 
@@ -64,6 +66,11 @@ protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
+
+	[[nodiscard]] QAccessible::Role accessibilityRole() override {
+		return QAccessible::MenuItem;
+	}
+	[[nodiscard]] AccessibilityState accessibilityState() const override;
 
 private:
 	bool _mousePressed = false;
