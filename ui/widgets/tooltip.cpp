@@ -16,6 +16,7 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
 
@@ -110,6 +111,21 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	if (s.width() < 2 * _st->shift.x()) {
 		p.setX(m.x() - (s.width() / 2));
 	}
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+	using namespace QNativeInterface::Private;
+	create();
+	if (const auto native
+			= windowHandle()->nativeInterface<QWaylandWindow>()) {
+		native->setParentControlGeometry(
+			QRect(
+				QPoint(m.x() + _st->shift.x(), m.y() - _st->skip),
+				QSize(-_st->shift.x() * 2, _st->shift.y() + _st->skip)));
+		// even though Qt has tooltip type, our tooltip behaves like a menu
+		// (bottom left origin, no flip_x)
+		native->setExtendedWindowType(QWaylandWindow::Menu);
+	}
+#endif // Qt >= 6.11.0 && wayland
 
 	const auto screen = QGuiApplication::screenAt(m);
 	if (screen) {
