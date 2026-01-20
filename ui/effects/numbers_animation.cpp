@@ -134,6 +134,7 @@ void NumbersAnimation::paint(QPainter &p, int x, int y, int outerWidth) {
 	auto progress = anim::easeOutCirc(1., _a_ready.value(1.));
 	auto width = anim::interpolate(_fromWidth, _toWidth, progress);
 
+	p.setFont(_font);
 	const auto initial = p.opacity();
 	QString singleChar('0');
 	if (style::RightToLeft()) x = outerWidth - x - width;

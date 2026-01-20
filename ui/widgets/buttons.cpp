@@ -537,7 +537,6 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 	}
 	if (_numbers) {
 		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
-		p.setFont(_st.style.font);
 		p.setPen((over || down) ? _st.numbersTextFgOver : _st.numbersTextFg);
 		_numbers->paint(p, textLeft, textTop, width());
 	}
