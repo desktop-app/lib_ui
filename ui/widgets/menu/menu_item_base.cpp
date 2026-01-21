@@ -153,6 +153,9 @@ void ItemBase::setActionTriggered(Fn<void()> callback) {
 }
 
 void ItemBase::mousePressEvent(QMouseEvent *e) {
+	if (!_menu->hasMouseMoved(e->globalPosition().toPoint())) {
+		return;
+	}
 	if (e->button() == Qt::LeftButton) {
 		_mousePressed = true;
 	}
@@ -160,6 +163,10 @@ void ItemBase::mousePressEvent(QMouseEvent *e) {
 }
 
 void ItemBase::mouseMoveEvent(QMouseEvent *e) {
+	_menu->mouseMoved();
+	if (!_menu->hasMouseMoved(e->globalPosition().toPoint())) {
+		return;
+	}
 	if (_mousePressed && _menu && !rect().contains(e->pos())) {
 		_menu->handlePressedOutside(e->globalPos());
 	}
@@ -167,6 +174,9 @@ void ItemBase::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
+	if (!_menu->hasMouseMoved(e->globalPosition().toPoint())) {
+		return;
+	}
 	const auto wasPressed = base::take(_mousePressed);
 #ifdef Q_OS_UNIX
 	if (isEnabled() && e->button() == Qt::RightButton) {

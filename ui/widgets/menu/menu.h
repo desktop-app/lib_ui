@@ -107,6 +107,9 @@ public:
 
 	void setSelected(int selected, bool isMouseSelection);
 
+	[[nodiscard]] bool hasMouseMoved(const QPoint &globalPosition) const;
+	void mouseMoved();
+
 	[[nodiscard]] rpl::producer<> resizesFromInner() const;
 	[[nodiscard]] rpl::producer<ScrollToRequest> scrollToRequests() const;
 
@@ -156,6 +159,9 @@ private:
 	int _visibleBottom = 0;
 	bool _lastSelectedByMouse = false;
 	bool _pressedOutside = false;
+
+	int _motions = 0;
+	QPoint _mousePopupPosition;
 
 	QPointer<QAction> _childShownAction;
 

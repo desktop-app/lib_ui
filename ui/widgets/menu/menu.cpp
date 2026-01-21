@@ -13,6 +13,7 @@
 #include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
+#include <QtWidgets/QApplication>
 
 namespace Ui::Menu {
 
@@ -286,6 +287,8 @@ rpl::producer<ScrollToRequest> Menu::scrollToRequests() const {
 }
 
 void Menu::setShowSource(TriggeredSource source) {
+	_motions = 0;
+	_mousePopupPosition = QCursor::pos();
 	const auto mouseSelection = (source == TriggeredSource::Mouse);
 	setSelected(
 		(mouseSelection || _actions.empty()) ? -1 : 0,
@@ -410,6 +413,19 @@ void Menu::setSelected(int selected, bool isMouseSelection) {
 	if (selected >= 0) {
 		_actionWidgets[selected].get()->setSelected(true, source);
 	}
+}
+
+bool Menu::hasMouseMoved(const QPoint &globalPosition) const {
+	// determines if the mouse has moved (ie its initial position has
+	// changed by more than QApplication::startDragDistance()
+	// or if there were at least 6 mouse motions)
+	return _motions > 6
+		|| QApplication::startDragDistance()
+			< (_mousePopupPosition - globalPosition).manhattanLength();
+}
+
+void Menu::mouseMoved() {
+	_motions++;
 }
 
 void Menu::mouseMoveEvent(QMouseEvent *e) {
