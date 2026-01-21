@@ -43,7 +43,9 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
 		} else if (a.isAttention) {
 			return menu->addAction(base::make_unique_q<Ui::Menu::Action>(
 				menu->menu(),
-				st::menuWithIconsAttention,
+				a.icon
+					? st::menuWithIconsAttention
+					: st::menuAttention,
 				Ui::Menu::CreateAction(
 					menu->menu().get(),
 					a.text,
