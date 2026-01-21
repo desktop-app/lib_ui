@@ -162,6 +162,7 @@ public:
 	}
 	void setWidthChangedCallback(Fn<void()> callback);
 	void setBrushOverride(std::optional<QBrush> brush);
+	void setRippleOverride(std::optional<QColor> color);
 	void setPenOverride(std::optional<QPen> pen);
 	void setTextFgOverride(std::optional<QColor> textFg);
 	void setIconOverride(const style::icon *icon);
@@ -201,6 +202,7 @@ private:
 
 	const style::RoundButton &_st;
 	std::optional<QBrush> _brushOverride;
+	std::optional<QColor> _rippleOverride;
 	std::optional<QPen> _penOverride;
 	std::optional<QColor> _textFgOverride;
 	const style::icon *_iconOverride = nullptr;
