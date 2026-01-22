@@ -327,6 +327,8 @@ void AccessibilityState::writeTo(QAccessible::State &state) {
 	state.checkable = checkable ? 1 : 0;
 	state.checked = checked ? 1 : 0;
 	state.pressed = pressed ? 1 : 0;
+	state.focused = focused ? 1 : 0;
+	state.disabled = disabled ? 1 : 0;
 }
 
 RpWidget::RpWidget(QWidget *parent)

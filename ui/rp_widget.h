@@ -357,6 +357,8 @@ struct AccessibilityState {
 	bool checkable : 1 = false;
 	bool checked : 1 = false;
 	bool pressed : 1 = false;
+	bool focused : 1 = false;
+	bool disabled : 1 = false;
 
 	void writeTo(QAccessible::State &state);
 };
