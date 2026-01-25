@@ -25,6 +25,12 @@ public:
 	QAccessible::State state() const override;
 	QStringList actionNames() const override;
 	void doAction(const QString &actionName) override;
+	QAccessibleInterface* childAt(int x, int y) const override;
+	int childCount() const override;
+	QAccessibleInterface *child(int index) const override;
+	int indexOfChild(const QAccessibleInterface *child) const override;
+	QAccessibleInterface *focusChild() const override;
+	QAccessibleInterface *parent() const override;
 
 };
 
