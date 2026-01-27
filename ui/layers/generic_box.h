@@ -130,6 +130,8 @@ public:
 
 	[[nodiscard]] not_null<Ui::VerticalLayout*> verticalLayout();
 
+	void animateHeightFrom(int wasHeight);
+
 	using BoxContent::setNoContentMargin;
 
 private:
@@ -162,6 +164,7 @@ private:
 		object_ptr<Ui::RpWidget> content);
 	not_null<Ui::RpWidget*> doSetPinnedToBottomContent(
 		object_ptr<Ui::RpWidget> content);
+	void updateDimensions();
 
 	FnMut<void(not_null<GenericBox*>)> _init;
 	Fn<void()> _focus;
@@ -174,6 +177,9 @@ private:
 	int _width = 0;
 	int _minHeight = 0;
 	int _maxHeight = 0;
+	int _desiredHeight = 0;
+	int _animateHeightFrom = 0;
+	Ui::Animations::Simple _heightAnimation;
 
 	object_ptr<Ui::RpWidget> _pinnedToTopContent = { nullptr };
 	object_ptr<Ui::RpWidget> _pinnedToBottomContent = { nullptr };
