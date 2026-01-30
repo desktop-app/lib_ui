@@ -41,7 +41,7 @@ public:
 
 	void setPointerCursor(bool enablePointerCursor);
 
-	void setAcceptBoth(bool acceptBoth = true);
+	void setAcceptBoth(bool acceptBoth = true, bool triggerOnPress = false);
 
 	void setClickedCallback(Fn<void()> callback) {
 		_clickedCallback = std::move(callback);
@@ -115,6 +115,7 @@ private:
 	bool _enablePointerCursor = true;
 	bool _pointerCursor = false;
 	bool _acceptBoth = false;
+	bool _triggerOnPress = false;
 
 	Fn<void()> _clickedCallback;
 
