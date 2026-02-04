@@ -1600,7 +1600,7 @@ void Renderer::applyBlockProperties(
 		if (const auto color = block->colorIndex()) {
 			if (color == 1) {
 				if (_quote && _quote->blockquote && _quoteBlockquoteCache) {
-					_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->outlines[0]);
+					_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->icon);
 					_currentPen = &_quoteLinkPenOverride;
 					_currentPenSelected = &_quoteLinkPenOverride;
 				} else {
@@ -1619,7 +1619,7 @@ void Renderer::applyBlockProperties(
 			_currentPenSelected = &_palette->selectMonoFg->p;
 		} else if (block->linkIndex()) {
 			if (_quote && _quote->blockquote && _quoteBlockquoteCache) {
-				_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->outlines[0]);
+				_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->icon);
 				_currentPen = &_quoteLinkPenOverride;
 				_currentPenSelected = &_quoteLinkPenOverride;
 			} else {
