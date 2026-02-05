@@ -91,13 +91,38 @@ struct QuoteDetails {
 struct QuotesData {
 	std::vector<QuoteDetails> list;
 	Fn<void(int index, bool expanded)> expandCallback;
+
+};
+
+struct CustomEmojiData;
+
+class CustomEmojiClickHandler final : public ClickHandler {
+public:
+	explicit CustomEmojiClickHandler(not_null<CustomEmojiData*> data);
+
+	void onClick(ClickContext context) const override;
+
+private:
+	const not_null<CustomEmojiData*> _data;
+
+};
+
+struct CustomEmojiData {
+	std::shared_ptr<CustomEmojiClickHandler> link;
+	Fn<bool(QStringView)> predicate;
+	Fn<void(QStringView, ClickContext)> callback;
+	mutable QString entityData;
+	uint16 handlerIndex = 0;
+
 };
 
 struct ExtendedData {
 	std::vector<ClickHandlerPtr> links;
 	std::unique_ptr<QuotesData> quotes;
 	std::unique_ptr<SpoilerData> spoiler;
+	std::unique_ptr<CustomEmojiData> customEmoji;
 	std::vector<Modification> modifications;
+
 };
 
 } // namespace Ui::Text

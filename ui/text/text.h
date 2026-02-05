@@ -323,6 +323,11 @@ public:
 	void setSpoilerRevealed(bool revealed, anim::type animated);
 	void setSpoilerLinkFilter(Fn<bool(const ClickContext&)> filter);
 
+	[[nodiscard]] bool hasCustomEmoji() const;
+	void setCustomEmojiClickHandler(
+		Fn<bool(QStringView)> predicate,
+		Fn<void(QStringView, ClickContext)> callback);
+
 	[[nodiscard]] bool hasCollapsedBlockquots() const;
 	[[nodiscard]] bool blockquoteCollapsed(int index) const;
 	[[nodiscard]] bool blockquoteExpanded(int index) const;

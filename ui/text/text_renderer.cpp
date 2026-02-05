@@ -1639,9 +1639,23 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
 		&& (block->flags() & TextBlockFlag::Spoiler))
 		? _spoiler->link
 		: ClickHandlerPtr();
-	return (spoilerLink || !block->linkIndex() || !_t->_extended)
-		? spoilerLink
-		: _t->_extended->links[block->linkIndex() - 1];
+	if (spoilerLink || !block->linkIndex() || !_t->_extended) {
+		return spoilerLink;
+	}
+	const auto index = block->linkIndex();
+	const auto customEmoji = _t->_extended->customEmoji.get();
+	if (customEmoji
+		&& customEmoji->link
+		&& index == customEmoji->handlerIndex
+		&& block->type() == TextBlockType::CustomEmoji) {
+		const auto customBlock = static_cast<const CustomEmojiBlock*>(block);
+		customEmoji->entityData = customBlock->custom()->entityData();
+		if (customEmoji->predicate && !customEmoji->predicate(customEmoji->entityData)) {
+			return nullptr;
+		}
+		return customEmoji->link;
+	}
+	return _t->_extended->links[index - 1];
 }
 
 } // namespace Ui::Text

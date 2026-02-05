@@ -184,10 +184,12 @@ void BlockParser::createBlock(int skipBack) {
 			createBlock(skipBack - length);
 		}
 	}
-	const auto linkIndex = _monoIndex ? _monoIndex : _linkIndex;
 	auto custom = _customEmojiData.isEmpty()
 		? nullptr
 		: MakeCustomEmoji(_customEmojiData, _context);
+	const auto linkIndex = _monoIndex
+		? _monoIndex
+		: _linkIndex;
 	const auto push = [&](auto &&factory, auto &&...args) {
 		_tBlocks.push_back(factory({
 			.position = uint16(_blockStart),
@@ -197,6 +199,7 @@ void BlockParser::createBlock(int skipBack) {
 		}, std::forward<decltype(args)>(args)...));
 	};
 	if (custom) {
+		_hasCloudCustomEmoji = true;
 		push(&Block::CustomEmoji, std::move(custom));
 	} else if (_emoji) {
 		push(&Block::Emoji, _emoji);
@@ -677,12 +680,14 @@ void BlockParser::trimSourceRange() {
 // }
 
 void BlockParser::finalize(const TextParseOptions &options) {
-	auto links = (_maxLinkIndex || _maxShiftedLinkIndex)
-		? &_t->ensureExtended()->links
-		: nullptr;
+	const auto totalLinks = _maxLinkIndex
+		+ _maxShiftedLinkIndex
+		+ (_hasCloudCustomEmoji ? 1 : 0);
+	auto links = totalLinks ? &_t->ensureExtended()->links : nullptr;
 	if (links) {
-		links->resize(_maxLinkIndex + _maxShiftedLinkIndex);
+		links->resize(totalLinks);
 	}
+	auto cloudCustomEmojiIndex = uint16(0);
 	auto counterCustomIndex = uint16(0);
 	auto currentIndex = uint16(0); // Current the latest index of _t->_links.
 	struct {
@@ -771,6 +776,17 @@ void BlockParser::finalize(const TextParseOptions &options) {
 				continue;
 			} else if (shiftedIndex) {
 				useCustomIndex = true;
+			} else if (block->type() == TextBlockType::CustomEmoji) {
+				if (!cloudCustomEmojiIndex) {
+					cloudCustomEmojiIndex = ++currentIndex;
+					if (!links) {
+						links = &_t->ensureExtended()->links;
+					}
+					links->resize(currentIndex);
+				}
+				avoidIntersectionsWithCustom();
+				block->setLinkIndex(cloudCustomEmojiIndex);
+				continue;
 			} else {
 				continue;
 			}

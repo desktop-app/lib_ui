@@ -93,5 +93,22 @@ void BlockquoteClickHandler::onClick(ClickContext context) const {
 		!_text->blockquoteExpanded(_quoteIndex));
 }
 
+CustomEmojiClickHandler::CustomEmojiClickHandler(
+	not_null<CustomEmojiData*> data)
+: _data(data) {
+}
+
+void CustomEmojiClickHandler::onClick(ClickContext context) const {
+	if (context.button != Qt::LeftButton) {
+		return;
+	}
+	if (_data->predicate && !_data->predicate(_data->entityData)) {
+		return;
+	}
+	if (_data->callback) {
+		_data->callback(_data->entityData, context);
+	}
+}
+
 } // namespace Ui::Text
 
