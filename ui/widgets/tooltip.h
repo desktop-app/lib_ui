@@ -146,4 +146,9 @@ private:
 	const style::PopupMenu &stMenu = st::defaultPopupMenu,
 	const Text::MarkedContext &context = {});
 
+void InstallTooltip(
+	not_null<RpWidget*> widget,
+	Fn<QString()> text,
+	const style::Tooltip *st = nullptr);
+
 } // namespace Ui

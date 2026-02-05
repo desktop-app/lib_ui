@@ -500,4 +500,49 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 	return result;
 }
 
+namespace {
+
+class TooltipShower final : public AbstractTooltipShower {
+public:
+	TooltipShower(not_null<RpWidget*> widget, Fn<QString()> text)
+	: _widget(widget), _text(std::move(text)) {
+	}
+
+	QString tooltipText() const override {
+		return _text ? _text() : QString();
+	}
+
+	QPoint tooltipPos() const override {
+		return _widget->mapToGlobal(_widget->rect().center());
+	}
+
+	bool tooltipWindowActive() const override {
+		return _widget->window() && _widget->window()->isActiveWindow();
+	}
+
+private:
+	not_null<RpWidget*> _widget;
+	Fn<QString()> _text;
+
+};
+
+} // namespace
+
+void InstallTooltip(
+		not_null<RpWidget*> widget,
+		Fn<QString()> text,
+		const style::Tooltip *st) {
+	const auto shower = widget->lifetime().make_state<TooltipShower>(
+		widget,
+		std::move(text));
+
+	widget->events() | rpl::on_next([=](not_null<QEvent*> e) {
+		if (e->type() == QEvent::Enter) {
+			Tooltip::Show(1000, shower);
+		} else if (e->type() == QEvent::Leave) {
+			Tooltip::Hide();
+		}
+	}, widget->lifetime());
+}
+
 } // namespace Ui
