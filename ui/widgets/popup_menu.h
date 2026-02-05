@@ -84,6 +84,9 @@ public:
 
 	void deleteOnHide(bool del);
 	void popup(const QPoint &p);
+	[[nodiscard]] static QPoint ConstrainToParentScreen(
+		not_null<PopupMenu*> menu,
+		QPoint globalPos);
 	bool prepareGeometryFor(const QPoint &p);
 	void popupPrepared();
 	void hideMenu(bool fast = false);

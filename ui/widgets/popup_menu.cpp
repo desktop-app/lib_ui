@@ -920,6 +920,22 @@ void PopupMenu::deleteOnHide(bool del) {
 	_deleteOnHide = del;
 }
 
+QPoint PopupMenu::ConstrainToParentScreen(
+		not_null<PopupMenu*> menu,
+		QPoint globalPos) {
+	auto result = globalPos;
+	if (const auto parent = menu->parentWidget()) {
+		if (const auto parentScreen = parent->window()->screen()) {
+			const auto r = parentScreen->availableGeometry();
+			if (!r.contains(result)) {
+				result.setX(std::clamp(result.x(), r.left(), r.right()));
+				result.setY(std::clamp(result.y(), r.top(), r.bottom()));
+			}
+		}
+	}
+	return result;
+}
+
 void PopupMenu::popup(const QPoint &p) {
 	if (prepareGeometryFor(p)) {
 		popupPrepared();
