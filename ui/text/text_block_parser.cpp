@@ -680,9 +680,10 @@ void BlockParser::trimSourceRange() {
 // }
 
 void BlockParser::finalize(const TextParseOptions &options) {
+	const auto hasRealLinks = (_maxLinkIndex + _maxShiftedLinkIndex) > 0;
 	const auto totalLinks = _maxLinkIndex
 		+ _maxShiftedLinkIndex
-		+ (_hasCloudCustomEmoji ? 1 : 0);
+		+ ((hasRealLinks && _hasCloudCustomEmoji) ? 1 : 0);
 	auto links = totalLinks ? &_t->ensureExtended()->links : nullptr;
 	if (links) {
 		links->resize(totalLinks);
@@ -779,10 +780,12 @@ void BlockParser::finalize(const TextParseOptions &options) {
 			} else if (block->type() == TextBlockType::CustomEmoji) {
 				if (!cloudCustomEmojiIndex) {
 					cloudCustomEmojiIndex = ++currentIndex;
-					if (!links) {
-						links = &_t->ensureExtended()->links;
+					if (hasRealLinks) {
+						if (!links) {
+							links = &_t->ensureExtended()->links;
+						}
+						links->resize(currentIndex);
 					}
-					links->resize(currentIndex);
 				}
 				avoidIntersectionsWithCustom();
 				block->setLinkIndex(cloudCustomEmojiIndex);
