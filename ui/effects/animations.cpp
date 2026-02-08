@@ -27,6 +27,7 @@ constexpr auto kAnimationTick = crl::time(1000) / st::universalDuration;
 constexpr auto kIgnoreUpdatesTimeout = crl::time(4);
 
 Manager *ManagerInstance = nullptr;
+bool ScheduleWithInvokeQueued = false;
 
 } // namespace
 
@@ -174,7 +175,7 @@ void Manager::schedule() {
 	stopTimer();
 
 	_scheduled = true;
-	PostponeCall(delayedCallGuard(), [=] {
+	const auto callback = [=] {
 		_scheduled = false;
 		if (_active.empty()) {
 			return;
@@ -191,7 +192,12 @@ void Manager::schedule() {
 				updateQueued();
 			}
 		}
-	});
+	};
+	if (!ScheduleWithInvokeQueued) [[likely]] {
+		PostponeCall(delayedCallGuard(), callback);
+	} else {
+		InvokeQueued(delayedCallGuard(), callback);
+	}
 }
 
 not_null<const QObject*> Manager::delayedCallGuard() const {
@@ -206,6 +212,10 @@ void Manager::stopTimer() {
 
 void Manager::timerEvent(QTimerEvent *e) {
 	update();
+}
+
+void Manager::SetScheduleWithInvokeQueued(bool value) {
+	ScheduleWithInvokeQueued = value;
 }
 
 } // namespace Animations

@@ -141,6 +141,8 @@ public:
 
 	void update();
 
+	static void SetScheduleWithInvokeQueued(bool value);
+
 private:
 	class ActiveBasicPointer {
 	public:
