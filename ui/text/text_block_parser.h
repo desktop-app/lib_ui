@@ -108,7 +108,6 @@ private:
 
 	uint16 _maxLinkIndex = 0;
 	uint16 _maxShiftedLinkIndex = 0;
-	bool _hasCloudCustomEmoji = false;
 
 	// current state
 	TextBlockFlags _flags;

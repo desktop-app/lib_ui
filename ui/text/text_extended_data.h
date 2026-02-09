@@ -112,7 +112,6 @@ struct CustomEmojiData {
 	Fn<bool(QStringView)> predicate;
 	Fn<void(QStringView, ClickContext)> callback;
 	mutable QString entityData;
-	uint16 handlerIndex = 0;
 
 };
 
