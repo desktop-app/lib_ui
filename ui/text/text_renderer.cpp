@@ -1407,16 +1407,14 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
 			&& ((*_elideSavedBlock)->type() == TextBlockType::CustomEmoji)
 			&& (!_t->_extended
 				|| (_t->_extended->links.size() < elidedLinkIndex)
-				|| !_t->_extended->links[elidedLinkIndex]
+				|| !_t->_extended->links[elidedLinkIndex - 1]
 				|| (_t->_extended->customEmoji
 					&& (_t->_extended->customEmoji->handlerIndex
 						== elidedLinkIndex)));
 		mutableText->_blocks[blockIndex] = Block::Text({
 			.position = (*_elideSavedBlock)->position(),
 			.flags = (*_elideSavedBlock)->flags(),
-			.linkIndex = (skipElideLinkIndex
-				? uint16()
-				: (*_elideSavedBlock)->linkIndex()),
+			.linkIndex = (skipElideLinkIndex ? uint16() : elidedLinkIndex),
 			.colorIndex = (*_elideSavedBlock)->colorIndex(),
 		});
 	}
