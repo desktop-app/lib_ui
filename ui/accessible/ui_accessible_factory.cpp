@@ -7,15 +7,16 @@
 #include "ui/accessible/ui_accessible_factory.h"
 
 #include "ui/rp_widget.h"
-#include "base/screen_reader_state.h"
-#include <QAccessibleWidget>
 
 namespace Ui::Accessible {
 namespace {
 
 [[nodiscard]] QAccessibleInterface *Method(const QString&, QObject *object) {
 	const auto rpWidget = qobject_cast<Ui::RpWidget*>(object);
-	return rpWidget ? rpWidget->accessibilityCreate() : nullptr;
+	if (!rpWidget) {
+		return nullptr;
+	}
+	return rpWidget->accessibilityCreate();
 }
 
 } // namespace
