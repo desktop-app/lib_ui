@@ -513,7 +513,7 @@ public:
 	}
 
 	QPoint tooltipPos() const override {
-		return _widget->mapToGlobal(_widget->rect().center());
+		return QCursor::pos();
 	}
 
 	bool tooltipWindowActive() const override {
