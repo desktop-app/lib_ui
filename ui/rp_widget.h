@@ -359,9 +359,6 @@ struct AccessibilityState {
 	bool pressed : 1 = false;
 	bool readOnly : 1 = false;
 	bool selected : 1 = false;
-	// Use -1 to mean "don't override", 0 for false, 1 for true.
-	int focused : 2 = -1;
-	int focusable : 2 = -1;
 
 	void writeTo(QAccessible::State &state);
 };

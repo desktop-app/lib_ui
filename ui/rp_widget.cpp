@@ -330,12 +330,6 @@ void AccessibilityState::writeTo(QAccessible::State &state) {
 	state.pressed = pressed ? 1 : 0;
 	state.readOnly = readOnly ? 1 : 0;
 	state.selected = selected ? 1 : 0;
-	if (focused >= 0) {
-		state.focused = focused ? 1 : 0;
-	}
-	if (focusable >= 0) {
-		state.focusable = focusable ? 1 : 0;
-	}
 }
 
 RpWidget::RpWidget(QWidget *parent)
