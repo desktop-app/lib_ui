@@ -20,9 +20,27 @@ public:
 
 	[[nodiscard]] not_null<RpWidget*> rp() const;
 
-	QString text(QAccessible::Text t) const override;
+	// Interface cast.
+	void *interface_cast(QAccessible::InterfaceType type) override;
+
+	// Identity.
 	QAccessible::Role role() const override;
 	QAccessible::State state() const override;
+
+	// Content.
+	QString text(QAccessible::Text t) const override;
+
+	// Children.
+	int childCount() const override;
+	QAccessibleInterface* child(int index) const override;
+	int indexOfChild(const QAccessibleInterface* child) const override;
+	QAccessibleInterface* childAt(int x, int y) const override;
+	QAccessibleInterface* focusChild() const override;
+
+	// Navigation.
+	QAccessibleInterface* parent() const override;
+
+	// Actions.
 	QStringList actionNames() const override;
 	void doAction(const QString &actionName) override;
 

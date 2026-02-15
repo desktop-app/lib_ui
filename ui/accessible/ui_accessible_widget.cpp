@@ -11,9 +11,31 @@
 #include "base/screen_reader_state.h"
 #include "base/timer.h"
 #include "ui/rp_widget.h"
+#include "ui_accessible_item.h"
+
+#include <algorithm>
 
 namespace Ui::Accessible {
 namespace {
+
+// Check if widget has effective focus, either directly or as a focus proxy.
+// When ScrollArea->setFocusProxy(InnerWidget), InnerWidget->hasFocus()
+// returns false even though it receives keyboard events.
+[[nodiscard]] bool HasEffectiveFocus(QWidget *widget) {
+	if (!widget) {
+		return false;
+	}
+	if (widget->hasFocus()) {
+		return true;
+	}
+	// Check if any parent uses this widget as focus proxy and has focus.
+	for (auto *p = widget->parentWidget(); p; p = p->parentWidget()) {
+		if (p->focusProxy() == widget && p->hasFocus()) {
+			return true;
+		}
+	}
+	return false;
+}
 
 constexpr auto kCleanupDelay = 5 * crl::time(1000);
 
@@ -83,9 +105,17 @@ Widget::Widget(not_null<RpWidget*> widget) : QAccessibleWidget(widget) {
 	Manager().registerWidget(widget);
 }
 
-[[nodiscard]] not_null<RpWidget*> Widget::rp() const {
+not_null<RpWidget*> Widget::rp() const {
 	return static_cast<RpWidget*>(widget());
 }
+
+// Interface cast.
+
+void *Widget::interface_cast(QAccessible::InterfaceType type) {
+	return QAccessibleWidget::interface_cast(type);
+}
+
+// Identity.
 
 QAccessible::Role Widget::role() const {
 	return rp()->accessibilityRole();
@@ -97,17 +127,7 @@ QAccessible::State Widget::state() const {
 	return result;
 }
 
-QStringList Widget::actionNames() const {
-	return QAccessibleWidget::actionNames()
-		+ rp()->accessibilityActionNames();
-}
-
-void Widget::doAction(const QString &actionName) {
-	QAccessibleWidget::doAction(actionName);
-	base::Integration::Instance().enterFromEventLoop([&] {
-		rp()->accessibilityDoAction(actionName);
-	});
-}
+// Content.
 
 QString Widget::text(QAccessible::Text t) const {
 	const auto result = QAccessibleWidget::text(t);
@@ -126,6 +146,111 @@ QString Widget::text(QAccessible::Text t) const {
 	}
 	}
 	return result;
+}
+
+// Children.
+
+int Widget::childCount() const {
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0) {
+		return count;
+	}
+	return QAccessibleWidget::childCount();
+}
+
+QAccessibleInterface* Widget::child(int index) const {
+	if (index < 0) {
+		return nullptr;
+	}
+	if (const auto customInterface = rp()->accessibilityChildInterface(index)) {
+		return customInterface;
+	}
+	return QAccessibleWidget::child(index);
+}
+
+int Widget::indexOfChild(const QAccessibleInterface* child) const {
+	if (const auto item = dynamic_cast<const Ui::Accessible::Item*>(child)) {
+		return item->index();
+	}
+	return QAccessibleWidget::indexOfChild(child);
+}
+
+QAccessibleInterface* Widget::childAt(int x, int y) const {
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0) {
+		const QPoint p(x, y);
+		for (int i = 0; i < count; ++i) {
+			if (const auto iface = rp()->accessibilityChildInterface(i)) {
+				if (iface->rect().contains(p)) {
+					return iface;
+				}
+			}
+		}
+		return nullptr;
+	}
+	return QAccessibleWidget::childAt(x, y);
+}
+
+QAccessibleInterface* Widget::focusChild() const {
+	// Guard against re-entrancy which can cause infinite loops.
+	// Qt's QAccessibleWidget::focusChild() may trigger accessibility
+	// queries that call back into focusChild().
+	static thread_local int ReentrancyDepth = 0;
+	if (ReentrancyDepth > 0) {
+		return nullptr;
+	}
+	++ReentrancyDepth;
+	struct Guard { ~Guard() { --ReentrancyDepth; } } guard;
+
+	// Only handle focus child for widgets with custom accessibility children.
+	// For other widgets (containers, scroll areas), delegate to Qt immediately.
+	const auto count = rp()->accessibilityChildCount();
+	if (count < 0) {
+		// No custom children - let Qt handle it normally.
+		return QAccessibleWidget::focusChild();
+	}
+
+	if (!HasEffectiveFocus(widget())) {
+		return nullptr;
+	}
+
+	// Iterate through children to find focused one (Qt standard approach).
+	for (int i = 0; i < count; ++i) {
+		if (const auto iface = rp()->accessibilityChildInterface(i)) {
+			const auto s = iface->state();
+			if (s.focused || s.active) {
+				return iface;
+			}
+		}
+	}
+
+	// Has custom children but none focused - return null.
+	return nullptr;
+}
+
+// Navigation.
+
+QAccessibleInterface* Widget::parent() const {
+	if (const auto parentRp = rp()->accessibilityParent()) {
+		if (auto iface = parentRp->accessibilityCreate()) {
+			return iface;
+		}
+	}
+	return QAccessibleWidget::parent();
+}
+
+// Actions.
+
+QStringList Widget::actionNames() const {
+	return QAccessibleWidget::actionNames()
+		+ rp()->accessibilityActionNames();
+}
+
+void Widget::doAction(const QString &actionName) {
+	QAccessibleWidget::doAction(actionName);
+	base::Integration::Instance().enterFromEventLoop([&] {
+		rp()->accessibilityDoAction(actionName);
+	});
 }
 
 } // namespace Ui::Accessible
