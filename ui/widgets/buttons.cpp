@@ -886,6 +886,13 @@ AccessibilityState SettingsButton::accessibilityState() const {
 	return { .checkable = true, .checked = _toggle->checked() };
 }
 
+QAccessible::Role SettingsButton::accessibilityRole() {
+	if (_toggle) {
+		return QAccessible::Role::CheckBox;
+	}
+	return Ui::RippleButton::accessibilityRole();
+}
+
 void SettingsButton::setToggleLocked(bool locked) {
 	if (_toggle) {
 		_toggle->setLocked(locked);

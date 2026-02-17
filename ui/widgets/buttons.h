@@ -310,6 +310,7 @@ public:
 		return _text.toString();
 	}
 	AccessibilityState accessibilityState() const override;
+	QAccessible::Role accessibilityRole() override;
 
 	SettingsButton *toggleOn(
 		rpl::producer<bool> &&toggled,
