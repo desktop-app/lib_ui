@@ -81,6 +81,12 @@ checkboxFg: #b3b3b3; // default unchecked checkbox rounded rectangle
 botKbBg: menuBgOver; // bot keyboard button background
 botKbDownBg: menuBgRipple; // bot keyboard button ripple effect
 botKbColor: windowBoldFgOver; // bot keyboard button text
+botKbPrimaryBg: #298acfcc; // bot keyboard Primary button background
+botKbDangerBg: #e05356cc; // bot keyboard Danger button background
+botKbSuccessBg: #61c752cc; // bot keyboard Success button background
+botKbInlinePrimaryBg: #378eaeb3; // inline bot keyboard Primary button background
+botKbInlineDangerBg: #c9543eb3; // inline bot keyboard Danger button background
+botKbInlineSuccessBg: #489d38b3; // inline bot keyboard Success button background
 
 sliderBgInactive: #e1eaef; // default slider not active bar (like in Settings when you choose interface scale or custom notifications count)
 sliderBgActive: windowBgActive; // default slider active bar (like in Settings when you choose interface scale or custom notifications count)
