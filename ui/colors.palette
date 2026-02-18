@@ -682,3 +682,7 @@ creditsBg3: #f0b400; // credits icon gradient 3, dark
 creditsFg: #ba7000; // credits text on light background
 creditsStroke: #da8735; // credits icon stroke
 currencyFg: #168acd; // currency icon, blue
+
+rankAdminFg: #49a355; // admin badge text and pill, green
+rankOwnerFg: #956ac8; // owner badge text and pill, purple
+rankUserFg: windowSubTextFg; // regular user badge text, gray
