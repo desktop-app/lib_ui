@@ -18,25 +18,6 @@
 namespace Ui::Accessible {
 namespace {
 
-// Check if widget has effective focus, either directly or as a focus proxy.
-// When ScrollArea->setFocusProxy(InnerWidget), InnerWidget->hasFocus()
-// returns false even though it receives keyboard events.
-[[nodiscard]] bool HasEffectiveFocus(QWidget *widget) {
-	if (!widget) {
-		return false;
-	}
-	if (widget->hasFocus()) {
-		return true;
-	}
-	// Check if any parent uses this widget as focus proxy and has focus.
-	for (auto *p = widget->parentWidget(); p; p = p->parentWidget()) {
-		if (p->focusProxy() == widget && p->hasFocus()) {
-			return true;
-		}
-	}
-	return false;
-}
-
 constexpr auto kCleanupDelay = 5 * crl::time(1000);
 
 class FocusManager final {
@@ -210,7 +191,7 @@ QAccessibleInterface* Widget::focusChild() const {
 		return QAccessibleWidget::focusChild();
 	}
 
-	if (!HasEffectiveFocus(widget())) {
+	if (!widget()->hasFocus()) {
 		return nullptr;
 	}
 
