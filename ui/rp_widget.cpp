@@ -309,6 +309,8 @@ RpWidgetWrap::Initer::Initer(QWidget *parent, bool setZeroGeometry) {
 	}
 }
 
+RpWidgetWrap::Initer::~Initer() = default;
+
 void RpWidgetWrap::visibilityChangedHook(bool wasVisible, bool nowVisible) {
 	if (nowVisible != wasVisible) {
 		if (auto streams = _eventStreams.get()) {
@@ -487,14 +489,25 @@ RpWidget *RpWidget::accessibilityParent() const {
 	return nullptr;
 }
 
-QAccessibleInterface* RpWidget::accessibilityChildInterface(int index) const {
+QAccessibleInterface *RpWidget::accessibilityChildInterface(
+		int index) const {
 	const auto count = accessibilityChildCount();
 	if (count < 0 || index < 0 || index >= count) {
 		return nullptr;
 	}
-	return Accessible::cachedItem(
-		const_cast<RpWidget*>(this),
-		index);
+	auto &items = accessibleItems();
+	auto &ids = items.list;
+	if (int(ids.size()) < count) {
+		ids.resize(count);
+	}
+	if (!ids[index]) {
+		ids[index] = Accessible::UniqueId(
+			QAccessible::registerAccessibleInterface(
+				new Accessible::Item(
+					const_cast<RpWidget*>(this),
+					index)));
+	}
+	return ids[index].get();
 }
 
 } // namespace Ui

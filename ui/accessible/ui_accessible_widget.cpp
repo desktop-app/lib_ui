@@ -10,8 +10,8 @@
 #include "base/integration.h"
 #include "base/screen_reader_state.h"
 #include "base/timer.h"
+#include "ui/accessible/ui_accessible_item.h"
 #include "ui/rp_widget.h"
-#include "ui_accessible_item.h"
 
 #include <algorithm>
 

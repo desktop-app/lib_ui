@@ -19,6 +19,10 @@
 #include <QtGui/QtEvents>
 #include <QAccessible>
 
+namespace Ui::Accessible {
+struct Items;
+} // namespace Ui::Accessible
+
 namespace Ui {
 
 class RpWidget;
@@ -130,6 +134,9 @@ private:
 	};
 	struct Initer {
 		Initer(QWidget *parent, bool setZeroGeometry);
+		~Initer();
+
+		mutable std::unique_ptr<Accessible::Items> accessibleItems;
 	};
 
 	virtual void callSetVisible(bool visible) = 0;
@@ -331,6 +338,13 @@ protected:
 	}
 	virtual void leaveEventHook(QEvent *e) {
 		return Widget::leaveEvent(e);
+	}
+
+	[[nodiscard]] Accessible::Items &accessibleItems() const {
+		if (!_initer.accessibleItems) {
+			_initer.accessibleItems = std::make_unique<Accessible::Items>();
+		}
+		return *_initer.accessibleItems;
 	}
 
 private:
