@@ -10,6 +10,7 @@
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
 #include "ui/widgets/scroll_area.h"
+#include "base/screen_reader_state.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
@@ -290,7 +291,9 @@ void Menu::setShowSource(TriggeredSource source) {
 	_motions = 0;
 	_mousePopupPosition = QCursor::pos();
 	const auto mouseSelection = (source == TriggeredSource::Mouse);
-	if (mouseSelection || _actions.empty()) {
+	const auto selectFirst = !mouseSelection
+		|| base::ScreenReaderState::Instance()->active();
+	if (!selectFirst || _actions.empty()) {
 		setSelected(-1, mouseSelection);
 		return;
 	}
