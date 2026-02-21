@@ -10,6 +10,7 @@
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
 #include "ui/widgets/scroll_area.h"
+#include "base/screen_reader_state.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
@@ -290,25 +291,30 @@ void Menu::setShowSource(TriggeredSource source) {
 	_motions = 0;
 	_mousePopupPosition = QCursor::pos();
 	const auto mouseSelection = (source == TriggeredSource::Mouse);
-
-	if (QAccessible::isActive()) {
-		QAccessibleEvent event(this, QAccessible::PopupMenuStart);
-		QAccessible::updateAccessibility(&event);
+	const auto selectFirst = !mouseSelection
+		|| base::ScreenReaderState::Instance()->active();
+	if (!selectFirst || _actions.empty()) {
+		setSelected(-1, mouseSelection);
+		return;
 	}
-
-	if (mouseSelection || _actions.empty()) {
-		setSelected(-1, false);
-	} else {
-		int firstValid = -1;
-		for (int i = 0; i < int(_actionWidgets.size()); ++i) {
-			if (_actionWidgets[i]->isEnabled()
-					&& !_actionWidgets[i]->action()->isSeparator()) {
-				firstValid = i;
-				break;
-			}
+	auto first = -1;
+	for (auto i = 0, count = int(_actionWidgets.size()); i != count; ++i) {
+		if (_actionWidgets[i]->isEnabled()) {
+			first = i;
+			break;
 		}
-		setSelected(firstValid, false);
 	}
+	setSelected(first, false);
+}
+
+void Menu::afterShowStart() {
+	QAccessibleEvent event(this, QAccessible::PopupMenuStart);
+	QAccessible::updateAccessibility(&event);
+}
+
+void Menu::beforeHideFinish() {
+	QAccessibleEvent event(this, QAccessible::PopupMenuEnd);
+	QAccessible::updateAccessibility(&event);
 }
 
 const std::vector<not_null<QAction*>> &Menu::actions() const {

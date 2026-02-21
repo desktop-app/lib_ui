@@ -76,6 +76,20 @@ bool Action::hasSubmenu() const {
 	return _action->menu() != nullptr;
 }
 
+int Action::accessibilityChildCount() const {
+	return hasSubmenu() ? 1 : -1;
+}
+
+QAccessible::Role Action::accessibilityChildRole() const {
+	return QAccessible::PopupMenu;
+}
+
+QAccessible::State Action::accessibilityChildState(int index) const {
+	QAccessible::State state;
+	state.invisible = 1;
+	return state;
+}
+
 void Action::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	paint(p);

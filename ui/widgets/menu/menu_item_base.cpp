@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/menu/menu_item_base.h"
 
+#include "base/screen_reader_state.h"
 #include "ui/widgets/menu/menu.h"
 
 namespace Ui::Menu {
@@ -15,6 +16,14 @@ ItemBase::ItemBase(
 	const style::Menu &st)
 : RippleButton(parent, st.ripple)
 , _menu(parent) {
+	const auto reader = base::ScreenReaderState::Instance();
+	if (reader->active()) {
+		setFocusPolicy(Qt::TabFocus);
+	}
+	reader->activeValue(
+	) | rpl::on_next([=](bool active) {
+		setFocusPolicy(active ? Qt::TabFocus : Qt::NoFocus);
+	}, lifetime());
 }
 
 void ItemBase::setSelected(
@@ -28,24 +37,18 @@ void ItemBase::setSelected(
 		_lastTriggeredSource = source;
 		_selected = selected;
 		update();
-		if (selected && QAccessible::isActive()) {
-			accessibilityStateChanged({ .focused = true });
+		if (selected) {
+			if (focusPolicy() != Qt::NoFocus) {
+				setFocus();
+			}
+			QAccessibleEvent event(this, QAccessible::Focus);
+			QAccessible::updateAccessibility(&event);
 		}
 	}
 }
 
 bool ItemBase::isSelected() const {
 	return _selected.current();
-}
-
-QString ItemBase::accessibilityName() {
-	if (const auto act = action()) {
-		if (!act->isSeparator()) {
-			QString text = act->text();
-			return text;
-		}
-	}
-	return QString();
 }
 
 rpl::producer<CallbackData> ItemBase::selects() const {
@@ -165,6 +168,14 @@ void ItemBase::setActionTriggered(Fn<void()> callback) {
 	}
 }
 
+void ItemBase::keyPressEvent(QKeyEvent *e) {
+	e->ignore();
+}
+
+void ItemBase::keyReleaseEvent(QKeyEvent *e) {
+	e->ignore();
+}
+
 void ItemBase::mousePressEvent(QMouseEvent *e) {
 	if (!_menu->hasMouseMoved(e->globalPos())) {
 		return;
@@ -210,13 +221,6 @@ void ItemBase::mouseReleaseEvent(QMouseEvent *e) {
 		_menu->handleMouseRelease(e->globalPos());
 	}
 	RippleButton::mouseReleaseEvent(e);
-}
-
-AccessibilityState ItemBase::accessibilityState() const {
-	auto result = RippleButton::accessibilityState();
-	result.focused = isSelected();
-	result.disabled = !isEnabled();
-	return result;
 }
 
 } // namespace Ui::Menu

@@ -772,15 +772,12 @@ void PopupMenu::hideFast() {
 }
 
 void PopupMenu::hideFinished() {
+	_menu->beforeHideFinish();
 	_hiding = false;
 	_a_show.stop();
 	_cache = QPixmap();
 	_animatePhase = AnimatePhase::Hidden;
 	if (!isHidden()) {
-		if (QAccessible::isActive()) {
-			QAccessibleEvent event(this, QAccessible::PopupMenuEnd);
-			QAccessible::updateAccessibility(&event);
-		}
 		hide();
 	}
 }
@@ -1133,8 +1130,6 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 }
 
 void PopupMenu::showPrepared(TriggeredSource source) {
-	_menu->setShowSource(source);
-
 	startShowAnimation();
 
 	if (::Platform::IsWindows()) {
@@ -1144,6 +1139,8 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 	Platform::ShowOverAll(this);
 	raise();
 	activateWindow();
+	_menu->afterShowStart();
+	_menu->setShowSource(source);
 }
 
 void PopupMenu::setClearLastSeparator(bool clear) {
