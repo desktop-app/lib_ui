@@ -290,9 +290,28 @@ void Menu::setShowSource(TriggeredSource source) {
 	_motions = 0;
 	_mousePopupPosition = QCursor::pos();
 	const auto mouseSelection = (source == TriggeredSource::Mouse);
-	setSelected(
-		(mouseSelection || _actions.empty()) ? -1 : 0,
-		mouseSelection);
+	if (mouseSelection || _actions.empty()) {
+		setSelected(-1, mouseSelection);
+		return;
+	}
+	auto first = -1;
+	for (auto i = 0, count = int(_actionWidgets.size()); i != count; ++i) {
+		if (_actionWidgets[i]->isEnabled()) {
+			first = i;
+			break;
+		}
+	}
+	setSelected(first, false);
+}
+
+void Menu::afterShowStart() {
+	QAccessibleEvent event(this, QAccessible::PopupMenuStart);
+	QAccessible::updateAccessibility(&event);
+}
+
+void Menu::beforeHideFinish() {
+	QAccessibleEvent event(this, QAccessible::PopupMenuEnd);
+	QAccessible::updateAccessibility(&event);
 }
 
 const std::vector<not_null<QAction*>> &Menu::actions() const {

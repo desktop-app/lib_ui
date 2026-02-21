@@ -36,6 +36,10 @@ public:
 	Menu(QWidget *parent, QMenu *menu, const style::Menu &st = st::defaultMenu);
 	~Menu();
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::PopupMenu;
+	}
+
 	[[nodiscard]] const style::Menu &st() const {
 		return _st;
 	}
@@ -69,6 +73,8 @@ public:
 		_childShownAction = action;
 	}
 	void setShowSource(TriggeredSource source);
+	void afterShowStart();
+	void beforeHideFinish();
 	void setForceWidth(int forceWidth);
 
 	[[nodiscard]] const std::vector<not_null<QAction*>> &actions() const;
