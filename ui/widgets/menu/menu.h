@@ -119,10 +119,6 @@ protected:
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
 
-	[[nodiscard]] QAccessible::Role accessibilityRole() override {
-		return QAccessible::PopupMenu;
-	}
-
 private:
 	void updateSelected(QPoint globalPosition);
 	void init();

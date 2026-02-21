@@ -373,8 +373,6 @@ struct AccessibilityState {
 	bool pressed : 1 = false;
 	bool readOnly : 1 = false;
 	bool selected : 1 = false;
-	bool focused : 1 = false;
-	bool disabled : 1 = false;
 
 	void writeTo(QAccessible::State &state);
 };
