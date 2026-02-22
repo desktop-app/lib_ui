@@ -36,6 +36,10 @@ public:
 	Menu(QWidget *parent, QMenu *menu, const style::Menu &st = st::defaultMenu);
 	~Menu();
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::PopupMenu;
+	}
+
 	[[nodiscard]] const style::Menu &st() const {
 		return _st;
 	}
@@ -118,10 +122,6 @@ protected:
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mousePressEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
-
-	[[nodiscard]] QAccessible::Role accessibilityRole() override {
-		return QAccessible::PopupMenu;
-	}
 
 private:
 	void updateSelected(QPoint globalPosition);

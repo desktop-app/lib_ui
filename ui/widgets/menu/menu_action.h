@@ -29,6 +29,9 @@ public:
 	QString accessibilityName() override {
 		return _action->text();
 	}
+	int accessibilityChildCount() const override;
+	QAccessible::Role accessibilityChildRole() const override;
+	QAccessible::State accessibilityChildState(int index) const override;
 
 	[[nodiscard]] const style::Menu &st() const;
 
