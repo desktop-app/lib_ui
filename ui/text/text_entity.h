@@ -9,6 +9,7 @@
 #include "base/qt/qt_compare.h"
 #include "base/basic_types.h"
 #include "base/algorithm.h"
+#include "base/flags.h"
 
 #include <QtCore/QList>
 #include <QtCore/QVector>
@@ -52,7 +53,25 @@ enum class EntityType : uchar {
 	Pre,  // block
 	Blockquote,
 	Spoiler,
+	FormattedDate,
 };
+
+enum class FormattedDateFlag : uint8 {
+	Relative   = 0x01,
+	ShortTime  = 0x02,
+	LongTime   = 0x04,
+	ShortDate  = 0x08,
+	LongDate   = 0x10,
+	DayOfWeek  = 0x20,
+};
+inline constexpr bool is_flag_type(FormattedDateFlag) { return true; }
+using FormattedDateFlags = base::flags<FormattedDateFlag>;
+
+[[nodiscard]] QString SerializeFormattedDateData(
+	int32 date,
+	FormattedDateFlags flags);
+[[nodiscard]] std::pair<int32, FormattedDateFlags> DeserializeFormattedDateData(
+	const QString &data);
 
 enum class EntityLinkShown : uchar {
 	Full,

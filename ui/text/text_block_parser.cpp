@@ -184,7 +184,7 @@ void BlockParser::createBlock(int skipBack) {
 			createBlock(skipBack - length);
 		}
 	}
-	const auto linkIndex = _monoIndex ? _monoIndex : _linkIndex;
+	const auto linkIndex = _internalIndex ? _internalIndex : _linkIndex;
 	auto custom = _customEmojiData.isEmpty()
 		? nullptr
 		: MakeCustomEmoji(_customEmojiData, _context);
@@ -296,8 +296,9 @@ void BlockParser::finishEntities() {
 							last.unsafe<NewlineBlock>().setQuoteIndex(0);
 						}
 					}
-					if (IsMono(*flags)) {
-						_monoIndex = 0;
+					if (IsMono(*flags)
+						|| (*flags & TextBlockFlag::FormattedDate)) {
+						_internalIndex = 0;
 					}
 				}
 			} else if (const auto linkIndex = list.back().linkIndex()) {
@@ -327,7 +328,7 @@ bool BlockParser::checkEntities() {
 
 	auto flags = TextBlockFlags();
 	auto link = EntityLinkData();
-	auto monoIndex = 0;
+	auto internalIndex = 0;
 	const auto entityType = _waitingEntity->type();
 	const auto entityLength = _waitingEntity->length();
 	const auto entityBegin = _start + _waitingEntity->offset();
@@ -365,6 +366,54 @@ bool BlockParser::checkEntities() {
 		flags = TextBlockFlag::Spoiler;
 	} else if (entityType == EntityType::StrikeOut) {
 		flags = TextBlockFlag::StrikeOut;
+	} else if (entityType == EntityType::FormattedDate) {
+		const auto entityData = _waitingEntity->data();
+		const auto [dateValue, dateFlags] = DeserializeFormattedDateData(
+			entityData);
+		const auto customText = (dateFlags != FormattedDateFlags())
+			&& _context.formattedDateFactory;
+		if (customText) {
+			createBlock();
+
+			const auto result = _context.formattedDateFactory(
+				dateValue,
+				dateFlags);
+			if (result.nextUpdate) {
+				auto &next = _t->ensureExtended()->nextFormattedDateUpdate;
+				if (!next || result.nextUpdate < next) {
+					next = result.nextUpdate;
+				}
+			}
+
+			const auto position = int(_tText.size());
+			const auto &formatted = result.text;
+			_t->insertReplacement(
+				position,
+				entityLength,
+				formatted.size());
+			_tText.append(formatted);
+			_ptr = entityEnd;
+			_internals.push_back({
+				.text = formatted,
+				.data = entityData,
+				.type = EntityType::FormattedDate,
+			});
+
+			_internalIndex = _internals.size();
+			_flags |= TextBlockFlag::FormattedDate;
+			createBlock();
+			_internalIndex = 0;
+			_flags &= ~TextBlockFlag::FormattedDate;
+		} else {
+			flags = TextBlockFlag::FormattedDate;
+
+			_internals.push_back({
+				.text = QString(entityBegin, entityLength),
+				.data = entityData,
+				.type = EntityType::FormattedDate,
+			});
+			internalIndex = _internals.size();
+		}
 	} else if ((entityType == EntityType::Code) // #TODO entities
 		|| (entityType == EntityType::Pre)) {
 		if (entityType == EntityType::Code) {
@@ -385,8 +434,8 @@ bool BlockParser::checkEntities() {
 
 		// TODO: remove trimming.
 		if (isSingleLine && (entityType == EntityType::Code)) {
-			_monos.push_back({ .text = text, .type = entityType });
-			monoIndex = _monos.size();
+			_internals.push_back({ .text = text, .type = entityType });
+			internalIndex = _internals.size();
 		}
 	} else if (entityType == EntityType::Blockquote) {
 		flags = TextBlockFlag::Blockquote;
@@ -438,7 +487,7 @@ bool BlockParser::checkEntities() {
 			createBlock();
 			_flags |= flags;
 			_startedEntities[entityEnd].emplace_back(flags);
-			_monoIndex = monoIndex;
+			_internalIndex = internalIndex;
 		}
 	}
 
@@ -686,7 +735,7 @@ void BlockParser::finalize(const TextParseOptions &options) {
 	auto counterCustomIndex = uint16(0);
 	auto currentIndex = uint16(0); // Current the latest index of _t->_links.
 	struct {
-		uint16 mono = 0;
+		uint16 internal = 0;
 		uint16 lnk = 0;
 	} lastHandlerIndex;
 	const auto avoidIntersectionsWithCustom = [&] {
@@ -746,19 +795,22 @@ void BlockParser::finalize(const TextParseOptions &options) {
 		const auto shiftedIndex = block->linkIndex();
 		auto useCustomIndex = false;
 		if (shiftedIndex <= kStringLinkIndexShift) {
-			if (IsMono(block->flags()) && shiftedIndex) {
-				const auto monoIndex = shiftedIndex;
+			const auto isInternal = shiftedIndex
+				&& (IsMono(block->flags())
+					|| (block->flags() & TextBlockFlag::FormattedDate));
+			if (isInternal) {
+				const auto internalIndex = shiftedIndex;
 
-				if (lastHandlerIndex.mono == monoIndex) {
+				if (lastHandlerIndex.internal == internalIndex) {
 					block->setLinkIndex(currentIndex);
-					continue; // Optimization.
+					continue;
 				} else {
 					currentIndex++;
 				}
 				avoidIntersectionsWithCustom();
 				block->setLinkIndex(currentIndex);
 				const auto handler = Integration::Instance().createLinkHandler(
-					_monos[monoIndex - 1],
+					_internals[internalIndex - 1],
 					_context);
 				if (!links) {
 					links = &_t->ensureExtended()->links;
@@ -767,7 +819,7 @@ void BlockParser::finalize(const TextParseOptions &options) {
 				if (handler) {
 					_t->setLink(currentIndex, handler);
 				}
-				lastHandlerIndex.mono = monoIndex;
+				lastHandlerIndex.internal = internalIndex;
 				continue;
 			} else if (shiftedIndex) {
 				useCustomIndex = true;

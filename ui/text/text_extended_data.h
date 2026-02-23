@@ -121,6 +121,7 @@ struct ExtendedData {
 	std::unique_ptr<SpoilerData> spoiler;
 	std::unique_ptr<CustomEmojiData> customEmoji;
 	std::vector<Modification> modifications;
+	int32 nextFormattedDateUpdate = 0;
 
 };
 

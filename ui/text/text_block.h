@@ -40,6 +40,7 @@ enum class TextBlockFlag : uint16 {
 	Pre        = 0x080,
 	Spoiler    = 0x100,
 	Blockquote = 0x200,
+	FormattedDate = 0x400,
 };
 inline constexpr bool is_flag_type(TextBlockFlag) { return true; }
 using TextBlockFlags = base::flags<TextBlockFlag>;

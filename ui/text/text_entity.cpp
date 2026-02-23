@@ -2433,3 +2433,23 @@ int EntityInText::FirstMonospaceOffset(
 		&EntityInText::offset);
 	return (i == monospace.end()) ? textLength : i->offset();
 }
+
+QString SerializeFormattedDateData(
+		int32 date,
+		FormattedDateFlags flags) {
+	return QString::number(date)
+		+ ':'
+		+ QString::number(flags.value());
+}
+
+std::pair<int32, FormattedDateFlags> DeserializeFormattedDateData(
+		const QString &data) {
+	const auto parts = data.split(':');
+	if (parts.size() != 2) {
+		return std::pair(int32(0), FormattedDateFlags());
+	}
+	const auto date = int32(parts[0].toInt());
+	const auto flags = FormattedDateFlags::from_raw(
+		uint8(parts[1].toUInt()));
+	return std::pair(date, flags);
+}

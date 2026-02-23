@@ -927,7 +927,7 @@ void String::insertModifications(int position, int delta) {
 		modifications.insert(i, {
 			.position = position,
 			.skipped = uint16(delta < 0 ? (-delta) : 0),
-			.added = (delta > 0),
+			.added = uint16(delta > 0 ? 1 : 0),
 		});
 	}
 }
@@ -942,13 +942,31 @@ void String::removeModificationsAfter(int size) {
 		if (i->position > size) {
 			i = modifications.erase(i);
 		} else if (i->position == size) {
-			i->added = false;
+			i->added = 0;
 			if (!i->skipped) {
 				i = modifications.erase(i);
 			}
 		} else {
 			break;
 		}
+	}
+}
+
+void String::insertReplacement(int position, int skipped, int added) {
+	auto &modifications = ensureExtended()->modifications;
+	auto i = end(modifications);
+	while (i != begin(modifications) && (i - 1)->position > position) {
+		--i;
+	}
+	if (i != end(modifications) && i->position == position) {
+		i->skipped += uint16(skipped);
+		i->added += uint16(added);
+	} else {
+		modifications.insert(i, {
+			.position = position,
+			.skipped = uint16(skipped),
+			.added = uint16(added),
+		});
 	}
 }
 
@@ -1637,6 +1655,10 @@ bool String::hasNotEmojiAndSpaces() const {
 const std::vector<Modification> &String::modifications() const {
 	static const auto kEmpty = std::vector<Modification>();
 	return _extended ? _extended->modifications : kEmpty;
+}
+
+int32 String::nextFormattedDateUpdate() const {
+	return _extended ? _extended->nextFormattedDateUpdate : 0;
 }
 
 QString String::toString(TextSelection selection) const {

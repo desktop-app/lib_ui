@@ -101,7 +101,7 @@ private:
 	std::vector<uint16> _linksIndexes;
 
 	std::vector<EntityLinkData> _links;
-	std::vector<EntityLinkData> _monos;
+	std::vector<EntityLinkData> _internals;
 	base::flat_map<
 		const QChar*,
 		std::vector<StartedEntity>> _startedEntities;
@@ -113,7 +113,7 @@ private:
 	TextBlockFlags _flags;
 	uint16 _linkIndex = 0;
 	uint16 _colorIndex = 0;
-	uint16 _monoIndex = 0;
+	uint16 _internalIndex = 0;
 	uint16 _quoteIndex = 0;
 	int _quoteStartPosition = 0;
 	EmojiPtr _emoji = nullptr; // current emoji, if current word is an emoji, or zero
