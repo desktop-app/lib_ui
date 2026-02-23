@@ -290,18 +290,18 @@ void Menu::setShowSource(TriggeredSource source) {
 	_motions = 0;
 	_mousePopupPosition = QCursor::pos();
 	const auto mouseSelection = (source == TriggeredSource::Mouse);
-	if (mouseSelection || _actions.empty()) {
-		setSelected(-1, mouseSelection);
-		return;
-	}
-	auto first = -1;
-	for (auto i = 0, count = int(_actionWidgets.size()); i != count; ++i) {
-		if (_actionWidgets[i]->isEnabled()) {
-			first = i;
-			break;
+	setSelected([&] {
+		if (mouseSelection) {
+			return -1;
 		}
-	}
-	setSelected(first, false);
+		for (auto i = 0, count = int(_actions.size()); i != count; ++i) {
+			const auto widget = _actionWidgets[i].get();
+			if (widget->isEnabled() && !widget->action()->isSeparator()) {
+				return i;
+			}
+		}
+		return -1;
+	}(), mouseSelection);
 }
 
 
