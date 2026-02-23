@@ -41,6 +41,11 @@ public:
 	PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st = st::defaultPopupMenu);
 	~PopupMenu();
 
+	QAccessible::Role accessibilityRole() override {
+		return QAccessible::Role::PopupMenu;
+	}
+	RpWidget *accessibilityParent() const override;
+
 	[[nodiscard]] const style::PopupMenu &st() const {
 		return _st;
 	}

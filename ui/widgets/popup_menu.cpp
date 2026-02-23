@@ -1145,6 +1145,10 @@ void PopupMenu::setClearLastSeparator(bool clear) {
 	_clearLastSeparator = clear;
 }
 
+RpWidget *PopupMenu::accessibilityParent() const {
+	return qobject_cast<RpWidget*>(parentWidget());
+}
+
 PopupMenu::~PopupMenu() {
 	for (const auto &[action, submenu] : base::take(_submenus)) {
 		delete submenu;
