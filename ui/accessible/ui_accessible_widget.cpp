@@ -213,7 +213,7 @@ QAccessibleInterface* Widget::focusChild() const {
 
 QAccessibleInterface* Widget::parent() const {
 	if (const auto parentRp = rp()->accessibilityParent()) {
-		if (auto iface = parentRp->accessibilityCreate()) {
+		if (auto iface = QAccessible::queryAccessibleInterface(parentRp)) {
 			return iface;
 		}
 	}
