@@ -571,6 +571,8 @@ void PopupMenu::popupSubmenu(
 			: QMargins(st::lineWidth, 0, st::lineWidth, 0);
 		QPoint p(_inner.x() + (style::RightToLeft() ? padding.right() : (_inner.width() - padding.left())), _inner.y() + actionTop);
 		_activeSubmenu = submenu;
+		_activeSubmenu->menu()->clearSelection();
+		_activeSubmenu->setAccessibleName(action->text());
 		if (_activeSubmenu->prepareGeometryFor(geometry().topLeft() + p, this)) {
 			_activeSubmenu->showPrepared(source);
 			_menu->setChildShownAction(action);
