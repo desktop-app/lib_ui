@@ -156,6 +156,10 @@ QString Integration::phraseFormattingSpoiler() {
 	return "Spoiler";
 }
 
+QString Integration::phraseFormattingDate() {
+	return "Date";
+}
+
 QString Integration::phraseButtonOk() {
 	return "OK";
 }

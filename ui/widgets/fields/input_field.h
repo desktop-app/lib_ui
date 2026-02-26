@@ -43,6 +43,7 @@ const auto kBlockquoteSequence = QKeySequence("ctrl+shift+.");
 const auto kMonospaceSequence = QKeySequence("ctrl+shift+m");
 const auto kEditLinkSequence = QKeySequence("ctrl+k");
 const auto kSpoilerSequence = QKeySequence("ctrl+shift+p");
+const auto kEditDateSequence = QKeySequence("ctrl+shift+d");
 
 class PopupMenu;
 class InputField;
@@ -154,6 +155,7 @@ public:
 	static const QString kTagBlockquote;
 	static const QString kTagBlockquoteCollapsed;
 	static const QString kCustomEmojiTagStart;
+	static const QString kCustomDateTagStart;
 	static const int kCollapsedQuoteFormat; // QTextFormat::ObjectTypes
 	static const int kCustomEmojiFormat; // QTextFormat::ObjectTypes
 	static const int kCustomEmojiId; // QTextFormat::Property
@@ -273,6 +275,7 @@ public:
 	[[nodiscard]] static bool IsCustomEmojiLink(QStringView link);
 	[[nodiscard]] static QString CustomEmojiLink(QStringView entityData);
 	[[nodiscard]] static QString CustomEmojiEntityData(QStringView link);
+	[[nodiscard]] static bool IsCustomDateLink(QStringView link);
 
 	[[nodiscard]] const QString &getLastText() const {
 		return _lastTextWithTags.text;
@@ -388,6 +391,7 @@ private:
 	enum class MarkdownActionType {
 		ToggleTag,
 		EditLink,
+		EditDate,
 	};
 	struct MarkdownAction {
 		QKeySequence sequence;
@@ -483,7 +487,11 @@ private:
 	};
 	EditLinkData selectionEditLinkData(EditLinkSelection selection) const;
 	EditLinkSelection editLinkSelection(QContextMenuEvent *e) const;
+	TextWithTags prepareTextStrippingLinks(
+		EditLinkSelection selection,
+		EditLinkData *outData);
 	void editMarkdownLink(EditLinkSelection selection);
+	void editMarkdownDate(EditLinkSelection selection);
 
 	void commitInstantReplacement(
 		int from,

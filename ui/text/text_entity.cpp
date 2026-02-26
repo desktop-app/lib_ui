@@ -2151,12 +2151,17 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				closeType(type);
 			}
 		}
-		if (closeLink && !closeCustomEmoji) {
+		const auto closeCustomDate = closeLink
+			&& Ui::InputField::IsCustomDateLink(state.link);
+		if (closeLink && !closeCustomEmoji && !closeCustomDate) {
 			if (IsMentionLink(state.link)) {
 				closeType(EntityType::MentionName);
 			} else {
 				closeType(EntityType::CustomUrl);
 			}
+		}
+		if (closeCustomDate) {
+			closeType(EntityType::FormattedDate);
 		}
 		for (const auto type : kInMaskTypesBlock) {
 			if (state.has(type) && !nextState.has(type)) {
@@ -2167,6 +2172,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 		const auto openLink = linkChanged && !nextState.link.isEmpty();
 		const auto openCustomEmoji = openLink
 			&& Ui::InputField::IsCustomEmojiLink(nextState.link);
+		const auto openCustomDate = openLink
+			&& Ui::InputField::IsCustomDateLink(nextState.link);
 		for (const auto type : kInMaskTypesBlock | ranges::views::reverse) {
 			if (nextState.has(type) && !state.has(type)) {
 				openType(type, (type == EntityType::Pre)
@@ -2176,7 +2183,7 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 					: QString());
 			}
 		}
-		if (openLink && !openCustomEmoji) {
+		if (openLink && !openCustomEmoji && !openCustomDate) {
 			if (IsMentionLink(nextState.link)) {
 				const auto data = MentionEntityData(nextState.link);
 				if (!data.isEmpty()) {
@@ -2196,6 +2203,17 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
 				nextState.link);
 			if (!data.isEmpty()) {
 				openType(EntityType::CustomEmoji, data);
+			}
+		}
+		if (openCustomDate) {
+			const auto dateStr = base::StringViewMid(
+				nextState.link,
+				Ui::InputField::kCustomDateTagStart.size());
+			const auto date = int32(dateStr.toInt());
+			if (date > 0) {
+				openType(
+					EntityType::FormattedDate,
+					SerializeFormattedDateData(date, FormattedDateFlags()));
 			}
 		}
 		state = nextState;
@@ -2341,6 +2359,14 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 				: Ui::InputField::kTagBlockquoteCollapsed);
 			break;
 		case EntityType::Spoiler: push(Ui::InputField::kTagSpoiler); break;
+		case EntityType::FormattedDate: {
+			const auto [date, flags] = DeserializeFormattedDateData(
+				entity.data());
+			if (date > 0 && !flags) {
+				push(Ui::InputField::kCustomDateTagStart
+					+ QString::number(date));
+			}
+		} break;
 		}
 	}
 	if (!toRemove.empty()) {
