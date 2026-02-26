@@ -23,6 +23,7 @@ Separator::Separator(
 , _bg(st.itemBg)
 , _height(_padding.top() + _lineWidth + _padding.bottom())
 , _action(action) {
+	setEnabled(false);
 	fitToMenuWidth();
 	paintRequest(
 	) | rpl::on_next([=] {
