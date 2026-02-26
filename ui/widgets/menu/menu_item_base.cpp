@@ -6,8 +6,8 @@
 //
 #include "ui/widgets/menu/menu_item_base.h"
 
-#include "base/screen_reader_state.h"
 #include "ui/widgets/menu/menu.h"
+#include "base/screen_reader_state.h"
 
 namespace Ui::Menu {
 
@@ -18,11 +18,11 @@ ItemBase::ItemBase(
 , _menu(parent) {
 	const auto reader = base::ScreenReaderState::Instance();
 	if (reader->active()) {
-		setFocusPolicy(Qt::TabFocus);
+		setFocusPolicy(Qt::ClickFocus);
 	}
 	reader->activeValue(
 	) | rpl::on_next([=](bool active) {
-		setFocusPolicy(active ? Qt::TabFocus : Qt::NoFocus);
+		setFocusPolicy(active ? Qt::ClickFocus : Qt::NoFocus);
 	}, lifetime());
 }
 
@@ -38,9 +38,7 @@ void ItemBase::setSelected(
 		_selected = selected;
 		update();
 		if (selected) {
-			if (focusPolicy() != Qt::NoFocus) {
-				setFocus();
-			}
+			setFocus();
 			QAccessibleEvent event(this, QAccessible::Focus);
 			QAccessible::updateAccessibility(&event);
 		}
