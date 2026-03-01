@@ -642,7 +642,9 @@ void PopupMenu::handleMouseRelease(QPoint globalPosition) {
 }
 
 void PopupMenu::focusOutEvent(QFocusEvent *e) {
-	hideMenu();
+	if (!InFocusChain(this)) {
+		hideMenu();
+	}
 }
 
 void PopupMenu::hideEvent(QHideEvent *e) {
