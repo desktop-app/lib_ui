@@ -882,7 +882,7 @@ void RadiobuttonGroup::setValue(int value) {
 	}
 	_hasValue = true;
 	_value = value;
-	for (const auto button : _buttons) {
+	for (const auto &button : _buttons) {
 		button->handleNewGroupValue(_value);
 	}
 	const auto guard = weak_from_this();
