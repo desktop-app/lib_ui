@@ -310,6 +310,11 @@ public:
 		return _text.toString();
 	}
 	AccessibilityState accessibilityState() const override;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
+	QAccessible::Role accessibilityRole() override {
+		return _toggle ? QAccessible::Role::Switch : QAccessible::Role::Button;
+	}
+#endif
 
 	SettingsButton *toggleOn(
 		rpl::producer<bool> &&toggled,
