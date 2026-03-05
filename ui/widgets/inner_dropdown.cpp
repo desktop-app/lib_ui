@@ -150,7 +150,16 @@ void InnerDropdown::leaveEventHook(QEvent *e) {
 
 void InnerDropdown::otherEnter() {
 	if (_autoHiding) {
-		showAnimated(_origin);
+		if (const auto widget = static_cast<RpWidget*>(_scroll->widget())) {
+			const auto weak = base::make_weak(widget);
+			SendPendingMoveResizeEvents(widget);
+			if (weak.get()) {
+				const auto padding = _st.scrollPadding;
+				if (widget->height() > padding.top() + padding.bottom()) {
+					showAnimated(_origin);
+				}
+			}
+		}
 	}
 }
 
