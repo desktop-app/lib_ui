@@ -6,6 +6,7 @@
 //
 #include "emoji_config.h"
 
+#include "ui/widgets/fields/input_field.h"
 #include "emoji_suggestions_helper.h"
 #include "base/bytes.h"
 #include "base/openssl_help.h"
@@ -485,6 +486,9 @@ QImage UniversalImages::generate(int size, int index) const {
 
 void Init() {
 	internal::Init();
+
+	// Pre-warm InstantReplaces trie on background thread.
+	crl::async([] { InstantReplaces::Default(); });
 
 	const auto count = internal::FullCount();
 	const auto persprite = kImagesPerRow * kImageRowsPerSprite;
