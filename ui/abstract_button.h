@@ -60,8 +60,12 @@ public:
 
 	void clicked(Qt::KeyboardModifiers modifiers, Qt::MouseButton button);
 
+	void setIsMenuButton(bool value) {
+		_menuButton = value;
+	}
+
 	QAccessible::Role accessibilityRole() override {
-		return QAccessible::Role::Button;
+		return _menuButton ? QAccessible::ButtonMenu : QAccessible::Button;
 	}
 	AccessibilityState accessibilityState() const override;
 	void accessibilityDoAction(const QString &name) override;
@@ -112,10 +116,11 @@ private:
 	State _state = StateFlag::None;
 
 	Qt::KeyboardModifiers _modifiers;
-	bool _enablePointerCursor = true;
-	bool _pointerCursor = false;
-	bool _acceptBoth = false;
-	bool _triggerOnPress = false;
+	bool _enablePointerCursor : 1 = true;
+	bool _pointerCursor : 1 = false;
+	bool _acceptBoth : 1 = false;
+	bool _triggerOnPress : 1 = false;
+	bool _menuButton : 1 = false;
 
 	Fn<void()> _clickedCallback;
 

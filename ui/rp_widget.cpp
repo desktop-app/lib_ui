@@ -358,13 +358,14 @@ QAccessibleInterface *RpWidget::accessibilityCreate() {
 		: nullptr;
 }
 
-QAccessible::Role RpWidget::accessibilityRole(){
+QAccessible::Role RpWidget::accessibilityRole() {
 	return QAccessible::Role::NoRole;
 }
 
 Qt::FocusPolicy RpWidget::accessibilityFocusPolicy() {
 	const auto role = accessibilityRole();
 	const auto focusable = (role == QAccessible::Role::Button)
+		|| (role == QAccessible::Role::ButtonMenu)
 		|| (role == QAccessible::Role::Link)
 		|| (role == QAccessible::Role::CheckBox)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
