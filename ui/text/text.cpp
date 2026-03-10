@@ -738,6 +738,37 @@ void String::setLink(uint16 index, const ClickHandlerPtr &link) {
 	}
 }
 
+TextSelection String::linkRangeFor(const ClickHandlerPtr &link) const {
+	if (!_extended || !link) {
+		return {};
+	}
+	const auto index = [&] {
+		const auto &links = _extended->links;
+		for (auto i = 0, count = int(links.size()); i != count; ++i) {
+			if (links[i] == link) {
+				return uint16(i + 1);
+			}
+		}
+		return uint16(0);
+	}();
+	if (!index) {
+		return {};
+	}
+	auto from = uint16(_text.size());
+	auto to = uint16(0);
+	for (auto i = 0, count = int(_blocks.size()); i != count; ++i) {
+		if (_blocks[i]->linkIndex() == index) {
+			const auto position = _blocks[i]->position();
+			const auto end = (i + 1 < count)
+				? _blocks[i + 1]->position()
+				: uint16(_text.size());
+			from = std::min(from, position);
+			to = std::max(to, end);
+		}
+	}
+	return (from < to) ? TextSelection{ from, to } : TextSelection{};
+}
+
 void String::setSpoilerRevealed(bool revealed, anim::type animated) {
 	const auto data = _extended ? _extended->spoiler.get() : nullptr;
 	if (!data) {

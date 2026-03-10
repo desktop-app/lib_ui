@@ -411,6 +411,9 @@ public:
 
 	[[nodiscard]] int lineHeight() const;
 
+	[[nodiscard]] TextSelection linkRangeFor(
+		const ClickHandlerPtr &link) const;
+
 	void clear();
 
 private:
