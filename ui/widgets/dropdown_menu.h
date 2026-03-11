@@ -94,6 +94,8 @@ private:
 
 	SubmenuPointer _activeSubmenu;
 
+	QPointer<QWidget> _previousFocusWidget;
+
 	bool _deleteOnHide = false;
 	bool _triggering = false;
 	bool _deleteLater = false;

@@ -38,9 +38,9 @@ void ItemBase::setSelected(
 		_selected = selected;
 		update();
 		if (selected) {
-			//setFocus();
-			//QAccessibleEvent event(this, QAccessible::Focus);
-			//QAccessible::updateAccessibility(&event);
+			setFocus();
+			QAccessibleEvent event(this, QAccessible::Focus);
+			QAccessible::updateAccessibility(&event);
 		}
 	}
 }
