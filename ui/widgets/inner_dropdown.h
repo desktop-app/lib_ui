@@ -19,9 +19,10 @@ namespace Ui {
 class ScrollArea;
 
 class InnerDropdown : public RpWidget {
-
 public:
-	InnerDropdown(QWidget *parent, const style::InnerDropdown &st = st::defaultInnerDropdown);
+	InnerDropdown(
+		QWidget *parent,
+		const style::InnerDropdown &st = st::defaultInnerDropdown);
 
 	template <typename Widget>
 	QPointer<Widget> setOwnedWidget(object_ptr<Widget> widget) {
@@ -29,10 +30,14 @@ public:
 		return QPointer<Widget>(static_cast<Widget*>(result.data()));
 	}
 
-	bool overlaps(const QRect &globalRect) {
-		if (isHidden() || _a_show.animating() || _a_opacity.animating()) return false;
-
-		return rect().marginsRemoved(_st.padding).contains(QRect(mapFromGlobal(globalRect.topLeft()), globalRect.size()));
+	[[nodiscard]] bool overlaps(const QRect &globalRect) {
+		return !isHidden()
+			&& !_a_show.animating()
+			&& !_a_opacity.animating()
+			&& rect().marginsRemoved(_st.padding).contains(
+				QRect(
+					mapFromGlobal(globalRect.topLeft()),
+					globalRect.size()));
 	}
 
 	void setAutoHiding(bool autoHiding) {
@@ -79,7 +84,6 @@ protected:
 
 	int resizeGetHeight(int newWidth) override;
 
-
 private:
 	QPointer<RpWidget> doSetOwnedWidget(object_ptr<RpWidget> widget);
 	QImage grabForPanelAnimation();
@@ -91,10 +95,10 @@ private:
 	void showAnimationCallback();
 	void opacityAnimationCallback();
 
+	void saveFocusWidgetAndShow();
+	void maybeReturnFocus();
 	void hideFinished();
 	void showStarted();
-
-	void updateHeight();
 
 	void scrolled();
 
@@ -118,13 +122,17 @@ private:
 
 	object_ptr<ScrollArea> _scroll;
 
+	QPointer<QWidget> _savedFocusWidget;
 	int _maxHeight = 0;
 
 };
 
-class InnerDropdown::Container : public RpWidget {
+class InnerDropdown::Container final : public RpWidget {
 public:
-	Container(QWidget *parent, object_ptr<RpWidget> child, const style::InnerDropdown &st);
+	Container(
+		QWidget *parent,
+		object_ptr<RpWidget> child,
+		const style::InnerDropdown &st);
 
 	void resizeToContent();
 

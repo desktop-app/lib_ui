@@ -14,14 +14,20 @@ namespace Ui {
 
 class DropdownMenu : public InnerDropdown {
 public:
-	DropdownMenu(QWidget *parent, const style::DropdownMenu &st = st::defaultDropdownMenu);
+	DropdownMenu(
+		QWidget *parent,
+		const style::DropdownMenu &st = st::defaultDropdownMenu);
 
 	QAccessible::Role accessibilityRole() override {
 		return QAccessible::Role::PopupMenu;
 	}
 
 	not_null<QAction*> addAction(base::unique_qptr<Menu::ItemBase> widget);
-	not_null<QAction*> addAction(const QString &text, Fn<void()> callback, const style::icon *icon = nullptr, const style::icon *iconOver = nullptr);
+	not_null<QAction*> addAction(
+		const QString &text,
+		Fn<void()> callback,
+		const style::icon *icon = nullptr,
+		const style::icon *iconOver = nullptr);
 	not_null<QAction*> addSeparator(
 		const style::MenuSeparator *st = nullptr);
 	void clearActions();
@@ -48,9 +54,12 @@ protected:
 
 private:
 	// Not ready with submenus yet.
-	DropdownMenu(QWidget *parent, QMenu *menu, const style::DropdownMenu &st = st::defaultDropdownMenu);
-	void deleteOnHide(bool del);
-	void popup(const QPoint &p);
+	DropdownMenu(
+		QWidget *parent,
+		QMenu *menu,
+		const style::DropdownMenu &st = st::defaultDropdownMenu);
+	//void deleteOnHide(bool del);
+	//void popup(const QPoint &p);
 	void hideMenu(bool fast = false);
 
 	void childHiding(DropdownMenu *child);
@@ -78,8 +87,14 @@ private:
 
 	using SubmenuPointer = QPointer<DropdownMenu>;
 	bool popupSubmenuFromAction(const Menu::CallbackData &data);
-	void popupSubmenu(SubmenuPointer submenu, int actionTop, TriggeredSource source);
-	void showMenu(const QPoint &p, DropdownMenu *parent, TriggeredSource source);
+	//void popupSubmenu(
+	//	SubmenuPointer submenu,
+	//	int actionTop,
+	//	TriggeredSource source);
+	//void showMenu(
+	//	const QPoint &p,
+	//	DropdownMenu *parent,
+	//	TriggeredSource source);
 
 	const style::DropdownMenu &_st;
 	Fn<void()> _hiddenCallback;
@@ -93,8 +108,6 @@ private:
 	DropdownMenu *_parent = nullptr;
 
 	SubmenuPointer _activeSubmenu;
-
-	QPointer<QWidget> _previousFocusWidget;
 
 	bool _deleteOnHide = false;
 	bool _triggering = false;

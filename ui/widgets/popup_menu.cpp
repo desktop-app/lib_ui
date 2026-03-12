@@ -200,14 +200,6 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 }
 
 void PopupMenu::init() {
-	const auto reader = base::ScreenReaderState::Instance();
-	if (reader->active()) {
-		setFocusPolicy(Qt::ClickFocus);
-	}
-	reader->activeValue(
-	) | rpl::on_next([=](bool active) {
-		setFocusPolicy(active ? Qt::ClickFocus : Qt::NoFocus);
-	}, lifetime());
 	using namespace rpl::mappers;
 
 	Integration::Instance().forcePopupMenuHideRequests(

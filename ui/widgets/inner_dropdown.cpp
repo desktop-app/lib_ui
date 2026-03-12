@@ -188,11 +188,15 @@ void InnerDropdown::showAnimated() {
 }
 
 void InnerDropdown::hideAnimated(HideOption option) {
-	if (isHidden()) return;
+	if (isHidden()) {
+		return;
+	}
 	if (option == HideOption::IgnoreShow) {
 		_ignoreShowEvents = true;
 	}
-	if (_hiding) return;
+	if (_hiding) {
+		return;
+	}
 
 	_hideTimer.cancel();
 	startOpacityAnimation(true);
@@ -218,18 +222,32 @@ void InnerDropdown::showFast() {
 	finishAnimating();
 	if (isHidden()) {
 		showChildren();
-		show();
+		saveFocusWidgetAndShow();
 	}
 	_hiding = false;
 }
 
 void InnerDropdown::hideFast() {
-	if (isHidden()) return;
-
+	if (isHidden()) {
+		return;
+	}
 	_hideTimer.cancel();
 	finishAnimating();
 	_hiding = false;
 	hideFinished();
+}
+
+void InnerDropdown::saveFocusWidgetAndShow() {
+	_savedFocusWidget = window()->focusWidget();
+	show();
+}
+
+void InnerDropdown::maybeReturnFocus() {
+	if (const auto was = base::take(_savedFocusWidget).data()) {
+		if (InFocusChain(this)) {
+			was->setFocus();
+		}
+	}
 }
 
 void InnerDropdown::hideFinished() {
@@ -239,7 +257,8 @@ void InnerDropdown::hideFinished() {
 	_ignoreShowEvents = false;
 	if (!isHidden()) {
 		const auto weak = base::make_weak(this);
-		if (const auto onstack = _hiddenCallback) {
+		maybeReturnFocus();
+		if (const auto onstack = weak ? _hiddenCallback : nullptr) {
 			onstack();
 		}
 		if (weak) {
@@ -266,7 +285,8 @@ void InnerDropdown::prepareCache() {
 void InnerDropdown::startOpacityAnimation(bool hiding) {
 	const auto weak = base::make_weak(this);
 	if (hiding) {
-		if (const auto onstack = _hideStartCallback) {
+		maybeReturnFocus();
+		if (const auto onstack = weak ? _hideStartCallback : nullptr) {
 			onstack();
 		}
 	} else if (const auto onstack = _showStartCallback) {
@@ -288,9 +308,10 @@ void InnerDropdown::startOpacityAnimation(bool hiding) {
 }
 
 void InnerDropdown::showStarted() {
-	if (_ignoreShowEvents) return;
-	if (isHidden()) {
-		show();
+	if (_ignoreShowEvents) {
+		return;
+	} else if (isHidden()) {
+		saveFocusWidgetAndShow();
 		startShowAnimation();
 		return;
 	} else if (!_hiding) {

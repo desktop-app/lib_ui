@@ -400,6 +400,7 @@ public:
 
 	[[nodiscard]] virtual QAccessibleInterface *accessibilityCreate();
 	[[nodiscard]] virtual QAccessible::Role accessibilityRole();
+	[[nodiscard]] virtual Qt::FocusPolicy accessibilityFocusPolicy();
 	[[nodiscard]] virtual QString accessibilityName();
 	void accessibilityNameChanged();
 	[[nodiscard]] virtual QString accessibilityDescription();

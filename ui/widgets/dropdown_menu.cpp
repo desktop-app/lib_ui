@@ -7,7 +7,6 @@
 #include "ui/widgets/dropdown_menu.h"
 
 #include <QtGui/QtEvents>
-#include <QtWidgets/QApplication>
 
 namespace Ui {
 
@@ -32,15 +31,6 @@ DropdownMenu::DropdownMenu(QWidget *parent, const style::DropdownMenu &st) : Inn
 //}
 
 void DropdownMenu::init() {
-	QObject::connect(
-		qApp,
-		&QApplication::focusChanged,
-		this,
-		[this](QWidget *old, QWidget *now) {
-			if (now && isAncestorOf(now) && old && !isAncestorOf(old)) {
-				_previousFocusWidget = old;
-			}
-		});
 	InnerDropdown::setHiddenCallback([this] { hideFinish(); });
 
 	_menu->resizesFromInner(
@@ -243,10 +233,6 @@ void DropdownMenu::childHiding(DropdownMenu *child) {
 
 void DropdownMenu::hideFinish() {
 	_menu->clearSelection();
-	if (const auto widget = _previousFocusWidget.data()) {
-		widget->setFocus();
-		_previousFocusWidget = nullptr;
-	}
 	if (const auto onstack = _hiddenCallback) {
 		onstack();
 	}

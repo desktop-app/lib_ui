@@ -45,21 +45,19 @@ FocusManager::FocusManager() : _cleanupTimer([=] { cleanup(); }) {
 
 		cleanup();
 		for (const auto &widget : _widgets) {
-			widget->setFocusPolicy(active ? Qt::TabFocus : Qt::NoFocus);
+			widget->setFocusPolicy(active
+				? widget->accessibilityFocusPolicy()
+				: Qt::NoFocus);
 		}
 	}, _lifetime);
 }
 
 void FocusManager::registerWidget(not_null<RpWidget*> widget) {
-	const auto role = widget->accessibilityRole();
-	if (role != QAccessible::Role::Button
-		&& role != QAccessible::Role::Link
-		&& role != QAccessible::Role::CheckBox
-		&& role != QAccessible::Role::Slider) {
+	const auto policy = widget->accessibilityFocusPolicy();
+	if (policy == Qt::NoFocus) {
 		return;
-	}
-	if (_active) {
-		widget->setFocusPolicy(Qt::TabFocus);
+	} else if (_active) {
+		widget->setFocusPolicy(policy);
 	}
 	_widgets.push_back(widget.get());
 	if (!_cleanupTimer.isActive()) {

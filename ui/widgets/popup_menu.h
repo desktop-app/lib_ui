@@ -44,6 +44,9 @@ public:
 	QAccessible::Role accessibilityRole() override {
 		return QAccessible::Role::PopupMenu;
 	}
+	Qt::FocusPolicy accessibilityFocusPolicy() override {
+		return Qt::ClickFocus;
+	}
 	RpWidget *accessibilityParent() const override;
 
 	[[nodiscard]] const style::PopupMenu &st() const {

@@ -7,7 +7,6 @@
 #include "ui/widgets/menu/menu_item_base.h"
 
 #include "ui/widgets/menu/menu.h"
-#include "base/screen_reader_state.h"
 
 namespace Ui::Menu {
 
@@ -16,14 +15,6 @@ ItemBase::ItemBase(
 	const style::Menu &st)
 : RippleButton(parent, st.ripple)
 , _menu(parent) {
-	const auto reader = base::ScreenReaderState::Instance();
-	if (reader->active()) {
-		setFocusPolicy(Qt::ClickFocus);
-	}
-	reader->activeValue(
-	) | rpl::on_next([=](bool active) {
-		setFocusPolicy(active ? Qt::ClickFocus : Qt::NoFocus);
-	}, lifetime());
 }
 
 void ItemBase::setSelected(
@@ -37,7 +28,7 @@ void ItemBase::setSelected(
 		_lastTriggeredSource = source;
 		_selected = selected;
 		update();
-		if (selected) {
+		if (selected && focusPolicy() != Qt::NoFocus) {
 			setFocus();
 			QAccessibleEvent event(this, QAccessible::Focus);
 			QAccessible::updateAccessibility(&event);
