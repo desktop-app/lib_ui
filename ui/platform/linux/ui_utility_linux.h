@@ -39,5 +39,9 @@ inline constexpr bool UseMainQueueGeneric() {
 inline void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu) {
 }
 
+inline SystemTextReplaceResult FindSystemTextReplace(const QString &) {
+	return {};
+}
+
 } // namespace Platform
 } // namespace Ui

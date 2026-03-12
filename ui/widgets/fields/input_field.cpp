@@ -12,6 +12,7 @@
 #include "base/invoke_queued.h"
 #include "base/qthelp_regex.h"
 #include "base/random.h"
+#include "ui/platform/ui_platform_utility.h"
 #include "emoji_suggestions_helper.h"
 #include "ui/text/text.h"
 #include "ui/text/text_renderer.h" // kQuoteCollapsedLines
@@ -37,6 +38,8 @@
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QTextEdit>
 #include <QShortcut>
+
+#include <crl/crl_async.h>
 
 namespace Ui {
 namespace {
@@ -1532,6 +1535,9 @@ InputField::InputField(
 , _inner(std::make_unique<Inner>(this))
 , _lastTextWithTags(value)
 , _placeholderFull(std::move(placeholder)) {
+#ifdef Q_OS_MAC
+	_systemTextReplaces = std::make_unique<SystemTextReplaces>();
+#endif
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
 	_inner->setAcceptRichText(false);
 	resize(_st.width, _minHeight);
@@ -1863,12 +1869,21 @@ void InputField::setInstantReplaces(const InstantReplaces &replaces) {
 	_mutableInstantReplaces = replaces;
 }
 
-void InputField::setInstantReplacesEnabled(rpl::producer<bool> enabled) {
+void InputField::setInstantReplacesEnabled(
+		rpl::producer<bool> enabled,
+		rpl::producer<bool> systemTextReplacesEnabled) {
 	std::move(
 		enabled
 	) | rpl::on_next([=](bool value) {
 		_instantReplacesEnabled = value;
 	}, lifetime());
+	if (systemTextReplacesEnabled) {
+		std::move(
+			systemTextReplacesEnabled
+		) | rpl::on_next([=](bool value) {
+			_systemTextReplacesEnabled = value;
+		}, lifetime());
+	}
 }
 
 void InputField::setMarkdownReplacesEnabled(bool enabled) {
@@ -3978,7 +3993,7 @@ bool InputField::ShouldSubmit(
 void InputField::keyPressEventInner(QKeyEvent *e) {
 	const auto shift = e->modifiers().testFlag(Qt::ShiftModifier);
 	const auto alt = e->modifiers().testFlag(Qt::AltModifier);
-	const auto macmeta = Platform::IsMac()
+	const auto macmeta = ::Platform::IsMac()
 		&& e->modifiers().testFlag(Qt::ControlModifier)
 		&& !e->modifiers().testFlag(Qt::MetaModifier)
 		&& !e->modifiers().testFlag(Qt::AltModifier);
@@ -4157,6 +4172,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		if (!processMarkdownReplaces(text)) {
 			processInstantReplaces(text);
 		}
+		processSystemTextReplaces(text);
 	}
 }
 
@@ -4414,6 +4430,7 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 		if (!processMarkdownReplaces(text)) {
 			processInstantReplaces(text);
 		}
+		processSystemTextReplaces(text);
 	}
 }
 
@@ -4497,6 +4514,98 @@ void InputField::processInstantReplaces(const QString &appended) {
 		}
 		node = &it->second;
 	} while (true);
+}
+
+void InputField::processSystemTextReplaces(const QString &appended) {
+	if (!_systemTextReplacesEnabled
+		|| !_systemTextReplaces
+		|| appended.size() != 1
+		|| appended[0].isLetterOrNumber()) {
+		return;
+	}
+	const auto position = textCursor().position();
+	if (position < 2) {
+		return;
+	}
+	for (const auto &tag : _lastMarkdownTags) {
+		if (tag.internalStart < position
+			&& tag.internalStart + tag.internalLength >= position
+			&& (tag.tag == kTagCode || IsTagPre(tag.tag))) {
+			return;
+		}
+	}
+	const auto lookBack = std::min(position - 1, 100);
+	const auto from = position - 1 - lookBack;
+	auto selectCursor = textCursor();
+	selectCursor.setPosition(from);
+	selectCursor.setPosition(position - 1, QTextCursor::KeepAnchor);
+	const auto textBefore = selectCursor.selectedText();
+	if (textBefore.isEmpty()) {
+		return;
+	}
+
+	auto endAnchor = textCursor();
+	endAnchor.setPosition(position - 1);
+
+	const auto id = ++_systemTextReplaces->nextId;
+	_systemTextReplaces->pending.push_back({
+		.id = id,
+		.endAnchor = endAnchor,
+		.textSent = textBefore,
+	});
+
+	const auto weak = base::make_weak(this);
+	crl::async([text = textBefore, weak, id] {
+		const auto result = Platform::FindSystemTextReplace(text);
+		crl::on_main(weak, [=] {
+			weak->applySystemTextReplace(
+				id,
+				result.length,
+				result.replacement);
+		});
+	});
+}
+
+void InputField::applySystemTextReplace(
+		uint64 id,
+		int matchLength,
+		const QString &replacement) {
+	if (!_systemTextReplaces) {
+		return;
+	}
+	const auto it = ranges::find(
+		_systemTextReplaces->pending,
+		id,
+		&SystemTextReplaces::PendingCheck::id);
+	if (it == end(_systemTextReplaces->pending)) {
+		return;
+	}
+	const auto pending = *it;
+	_systemTextReplaces->pending.erase(it);
+
+	if (matchLength <= 0) {
+		return;
+	}
+	const auto anchorPos = pending.endAnchor.position();
+	const auto from = anchorPos - matchLength;
+	if (from < 0) {
+		return;
+	}
+	const auto till = anchorPos;
+	const auto original = pending.textSent.mid(
+		pending.textSent.size() - matchLength);
+	auto sanitized = replacement;
+	if (_mode != Mode::MultiLine) {
+		sanitized.replace('\n', ' ');
+		sanitized.replace('\r', ' ');
+	}
+	commitInstantReplacement(
+		from,
+		till,
+		sanitized,
+		QString(),
+		original,
+		true);
 }
 
 void InputField::applyInstantReplace(

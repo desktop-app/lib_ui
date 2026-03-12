@@ -44,6 +44,13 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point);
 
 void FixPopupMenuNativeEmojiPopup(not_null<PopupMenu*> menu);
 
+struct SystemTextReplaceResult {
+	int length = 0;
+	QString replacement;
+};
+[[nodiscard]] SystemTextReplaceResult FindSystemTextReplace(
+	const QString &text);
+
 } // namespace Ui::Platform
 
 // Platform dependent implementations.

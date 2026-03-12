@@ -52,5 +52,9 @@ inline bool WindowMarginsSupported() {
 inline void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 }
 
+inline SystemTextReplaceResult FindSystemTextReplace(const QString &) {
+	return {};
+}
+
 } // namespace Platform
 } // namespace Ui
