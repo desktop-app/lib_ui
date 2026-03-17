@@ -287,6 +287,7 @@ public:
 		int afterSymbols = 0);
 	void setPlaceholderHidden(bool forcePlaceholderHidden);
 	void setDisplayFocused(bool focused);
+	[[nodiscard]] QMargins fullTextMargins() const;
 	void finishAnimating();
 	void setFocusFast() {
 		setDisplayFocused(true);

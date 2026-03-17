@@ -2479,12 +2479,9 @@ void InputField::paintEvent(QPaintEvent *e) {
 	const auto focusedDegree = _a_focused.value(_focused ? 1. : 0.);
 	paintSurrounding(p, r, errorDegree, focusedDegree);
 
-	const auto skip = int(base::SafeRound(_inner->document()->documentMargin()));
-	const auto margins = _st.textMargins
-		+ _st.placeholderMargins
-		+ QMargins(skip, skip + _placeholderCustomFontSkip, skip, 0)
-		+ _additionalMargins
-		+ _customFontMargins;
+	const auto margins = fullTextMargins()
+		+ QMargins(0, _placeholderCustomFontSkip, 0, 0)
+		+ _st.placeholderMargins;
 
 	if (_st.placeholderScale > 0. && !_placeholderPath.isEmpty()) {
 		auto placeholderShiftDegree = _a_placeholderShifted.value(_placeholderShifted ? 1. : 0.);
@@ -3702,6 +3699,15 @@ void InputField::highlightMarkdown() {
 	if (const auto till = cursor.position(); till > from) {
 		applyColor(from, till, QColor(0, 0, 0));
 	}
+}
+
+QMargins InputField::fullTextMargins() const {
+	const auto skip = int(base::SafeRound(
+		_inner->document()->documentMargin()));
+	return _st.textMargins
+		+ QMargins(skip, skip, skip, 0)
+		+ _additionalMargins
+		+ _customFontMargins;
 }
 
 void InputField::setDisplayFocused(bool focused) {
