@@ -87,6 +87,31 @@ private:
 
 };
 
+class RoundCheckView : public AbstractCheckView {
+public:
+	RoundCheckView(
+		const style::Check &st,
+		bool checked,
+		Fn<void()> updateCallback = nullptr);
+
+	void setStyle(const style::Check &st);
+
+	QSize getSize() const override;
+	void paint(QPainter &p, int left, int top, int outerWidth) override;
+	QImage prepareRippleMask() const override;
+	bool checkRippleStartPosition(QPoint position) const override;
+
+	void setUntoggledOverride(
+		std::optional<QColor> untoggledOverride);
+
+private:
+	QSize rippleSize() const;
+
+	not_null<const style::Check*> _st;
+	std::optional<QColor> _untoggledOverride;
+
+};
+
 class RadioView : public AbstractCheckView {
 public:
 	RadioView(

@@ -316,6 +316,68 @@ Fn<void()> CheckView::PrepareNonToggledError(
 	};
 }
 
+RoundCheckView::RoundCheckView(
+	const style::Check &st,
+	bool checked,
+	Fn<void()> updateCallback)
+: AbstractCheckView(st.duration, checked, std::move(updateCallback))
+, _st(&st) {
+}
+
+QSize RoundCheckView::getSize() const {
+	return QSize(_st->diameter, _st->diameter);
+}
+
+void RoundCheckView::setStyle(const style::Check &st) {
+	_st = &st;
+}
+
+void RoundCheckView::paint(QPainter &p, int left, int top, int outerWidth) {
+	auto toggled = currentAnimationValue();
+	auto pen = _untoggledOverride
+		? anim::pen(*_untoggledOverride, _st->toggledFg, toggled)
+		: anim::pen(_st->untoggledFg, _st->toggledFg, toggled);
+	pen.setWidth(_st->thickness);
+	p.setPen(pen);
+	p.setBrush(anim::brush(
+		_st->bg,
+		(_untoggledOverride
+			? anim::color(*_untoggledOverride, _st->toggledFg, toggled)
+			: anim::color(_st->untoggledFg, _st->toggledFg, toggled)),
+		toggled));
+
+	{
+		PainterHighQualityEnabler hq(p);
+		const auto remove = _st->thickness / 2.;
+		p.drawEllipse(style::rtlrect(
+			QRectF(left, top, _st->diameter, _st->diameter).marginsRemoved(
+				QMarginsF(remove, remove, remove, remove)), outerWidth));
+	}
+
+	if (toggled > 0) {
+		_st->icon.paint(p, QPoint(left, top), outerWidth);
+	}
+}
+
+QSize RoundCheckView::rippleSize() const {
+	return getSize()
+		+ 2 * QSize(_st->rippleAreaPadding, _st->rippleAreaPadding);
+}
+
+QImage RoundCheckView::prepareRippleMask() const {
+	return RippleAnimation::EllipseMask(rippleSize());
+}
+
+bool RoundCheckView::checkRippleStartPosition(QPoint position) const {
+	return QRect(QPoint(0, 0), rippleSize()).contains(position);
+}
+
+void RoundCheckView::setUntoggledOverride(
+		std::optional<QColor> untoggledOverride) {
+	_untoggledOverride = untoggledOverride;
+	update();
+}
+
 RadioView::RadioView(
 	const style::Radio &st,
 	bool checked,
