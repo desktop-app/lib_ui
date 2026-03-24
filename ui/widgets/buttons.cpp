@@ -594,6 +594,11 @@ void IconButton::setIconOverride(const style::icon *iconOverride, const style::i
 	update();
 }
 
+void IconButton::setIconColorOverride(std::optional<QColor> colorOverride) {
+	_iconColorOverride = colorOverride;
+	update();
+}
+
 void IconButton::setRippleColorOverride(const style::color *colorOverride) {
 	_rippleColorOverride = colorOverride;
 }
@@ -634,12 +639,20 @@ void IconButton::paintEvent(QPaintEvent *e) {
 	if (position.y() < 0) {
 		position.setY((height() - icon->height()) / 2);
 	}
-	icon->paint(p, position, width());
+	if (_iconColorOverride) {
+		icon->paint(p, position, width(), *_iconColorOverride);
+	} else {
+		icon->paint(p, position, width());
+	}
 	if (overIconOpacity > 0. && overIconOpacity < 1.) {
 		const auto iconOver = overIcon();
 		if (iconOver != icon) {
 			p.setOpacity(overIconOpacity);
-			iconOver->paint(p, position, width());
+			if (_iconColorOverride) {
+				iconOver->paint(p, position, width(), *_iconColorOverride);
+			} else {
+				iconOver->paint(p, position, width());
+			}
 		}
 	}
 }

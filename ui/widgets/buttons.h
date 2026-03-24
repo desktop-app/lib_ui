@@ -223,6 +223,7 @@ public:
 
 	// Pass nullptr to restore the default icon.
 	void setIconOverride(const style::icon *iconOverride, const style::icon *iconOverOverride = nullptr);
+	void setIconColorOverride(std::optional<QColor> colorOverride);
 	void setRippleColorOverride(const style::color *colorOverride);
 
 protected:
@@ -240,6 +241,7 @@ private:
 	const style::icon *_iconOverride = nullptr;
 	const style::icon *_iconOverrideOver = nullptr;
 	const style::color *_rippleColorOverride = nullptr;
+	std::optional<QColor> _iconColorOverride;
 
 	Ui::Animations::Simple _a_over;
 
