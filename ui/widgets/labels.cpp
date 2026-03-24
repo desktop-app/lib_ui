@@ -335,6 +335,11 @@ void FlatLabel::setSkipBlock(int width, int height) {
 	refreshSize();
 }
 
+void FlatLabel::setColors(std::span<Text::SpecialColor> colors) {
+	_colors = colors;
+	update();
+}
+
 int FlatLabel::resizeGetHeight(int newWidth) {
 	_textWidth = countTextWidth(newWidth);
 	return countTextHeight(_textWidth);
@@ -1006,6 +1011,7 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 		.align = _st.align,
 		.clip = e->rect(),
 		.palette = &_st.palette,
+		.colors = _colors,
 		.spoiler = Text::DefaultSpoilerCache(),
 		.now = crl::now(),
 		.pausedEmoji = (paused == WhichAnimationsPaused::CustomEmoji

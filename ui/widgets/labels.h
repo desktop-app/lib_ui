@@ -149,6 +149,7 @@ public:
 	void setBreakEverywhere(bool breakEverywhere);
 	void setTryMakeSimilarLines(bool tryMakeSimilarLines);
 	void setSkipBlock(int width, int height);
+	void setColors(std::span<Text::SpecialColor> colors);
 	enum class WhichAnimationsPaused {
 		None,
 		CustomEmoji,
@@ -252,6 +253,7 @@ private:
 	bool _tryMakeSimilarLines = false;
 	int _skipBlockWidth = 0;
 	int _skipBlockHeight = 0;
+	std::span<Text::SpecialColor> _colors;
 
 	style::cursor _cursor = style::cur_default;
 	bool _selectable = false;
