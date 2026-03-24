@@ -148,6 +148,7 @@ public:
 	void setContextCopyText(const QString &copyText);
 	void setBreakEverywhere(bool breakEverywhere);
 	void setTryMakeSimilarLines(bool tryMakeSimilarLines);
+	void setSkipBlock(int width, int height);
 	enum class WhichAnimationsPaused {
 		None,
 		CustomEmoji,
@@ -249,6 +250,8 @@ private:
 	int _fullTextHeight = 0;
 	bool _breakEverywhere = false;
 	bool _tryMakeSimilarLines = false;
+	int _skipBlockWidth = 0;
+	int _skipBlockHeight = 0;
 
 	style::cursor _cursor = style::cur_default;
 	bool _selectable = false;

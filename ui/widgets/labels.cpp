@@ -265,6 +265,9 @@ void FlatLabel::init() {
 
 void FlatLabel::textUpdated() {
 	accessibilityNameChanged();
+	if (_skipBlockWidth > 0 && _skipBlockHeight > 0) {
+		_text.updateSkipBlock(_skipBlockWidth, _skipBlockHeight);
+	}
 	refreshSize();
 	setMouseTracking(_selectable || _text.hasLinks());
 	if (_text.hasSpoilers()) {
@@ -316,6 +319,20 @@ void FlatLabel::setBreakEverywhere(bool breakEverywhere) {
 
 void FlatLabel::setTryMakeSimilarLines(bool tryMakeSimilarLines) {
 	_tryMakeSimilarLines = tryMakeSimilarLines;
+}
+
+void FlatLabel::setSkipBlock(int width, int height) {
+	if (_skipBlockWidth == width && _skipBlockHeight == height) {
+		return;
+	}
+	_skipBlockWidth = width;
+	_skipBlockHeight = height;
+	if (width > 0 && height > 0) {
+		_text.updateSkipBlock(width, height);
+	} else {
+		_text.removeSkipBlock();
+	}
+	refreshSize();
 }
 
 int FlatLabel::resizeGetHeight(int newWidth) {
