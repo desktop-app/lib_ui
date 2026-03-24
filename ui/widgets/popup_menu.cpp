@@ -18,7 +18,7 @@
 #include "ui/integration.h"
 #include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
-#include "base/screen_reader_state.h"
+#include "ui/screen_reader_mode.h"
 
 #include <QtGui/QtEvents>
 #include <QtGui/QPainter>
@@ -1143,7 +1143,7 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 	Platform::ShowOverAll(this);
 	raise();
 	activateWindow();
-	if (base::ScreenReaderState::Instance()->active()) {
+	if (Ui::ScreenReaderModeActive()) {
 		_menu->setShowSource(TriggeredSource::Keyboard);
 	} else {
 		_menu->setShowSource(source);

@@ -6,8 +6,8 @@
 //
 #include "ui/widgets/checkbox.h"
 
-#include "base/screen_reader_state.h"
 #include "ui/effects/ripple_animation.h"
+#include "ui/screen_reader_mode.h"
 #include "ui/basic_click_handlers.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
@@ -1013,10 +1013,7 @@ Radiobutton::Radiobutton(
 }
 
 void Radiobutton::trackScreenReaderState() {
-	const auto reader = base::ScreenReaderState::Instance();
-	if (checkbox()->checked() && reader->active()) {
-		// We had a group without checked item before,
-		// so they all wrongfully have StrongFocus policy.
+	if (checkbox()->checked() && Ui::ScreenReaderModeActive()) {
 		for (const auto &button : _group->_buttons) {
 			if (button != this) {
 				button->setFocusPolicy(Qt::NoFocus);
@@ -1028,7 +1025,7 @@ void Radiobutton::trackScreenReaderState() {
 		return std::make_optional(v);
 	});
 	rpl::combine(
-		reader->activeValue(),
+		Ui::ScreenReaderModeActiveValue(),
 		(_group->hasValue()
 			? (std::move(maybeValue) | rpl::type_erased)
 			: rpl::single(

@@ -8,10 +8,10 @@
 
 #include "base/debug_log.h"
 #include "base/integration.h"
-#include "base/screen_reader_state.h"
 #include "base/timer.h"
 #include "ui/accessible/ui_accessible_item.h"
 #include "ui/rp_widget.h"
+#include "ui/screen_reader_mode.h"
 
 #include <algorithm>
 
@@ -38,7 +38,7 @@ private:
 };
 
 FocusManager::FocusManager() : _cleanupTimer([=] { cleanup(); }) {
-	base::ScreenReaderState::Instance()->activeValue(
+	Ui::ScreenReaderModeActiveValue(
 	) | rpl::on_next([=](bool active) {
 		_active = active;
 		LOG(("Screen Reader: %1").arg(active ? "active" : "inactive"));
