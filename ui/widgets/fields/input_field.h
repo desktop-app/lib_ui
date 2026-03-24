@@ -253,6 +253,8 @@ public:
 		std::shared_ptr<QContextMenuEvent> event;
 	};
 
+	void setPlaceholderColorOverride(const style::color &color);
+
 	void setDocumentMargin(float64 margin);
 	void setAdditionalMargin(int margin);
 	void setAdditionalMargins(QMargins margins);
@@ -558,6 +560,7 @@ private:
 	void touchFinish();
 
 	const style::InputField &_st;
+	std::optional<style::color> _placeholderFgOverride;
 	Fn<not_null<Ui::Text::QuotePaintCache*>()> _preCache;
 	Fn<not_null<Ui::Text::QuotePaintCache*>()> _blockquoteCache;
 

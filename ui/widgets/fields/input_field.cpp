@@ -2182,6 +2182,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
 	}
 }
 
+void InputField::setPlaceholderColorOverride(const style::color &color) {
+	_placeholderFgOverride = color;
+	update();
+}
+
 void InputField::setDocumentMargin(float64 margin) {
 	_settingDocumentMargin = true;
 	document()->setDocumentMargin(margin);
@@ -2495,8 +2500,11 @@ void InputField::paintEvent(QPaintEvent *e) {
 		if (style::RightToLeft()) r.moveLeft(width() - r.left() - r.width());
 
 		auto placeholderScale = 1. - (1. - _st.placeholderScale) * placeholderShiftDegree;
-		auto placeholderFg = anim::color(_st.placeholderFg, _st.placeholderFgActive, focusedDegree);
-		placeholderFg = anim::color(placeholderFg, _st.placeholderFgError, errorDegree);
+		const auto &phFg = _placeholderFgOverride.value_or(_st.placeholderFg);
+		const auto &phFgActive = _placeholderFgOverride.value_or(_st.placeholderFgActive);
+		const auto &phFgError = _placeholderFgOverride.value_or(_st.placeholderFgError);
+		auto placeholderFg = anim::color(phFg, phFgActive, focusedDegree);
+		placeholderFg = anim::color(placeholderFg, phFgError, errorDegree);
 
 		PainterHighQualityEnabler hq(p);
 		p.setPen(Qt::NoPen);
@@ -2516,7 +2524,9 @@ void InputField::paintEvent(QPaintEvent *e) {
 			const auto placeholderLeft = anim::interpolate(0, -_st.placeholderShift, placeholderHiddenDegree);
 
 			p.setFont(_st.placeholderFont);
-			p.setPen(anim::pen(_st.placeholderFg, _st.placeholderFgActive, focusedDegree));
+			const auto &phFg2 = _placeholderFgOverride.value_or(_st.placeholderFg);
+			const auto &phFgActive2 = _placeholderFgOverride.value_or(_st.placeholderFgActive);
+			p.setPen(anim::pen(phFg2, phFgActive2, focusedDegree));
 			if (_st.placeholderAlign == style::al_topleft && _placeholderAfterSymbols > 0) {
 				const auto skipWidth = placeholderSkipWidth();
 				p.drawText(
