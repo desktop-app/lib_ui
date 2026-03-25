@@ -196,6 +196,8 @@ public:
 		QPoint fromPosition = QPoint(),
 		QPoint toPosition = QPoint());
 
+	[[nodiscard]] std::vector<int> countLineWidths() const;
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;

@@ -829,6 +829,15 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
 	return result;
 }
 
+std::vector<int> FlatLabel::countLineWidths() const {
+	const auto textWidth = _textWidth
+		? _textWidth
+		: (width() - _st.margin.left() - _st.margin.right());
+	return _text.countLineWidths(textWidth, {
+		.breakEverywhere = _breakEverywhere,
+	});
+}
+
 std::unique_ptr<CrossFadeAnimation> FlatLabel::CrossFade(
 		not_null<FlatLabel*> from,
 		not_null<FlatLabel*> to,
