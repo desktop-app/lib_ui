@@ -253,4 +253,19 @@ private:
 
 };
 
+template <typename Scroll>
+void SetStickyBottomScroll(
+		Scroll *scroll,
+		not_null<RpWidget*> inner) {
+	Expects(scroll != nullptr);
+	inner->heightValue(
+	) | rpl::combine_previous(
+	) | rpl::on_next([=](int previous, int height) {
+		if (scroll->scrollTop() + scroll->scrollHeight() >= previous) {
+			const auto visible = scroll->scrollHeight();
+			scroll->scrollToY(height - visible, height);
+		}
+	}, inner->lifetime());
+}
+
 } // namespace Ui
