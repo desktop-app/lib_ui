@@ -15,7 +15,7 @@
 #include "ui/layers/show.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/animation_value.h"
-#include "ui/text/text_entity.h"
+#include "ui/text/text_variant.h"
 #include "ui/rp_widget.h"
 
 enum class RectPart;
@@ -67,7 +67,9 @@ public:
 	virtual void setLayerType(bool layerType) = 0;
 	virtual void setStyle(const style::Box &st) = 0;
 	virtual const style::Box &style() = 0;
-	virtual void setTitle(rpl::producer<TextWithEntities> title) = 0;
+	virtual void setTitle(
+		rpl::producer<TextWithEntities> title,
+		Text::MarkedContext context = {}) = 0;
 	virtual void setAdditionalTitle(rpl::producer<QString> additional) = 0;
 	virtual void setCloseByOutsideClick(bool close) = 0;
 
@@ -128,10 +130,7 @@ public:
 		getDelegate()->triggerButton(index);
 	}
 
-	void setTitle(rpl::producer<QString> title);
-	void setTitle(rpl::producer<TextWithEntities> title) {
-		getDelegate()->setTitle(std::move(title));
-	}
+	void setTitle(v::text::data title, Text::MarkedContext context = {});
 	void setAdditionalTitle(rpl::producer<QString> additional) {
 		getDelegate()->setAdditionalTitle(std::move(additional));
 	}

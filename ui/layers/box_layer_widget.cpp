@@ -165,10 +165,17 @@ void BoxLayerWidget::parentResized() {
 	update();
 }
 
-void BoxLayerWidget::setTitle(rpl::producer<TextWithEntities> title) {
+void BoxLayerWidget::setTitle(
+		rpl::producer<TextWithEntities> title,
+		Text::MarkedContext context) {
 	const auto wasTitle = hasTitle();
 	if (title) {
-		_title.create(this, rpl::duplicate(title), st().title);
+		_title.create(
+			this,
+			rpl::duplicate(title),
+			st().title,
+			st::defaultPopupMenu,
+			context);
 		_title->show();
 		std::move(
 			title
