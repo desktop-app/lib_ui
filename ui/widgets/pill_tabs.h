@@ -28,6 +28,7 @@ public:
 		const style::PillTabs &st = st::defaultPillTabs);
 
 	void setActiveIndex(int index);
+	void setOpacity(float64 opacity);
 	[[nodiscard]] int activeIndex() const;
 	[[nodiscard]] rpl::producer<int> activeIndexChanges() const;
 
@@ -38,6 +39,7 @@ private:
 	const style::PillTabs &_st;
 	std::vector<QString> _labels;
 	int _activeIndex = 0;
+	float64 _opacity = 1.;
 	Animations::Simple _animation;
 	float64 _animatedPosition = 0.;
 	rpl::event_stream<int> _activeIndexChanges;

@@ -61,6 +61,13 @@ void PillTabs::setActiveIndex(int index) {
 	_activeIndexChanges.fire_copy(index);
 }
 
+void PillTabs::setOpacity(float64 opacity) {
+	if (_opacity != opacity) {
+		_opacity = opacity;
+		update();
+	}
+}
+
 int PillTabs::activeIndex() const {
 	return _activeIndex;
 }
@@ -92,6 +99,9 @@ void PillTabs::paint() {
 		return;
 	}
 	auto p = QPainter(this);
+	if (_opacity < 1.) {
+		p.setOpacity(_opacity);
+	}
 	auto hq = PainterHighQualityEnabler(p);
 	const auto r = rect();
 	const auto h = _st.height;
