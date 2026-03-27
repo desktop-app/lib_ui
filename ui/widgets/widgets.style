@@ -272,6 +272,18 @@ PopupMenu {
 	showDuration: int;
 }
 
+PillTabs {
+	height: pixels;
+	margin: pixels;
+	borderWidth: pixels;
+	textStyle: TextStyle;
+	fg: color;
+	fgActive: color;
+	bg: color;
+	bgActive: color;
+	duration: int;
+}
+
 InputField {
 	textBg: color;
 	textBgActive: color; // Used only with borderRadius.
@@ -979,6 +991,18 @@ defaultPopupMenu: PopupMenu {
 	radius: 8px;
 	duration: 150;
 	showDuration: 200;
+}
+
+defaultPillTabs: PillTabs {
+	height: 36px;
+	margin: 4px;
+	borderWidth: 2px;
+	textStyle: semiboldTextStyle;
+	fg: windowSubTextFg;
+	fgActive: windowActiveTextFg;
+	bg: transparent;
+	bgActive: windowBgOver;
+	duration: 300;
 }
 
 boxTextStyle: TextStyle(defaultTextStyle) {

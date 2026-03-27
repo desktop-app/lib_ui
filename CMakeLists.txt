@@ -246,6 +246,8 @@ PRIVATE
     ui/widgets/menu/menu_toggle.h
     ui/widgets/elastic_scroll.cpp
     ui/widgets/elastic_scroll.h
+    ui/widgets/pill_tabs.cpp
+    ui/widgets/pill_tabs.h
     ui/widgets/popup_menu.cpp
     ui/widgets/popup_menu.h
     ui/widgets/rp_window.cpp
