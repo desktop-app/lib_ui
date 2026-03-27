@@ -70,6 +70,7 @@ public:
 		crl::time duration,
 		anim::transition transition = anim::linear);
 	void stop();
+	void setFinishedCallback(Fn<void()> callback);
 	[[nodiscard]] bool animating() const;
 	[[nodiscard]] float64 value(float64 final) const;
 
@@ -115,6 +116,7 @@ private:
 		float64 delta = 0.;
 		float64 value = 0.;
 		float64 duration = 0.;
+		Fn<void()> finishedCallback;
 		bool *markOnDelete = nullptr;
 		ShortTracker tracker;
 	};
@@ -393,7 +395,10 @@ inline void Simple::start(
 		const auto result = callback(that->value) && !finished;
 		if (!deleted) {
 			that->markOnDelete = nullptr;
-			if (!result) {
+			if (finished && that->finishedCallback) {
+				that->finishedCallback();
+			}
+			if (!deleted && !result) {
 				that->tracker.release();
 			}
 		}
@@ -421,6 +426,12 @@ inline void Simple::prepare(float64 from, crl::time duration) {
 	}
 	if (isLong) {
 		_data->tracker.release();
+	}
+}
+
+inline void Simple::setFinishedCallback(Fn<void()> callback) {
+	if (_data) {
+		_data->finishedCallback = std::move(callback);
 	}
 }
 
