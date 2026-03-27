@@ -631,8 +631,6 @@ SideBarButton {
 
 Toast {
 	style: TextStyle;
-	icon: icon;
-	iconPosition: point;
 	palette: TextPalette;
 	padding: margins;
 	margin: margins;
@@ -1533,6 +1531,8 @@ defaultToastPalette: TextPalette(defaultTextPalette) {
 	linkFg: mediaviewTextLinkFg;
 	monoFg: mediaviewCaptionFg;
 }
+defaultToastLottieSize: size(32px, 32px);
+defaultToastIconPadding: margins(12px, 2px, 12px, 2px);
 defaultToast: Toast {
 	style: defaultTextStyle;
 	palette: defaultToastPalette;

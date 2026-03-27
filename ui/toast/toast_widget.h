@@ -40,7 +40,6 @@ private:
 	QImage _shownProxy;
 
 	object_ptr<RpWidget> _content;
-	rpl::variable<QMargins> _padding;
 	Fn<void(float64)> _updateShownGeometry;
 
 	bool _childrenPaintDisabled : 1 = false;

@@ -10,11 +10,17 @@
 #include "ui/toast/toast_widget.h"
 #include "styles/style_widgets.h"
 
-namespace Ui {
-namespace Toast {
+#include <vector>
+
+namespace Ui::Toast {
 namespace {
 
 QPointer<QWidget> DefaultParent;
+
+[[nodiscard]] auto &IconFactories() {
+	static auto result = std::vector<ToastIconFactory>();
+	return result;
+}
 
 } // namespace
 
@@ -40,6 +46,26 @@ Instance::Instance(
 
 void SetDefaultParent(not_null<QWidget*> parent) {
 	DefaultParent = parent;
+}
+
+void AddIconFactory(ToastIconFactory factory) {
+	if (!factory) {
+		return;
+	}
+
+	IconFactories().push_back(std::move(factory));
+}
+
+object_ptr<RpWidget> internal::MakeIconByFactory(
+		not_null<RpWidget*> parent,
+		const Config &config) {
+	const auto &factories = IconFactories();
+	for (auto i = factories.crbegin(); i != factories.crend(); ++i) {
+		if (auto result = (*i)(parent, config)) {
+			return result;
+		}
+	}
+	return { nullptr };
 }
 
 base::weak_ptr<Instance> Show(
@@ -96,5 +122,4 @@ not_null<RpWidget*> Instance::widget() const {
 	return _widget.get();
 }
 
-} // namespace Toast
-} // namespace Ui
+} // namespace Ui::Toast

@@ -8,14 +8,15 @@
 
 #include "base/object_ptr.h"
 #include "base/weak_ptr.h"
-#include "ui/effects/animations.h"
-#include "ui/text/text_entity.h"
-#include "ui/text/text.h"
 #include "ui/click_handler.h"
+#include "ui/effects/animations.h"
 #include "ui/rect_part.h"
 #include "ui/rp_widget.h"
+#include "ui/style/style_core_types.h"
+#include "ui/text/text.h"
+#include "ui/text/text_entity.h"
 
-#include <any>
+#include <optional>
 
 namespace style {
 struct Toast;
@@ -27,12 +28,20 @@ extern const style::Toast &defaultMultilineToast;
 
 namespace Ui::Toast {
 
+struct Config;
+
+using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
+using ToastIconFactory = Fn<object_ptr<RpWidget>(
+	not_null<RpWidget*> parent,
+	const Config &config)>;
+
 namespace internal {
 class Manager;
 class Widget;
+[[nodiscard]] object_ptr<RpWidget> MakeIconByFactory(
+	not_null<RpWidget*> parent,
+	const Config &config);
 } // namespace internal
-
-using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
 
 inline constexpr auto kDefaultDuration = crl::time(1500);
 struct Config {
@@ -46,6 +55,21 @@ struct Config {
 
 	// Custom way of composing any content.
 	object_ptr<RpWidget> content = { nullptr };
+
+	// Simple icon fields.
+	const style::icon *icon = nullptr;
+
+	// Lottie fields.
+	QString iconLottie;
+	std::optional<style::size> iconLottieSize;
+	anim::repeat iconLottieRepeat = anim::repeat::once;
+
+	// Generic icon-content fields.
+	object_ptr<RpWidget> iconContent = { nullptr };
+
+	// Common fields.
+	style::align iconAlign = style::al_left;
+	std::optional<style::margins> iconPadding;
 
 	rpl::producer<QMargins> padding;
 
@@ -62,6 +86,7 @@ struct Config {
 };
 
 void SetDefaultParent(not_null<QWidget*> parent);
+void AddIconFactory(ToastIconFactory factory);
 
 class Instance final : public base::has_weak_ptr {
 	struct Private {
