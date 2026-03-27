@@ -1005,6 +1005,15 @@ defaultPillTabs: PillTabs {
 	duration: 300;
 }
 
+popupMenuPillTabs: PillTabs(defaultPillTabs) {
+	height: 28px;
+	borderWidth: 3px;
+	fg: windowSubTextFg;
+	fgActive: windowFg;
+	bg: windowBg;
+	bgActive: windowBgOver;
+}
+
 boxTextStyle: TextStyle(defaultTextStyle) {
 	font: font(boxFontSize);
 }

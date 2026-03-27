@@ -209,59 +209,7 @@ void PopupMenu::init() {
 
 	installEventFilter(this);
 
-	const auto paddingWrap = static_cast<PaddingWrap<Menu::Menu>*>(
-		_menu->parentWidget());
-	paddingWrap->paintRequest(
-	) | rpl::on_next([=](QRect clip) {
-		const auto top = clip.intersected(
-			QRect(0, 0, paddingWrap->width(), _st.scrollPadding.top()));
-		const auto bottom = clip.intersected(QRect(
-			0,
-			paddingWrap->height() - _st.scrollPadding.bottom(),
-			paddingWrap->width(),
-			_st.scrollPadding.bottom()));
-		auto p = QPainter(paddingWrap);
-		if (!top.isEmpty()) {
-			p.fillRect(top, _st.menu.itemBg);
-		}
-		if (!bottom.isEmpty()) {
-			p.fillRect(bottom, _st.menu.itemBg);
-		}
-	}, paddingWrap->lifetime());
-
-	rpl::combine(
-		_scroll->scrollTopValue(),
-		_scroll->heightValue(),
-		_menu->heightValue()
-	) | rpl::on_next([=](int scrollTop, int scrollHeight, int) {
-		const auto scrollBottom = scrollTop + scrollHeight;
-		paddingWrap->setVisibleTopBottom(scrollTop, scrollBottom);
-	}, paddingWrap->lifetime());
-
-	_menu->scrollToRequests(
-	) | rpl::on_next([=](ScrollToRequest request) {
-		_scroll->scrollTo({
-			request.ymin ? (_st.scrollPadding.top() + request.ymin) : 0,
-			(request.ymax == _menu->height()
-				? paddingWrap->height()
-				: (_st.scrollPadding.top() + request.ymax)),
-		});
-	}, _menu->lifetime());
-
-	_menu->resizesFromInner(
-	) | rpl::on_next([=] {
-		handleMenuResize();
-	}, _menu->lifetime());
-	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
-		handleActivated(data);
-	});
-	_menu->setTriggeredCallback([this](const Menu::CallbackData &data) {
-		handleTriggered(data);
-	});
-	_menu->setKeyPressDelegate([this](int key) { return handleKeyPress(key); });
-	_menu->setMouseMoveDelegate([this](QPoint globalPosition) { handleMouseMove(globalPosition); });
-	_menu->setMousePressDelegate([this](QPoint globalPosition) { handleMousePress(globalPosition); });
-	_menu->setMouseReleaseDelegate([this](QPoint globalPosition) { handleMouseRelease(globalPosition); });
+	setupMenuWidget();
 
 	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint) | Qt::BypassWindowManagerHint | Qt::Popup | Qt::NoDropShadowWindowHint);
 	setMouseTracking(true);
@@ -283,8 +231,13 @@ not_null<PopupMenu*> PopupMenu::ensureSubmenu(
 		not_null<QAction*> action,
 		const style::PopupMenu &st) {
 	const auto &list = actions();
-	const auto i = ranges::find(list, action);
-	Assert(i != end(list));
+	const auto found = ranges::find(list, action) != end(list);
+	if (!found && _stashedContent) {
+		const auto &stashedList = _stashedContent->menu->actions();
+		Assert(ranges::find(stashedList, action) != end(stashedList));
+	} else {
+		Assert(found);
+	}
 
 	const auto j = _submenus.find(action);
 	if (j != end(_submenus)) {
@@ -364,6 +317,9 @@ void PopupMenu::updateRoundingOverlay() {
 
 	_roundingOverlay->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
+		if (_inner.isEmpty()) {
+			return;
+		}
 		auto p = QPainter(_roundingOverlay.data());
 		auto hq = PainterHighQualityEnabler(p);
 		p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
@@ -378,6 +334,9 @@ void PopupMenu::updateRoundingOverlay() {
 }
 
 void PopupMenu::handleMenuResize() {
+	if (_switchState) {
+		return;
+	}
 	auto newWidth = _padding.left() + _st.scrollPadding.left() + _menu->width() + _st.scrollPadding.right() + _padding.right();
 	auto newHeight = _padding.top() + _st.scrollPadding.top() + _menu->height() + _st.scrollPadding.bottom() + _padding.bottom();
 	const auto wantedHeight = newHeight - _padding.top() - _padding.bottom();
@@ -458,6 +417,9 @@ void PopupMenu::setTopShift(int topShift) {
 
 void PopupMenu::setForceWidth(int forceWidth) {
 	_menu->setForceWidth(forceWidth);
+	if (_stashedContent) {
+		_stashedContent->menu->setForceWidth(forceWidth);
+	}
 }
 
 const std::vector<not_null<QAction*>> &PopupMenu::actions() const {
@@ -749,7 +711,7 @@ void PopupMenu::setAdditionalMenuPadding(
 		|| _additionalMenuMargins != margins) {
 		_additionalMenuPadding = padding;
 		_additionalMenuMargins = margins;
-		_roundingOverlay = nullptr;
+		_roundingOverlay.destroy();
 	}
 }
 
@@ -968,6 +930,16 @@ QMargins PopupMenu::preparedPadding() const {
 	return _padding;
 }
 
+
+
+QMargins PopupMenu::additionalMenuPadding() const {
+	return _additionalMenuPadding;
+}
+
+QMargins PopupMenu::additionalMenuMargins() const {
+	return _additionalMenuMargins;
+}
+
 QMargins PopupMenu::preparedMargins() const {
 	return _margins;
 }
@@ -1154,11 +1126,256 @@ void PopupMenu::setClearLastSeparator(bool clear) {
 	_clearLastSeparator = clear;
 }
 
+
+void PopupMenu::finishSwitchAnimation() {
+	if (!_switchState) {
+		return;
+	}
+	_switchState->overlay.destroy();
+	_switchState.reset();
+	_scroll->show();
+	handleMenuResize();
+}
+
+void PopupMenu::setupMenuWidget() {
+	const auto paddingWrap = static_cast<PaddingWrap<Menu::Menu>*>(
+		_menu->parentWidget());
+
+	paddingWrap->paintRequest(
+	) | rpl::on_next([=](QRect clip) {
+		const auto top = clip.intersected(
+			QRect(0, 0, paddingWrap->width(), _st.scrollPadding.top()));
+		const auto bottom = clip.intersected(QRect(
+			0,
+			paddingWrap->height() - _st.scrollPadding.bottom(),
+			paddingWrap->width(),
+			_st.scrollPadding.bottom()));
+		auto p = QPainter(paddingWrap);
+		if (!top.isEmpty()) {
+			p.fillRect(top, _st.menu.itemBg);
+		}
+		if (!bottom.isEmpty()) {
+			p.fillRect(bottom, _st.menu.itemBg);
+		}
+	}, paddingWrap->lifetime());
+
+	rpl::combine(
+		_scroll->scrollTopValue(),
+		_scroll->heightValue(),
+		_menu->heightValue()
+	) | rpl::on_next([=](int scrollTop, int scrollHeight, int) {
+		const auto scrollBottom = scrollTop + scrollHeight;
+		paddingWrap->setVisibleTopBottom(scrollTop, scrollBottom);
+	}, paddingWrap->lifetime());
+
+	_menu->scrollToRequests(
+	) | rpl::on_next([=](ScrollToRequest request) {
+		_scroll->scrollTo({
+			request.ymin ? (_st.scrollPadding.top() + request.ymin) : 0,
+			(request.ymax == _menu->height()
+				? paddingWrap->height()
+				: (_st.scrollPadding.top() + request.ymax)),
+		});
+	}, _menu->lifetime());
+
+	_menu->resizesFromInner(
+	) | rpl::on_next([=] {
+		handleMenuResize();
+	}, _menu->lifetime());
+	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
+		handleActivated(data);
+	});
+	_menu->setTriggeredCallback([this](const Menu::CallbackData &data) {
+		handleTriggered(data);
+	});
+	_menu->setKeyPressDelegate([this](int key) {
+		return handleKeyPress(key);
+	});
+	_menu->setMouseMoveDelegate([this](QPoint globalPosition) {
+		handleMouseMove(globalPosition);
+	});
+	_menu->setMousePressDelegate([this](QPoint globalPosition) {
+		handleMousePress(globalPosition);
+	});
+	_menu->setMouseReleaseDelegate([this](QPoint globalPosition) {
+		handleMouseRelease(globalPosition);
+	});
+}
+
+void PopupMenu::swapWithStashed() {
+	Assert(_stashedContent != nullptr);
+
+	// Take current content out of scroll.
+	auto currentWrap = _scroll->takeWidget<QWidget>();
+	auto currentMenu = _menu;
+
+	// Restore stashed content into scroll.
+	// Subscriptions and delegates are still alive on the stashed widgets.
+	_scroll->setOwnedWidget(std::move(_stashedContent->wrap));
+	_menu = _stashedContent->menu;
+
+	// Stash current content.
+	_stashedContent->wrap = std::move(currentWrap);
+	_stashedContent->menu = currentMenu;
+
+	// _submenus stays shared — actions from both pages use it.
+}
+
+void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
+	if (_switchState) {
+		_switchState->animation.stop();
+		_switchState->overlay.destroy();
+		_switchState.reset();
+		_scroll->show();
+	}
+
+	// Stash current content. _submenus stays shared.
+	_stashedContent = std::make_unique<StashedContent>(StashedContent{
+		.wrap = _scroll->takeWidget<QWidget>(),
+		.menu = _menu,
+	});
+
+	// Create new menu in scroll.
+	auto wrap = object_ptr<PaddingWrap<Menu::Menu>>(
+		_scroll.data(),
+		object_ptr<Menu::Menu>(_scroll.data(), _st.menu),
+		_st.scrollPadding);
+	_menu = wrap->entity();
+	_scroll->setOwnedWidget(std::move(wrap));
+	setupMenuWidget();
+
+	// Fill new page.
+	fillNew(this);
+
+	// Equalize widths between stashed and new page.
+	const auto maxWidth = std::max(
+		_menu->width(),
+		_stashedContent->menu->width());
+	_menu->setForceWidth(maxWidth);
+	_stashedContent->menu->setForceWidth(maxWidth);
+
+	handleMenuResize();
+}
+
+void PopupMenu::swapStashed(SwitchDirection direction) {
+	if (!_stashedContent
+		|| (_switchState && _switchState->animation.animating())) {
+		return;
+	}
+	if (_switchState) {
+		_switchState->animation.stop();
+		_switchState->overlay.destroy();
+		_switchState.reset();
+		_scroll->show();
+	}
+
+	SendPendingMoveResizeEvents(this);
+	const auto oldPixmap = GrabWidget(_menu);
+	const auto scrollWidth = _scroll->width();
+	const auto oldScrollHeight = _scroll->height();
+
+	// Swap widgets.
+	swapWithStashed();
+	SendPendingMoveResizeEvents(_menu);
+
+	const auto newPixmap = GrabWidget(_menu);
+	const auto newMenuHeight = _menu->height();
+	const auto wantedHeight = _st.scrollPadding.top()
+		+ newMenuHeight
+		+ _st.scrollPadding.bottom();
+	const auto newScrollHeight = _st.maxHeight
+		? std::min(_st.maxHeight, wantedHeight)
+		: wantedHeight;
+
+	// Animate the transition (same as switchContent).
+	_switchState = std::make_unique<SwitchState>();
+	_switchState->direction = direction;
+	_switchState->fromScrollHeight = oldScrollHeight;
+	_switchState->oldSnapshot = oldPixmap;
+	_switchState->newSnapshot = newPixmap;
+	_switchState->toScrollHeight = newScrollHeight;
+
+	_scroll->hide();
+
+	const auto raw = _switchState.get();
+	raw->overlay.create(this);
+	raw->overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+	raw->overlay->move(_padding.left(), _padding.top());
+	raw->overlay->resize(scrollWidth, oldScrollHeight);
+	raw->overlay->show();
+	if (_roundingOverlay) {
+		_roundingOverlay->raise();
+	}
+
+	const auto scrollPadding = _st.scrollPadding;
+
+	raw->overlay->paintRequest(
+	) | rpl::on_next([=](QRect clip) {
+		if (!_switchState || _switchState.get() != raw) {
+			return;
+		}
+		if (!raw->overlay->width() || !raw->overlay->height()) {
+			return;
+		}
+		auto p = QPainter(raw->overlay.data());
+		p.fillRect(raw->overlay->rect(), _st.menu.itemBg);
+
+		const auto progress = raw->animation.value(1.);
+		const auto dir = (raw->direction == SwitchDirection::LeftToRight)
+			? 1
+			: -1;
+		const auto shift = anim::interpolate(0, scrollWidth, progress);
+
+		p.drawPixmap(
+			scrollPadding.left() - dir * shift,
+			scrollPadding.top(),
+			raw->oldSnapshot);
+		p.drawPixmap(
+			scrollPadding.left() + dir * (scrollWidth - shift),
+			scrollPadding.top(),
+			raw->newSnapshot);
+	}, raw->overlay->lifetime());
+
+	raw->animation.start([=] {
+		if (!_switchState) {
+			return;
+		}
+		const auto progress = raw->animation.value(1.);
+		const auto h = anim::interpolate(
+			raw->fromScrollHeight,
+			raw->toScrollHeight,
+			progress);
+
+		raw->overlay->resize(scrollWidth, h);
+		raw->overlay->update();
+
+		const auto newSize = QSize(
+			_padding.left() + scrollWidth + _padding.right(),
+			_padding.top() + h + _padding.bottom());
+		setFixedSize(newSize);
+		resize(newSize);
+		_inner = rect().marginsRemoved(_padding);
+
+		if (!raw->animation.animating()) {
+			PostponeCall(this, [=] {
+				if (_switchState.get() == raw) {
+					finishSwitchAnimation();
+				}
+			});
+		}
+	}, 0., 1., _st.showDuration, anim::sineInOut);
+}
+
+bool PopupMenu::hasStashedContent() const {
+	return _stashedContent != nullptr;
+}
+
 RpWidget *PopupMenu::accessibilityParent() const {
 	return qobject_cast<RpWidget*>(parentWidget());
 }
 
 PopupMenu::~PopupMenu() {
+	_stashedContent.reset();
 	for (const auto &[action, submenu] : base::take(_submenus)) {
 		delete submenu;
 	}

@@ -37,6 +37,11 @@ public:
 		StartHide,
 	};
 
+	enum class SwitchDirection {
+		LeftToRight,
+		RightToLeft,
+	};
+
 	PopupMenu(QWidget *parent, const style::PopupMenu &st = st::defaultPopupMenu);
 	PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st = st::defaultPopupMenu);
 	~PopupMenu();
@@ -99,6 +104,8 @@ public:
 	void setForcedOrigin(PanelAnimation::Origin origin);
 	void setForcedVerticalOrigin(VerticalOrigin origin);
 	void setAdditionalMenuPadding(QMargins padding, QMargins margins);
+	[[nodiscard]] QMargins additionalMenuPadding() const;
+	[[nodiscard]] QMargins additionalMenuMargins() const;
 
 	[[nodiscard]] PanelAnimation::Origin preparedOrigin() const;
 	[[nodiscard]] QMargins preparedPadding() const;
@@ -132,6 +139,10 @@ public:
 
 	void setClearLastSeparator(bool clear);
 
+	void stashContent(Fn<void(not_null<PopupMenu*>)> fillNew);
+	void swapStashed(SwitchDirection direction);
+	[[nodiscard]] bool hasStashedContent() const;
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void focusOutEvent(QFocusEvent *e) override;
@@ -159,6 +170,8 @@ private:
 	void opacityAnimationCallback();
 
 	void init();
+
+	void finishSwitchAnimation();
 
 	void hideFinished();
 	void showStarted();
@@ -239,6 +252,26 @@ private:
 	bool _keepingDelayedActivationPaused = false;
 
 	Fn<void()> _destroyedCallback;
+
+	struct StashedContent {
+		object_ptr<QWidget> wrap = { nullptr };
+		not_null<Menu::Menu*> menu;
+	};
+	std::unique_ptr<StashedContent> _stashedContent;
+
+	void setupMenuWidget();
+	void swapWithStashed();
+
+	struct SwitchState {
+		QPixmap oldSnapshot;
+		QPixmap newSnapshot;
+		object_ptr<RpWidget> overlay = { nullptr };
+		Animations::Simple animation;
+		int fromScrollHeight = 0;
+		int toScrollHeight = 0;
+		SwitchDirection direction = SwitchDirection::LeftToRight;
+	};
+	std::unique_ptr<SwitchState> _switchState;
 
 };
 
