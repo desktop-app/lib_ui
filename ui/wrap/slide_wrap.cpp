@@ -66,6 +66,9 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggle(
 				_toggled ? 1. : 0.,
 				_duration,
 				anim::linear);
+			if (_finishedCallback) {
+				_animation.setFinishedCallback(_finishedCallback);
+			}
 		}
 	}
 	if (animate) {
@@ -75,6 +78,15 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggle(
 	}
 	if (changed) {
 		_toggledChanged.fire_copy(_toggled);
+	}
+	return this;
+}
+
+SlideWrap<RpWidget> *SlideWrap<RpWidget>::setFinishedCallback(
+		Fn<void()> callback) {
+	_finishedCallback = std::move(callback);
+	if (_animation.animating()) {
+		_animation.setFinishedCallback(_finishedCallback);
 	}
 	return this;
 }

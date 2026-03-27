@@ -40,6 +40,7 @@ public:
 		return toggle(false, animated);
 	}
 	SlideWrap *finishAnimating();
+	SlideWrap *setFinishedCallback(Fn<void()> callback);
 	SlideWrap *toggleOn(
 		rpl::producer<bool> &&shown,
 		anim::type animated = anim::type::normal);
@@ -66,6 +67,7 @@ private:
 
 	rpl::event_stream<bool> _toggledChanged;
 	Animations::Simple _animation;
+	Fn<void()> _finishedCallback;
 	int _duration = 0;
 	bool _toggled = true;
 	bool _up = false;
@@ -112,6 +114,9 @@ public:
 	}
 	SlideWrap *finishAnimating() {
 		return chain(Parent::finishAnimating());
+	}
+	SlideWrap *setFinishedCallback(Fn<void()> callback) {
+		return chain(Parent::setFinishedCallback(std::move(callback)));
 	}
 	SlideWrap *toggleOn(
 			rpl::producer<bool> &&shown,
