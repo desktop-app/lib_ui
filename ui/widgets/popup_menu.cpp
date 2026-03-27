@@ -29,145 +29,12 @@
 #include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
-namespace {
-
-constexpr auto kShadowCornerMultiplier = 3;
-
-[[nodiscard]] not_null<QImage*> PrepareCachedShadow(
-		style::margins padding,
-		not_null<const style::Shadow*> shadow,
-		not_null<const RoundRect*> body,
-		int radius,
-		rpl::lifetime &lifetime) {
-	const auto side = radius * kShadowCornerMultiplier;
-	const auto middle = radius;
-	const auto size = side * 2 + middle;
-	const auto rect = QRect(0, 0, size, size);
-	const auto result = lifetime.make_state<QImage>(
-		rect.marginsAdded(padding).size() * style::DevicePixelRatio(),
-		QImage::Format_ARGB32_Premultiplied);
-	result->setDevicePixelRatio(style::DevicePixelRatio());
-	const auto render = [=] {
-		result->fill(Qt::transparent);
-		auto p = QPainter(result);
-		const auto inner = QRect(padding.left(), padding.top(), size, size);
-		const auto outerWidth = padding.left() + size + padding.right();
-		Shadow::paint(p, inner, outerWidth, *shadow);
-		p.setCompositionMode(QPainter::CompositionMode_DestinationOut);
-		body->paint(p, inner);
-	};
-	render();
-	style::PaletteChanged(
-	) | rpl::on_next(render, lifetime);
-	return result;
-}
-
-void PaintCachedShadow(
-		QPainter &p,
-		QSize outer,
-		int radius,
-		style::margins padding,
-		const QImage &cached) {
-	const auto fill = [&](
-			int dstx, int dsty, int dstw, int dsth,
-			int srcx, int srcy, int srcw, int srch) {
-		p.drawImage(
-			QRect(dstx, dsty, dstw, dsth),
-			cached,
-			QRect(
-				QPoint(srcx, srcy) * style::DevicePixelRatio(),
-				QSize(srcw, srch) * style::DevicePixelRatio()));
-	};
-	const auto paintCorner = [&](
-			int width, int height,
-			int dstx, int dsty,
-			int srcx, int srcy) {
-		fill(dstx, dsty, width, height, srcx, srcy, width, height);
-	};
-
-	const auto side = radius * kShadowCornerMultiplier;
-	const auto middle = radius;
-	const auto size = side * 2 + middle;
-	paintCorner( // Top-Left
-		padding.left() + side,
-		padding.top() + side,
-		0,
-		0,
-		0,
-		0);
-	paintCorner( // Top-Right
-		side + padding.right(),
-		padding.top() + side,
-		outer.width() - side - padding.right(),
-		0,
-		padding.left() + size - side,
-		0);
-	paintCorner( // Bottom-Right
-		side + padding.right(),
-		side + padding.bottom(),
-		outer.width() - side - padding.right(),
-		outer.height() - side - padding.bottom(),
-		padding.left() + size - side,
-		padding.top() + size - side);
-	paintCorner( // Bottom-Left
-		padding.left() + side,
-		side + padding.bottom(),
-		0,
-		outer.height() - side - padding.bottom(),
-		0,
-		padding.top() + size - side);
-	const auto fillx = outer.width()
-		- padding.left()
-		- padding.right()
-		- 2 * side;
-	fill( // Top
-		padding.left() + side,
-		0,
-		fillx,
-		padding.top(),
-		padding.left() + side + (middle / 2),
-		0,
-		1,
-		padding.top());
-	fill( // Bottom
-		padding.left() + side,
-		outer.height() - padding.bottom(),
-		fillx,
-		padding.bottom(),
-		padding.left() + side + (middle / 2),
-		padding.top() + size,
-		1,
-		padding.bottom());
-	const auto filly = outer.height()
-		- padding.top()
-		- padding.bottom()
-		- 2 * side;
-	fill( // Left
-		0,
-		padding.top() + side,
-		padding.left(),
-		filly,
-		0,
-		padding.top() + side + (middle / 2),
-		padding.left(),
-		1);
-	fill( // Right
-		outer.width() - padding.right(),
-		padding.top() + side,
-		padding.right(),
-		filly,
-		padding.left() + size,
-		padding.top() + side + (middle / 2),
-		padding.right(),
-		1);
-}
-
-} // namespace
 
 PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 : RpWidget(parent)
 , _st(st)
 , _roundRect(_st.radius, _st.menu.itemBg)
+, _boxShadow(_st.shadow)
 , _scroll(this, st::defaultMultiSelect.scroll)
 , _menu(_scroll->setOwnedWidget(
 	object_ptr<PaddingWrap<Menu::Menu>>(
@@ -181,6 +48,7 @@ PopupMenu::PopupMenu(QWidget *parent, QMenu *menu, const style::PopupMenu &st)
 : RpWidget(parent)
 , _st(st)
 , _roundRect(_st.radius, _st.menu.itemBg)
+, _boxShadow(_st.shadow)
 , _scroll(this, st::defaultMultiSelect.scroll)
 , _menu(_scroll->setOwnedWidget(
 	object_ptr<PaddingWrap<Menu::Menu>>(
@@ -281,11 +149,12 @@ void PopupMenu::validateCompositingSupport() {
 			std::max(line, additional.bottom()));
 		_margins = QMargins();
 	} else {
+		const auto ext = _boxShadow.extend();
 		_padding = QMargins(
-			std::max(_st.shadow.extend.left(), additional.left()),
-			std::max(_st.shadow.extend.top(), additional.top()),
-			std::max(_st.shadow.extend.right(), additional.right()),
-			std::max(_st.shadow.extend.bottom(), additional.bottom()));
+			std::max(ext.left(), additional.left()),
+			std::max(ext.top(), additional.top()),
+			std::max(ext.right(), additional.right()),
+			std::max(ext.bottom(), additional.bottom()));
 		_margins = _padding - (additional - _additionalMenuMargins);
 	}
 	Platform::SetWindowMargins(this, _margins);
@@ -308,13 +177,6 @@ void PopupMenu::updateRoundingOverlay() {
 		_roundingOverlay->setGeometry(QRect(QPoint(), size));
 	}, _roundingOverlay->lifetime());
 
-	const auto shadow = PrepareCachedShadow(
-		_padding,
-		&_st.shadow,
-		&_roundRect,
-		_st.radius,
-		_roundingOverlay->lifetime());
-
 	_roundingOverlay->paintRequest(
 	) | rpl::on_next([=](QRect clip) {
 		if (_inner.isEmpty()) {
@@ -326,7 +188,7 @@ void PopupMenu::updateRoundingOverlay() {
 		_roundRect.paint(p, _inner, RectPart::AllCorners);
 		if (!_grabbingForPanelAnimation) {
 			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
-			PaintCachedShadow(p, size(), _st.radius, _padding, *shadow);
+			_boxShadow.paint(p, _inner, _st.radius);
 		}
 	}, _roundingOverlay->lifetime());
 
@@ -474,10 +336,10 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
 
 void PopupMenu::paintBg(QPainter &p) {
 	if (!_useTransparency) {
-		p.fillRect(0, 0, width() - _padding.right(), _padding.top(), _st.shadow.fallback);
-		p.fillRect(width() - _padding.right(), 0, _padding.right(), height() - _padding.bottom(), _st.shadow.fallback);
-		p.fillRect(_padding.left(), height() - _padding.bottom(), width() - _padding.left(), _padding.bottom(), _st.shadow.fallback);
-		p.fillRect(0, _padding.top(), _padding.left(), height() - _padding.top(), _st.shadow.fallback);
+		p.fillRect(0, 0, width() - _padding.right(), _padding.top(), _st.shadowFallback);
+		p.fillRect(width() - _padding.right(), 0, _padding.right(), height() - _padding.bottom(), _st.shadowFallback);
+		p.fillRect(_padding.left(), height() - _padding.bottom(), width() - _padding.left(), _padding.bottom(), _st.shadowFallback);
+		p.fillRect(0, _padding.top(), _padding.left(), height() - _padding.top(), _st.shadowFallback);
 	}
 }
 
@@ -530,7 +392,7 @@ void PopupMenu::popupSubmenu(
 	}
 	if (submenu) {
 		const auto padding = _useTransparency
-			? _st.shadow.extend
+			? _boxShadow.extend()
 			: QMargins(st::lineWidth, 0, st::lineWidth, 0);
 		QPoint p(_inner.x() + (style::RightToLeft() ? padding.right() : (_inner.width() - padding.left())), _inner.y() + actionTop);
 		_activeSubmenu = submenu;
@@ -819,7 +681,7 @@ void PopupMenu::startShowAnimation() {
 
 		const auto pixelRatio = style::DevicePixelRatio();
 		_showAnimation = std::make_unique<PanelAnimation>(_st.animation, _origin);
-		_showAnimation->setFinalImage(std::move(cache), QRect(_inner.topLeft() * pixelRatio, _inner.size() * pixelRatio));
+		_showAnimation->setFinalImage(std::move(cache), QRect(_inner.topLeft() * pixelRatio, _inner.size() * pixelRatio), _st.radius);
 		if (_useTransparency) {
 			_showAnimation->setCornerMasks(Images::CornersMask(_st.radius));
 		} else {
@@ -1013,7 +875,7 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 				|| *_forcedOrigin == Origin::BottomRight));
 	auto w = p - QPoint(
 		std::max(
-			_additionalMenuPadding.left() - _st.shadow.extend.left(),
+			_additionalMenuPadding.left() - _boxShadow.extend().left(),
 			0),
 		_padding.top() - _topShift);
 	auto r = screen ? screen->availableGeometry() : QRect();
@@ -1068,7 +930,7 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
 				w.setX(w.x() + _margins.left() + _margins.right() - parentWidth - width() + _margins.left() + _margins.right());
 			} else {
 				w.setX(p.x() - width() + std::max(
-					_additionalMenuPadding.right() - _st.shadow.extend.right(),
+					_additionalMenuPadding.right() - _boxShadow.extend().right(),
 					0));
 			}
 			origin = PanelAnimation::Origin::TopRight;

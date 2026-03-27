@@ -333,7 +333,7 @@ void InnerDropdown::startShowAnimation() {
 		const auto pixelRatio = style::DevicePixelRatio();
 		_showAnimation = std::make_unique<PanelAnimation>(_st.animation, _origin);
 		auto inner = rect().marginsRemoved(_st.padding);
-		_showAnimation->setFinalImage(std::move(cache), QRect(inner.topLeft() * pixelRatio, inner.size() * pixelRatio));
+		_showAnimation->setFinalImage(std::move(cache), QRect(inner.topLeft() * pixelRatio, inner.size() * pixelRatio), st::innerDropdownRadius);
 		_showAnimation->setCornerMasks(
 			Images::CornersMask(st::innerDropdownRadius));
 		_showAnimation->start();

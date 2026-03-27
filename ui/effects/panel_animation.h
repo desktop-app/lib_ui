@@ -10,13 +10,15 @@
 
 namespace Ui {
 
+class BoxShadow;
+
 class RoundShadowAnimation {
 public:
 	void setCornerMasks(const std::array<QImage, 4> &corners);
 
 protected:
 	void start(int frameWidth, int frameHeight, float64 devicePixelRatio);
-	void setShadow(const style::Shadow &st);
+	void setShadow(const style::BoxShadow &st, int cornerRadius);
 
 	bool started() const {
 		return !_frame.isNull();
@@ -38,18 +40,23 @@ protected:
 	void paintCorner(Corner &corner, int left, int top);
 
 	struct Shadow {
-		style::margins extend;
-		QImage left, topLeft, top, topRight, right, bottomRight, bottom, bottomLeft;
+		QMargins extend;
+		QImage cache;
+		int cornerL = 0;
+		int cornerT = 0;
+		int cornerR = 0;
+		int cornerB = 0;
+		int middle = 0;
+		int opacity256 = 256;
 
 		bool valid() const {
-			return !left.isNull();
+			return !cache.isNull();
 		}
 	};
-	QImage cloneImage(const style::icon &source);
 	void paintShadow(int left, int top, int right, int bottom);
-	void paintShadowCorner(int left, int top, const QImage &image);
-	void paintShadowVertical(int left, int top, int bottom, const QImage &image);
-	void paintShadowHorizontal(int left, int right, int top, const QImage &image);
+	void paintShadowTile(
+		int dstX, int dstY, int dstW, int dstH,
+		int srcX, int srcY, int srcW, int srcH);
 
 	Shadow _shadow;
 
@@ -88,7 +95,7 @@ public:
 		int height = 0;
 	};
 
-	void setFinalImage(QImage &&finalImage, QRect inner);
+	void setFinalImage(QImage &&finalImage, QRect inner, int cornerRadius);
 	void setSkipShadow(bool skipShadow);
 
 	void start();
@@ -124,6 +131,7 @@ private:
 	int _finalInnerWidth = 0;
 	int _finalInnerHeight = 0;
 
+	int _cornerRadius = 0;
 	bool _skipShadow = false;
 	int _startWidth = -1;
 	int _startHeight = -1;

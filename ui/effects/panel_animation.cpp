@@ -7,6 +7,7 @@
 #include "ui/effects/panel_animation.h"
 
 #include "ui/effects/animation_value.h"
+#include "ui/widgets/shadow.h"
 #include "ui/ui_utility.h"
 
 #include <QtGui/QPainter>
@@ -28,33 +29,20 @@ void RoundShadowAnimation::start(int frameWidth, int frameHeight, float64 device
 	Assert(_frameIntsPerLineAdded >= 0);
 }
 
-void RoundShadowAnimation::setShadow(const style::Shadow &st) {
-	_shadow.extend = st.extend * style::DevicePixelRatio();
-	_shadow.left = cloneImage(st.left);
-	if (_shadow.valid()) {
-		_shadow.topLeft = cloneImage(st.topLeft);
-		_shadow.top = cloneImage(st.top);
-		_shadow.topRight = cloneImage(st.topRight);
-		_shadow.right = cloneImage(st.right);
-		_shadow.bottomRight = cloneImage(st.bottomRight);
-		_shadow.bottom = cloneImage(st.bottom);
-		_shadow.bottomLeft = cloneImage(st.bottomLeft);
-		Assert(!_shadow.topLeft.isNull()
-			&& !_shadow.top.isNull()
-			&& !_shadow.topRight.isNull()
-			&& !_shadow.right.isNull()
-			&& !_shadow.bottomRight.isNull()
-			&& !_shadow.bottom.isNull()
-			&& !_shadow.bottomLeft.isNull());
-	} else {
-		_shadow.topLeft =
-			_shadow.top =
-			_shadow.topRight =
-			_shadow.right =
-			_shadow.bottomRight =
-			_shadow.bottom =
-			_shadow.bottomLeft = QImage();
-	}
+void RoundShadowAnimation::setShadow(
+		const style::BoxShadow &st,
+		int cornerRadius) {
+	auto boxShadow = BoxShadow(st);
+	const auto grid = boxShadow.preparedGrid(cornerRadius);
+	const auto ratio = style::DevicePixelRatio();
+	_shadow.extend = boxShadow.extend() * ratio;
+	_shadow.cache = grid.image;
+	_shadow.cornerL = grid.cornerL;
+	_shadow.cornerT = grid.cornerT;
+	_shadow.cornerR = grid.cornerR;
+	_shadow.cornerB = grid.cornerB;
+	_shadow.middle = grid.middle;
+	_shadow.opacity256 = qRound(boxShadow.opacity() * 256);
 }
 
 void RoundShadowAnimation::setCornerMasks(
@@ -82,21 +70,6 @@ void RoundShadowAnimation::setCornerMask(Corner &corner, const QImage &image) {
 	}
 }
 
-QImage RoundShadowAnimation::cloneImage(const style::icon &source) {
-	if (source.empty()) return QImage();
-
-	auto result = QImage(
-		source.size() * style::DevicePixelRatio(),
-		QImage::Format_ARGB32_Premultiplied);
-	result.setDevicePixelRatio(style::DevicePixelRatio());
-	result.fill(Qt::transparent);
-	{
-		QPainter p(&result);
-		source.paint(p, 0, 0, source.width());
-	}
-	return result;
-}
-
 void RoundShadowAnimation::paintCorner(Corner &corner, int left, int top) {
 	auto mask = corner.bytes;
 	auto bytesPerPixel = corner.bytesPerPixel;
@@ -116,114 +89,100 @@ void RoundShadowAnimation::paintCorner(Corner &corner, int left, int top) {
 }
 
 void RoundShadowAnimation::paintShadow(int left, int top, int right, int bottom) {
-	paintShadowCorner(left, top, _shadow.topLeft);
-	paintShadowCorner(right - _shadow.topRight.width(), top, _shadow.topRight);
-	paintShadowCorner(right - _shadow.bottomRight.width(), bottom - _shadow.bottomRight.height(), _shadow.bottomRight);
-	paintShadowCorner(left, bottom - _shadow.bottomLeft.height(), _shadow.bottomLeft);
-	paintShadowVertical(left, top + _shadow.topLeft.height(), bottom - _shadow.bottomLeft.height(), _shadow.left);
-	paintShadowVertical(right - _shadow.right.width(), top + _shadow.topRight.height(), bottom - _shadow.bottomRight.height(), _shadow.right);
-	paintShadowHorizontal(left + _shadow.topLeft.width(), right - _shadow.topRight.width(), top, _shadow.top);
-	paintShadowHorizontal(left + _shadow.bottomLeft.width(), right - _shadow.bottomRight.width(), bottom - _shadow.bottom.height(), _shadow.bottom);
+	if (!_shadow.valid()) {
+		return;
+	}
+
+	const auto ratio = style::DevicePixelRatio();
+	const auto cL = _shadow.cornerL * ratio;
+	const auto cT = _shadow.cornerT * ratio;
+	const auto cR = _shadow.cornerR * ratio;
+	const auto cB = _shadow.cornerB * ratio;
+	const auto mid = _shadow.middle * ratio;
+	const auto srcR = cL + mid;
+	const auto srcB = cT + mid;
+
+	// Corners (1:1 from cache to frame, both in physical pixels).
+	paintShadowTile(left, top, cL, cT, 0, 0, cL, cT);
+	paintShadowTile(right - cR, top, cR, cT, srcR, 0, cR, cT);
+	paintShadowTile(left, bottom - cB, cL, cB, 0, srcB, cL, cB);
+	paintShadowTile(right - cR, bottom - cB, cR, cB, srcR, srcB, cR, cB);
+
+	// Sides (stretched from the middle strip).
+	paintShadowTile(left + cL, top, right - left - cL - cR, cT, cL, 0, mid, cT);
+	paintShadowTile(left + cL, bottom - cB, right - left - cL - cR, cB, cL, srcB, mid, cB);
+	paintShadowTile(left, top + cT, cL, bottom - top - cT - cB, 0, cT, cL, mid);
+	paintShadowTile(right - cR, top + cT, cR, bottom - top - cT - cB, srcR, cT, cR, mid);
 }
 
-void RoundShadowAnimation::paintShadowCorner(int left, int top, const QImage &image) {
-	auto imageWidth = image.width();
-	auto imageHeight = image.height();
-	auto imageInts = reinterpret_cast<const uint32*>(image.constBits());
-	auto imageIntsPerLine = (image.bytesPerLine() >> 2);
-	auto imageIntsPerLineAdded = imageIntsPerLine - imageWidth;
-	if (left < 0) {
-		auto shift = -base::take(left);
-		imageWidth -= shift;
-		imageInts += shift;
+void RoundShadowAnimation::paintShadowTile(
+		int dstX,
+		int dstY,
+		int dstW,
+		int dstH,
+		int srcX,
+		int srcY,
+		int srcW,
+		int srcH) {
+	if (dstW <= 0 || dstH <= 0 || srcW <= 0 || srcH <= 0) {
+		return;
 	}
-	if (top < 0) {
-		auto shift = -base::take(top);
-		imageHeight -= shift;
-		imageInts += shift * imageIntsPerLine;
-	}
-	if (left + imageWidth > _frameWidth) {
-		imageWidth = _frameWidth - left;
-	}
-	if (top + imageHeight > _frameHeight) {
-		imageHeight = _frameHeight - top;
-	}
-	if (imageWidth < 0 || imageHeight < 0) return;
 
-	auto frameInts = _frameInts + top * _frameIntsPerLine + left;
-	auto frameIntsPerLineAdd = _frameIntsPerLine - imageWidth;
-	for (auto y = 0; y != imageHeight; ++y) {
-		for (auto x = 0; x != imageWidth; ++x) {
-			auto source = *frameInts;
-			auto shadowAlpha = qMax(_frameAlpha - int(source >> 24), 0);
-			*frameInts = anim::unshifted(anim::shifted(source) * 256 + anim::shifted(*imageInts) * shadowAlpha);
-			++frameInts;
-			++imageInts;
+	const auto imageInts = reinterpret_cast<const uint32*>(
+		_shadow.cache.constBits());
+	const auto imageIntsPerLine = (_shadow.cache.bytesPerLine() >> 2);
+
+	// Clamp destination to frame bounds.
+	auto sx0 = srcX, sy0 = srcY;
+	if (dstX < 0) {
+		sx0 += (-dstX * srcW) / dstW;
+		srcW -= (-dstX * srcW) / dstW;
+		dstW += dstX;
+		dstX = 0;
+	}
+	if (dstY < 0) {
+		sy0 += (-dstY * srcH) / dstH;
+		srcH -= (-dstY * srcH) / dstH;
+		dstH += dstY;
+		dstY = 0;
+	}
+	if (dstX + dstW > _frameWidth) {
+		dstW = _frameWidth - dstX;
+	}
+	if (dstY + dstH > _frameHeight) {
+		dstH = _frameHeight - dstY;
+	}
+	if (dstW <= 0 || dstH <= 0) {
+		return;
+	}
+
+	const auto opacityScale = _shadow.opacity256;
+	auto frameRow = _frameInts + dstY * _frameIntsPerLine + dstX;
+	for (auto y = 0; y != dstH; ++y) {
+		const auto srcRow = sy0 + (y * srcH) / dstH;
+		const auto imageRow = imageInts + srcRow * imageIntsPerLine;
+		for (auto x = 0; x != dstW; ++x) {
+			const auto srcCol = sx0 + (x * srcW) / dstW;
+			const auto shadowPixel = imageRow[srcCol];
+			const auto source = frameRow[x];
+			const auto shadowAlpha = (std::max(
+				_frameAlpha - int(source >> 24),
+				0) * opacityScale) >> 8;
+			frameRow[x] = anim::unshifted(
+				anim::shifted(source) * 256
+				+ anim::shifted(shadowPixel) * shadowAlpha);
 		}
-		frameInts += frameIntsPerLineAdd;
-		imageInts += imageIntsPerLineAdded;
+		frameRow += _frameIntsPerLine;
 	}
 }
 
-void RoundShadowAnimation::paintShadowVertical(int left, int top, int bottom, const QImage &image) {
-	auto imageWidth = image.width();
-	auto imageInts = reinterpret_cast<const uint32*>(image.constBits());
-	if (left < 0) {
-		auto shift = -base::take(left);
-		imageWidth -= shift;
-		imageInts += shift;
-	}
-	if (top < 0) top = 0;
-	accumulate_min(bottom, _frameHeight);
-	accumulate_min(imageWidth, _frameWidth - left);
-	if (imageWidth < 0 || bottom <= top) return;
-
-	auto frameInts = _frameInts + top * _frameIntsPerLine + left;
-	auto frameIntsPerLineAdd = _frameIntsPerLine - imageWidth;
-	for (auto y = top; y != bottom; ++y) {
-		for (auto x = 0; x != imageWidth; ++x) {
-			auto source = *frameInts;
-			auto shadowAlpha = _frameAlpha - (source >> 24);
-			*frameInts = anim::unshifted(anim::shifted(source) * 256 + anim::shifted(*imageInts) * shadowAlpha);
-			++frameInts;
-			++imageInts;
-		}
-		frameInts += frameIntsPerLineAdd;
-		imageInts -= imageWidth;
-	}
-}
-
-void RoundShadowAnimation::paintShadowHorizontal(int left, int right, int top, const QImage &image) {
-	auto imageHeight = image.height();
-	auto imageInts = reinterpret_cast<const uint32*>(image.constBits());
-	auto imageIntsPerLine = (image.bytesPerLine() >> 2);
-	if (top < 0) {
-		auto shift = -base::take(top);
-		imageHeight -= shift;
-		imageInts += shift * imageIntsPerLine;
-	}
-	if (left < 0) left = 0;
-	accumulate_min(right, _frameWidth);
-	accumulate_min(imageHeight, _frameHeight - top);
-	if (imageHeight < 0 || right <= left) return;
-
-	auto frameInts = _frameInts + top * _frameIntsPerLine + left;
-	auto frameIntsPerLineAdd = _frameIntsPerLine - (right - left);
-	for (auto y = 0; y != imageHeight; ++y) {
-		auto imagePattern = anim::shifted(*imageInts);
-		for (auto x = left; x != right; ++x) {
-			auto source = *frameInts;
-			auto shadowAlpha = _frameAlpha - (source >> 24);
-			*frameInts = anim::unshifted(anim::shifted(source) * 256 + imagePattern * shadowAlpha);
-			++frameInts;
-		}
-		frameInts += frameIntsPerLineAdd;
-		imageInts += imageIntsPerLine;
-	}
-}
-
-void PanelAnimation::setFinalImage(QImage &&finalImage, QRect inner) {
+void PanelAnimation::setFinalImage(
+		QImage &&finalImage,
+		QRect inner,
+		int cornerRadius) {
 	Expects(!started());
+
+	_cornerRadius = cornerRadius;
 
 	const auto pixelRatio = style::DevicePixelRatio();
 	_finalImage = PixmapFromImage(
@@ -256,7 +215,7 @@ void PanelAnimation::setFinalImage(QImage &&finalImage, QRect inner) {
 	setHeightDuration();
 	setAlphaDuration();
 	if (!_skipShadow) {
-		setShadow(_st.shadow);
+		setShadow(_st.shadow, _cornerRadius);
 	}
 
 	auto checkCorner = [this, inner](Corner &corner) {

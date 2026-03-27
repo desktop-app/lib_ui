@@ -197,6 +197,12 @@ ScrollArea {
 	hiding: int;
 }
 
+BoxShadow {
+	blurRadius: pixels;
+	offset: point;
+	opacity: double;
+}
+
 Shadow {
 	left: icon;
 	topLeft: icon;
@@ -221,7 +227,7 @@ PanelAnimation {
 	fadeHeight: double;
 	fadeOpacity: double;
 	fadeBg: color;
-	shadow: Shadow;
+	shadow: BoxShadow;
 }
 
 MenuSeparator {
@@ -260,7 +266,8 @@ Menu {
 }
 
 PopupMenu {
-	shadow: Shadow;
+	shadow: BoxShadow;
+	shadowFallback: color;
 	scrollPadding: margins;
 	maxHeight: pixels;
 	animation: PanelAnimation;
@@ -910,6 +917,11 @@ defaultRoundShadow: Shadow {
 defaultEmptyShadow: Shadow {
 	fallback: windowBg;
 }
+defaultBoxShadow: BoxShadow {
+	blurRadius: 5px;
+	offset: point(0px, 1px);
+	opacity: 0.25;
+}
 roundShadowRadius8px: Shadow {
 	left: icon {{ "round_shadow_box_left", windowShadowFg }};
 	topLeft: icon {{ "round_shadow_box_top_left", windowShadowFg }};
@@ -934,7 +946,7 @@ defaultPanelAnimation: PanelAnimation {
 	fadeHeight: 0.2;
 	fadeOpacity: 1.0;
 	fadeBg: menuBg;
-	shadow: roundShadowRadius8px;
+	shadow: defaultBoxShadow;
 }
 
 defaultMenuArrow: icon {{ "menu/submenu_arrow", windowBoldFg }};
@@ -978,7 +990,8 @@ defaultMenu: Menu {
 	ripple: defaultRippleAnimation;
 }
 defaultPopupMenu: PopupMenu {
-	shadow: roundShadowRadius8px;
+	shadow: defaultBoxShadow;
+	shadowFallback: windowShadowFgFallback;
 	animation: defaultPanelAnimation;
 
 	scrollPadding: margins(0px, 8px, 0px, 8px);
@@ -1248,7 +1261,6 @@ defaultInnerDropdown: InnerDropdown {
 	shadow: roundShadowRadius8px;
 	animation: PanelAnimation(defaultPanelAnimation) {
 		startHeight: 0.5;
-		shadow: roundShadowRadius8px;
 	}
 
 	duration: 150;
