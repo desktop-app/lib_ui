@@ -23,7 +23,6 @@
 class QMenu;
 class QShortcut;
 class QTextEdit;
-class QTouchEvent;
 class QContextMenuEvent;
 class Painter;
 
@@ -407,7 +406,6 @@ private:
 	void handleContentsChanged();
 	void updateRootFrameFormat();
 	bool viewportEventInner(QEvent *e);
-	void handleTouchEvent(QTouchEvent *e);
 
 	void updatePalette();
 	void refreshPlaceholder(const QString &text);
@@ -556,9 +554,6 @@ private:
 		TextRange range);
 	void trippleEnterExitBlock(QTextCursor &cursor);
 
-	void touchUpdate(QPoint globalPosition);
-	void touchFinish();
-
 	const style::InputField &_st;
 	std::optional<style::color> _placeholderFgOverride;
 	Fn<not_null<Ui::Text::QuotePaintCache*>()> _preCache;
@@ -642,13 +637,6 @@ private:
 
 	bool _focused = false;
 	bool _error = false;
-
-	base::Timer _touchTimer;
-	bool _touchPress = false;
-	bool _touchRightButton = false;
-	bool _touchMove = false;
-	bool _mousePressedInTouch = false;
-	QPoint _touchStart;
 
 	bool _correcting = false;
 	MimeDataHook _mimeDataHook;

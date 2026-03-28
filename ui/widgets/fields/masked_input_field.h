@@ -68,8 +68,6 @@ public Q_SLOTS:
 
 	void onTextEdited();
 
-	void onTouchTimer();
-
 Q_SIGNALS:
 	void changed();
 	void cancelled();
@@ -82,8 +80,6 @@ protected:
 	void startBorderAnimation();
 	void startPlaceholderAnimation();
 
-	bool eventHook(QEvent *e) override;
-	void touchEvent(QTouchEvent *e);
 	void paintEvent(QPaintEvent *e) override;
 	void focusInEvent(QFocusEvent *e) override;
 	void focusOutEvent(QFocusEvent *e) override;
@@ -91,10 +87,6 @@ protected:
 	void resizeEvent(QResizeEvent *e) override;
 	void contextMenuEvent(QContextMenuEvent *e) override;
 	void inputMethodEvent(QInputMethodEvent *e) override;
-
-	void mousePressEvent(QMouseEvent *e) override;
-	void mouseReleaseEvent(QMouseEvent *e) override;
-	void mouseMoveEvent(QMouseEvent *e) override;
 
 	virtual void correctValue(
 		const QString &was,
@@ -123,9 +115,6 @@ private:
 	void updatePalette();
 	void refreshPlaceholder(const QString &text);
 	void setErrorShown(bool error);
-
-	void touchUpdate(QPoint globalPosition);
-	void touchFinish();
 
 	void setFocused(bool focused);
 
@@ -159,13 +148,6 @@ private:
 	bool _error = false;
 
 	style::margins _textMargins;
-
-	QTimer _touchTimer;
-	bool _touchPress = false;
-	bool _touchRightButton = false;
-	bool _touchMove = false;
-	bool _mousePressedInTouch = false;
-	QPoint _touchStart;
 
 	base::unique_qptr<PopupMenu> _contextMenu;
 
