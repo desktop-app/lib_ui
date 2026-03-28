@@ -274,6 +274,7 @@ private:
 		SwitchDirection direction = SwitchDirection::LeftToRight;
 	};
 	std::unique_ptr<SwitchState> _switchState;
+	void startSwitchAnimation(not_null<SwitchState*> raw, float64 from);
 
 };
 

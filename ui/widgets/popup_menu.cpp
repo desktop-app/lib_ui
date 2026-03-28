@@ -1120,15 +1120,27 @@ void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
 }
 
 void PopupMenu::swapStashed(SwitchDirection direction) {
-	if (!_stashedContent
-		|| (_switchState && _switchState->animation.animating())) {
+	if (!_stashedContent) {
+		return;
+	}
+	if (_switchState && _switchState->animation.animating()) {
+		const auto raw = _switchState.get();
+		const auto progress = raw->animation.value(1.);
+		raw->animation.stop();
+
+		swapWithStashed();
+
+		std::swap(raw->oldSnapshot, raw->newSnapshot);
+		std::swap(raw->fromScrollHeight, raw->toScrollHeight);
+		raw->direction = direction;
+		startSwitchAnimation(raw, 1. - progress);
 		return;
 	}
 	if (_switchState) {
-		_switchState->animation.stop();
 		_switchState->overlay.destroy();
 		_switchState.reset();
 		_scroll->show();
+		handleMenuResize();
 	}
 
 	SendPendingMoveResizeEvents(this);
@@ -1149,7 +1161,6 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 		? std::min(_st.maxHeight, wantedHeight)
 		: wantedHeight;
 
-	// Animate the transition (same as switchContent).
 	_switchState = std::make_unique<SwitchState>();
 	_switchState->direction = direction;
 	_switchState->fromScrollHeight = oldScrollHeight;
@@ -1217,8 +1228,15 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 			raw->newSnapshot);
 	}, raw->overlay->lifetime());
 
+	startSwitchAnimation(raw, 0.);
+}
+
+void PopupMenu::startSwitchAnimation(
+		not_null<SwitchState*> raw,
+		float64 from) {
+	const auto scrollWidth = raw->overlay->width();
 	raw->animation.start([=] {
-		if (!_switchState) {
+		if (!_switchState || _switchState.get() != raw) {
 			return;
 		}
 		const auto progress = raw->animation.value(1.);
@@ -1244,7 +1262,7 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 				}
 			});
 		}
-	}, 0., 1., _st.showDuration, anim::sineInOut);
+	}, from, 1., _st.showDuration * (1. - from), anim::sineInOut);
 }
 
 bool PopupMenu::hasStashedContent() const {
