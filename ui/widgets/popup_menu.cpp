@@ -1159,6 +1159,25 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 
 	_scroll->hide();
 
+	// Resize popup to max(old, new) height once upfront instead of
+	// calling setFixedSize/resize on every frame. Per-frame resizing of
+	// translucent top-level windows can cause compositor jitter on macOS.
+	// The visual height transition is achieved by animating _inner and
+	// clipping the overlay; the extra transparent area is invisible.
+	const auto maxScrollHeight = std::max(oldScrollHeight, newScrollHeight);
+	{
+		const auto maxSize = QSize(
+			_padding.left() + scrollWidth + _padding.right(),
+			_padding.top() + maxScrollHeight + _padding.bottom());
+		setFixedSize(maxSize);
+		resize(maxSize);
+	}
+	_inner = QRect(
+		_padding.left(),
+		_padding.top(),
+		scrollWidth,
+		oldScrollHeight);
+
 	const auto raw = _switchState.get();
 	raw->overlay.create(this);
 	raw->overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -1211,12 +1230,12 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 		raw->overlay->resize(scrollWidth, h);
 		raw->overlay->update();
 
-		const auto newSize = QSize(
-			_padding.left() + scrollWidth + _padding.right(),
-			_padding.top() + h + _padding.bottom());
-		setFixedSize(newSize);
-		resize(newSize);
-		_inner = rect().marginsRemoved(_padding);
+		_inner = QRect(
+			_padding.left(),
+			_padding.top(),
+			scrollWidth,
+			h);
+		update();
 
 		if (!raw->animation.animating()) {
 			PostponeCall(this, [=] {
