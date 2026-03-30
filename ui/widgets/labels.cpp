@@ -8,6 +8,7 @@
 
 #include "base/invoke_queued.h"
 #include "ui/text/text_entity.h"
+#include "ui/text/text_extended_data.h"
 #include "ui/effects/animation_value.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/box_content_divider.h"
@@ -276,6 +277,12 @@ void FlatLabel::textUpdated() {
 			return (context.button == Qt::LeftButton) && weak;
 		});
 	}
+	if (_text.hasCollapsedBlockquots()) {
+		_text.setBlockquoteExpandCallback([this](int, bool) {
+			refreshSize();
+			update();
+		});
+	}
 	update();
 }
 
@@ -386,6 +393,24 @@ void FlatLabel::refreshSize() {
 	resizeToWidth(widthNoMargins(), true);
 }
 
+void FlatLabel::setPreCache(Fn<not_null<Text::QuotePaintCache*>()> make) {
+	_preCacheCallback = std::move(make);
+	update();
+}
+
+void FlatLabel::setBlockquoteCache(
+		Fn<not_null<Text::QuotePaintCache*>()> make) {
+	_blockquoteCacheCallback = std::move(make);
+	update();
+}
+
+bool FlatLabel::allowTextSelectionByHandler(
+		const ClickHandlerPtr &handler) const {
+	return _selectable
+		&& (dynamic_cast<Text::BlockquoteClickHandler*>(handler.get())
+			|| dynamic_cast<Text::PreClickHandler*>(handler.get()));
+}
+
 void FlatLabel::setLink(uint16 index, const ClickHandlerPtr &lnk) {
 	_text.setLink(index, lnk);
 }
@@ -461,9 +486,11 @@ Text::StateResult FlatLabel::dragActionStart(const QPoint &p, Qt::MouseButton bu
 		MarkInactivePress(window(), false);
 	}
 
-	if (ClickHandler::getPressed()) {
-		_dragStartPosition = mapFromGlobal(_lastMousePos);
-		_dragAction = PrepareDrag;
+	if (const auto pressed = ClickHandler::getPressed()) {
+		if (!allowTextSelectionByHandler(pressed)) {
+			_dragStartPosition = mapFromGlobal(_lastMousePos);
+			_dragAction = PrepareDrag;
+		}
 	}
 	if (!_selectable || _dragAction != NoDrag) {
 		return state;
@@ -508,7 +535,8 @@ Text::StateResult FlatLabel::dragActionFinish(const QPoint &p, Qt::MouseButton b
 	auto state = dragActionUpdate();
 
 	auto activated = ClickHandler::unpressed();
-	if (_dragAction == Dragging) {
+	if (_dragAction == Dragging
+		|| (_dragAction == Selecting && !_selection.empty())) {
 		activated = nullptr;
 	} else if (_dragAction == PrepareDrag) {
 		_selection = { 0, 0 };
@@ -1020,6 +1048,10 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 		.align = _st.align,
 		.clip = e->rect(),
 		.palette = &_st.palette,
+		.pre = _preCacheCallback ? _preCacheCallback().get() : nullptr,
+		.blockquote = (_blockquoteCacheCallback
+			? _blockquoteCacheCallback().get()
+			: nullptr),
 		.colors = _colors,
 		.spoiler = Text::DefaultSpoilerCache(),
 		.now = crl::now(),

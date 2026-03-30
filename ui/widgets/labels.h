@@ -171,6 +171,9 @@ public:
 	void overrideLinkClickHandler(Fn<void()> handler);
 	void overrideLinkClickHandler(Fn<void(QString url)> handler);
 
+	void setPreCache(Fn<not_null<Text::QuotePaintCache*>()> make);
+	void setBlockquoteCache(Fn<not_null<Text::QuotePaintCache*>()> make);
+
 	struct ContextMenuRequest {
 		not_null<PopupMenu*> menu;
 		ClickHandlerPtr link;
@@ -236,6 +239,7 @@ private:
 	int countTextWidth(int newWidth) const;
 	int countTextHeight(int textWidth);
 	void refreshSize();
+	bool allowTextSelectionByHandler(const ClickHandlerPtr &handler) const;
 
 	enum class ContextMenuReason {
 		FromEvent,
@@ -285,6 +289,9 @@ private:
 
 	ClickHandlerFilter _clickHandlerFilter;
 	Fn<WhichAnimationsPaused()> _animationsPausedCallback;
+
+	Fn<not_null<Text::QuotePaintCache*>()> _preCacheCallback;
+	Fn<not_null<Text::QuotePaintCache*>()> _blockquoteCacheCallback;
 
 	// text selection and context menu by touch support (at least Windows Surface tablets)
 	bool _touchSelect = false;
