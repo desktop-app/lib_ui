@@ -9,11 +9,14 @@
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "base/object_ptr.h"
+#include "base/qt_connection.h"
 #include "base/timer.h"
 #include "styles/style_widgets.h"
 
 #include <QtWidgets/QScrollArea>
 #include <QtGui/QtEvents>
+
+class QScroller;
 
 namespace Ui {
 
@@ -42,6 +45,28 @@ struct ScrollToRequest {
 
 	int ymin = 0;
 	int ymax = 0;
+
+};
+
+extern const char kOptionQScroller[];
+
+class ScrollerStopper final : public QObject {
+public:
+	static ScrollerStopper &Instance();
+
+	void activate(not_null<QScroller*> scroller);
+
+private:
+	ScrollerStopper();
+
+	bool eventFilter(QObject *obj, QEvent *e) override;
+
+	struct {
+		QPointer<QScroller> scroller;
+		base::qt_connection connection;
+	} _active;
+
+	QPoint _mousePos;
 
 };
 
@@ -222,6 +247,9 @@ private:
 	object_ptr<ScrollBar> _horizontalBar, _verticalBar;
 	object_ptr<ScrollShadow> _topShadow, _bottomShadow;
 	int _horizontalValue, _verticalValue;
+
+	QPointer<QScroller> _scroller;
+	QPoint _wheelPos;
 
 	bool _touchEnabled = false;
 	base::Timer _touchTimer;
