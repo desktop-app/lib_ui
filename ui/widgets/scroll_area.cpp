@@ -12,6 +12,7 @@
 #include "base/debug_log.h"
 
 #include <QtWidgets/QScrollBar>
+#include <QtWidgets/QScroller>
 #include <QtWidgets/QApplication>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
@@ -57,6 +58,56 @@ namespace {
 }
 
 } // namespace
+
+ScrollerStopper::ScrollerStopper() {
+	qApp->installEventFilter(this);
+}
+
+ScrollerStopper &ScrollerStopper::Instance() {
+	static ScrollerStopper instance;
+	return instance;
+}
+
+void ScrollerStopper::activate(not_null<QScroller*> scroller) {
+	Expects(scroller->state() == QScroller::Scrolling);
+	_active = {
+		scroller.get(),
+		connect(
+			scroller,
+			&QScroller::stateChanged,
+			[=] { _active = {}; }),
+	};
+}
+
+bool ScrollerStopper::eventFilter(QObject *obj, QEvent *e) {
+	const auto type = e->type();
+	if (type != QEvent::MouseMove && type != QEvent::MouseButtonPress) {
+		return false;
+	}
+	const auto ev = static_cast<QMouseEvent*>(e);
+	if (type == QEvent::MouseMove) {
+		if (_mousePos == ev->globalPos()) {
+			return false;
+		}
+		_mousePos = ev->globalPos();
+	}
+	if (!_active.scroller) {
+		return false;
+	}
+	const auto scroller = _active.scroller;
+	for (const auto &input : {
+		QScroller::InputPress,
+		QScroller::InputRelease,
+	}) {
+		scroller->handleInput(
+			input,
+			static_cast<QWidget*>(
+				scroller->target()
+			)->mapFromGlobal(ev->globalPos()),
+			crl::now());
+	}
+	return true;
+}
 
 // flick scroll taken from http://qt-project.org/doc/qt-4.8/demos-embedded-anomaly-src-flickcharm-cpp.html
 
@@ -395,6 +446,7 @@ ScrollArea::ScrollArea(
 , _verticalBar(this, true, &_st)
 , _topShadow(this, &_st)
 , _bottomShadow(this, &_st)
+, _scroller(QScroller::scroller(this))
 , _touchEnabled(handleTouch) {
 	setLayoutDirection(style::LayoutDirection());
 	setFocusPolicy(Qt::NoFocus);
@@ -425,6 +477,12 @@ ScrollArea::ScrollArea(
 		_touchTimer.setCallback([=] { _touchRightButton = true; });
 		_touchScrollTimer.setCallback([=] { touchScrollTimer(); });
 	}
+
+	connect(_scroller, &QScroller::stateChanged, [=](QScroller::State state) {
+		if (state == QScroller::Scrolling) {
+			ScrollerStopper::Instance().activate(_scroller);
+		}
+	});
 }
 
 void ScrollArea::touchDeaccelerate(int32 elapsed) {
@@ -592,6 +650,38 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 		if (_customWheelProcess
 			&& _customWheelProcess(static_cast<QWheelEvent*>(e))) {
 			return true;
+		}
+		const auto ev = static_cast<QWheelEvent*>(e);
+		switch (ev->phase()) {
+		case Qt::ScrollBegin:
+		case Qt::ScrollUpdate: {
+			const auto wasNull = _wheelPos.isNull();
+			if (wasNull) {
+				_wheelPos = QPoint(width(), height()) / 2;
+			} else {
+				const auto unmultiplied = ScrollDelta(ev);
+				const auto multiply = ev->modifiers()
+					& (Qt::ControlModifier | Qt::ShiftModifier);
+				_wheelPos += multiply
+					? QPoint(
+						(unmultiplied.x() * std::max(width(), 120) / 120.),
+						(unmultiplied.y() * std::max(height(), 120) / 120.))
+					: unmultiplied;
+			}
+			_scroller->handleInput(wasNull
+				? QScroller::InputPress
+				: QScroller::InputMove, _wheelPos, crl::now());
+		} return true;
+		case Qt::ScrollEnd:
+		case Qt::ScrollMomentum: {
+			if (!_wheelPos.isNull()) {
+				_scroller->handleInput(
+					QScroller::InputRelease,
+					_wheelPos,
+					crl::now());
+				_wheelPos = {};
+			}
+		} return true;
 		}
 	}
 	return QScrollArea::viewportEvent(e);

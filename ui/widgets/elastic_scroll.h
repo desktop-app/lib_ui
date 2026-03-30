@@ -12,6 +12,8 @@
 #include "base/object_ptr.h"
 #include "base/timer.h"
 
+class QScroller;
+
 namespace style {
 struct ScrollArea;
 } // namespace style
@@ -211,6 +213,7 @@ private:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	bool handleWheelEvent(not_null<QWheelEvent*> e, bool touch = false);
+	bool handleScrollEvent(not_null<QScrollEvent*> e);
 	void handleTouchEvent(QTouchEvent *e);
 
 	void updateState();
@@ -250,6 +253,9 @@ private:
 	int _barTopInset = 0;
 	ScrollState _state;
 
+	const not_null<QScroller*> _scroller;
+	QPoint _wheelPos;
+
 	base::Timer _touchTimer;
 	base::Timer _touchScrollTimer;
 	QPoint _touchStart;
@@ -270,6 +276,7 @@ private:
 	bool _touchRightButton : 1 = false;
 	bool _touchPreviousPositionValid : 1 = false;
 	bool _touchWaitingAcceleration : 1 = false;
+	bool _touchScroller : 1 = false;
 	bool _vertical : 1 = false;
 	bool _widgetAcceptsTouch : 1 = false;
 	bool _disabled : 1 = false;

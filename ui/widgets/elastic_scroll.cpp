@@ -14,6 +14,7 @@
 
 #include <QtGui/QWindow>
 #include <QtCore/QtMath>
+#include <QtWidgets/QScroller>
 #include <QtWidgets/QApplication>
 
 namespace Ui {
@@ -353,6 +354,7 @@ ElasticScroll::ElasticScroll(
 : RpWidget(parent)
 , _st(st)
 , _bar(std::make_unique<ElasticScrollBar>(this, _st, orientation))
+, _scroller(QScroller::scroller(this))
 , _touchTimer([=] { _touchRightButton = true; })
 , _touchScrollTimer([=] { touchScrollTimer(); })
 , _vertical(orientation == Qt::Vertical)
@@ -364,6 +366,12 @@ ElasticScroll::ElasticScroll(
 	) | rpl::on_next([=](int from) {
 		tryScrollTo(from, false);
 	}, _bar->lifetime());
+
+	connect(_scroller, &QScroller::stateChanged, [=](QScroller::State state) {
+		if (state == QScroller::Scrolling && !_touchScroller) {
+			ScrollerStopper::Instance().activate(_scroller);
+		}
+	});
 }
 
 ElasticScroll::~ElasticScroll() {
@@ -618,6 +626,26 @@ bool ElasticScroll::eventHook(QEvent *e) {
 		}
 		return true;
 	}
+	switch (e->type()) {
+	case QEvent::ScrollPrepare: {
+		QScrollPrepareEvent *se = static_cast<QScrollPrepareEvent *>(e);
+		se->setViewportSize(QSizeF(viewport()->size()));
+		se->setContentPosRange(QRectF(
+			0,
+			0,
+			_vertical ? 0 : _state.fullSize - width(),
+			_vertical ? _state.fullSize - height() : 0));
+		se->setContentPos(QPointF(
+			_vertical ? 0 : _state.visibleFrom,
+			_vertical ? _state.visibleFrom : 0));
+		se->accept();
+		return true;
+	}
+	case QEvent::Scroll: {
+		QScrollEvent *se = static_cast<QScrollEvent *>(e);
+		return handleScrollEvent(se);
+	}
+	}
 	return RpWidget::eventHook(e);
 }
 
@@ -668,8 +696,6 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 		return true;
 	}
 	const auto phase = e->phase();
-	const auto momentum = (phase == Qt::ScrollMomentum)
-		|| (phase == Qt::ScrollEnd);
 	const auto now = crl::now();
 	const auto guard = gsl::finally([&] {
 		_lastScroll = now;
@@ -682,12 +708,50 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			(unmultiplied.x() * std::max(width(), 120) / 120.),
 			(unmultiplied.y() * std::max(height(), 120) / 120.))
 		: unmultiplied;
-	auto ignore = false;
-	auto delta = _vertical ? -pixels.y() : -pixels.x();
-	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
-		ignore = true;
-		delta = 0;
+	switch (phase) {
+	case Qt::NoScrollPhase: {
+		if (_overscroll == currentOverscrollDefault()) {
+			auto delta = _vertical ? -pixels.y() : -pixels.x();
+			if (std::abs(_vertical ? pixels.x() : pixels.y())
+					>= std::abs(delta)) {
+				delta = 0;
+			}
+			tryScrollTo(_state.visibleFrom + delta);
+			_movement = Movement::None;
+		} else if (!_overscrollReturnAnimation.animating()) {
+			overscrollReturn();
+		}
+	} break;
+	case Qt::ScrollBegin:
+	case Qt::ScrollUpdate: {
+		_touchScroller = touch;
+		const auto wasNull = _wheelPos.isNull();
+		if (wasNull) {
+			_wheelPos = QPoint(width(), height()) / 2;
+		} else {
+			_wheelPos += pixels;
+		}
+		_scroller->handleInput(wasNull
+			? QScroller::InputPress
+			: QScroller::InputMove, _wheelPos, now);
+	} break;
+	case Qt::ScrollEnd:
+	case Qt::ScrollMomentum: {
+		if (!_wheelPos.isNull()) {
+			_scroller->handleInput(QScroller::InputRelease, _wheelPos, now);
+			_wheelPos = {};
+		}
+	} break;
 	}
+	return true;
+}
+
+bool ElasticScroll::handleScrollEvent(not_null<QScrollEvent*> e) {
+	const auto state = _scroller->state();
+	const auto momentum = (state == QScroller::Scrolling)
+		|| (state == QScroller::Inactive);
+	const auto pixels = e->overshootDistance().toPoint();
+	auto delta = _vertical ? pixels.y() : pixels.x();
 	if (_ignoreMomentumFromOverscroll) {
 		if (!momentum) {
 			_ignoreMomentumFromOverscroll = 0;
@@ -696,34 +760,25 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			return true;
 		}
 	}
-	if (phase == Qt::NoScrollPhase) {
-		if (_overscroll == currentOverscrollDefault()) {
-			tryScrollTo(_state.visibleFrom + delta);
-			_movement = Movement::None;
-		} else if (!_overscrollReturnAnimation.animating()) {
-			overscrollReturn();
-		}
-		return true;
-	}
 	if (!momentum) {
 		overscrollReturnCancel();
 	} else if (_overscroll != currentOverscrollDefault()
 		&& !_overscrollReturnAnimation.animating()) {
 		overscrollReturn();
 	} else if (!_overscrollReturnAnimation.animating()) {
-		_movement = (phase == Qt::ScrollEnd)
+		_movement = (state == QScroller::Inactive)
 			? Movement::None
 			: Movement::Momentum;
 	}
 	if (!_overscroll) {
-		const auto normalTo = willScrollTo(_state.visibleFrom + delta);
-		delta -= normalTo - _state.visibleFrom;
-		applyScrollTo(normalTo);
+		applyScrollTo(_vertical
+			? e->contentPos().y()
+			: e->contentPos().x());
 	}
 	if (!delta) {
-		return !ignore;
+		return true;
 	}
-	if (touch) {
+	if (_touchScroller) {
 		delta *= kTouchOverscrollMultiplier;
 	}
 	const auto accumulated = _overscrollAccumulated + delta;
