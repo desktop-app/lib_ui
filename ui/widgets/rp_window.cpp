@@ -19,6 +19,21 @@ RpWindow::RpWindow(QWidget *parent)
 	hide();
 }
 
+RpWindow::RpWindow(bool translucent, QWidget *parent)
+: RpWidget(parent)
+, _helper([&]() -> std::unique_ptr<Platform::BasicWindowHelper> {
+	if (translucent) {
+		setAttribute(Qt::WA_NoSystemBackground, true);
+		setAttribute(Qt::WA_TranslucentBackground, true);
+	}
+	return Platform::CreateWindowHelper(this);
+}()) {
+	Expects(_helper != nullptr);
+
+	_helper->initInWindow(this);
+	hide();
+}
+
 RpWindow::~RpWindow() = default;
 
 not_null<RpWidget*> RpWindow::body() {

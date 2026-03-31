@@ -18,8 +18,12 @@ struct Capabilities;
 
 class Window final {
 public:
+	enum class Translucent { Yes };
+
 	Window();
+	explicit Window(Translucent);
 	explicit Window(Fn<Backend(Capabilities)> chooseBackend);
+	Window(Fn<Backend(Capabilities)> chooseBackend, Translucent);
 	~Window();
 
 	[[nodiscard]] Backend backend() const;
@@ -28,7 +32,8 @@ public:
 
 private:
 	[[nodiscard]] std::unique_ptr<RpWindow> createWindow(
-		const Fn<Backend(Capabilities)> &chooseBackend);
+		const Fn<Backend(Capabilities)> &chooseBackend,
+		bool translucent = false);
 
 	Backend _backend = Backend();
 	const std::unique_ptr<RpWindow> _window;

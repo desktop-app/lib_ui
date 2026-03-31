@@ -28,8 +28,15 @@ namespace {
 Window::Window() : Window(ChooseBackendDefault) {
 }
 
+Window::Window(Translucent) : Window(ChooseBackendDefault, Translucent::Yes) {
+}
+
 Window::Window(Fn<Backend(Capabilities)> chooseBackend)
 : _window(createWindow(ChooseBackendWrap(chooseBackend))) {
+}
+
+Window::Window(Fn<Backend(Capabilities)> chooseBackend, Translucent)
+: _window(createWindow(ChooseBackendWrap(chooseBackend), true)) {
 }
 
 Window::~Window() = default;
@@ -47,9 +54,10 @@ not_null<RpWidget*> Window::widget() const {
 }
 
 std::unique_ptr<RpWindow> Window::createWindow(
-		const Fn<Backend(Capabilities)> &chooseBackend) {
+		const Fn<Backend(Capabilities)> &chooseBackend,
+		bool translucent) {
 	_backend = chooseBackend(CheckCapabilities());
-	return std::make_unique<RpWindow>();
+	return std::make_unique<RpWindow>(translucent);
 }
 
 } // namespace Ui::GL

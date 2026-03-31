@@ -36,6 +36,7 @@ using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 class RpWindow : public RpWidget {
 public:
 	explicit RpWindow(QWidget *parent = nullptr);
+	explicit RpWindow(bool translucent, QWidget *parent = nullptr);
 	~RpWindow();
 
 	[[nodiscard]] not_null<RpWidget*> body();
