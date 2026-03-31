@@ -249,6 +249,7 @@ private:
 	bool _reactivateParent = true;
 	bool _grabbingForPanelAnimation = false;
 
+	int _touchBeginCounter = 0;
 	int _topShift = 0;
 	bool _clearLastSeparator = true;
 	bool _keepingDelayedActivationPaused = false;

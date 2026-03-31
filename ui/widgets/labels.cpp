@@ -25,6 +25,7 @@
 #include <QtGui/QClipboard>
 #include <QtGui/QDrag>
 #include <QtGui/QtEvents>
+#include <QtGui/QWindow>
 #include <QtCore/QMimeData>
 
 namespace Ui {
@@ -205,7 +206,8 @@ FlatLabel::FlatLabel(
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
-, _stMenu(stMenu) {
+, _stMenu(stMenu)
+, _touchSelectTimer([=] { touchSelect(); }) {
 	init();
 }
 
@@ -217,7 +219,8 @@ FlatLabel::FlatLabel(
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
-, _stMenu(stMenu) {
+, _stMenu(stMenu)
+, _touchSelectTimer([=] { touchSelect(); }) {
 	setText(text);
 	init();
 }
@@ -230,7 +233,8 @@ FlatLabel::FlatLabel(
 : RpWidget(parent)
 , _text(st.minWidth ? st.minWidth : kQFixedMax)
 , _st(st)
-, _stMenu(stMenu) {
+, _stMenu(stMenu)
+, _touchSelectTimer([=] { touchSelect(); }) {
 	textUpdated();
 	std::move(
 		text
@@ -271,6 +275,7 @@ void FlatLabel::textUpdated() {
 	}
 	refreshSize();
 	setMouseTracking(_selectable || _text.hasLinks());
+	setAttribute(Qt::WA_AcceptTouchEvents, _selectable);
 	if (_text.hasSpoilers()) {
 		_text.setSpoilerLinkFilter([weak = base::make_weak(this)](
 				const ClickContext &context) {
@@ -308,7 +313,9 @@ void FlatLabel::setSelectable(bool selectable) {
 		_selection = { 0, 0 };
 		_savedSelection = { 0, 0 };
 		_selectable = selectable;
+		cancelTouchInProgress();
 		setMouseTracking(_selectable || _text.hasLinks());
+		setAttribute(Qt::WA_AcceptTouchEvents, _selectable);
 	}
 }
 
@@ -538,7 +545,7 @@ Text::StateResult FlatLabel::dragActionFinish(const QPoint &p, Qt::MouseButton b
 	if (_dragAction == Dragging
 		|| (_dragAction == Selecting && !_selection.empty())) {
 		activated = nullptr;
-	} else if (_dragAction == PrepareDrag) {
+	} else if (_dragAction == PrepareDrag && button != Qt::RightButton) {
 		_selection = { 0, 0 };
 		_savedSelection = { 0, 0 };
 		update();
@@ -646,25 +653,60 @@ void FlatLabel::contextMenuEvent(QContextMenuEvent *e) {
 	showContextMenu(e, ContextMenuReason::FromEvent);
 }
 
-bool FlatLabel::eventHook(QEvent *e) {
-	if (e->type() == QEvent::TouchBegin || e->type() == QEvent::TouchUpdate || e->type() == QEvent::TouchEnd || e->type() == QEvent::TouchCancel) {
-		QTouchEvent *ev = static_cast<QTouchEvent*>(e);
-		if (ev->device()->type() == base::TouchDevice::TouchScreen) {
-			touchEvent(ev);
-			return true;
+QTouchEvent *FlatLabel::checkTouchEvent(QEvent *e) {
+	const auto type = e->type();
+	if (type == QEvent::TouchBegin
+		|| type == QEvent::TouchUpdate
+		|| type == QEvent::TouchEnd
+		|| type == QEvent::TouchCancel) {
+		const auto touch = static_cast<QTouchEvent*>(e);
+		if (_selectable
+			&& touch->device()->type() == base::TouchDevice::TouchScreen) {
+			return touch;
 		}
+	}
+	return nullptr;
+}
+
+bool FlatLabel::eventHook(QEvent *e) {
+	if (const auto touch = checkTouchEvent(e)) {
+		const auto result = handleTouchEvent(touch);
+		if (result) {
+			e->accept();
+		} else {
+			e->ignore();
+		}
+		return result;
 	}
 	return RpWidget::eventHook(e);
 }
 
-void FlatLabel::touchEvent(QTouchEvent *e) {
-	if (e->type() == QEvent::TouchCancel) { // cancel
-		if (!_touchInProgress) return;
-		_touchInProgress = false;
-		_touchSelectTimer.cancel();
-		_touchSelect = false;
-		_dragAction = NoDrag;
+void FlatLabel::startTouchInProgress() {
+	if (_touchInProgress) {
 		return;
+	} else if (const auto w = window()->windowHandle()) {
+		_touchInProgress = true;
+		_touchSelectTimer.callOnce(QApplication::startDragTime());
+		_touchSelect = false;
+		_touchStart = _touchPrevPos = _touchPos;
+		w->installEventFilter(this);
+	}
+}
+
+void FlatLabel::cancelTouchInProgress() {
+	_touchInProgress = false;
+	_touchSelectTimer.cancel();
+	_touchSelect = false;
+	_dragAction = NoDrag;
+	if (const auto w = window()->windowHandle()) {
+		w->removeEventFilter(this);
+	}
+}
+
+bool FlatLabel::handleTouchEvent(QTouchEvent *e) {
+	if (e->type() == QEvent::TouchCancel) {
+		cancelTouchInProgress();
+		return false;
 	}
 
 	if (!e->touchPoints().isEmpty()) {
@@ -675,28 +717,31 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 	switch (e->type()) {
 	case QEvent::TouchBegin: {
 		if (_contextMenu) {
-			e->accept();
-			return; // ignore mouse press, that was hiding context menu
+			return true;
+		} else if (_touchInProgress || e->touchPoints().isEmpty()) {
+			return false;
 		}
-		if (_touchInProgress) return;
-		if (e->touchPoints().isEmpty()) return;
-
-		_touchInProgress = true;
-		_touchSelectTimer.callOnce(QApplication::startDragTime());
-		_touchSelect = false;
-		_touchStart = _touchPrevPos = _touchPos;
+		startTouchInProgress();
 	} break;
 
 	case QEvent::TouchUpdate: {
-		if (!_touchInProgress) return;
-		if (_touchSelect) {
+		if (!_touchInProgress) {
+			return false;
+		} else if (_touchSelect) {
 			_lastMousePos = _touchPos;
 			dragActionUpdate();
+			return true;
+		} else if ((_touchPos - _touchStart).manhattanLength()
+			>= QApplication::startDragDistance()) {
+			cancelTouchInProgress();
+			return false;
 		}
 	} break;
 
 	case QEvent::TouchEnd: {
-		if (!_touchInProgress) return;
+		if (!_touchInProgress) {
+			return false;
+		}
 		_touchInProgress = false;
 		auto weak = base::make_weak(this);
 		if (_touchSelect) {
@@ -708,11 +753,22 @@ void FlatLabel::touchEvent(QTouchEvent *e) {
 			dragActionFinish(_touchPos, Qt::LeftButton);
 		}
 		if (weak) {
-			_touchSelectTimer.cancel();
-			_touchSelect = false;
+			cancelTouchInProgress();
 		}
+		return true;
 	} break;
 	}
+	return false;
+}
+
+bool FlatLabel::eventFilter(QObject *receiver, QEvent *e) {
+	if (const auto touch = checkTouchEvent(e)) {
+		if (handleTouchEvent(static_cast<QTouchEvent*>(e))) {
+			e->accept();
+			return true;
+		}
+	}
+	return QObject::eventFilter(receiver, e);
 }
 
 void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason) {

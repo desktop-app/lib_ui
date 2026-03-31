@@ -49,6 +49,8 @@ public:
 
 	virtual void textActionsUpdated();
 	virtual void activationFromTopPanel();
+	virtual void touchCounterIncrement() = 0;
+	[[nodiscard]] virtual int touchCounterNow() = 0;
 
 	[[nodiscard]] virtual bool screenIsLocked();
 

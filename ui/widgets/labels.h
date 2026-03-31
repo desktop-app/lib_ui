@@ -214,7 +214,8 @@ protected:
 	void keyPressEvent(QKeyEvent *e) override;
 	void contextMenuEvent(QContextMenuEvent *e) override;
 	bool eventHook(QEvent *e) override; // calls touchEvent when necessary
-	void touchEvent(QTouchEvent *e);
+	bool handleTouchEvent(QTouchEvent *e);
+	bool eventFilter(QObject *receiver, QEvent *e) override;
 
 	int resizeGetHeight(int newWidth) override;
 
@@ -228,6 +229,10 @@ protected:
 private:
 	void init();
 	void textUpdated();
+
+	[[nodiscard]] QTouchEvent *checkTouchEvent(QEvent *e);
+	void startTouchInProgress();
+	void cancelTouchInProgress();
 
 	Text::StateResult dragActionUpdate();
 	Text::StateResult dragActionStart(const QPoint &p, Qt::MouseButton button);

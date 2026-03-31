@@ -6,19 +6,19 @@
 //
 #include "ui/widgets/popup_menu.h"
 
+#include "base/platform/base_platform_info.h"
+#include "base/invoke_queued.h"
 #include "ui/image/image_prepare.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/shadow.h"
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/padding_wrap.h"
-#include "ui/ui_utility.h"
 #include "ui/delayed_activation.h"
 #include "ui/painter.h"
 #include "ui/integration.h"
-#include "base/invoke_queued.h"
-#include "base/platform/base_platform_info.h"
 #include "ui/screen_reader_mode.h"
+#include "ui/ui_utility.h"
 
 #include <QtGui/QtEvents>
 #include <QtGui/QPainter>
@@ -75,11 +75,16 @@ void PopupMenu::init() {
 		hideMenu(true);
 	}, lifetime());
 
+	_touchBeginCounter = Integration::Instance().touchCounterNow();
+
 	installEventFilter(this);
 
 	setupMenuWidget();
 
-	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint) | Qt::BypassWindowManagerHint | Qt::Popup | Qt::NoDropShadowWindowHint);
+	setWindowFlags(Qt::WindowFlags(Qt::FramelessWindowHint)
+		| Qt::BypassWindowManagerHint
+		| Qt::Popup
+		| Qt::NoDropShadowWindowHint);
 	setMouseTracking(true);
 
 	hide();
@@ -482,7 +487,14 @@ void PopupMenu::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void PopupMenu::mousePressEvent(QMouseEvent *e) {
-	forwardMousePress(e->globalPos());
+	// Mouse presses, synthesized from touch events,
+	// should be ignored, if the touch, that caused
+	// them, started before the menu was created.
+	if (e->source() != Qt::MouseEventSynthesizedBySystem
+		|| (Integration::Instance().touchCounterNow()
+			> _touchBeginCounter)) {
+		forwardMousePress(e->globalPos());
+	}
 }
 
 bool PopupMenu::eventFilter(QObject *o, QEvent *e) {
