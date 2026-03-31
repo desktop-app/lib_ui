@@ -203,6 +203,11 @@ Capabilities CheckCapabilities(QWidget *widget) {
 }
 
 Backend ChooseBackendDefault(Capabilities capabilities) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	if (qEnvironmentVariableIsSet("DESKTOP_APP_USE_QRHI")) {
+		return Backend::QRhi;
+	}
+#endif // Qt >= 6.7
 	const auto use = ::Platform::IsMac()
 		? true
 		: ::Platform::IsWindows()

@@ -17,8 +17,12 @@ namespace {
 		Fn<Backend(Capabilities)> chooseBackend) {
 	return [=](Capabilities capabilities) {
 		const auto backend = chooseBackend(capabilities);
-		const auto use = backend == Backend::OpenGL;
-		LOG(("OpenGL: %1 (Window)").arg(use ? "[TRUE]" : "[FALSE]"));
+		const auto use = (backend == Backend::OpenGL)
+			|| (backend == Backend::QRhi);
+		LOG(("Renderer: %1 (Window)").arg(
+			backend == Backend::QRhi
+				? "[QRhi]"
+				: use ? "[OpenGL]" : "[Raster]"));
 		return backend;
 	};
 }

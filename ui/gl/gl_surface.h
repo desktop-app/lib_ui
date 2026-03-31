@@ -63,4 +63,8 @@ struct ChosenRenderer {
 	QWidget *parent,
 	ChosenRenderer chosen);
 
+[[nodiscard]] std::unique_ptr<RpWidgetWrap> CreateSurfaceRhi(
+	QWidget *parent,
+	std::unique_ptr<Renderer> renderer);
+
 } // namespace Ui::GL

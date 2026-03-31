@@ -6,6 +6,7 @@
 //
 #include "ui/gl/gl_surface.h"
 
+#include "ui/rhi/rhi_surface.h"
 #include "ui/rp_widget.h"
 #include "ui/painter.h"
 
@@ -156,6 +157,10 @@ std::unique_ptr<RpWidgetWrap> CreateSurface(
 		Fn<ChosenRenderer(Capabilities)> chooseRenderer) {
 	auto chosen = chooseRenderer(CheckCapabilities(nullptr));
 	switch (chosen.backend) {
+	case Backend::QRhi:
+		return CreateSurfaceRhi(
+			nullptr,
+			std::move(chosen.renderer));
 	case Backend::OpenGL:
 		return std::make_unique<SurfaceOpenGL>(
 			nullptr,
@@ -172,6 +177,10 @@ std::unique_ptr<RpWidgetWrap> CreateSurface(
 		QWidget *parent,
 		ChosenRenderer chosen) {
 	switch (chosen.backend) {
+	case Backend::QRhi:
+		return CreateSurfaceRhi(
+			parent,
+			std::move(chosen.renderer));
 	case Backend::OpenGL:
 		return std::make_unique<SurfaceOpenGL>(
 			parent,

@@ -20,6 +20,7 @@ namespace Ui::GL {
 enum class Backend {
 	Raster,
 	OpenGL,
+	QRhi,
 };
 
 struct Capabilities {
