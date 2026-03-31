@@ -60,6 +60,11 @@ void CrashCheckStart() {
 } // namespace
 
 Capabilities CheckCapabilities(QWidget *widget) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	if (qEnvironmentVariableIsSet("DESKTOP_APP_USE_QRHI")) {
+		return {};
+	}
+#endif // Qt >= 6.7
 	if (!Platform::IsMac()) {
 		if (ForceDisabled) {
 			LOG_ONCE(("OpenGL: Force-disabled."));

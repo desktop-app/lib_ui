@@ -35,7 +35,9 @@ void Image::invalidate() {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 void Image::ensureCreated(QRhi *rhi) {
-	if (_texture && _rhi == rhi) {
+	if (_texture && _rhi == rhi
+		&& _textureSize.width() >= _subimage.width()
+		&& _textureSize.height() >= _subimage.height()) {
 		return;
 	}
 	destroy();
