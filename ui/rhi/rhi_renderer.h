@@ -27,6 +27,17 @@ public:
 		QRhiRenderTarget *rt,
 		QRhiCommandBuffer *cb) = 0;
 
+	virtual void renderOffscreen(
+		QRhi *rhi,
+		QRhiRenderTarget *rt,
+		QRhiCommandBuffer *cb) {
+	}
+	virtual void renderOnscreen(
+		QRhi *rhi,
+		QRhiRenderTarget *rt,
+		QRhiCommandBuffer *cb) {
+	}
+
 	virtual void releaseResources() {
 	}
 
