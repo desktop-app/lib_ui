@@ -61,10 +61,10 @@ void CrashCheckStart() {
 
 Capabilities CheckCapabilities(QWidget *widget) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	if (qEnvironmentVariableIsSet("DESKTOP_APP_USE_QRHI")) {
+	if (qEnvironmentVariableIsSet("QT_WIDGETS_RHI")) {
 		return {};
 	}
-#endif // Qt >= 6.7
+#endif // Qt >= 6.8
 	if (!Platform::IsMac()) {
 		if (ForceDisabled) {
 			LOG_ONCE(("OpenGL: Force-disabled."));
@@ -209,10 +209,10 @@ Capabilities CheckCapabilities(QWidget *widget) {
 
 Backend ChooseBackendDefault(Capabilities capabilities) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	if (qEnvironmentVariableIsSet("DESKTOP_APP_USE_QRHI")) {
+	if (qEnvironmentVariableIsSet("QT_WIDGETS_RHI")) {
 		return Backend::QRhi;
 	}
-#endif // Qt >= 6.7
+#endif // Qt >= 6.8
 	const auto use = ::Platform::IsMac()
 		? true
 		: ::Platform::IsWindows()
