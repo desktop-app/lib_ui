@@ -220,18 +220,15 @@ void Shadow::paintEvent(QPaintEvent *e) {
 }
 
 BoxShadow::BoxShadow(const style::BoxShadow &st)
-: _blurRadius(style::ConvertScale(st.blurRadius))
-, _offset(
-	style::ConvertScale(st.offset.x()),
-	style::ConvertScale(st.offset.y()))
+: _blurRadius(st.blurRadius)
+, _offset(st.offset)
 , _opacity(st.opacity) {
 }
 
-
 QMargins BoxShadow::ExtendFor(const style::BoxShadow &st) {
-	const auto blur = style::ConvertScale(st.blurRadius);
-	const auto ox = style::ConvertScale(st.offset.x());
-	const auto oy = style::ConvertScale(st.offset.y());
+	const auto blur = st.blurRadius;
+	const auto ox = st.offset.x();
+	const auto oy = st.offset.y();
 	return {
 		std::max(blur - ox, 0),
 		std::max(blur - oy, 0),
