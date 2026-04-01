@@ -139,6 +139,7 @@ public:
 	void activateBeforeNativeMove();
 	void setStaysOnTop(bool enabled);
 	void setNativeTitleVisibility(bool visible);
+	void reapplyCustomTitle();
 	void close();
 
 private:
@@ -315,8 +316,11 @@ void WindowHelper::Private::initCustomTitle() {
 		return;
 	}
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+	_owner->window()->setWindowFlag(Qt::NoTitleBarBackgroundHint);
+#endif
 	[_nativeWindow setTitlebarAppearsTransparent:YES];
-
+	[_nativeWindow setTitleVisibility:NSWindowTitleHidden];
 	if (_observer) {
 		[_observer release];
 	}
@@ -331,6 +335,45 @@ void WindowHelper::Private::initCustomTitle() {
 	//
 	// Tried to backport a fix, testing.
 	[_nativeWindow setStyleMask:[_nativeWindow styleMask] | NSWindowStyleMaskFullSizeContentView];
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+	// Qt 6.11 may recreate both the NSView and NSWindow after this
+	// point (e.g. in recreateWindowIfNeeded during show). The weak
+	// pointers to the old view/window become nil. Poll from winId()
+	// until the new window appears and reapply customizations.
+	const auto guard = base::make_weak(_owner->window());
+	const auto savedWindow = _nativeWindow;
+	const auto poll = std::make_shared<Fn<void(int)>>();
+	*poll = [this, guard, savedWindow, poll](int attempts) {
+		if (!guard || attempts <= 0) return;
+		const auto wid = _owner->window()->winId();
+		if (!wid) {
+			dispatch_async(dispatch_get_main_queue(), ^{
+				(*poll)(attempts - 1);
+			});
+			return;
+		}
+		const auto freshView = reinterpret_cast<NSView*>(wid);
+		const auto freshWindow = freshView ? [freshView window] : nil;
+		if (!freshWindow) {
+			dispatch_async(dispatch_get_main_queue(), ^{
+				(*poll)(attempts - 1);
+			});
+			return;
+		}
+		if (freshWindow != savedWindow) {
+			_nativeView = freshView;
+			_nativeWindow = freshWindow;
+			_owner->window()->setWindowFlag(Qt::NoTitleBarBackgroundHint);
+			[freshWindow setTitlebarAppearsTransparent:YES];
+			[freshWindow setTitleVisibility:NSWindowTitleHidden];
+			[freshWindow setStyleMask:[freshWindow styleMask]
+				| NSWindowStyleMaskFullSizeContentView];
+		}
+	};
+	dispatch_async(dispatch_get_main_queue(), ^{ (*poll)(50); });
+#endif
+
 	auto inner = [_nativeWindow contentLayoutRect];
 	auto full = [_nativeView frame];
 	_customTitleHeight = qMax(qRound(full.size.height - inner.size.height), 0);
