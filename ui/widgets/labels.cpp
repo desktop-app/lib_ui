@@ -762,8 +762,8 @@ bool FlatLabel::handleTouchEvent(QTouchEvent *e) {
 }
 
 bool FlatLabel::eventFilter(QObject *receiver, QEvent *e) {
-	if ([[maybe_unused]] const auto touch = checkTouchEvent(e)) {
-		if (handleTouchEvent(static_cast<QTouchEvent*>(e))) {
+	if (const auto touch = checkTouchEvent(e)) {
+		if (handleTouchEvent(touch)) {
 			e->accept();
 			return true;
 		}
