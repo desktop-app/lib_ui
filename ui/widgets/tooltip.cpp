@@ -10,6 +10,9 @@
 #include "ui/painter.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/buttons.h"
+#include "ui/wrap/padding_wrap.h"
+#include "ui/qt_object_factory.h"
 #include "base/invoke_queued.h"
 #include "styles/style_widgets.h"
 
@@ -497,6 +500,36 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 			});
 		raw->resizeToWidth(niceWidth);
 	}, raw->lifetime());
+	return result;
+}
+
+object_ptr<RpWidget> MakeTooltipWithClose(
+		not_null<QWidget*> parent,
+		rpl::producer<TextWithEntities> text,
+		int maxWidth,
+		const style::FlatLabel &labelSt,
+		const style::IconButton &closeSt,
+		const style::margins &padding,
+		Fn<void()> hide) {
+	const auto size = closeSt.width;
+	const auto skip = padding.right();
+	auto result = object_ptr<PaddingWrap<FlatLabel>>(
+		parent,
+		MakeNiceTooltipLabel(
+			parent,
+			std::move(text),
+			maxWidth,
+			labelSt),
+		(padding + QMargins(0, 0, skip + size, 0)));
+	const auto button = CreateChild<IconButton>(
+		result.data(),
+		closeSt);
+	result->sizeValue(
+	) | rpl::on_next([=](QSize size) {
+		button->resize(button->width(), size.height());
+		button->moveToRight(0, 0, size.width());
+	}, button->lifetime());
+	button->setClickedCallback(std::move(hide));
 	return result;
 }
 

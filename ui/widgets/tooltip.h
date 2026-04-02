@@ -16,6 +16,7 @@
 namespace style {
 struct Tooltip;
 struct ImportantTooltip;
+struct IconButton;
 struct FlatLabel;
 struct PopupMenu;
 } // namespace style
@@ -145,6 +146,15 @@ private:
 	const style::FlatLabel &st = st::defaultFlatLabel,
 	const style::PopupMenu &stMenu = st::defaultPopupMenu,
 	const Text::MarkedContext &context = {});
+
+[[nodiscard]] object_ptr<RpWidget> MakeTooltipWithClose(
+	not_null<QWidget*> parent,
+	rpl::producer<TextWithEntities> text,
+	int maxWidth,
+	const style::FlatLabel &labelSt,
+	const style::IconButton &closeSt,
+	const style::margins &padding,
+	Fn<void()> hide);
 
 void InstallTooltip(
 	not_null<RpWidget*> widget,
