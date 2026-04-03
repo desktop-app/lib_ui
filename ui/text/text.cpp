@@ -1013,7 +1013,7 @@ String::DimensionsResult String::countDimensions(
 	if (request.lineWidths && request.reserve) {
 		result.lineWidths.reserve(request.reserve);
 	}
-	enumerateLines(geometry, [&](QFixed lineWidth, int lineBottom) {
+	enumerateLines(geometry, [&](QFixed lineWidth, int lineBottom, int) {
 		const auto width = lineWidth.ceil().toInt();
 		if (request.lineWidths) {
 			result.lineWidths.push_back(width);
@@ -1031,7 +1031,7 @@ int String::countWidth(int width, bool breakEverywhere) const {
 	}
 
 	QFixed maxLineWidth = 0;
-	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int) {
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int, int) {
 		if (lineWidth > maxLineWidth) {
 			maxLineWidth = lineWidth;
 		}
@@ -1044,7 +1044,7 @@ int String::countHeight(int width, bool breakEverywhere) const {
 		return _minHeight;
 	}
 	int result = 0;
-	enumerateLines(width, breakEverywhere, [&](auto, int lineBottom) {
+	enumerateLines(width, breakEverywhere, [&](auto, int lineBottom, int) {
 		result = lineBottom;
 	});
 	return result;
@@ -1061,8 +1061,20 @@ std::vector<int> String::countLineWidths(
 	if (options.reserve) {
 		result.reserve(options.reserve);
 	}
-	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int) {
+	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int, int) {
 		result.push_back(lineWidth.ceil().toInt());
+	});
+	return result;
+}
+
+std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
+	auto result = std::vector<LineLayoutInfo>();
+	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft) {
+		result.push_back({
+			.top = lineBottom,
+			.left = lineLeft,
+			.width = lineWidth.ceil().toInt(),
+		});
 	});
 	return result;
 }
@@ -1153,7 +1165,7 @@ void String::enumerateLines(
 				--qlinesleft;
 			}
 			if (!hidden) {
-				callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+				callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left());
 			}
 			if (lineElided) {
 				return withElided(true);
@@ -1202,7 +1214,7 @@ void String::enumerateLines(
 		if (qlinesleft > 0) {
 			--qlinesleft;
 		}
-		callback(lineLeft + lineWidth - widthLeft, top += lineHeight);
+		callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left());
 		if (lineElided) {
 			return withElided(true);
 		}
@@ -1225,7 +1237,8 @@ void String::enumerateLines(
 			: lineHeight;
 		callback(
 			lineLeft + lineWidth - widthLeft,
-			top + useLineHeight + qpadding.bottom());
+			top + useLineHeight + qpadding.bottom(),
+			lineLeft + qpadding.left());
 	}
 	return withElided(false);
 }
