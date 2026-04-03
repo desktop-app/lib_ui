@@ -916,6 +916,18 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			glyphsEnd = si.num_glyphs;
 		}
 
+		const auto isSpaceGlyph = [&](int g) {
+			if (!glyphs.attributes[g].dontPrint) {
+				return false;
+			}
+			for (auto p = itemStart; p < itemEnd; ++p) {
+				if (logClusters[p - si.position] == g) {
+					return lineText.at(p).isSpace();
+				}
+			}
+			return false;
+		};
+
 		QFixed itemWidth = 0;
 		for (int g = glyphsStart; g < glyphsEnd; ++g)
 			itemWidth += glyphs.effectiveAdvance(g);
@@ -926,7 +938,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				const auto adv = glyphs.effectiveAdvance(g);
 				if (leftLineLengthLeft - adv.toReal() < 0) {
 					leftLineLengthLeft = 0;
-					if (lineText.at(g).isSpace()) {
+					if (isSpaceGlyph(g)) {
 						rightLineLengthLeft += _f->spacew;
 					}
 					glyphsEnd = g;
@@ -951,7 +963,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 					rightLineLengthLeft = 0;
 					glyphsStart = std::min(g + 1, glyphsEnd - 1);
 					i = nItems;
-					if (lineText.at(glyphsStart).isSpace()) {
+					if (isSpaceGlyph(glyphsStart)) {
 						x -= _f->spacew;
 					}
 					{
