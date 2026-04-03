@@ -512,7 +512,6 @@ object_ptr<RpWidget> MakeTooltipWithClose(
 		const style::margins &padding,
 		Fn<void()> hide) {
 	const auto size = closeSt.width;
-	const auto skip = padding.right();
 	auto result = object_ptr<PaddingWrap<FlatLabel>>(
 		parent,
 		MakeNiceTooltipLabel(
@@ -520,7 +519,7 @@ object_ptr<RpWidget> MakeTooltipWithClose(
 			std::move(text),
 			maxWidth,
 			labelSt),
-		(padding + QMargins(0, 0, skip + size, 0)));
+		(padding + QMargins(0, 0, size - padding.right(), 0)));
 	const auto button = CreateChild<IconButton>(
 		result.data(),
 		closeSt);
