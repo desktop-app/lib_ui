@@ -172,6 +172,11 @@ public:
 
 	void setFullWidth(int newFullWidth);
 	void setFullRadius(bool enabled);
+	void setCornerRadii(
+		int topLeft,
+		int topRight,
+		int bottomLeft,
+		int bottomRight);
 
 	enum class TextTransform {
 		NoTransform,
@@ -212,6 +217,7 @@ private:
 
 	TextTransform _transform = TextTransform::ToUpper;
 	bool _fullRadius = false;
+	std::optional<std::array<int, 4>> _cornerRadii;
 
 };
 
