@@ -35,15 +35,16 @@ void Image::invalidate() {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 void Image::ensureCreated(QRhi *rhi) {
-	if (_texture && _rhi == rhi
-		&& _textureSize.width() >= _subimage.width()
-		&& _textureSize.height() >= _subimage.height()) {
+	if (_texture && _rhi == rhi && _textureSize == _subimage) {
 		return;
 	}
-	destroy();
+	delete _sampler;
+	_sampler = nullptr;
+	delete _texture;
+	_texture = nullptr;
 	_rhi = rhi;
 	_texture = rhi->newTexture(
-		QRhiTexture::RGBA8,
+		QRhiTexture::BGRA8,
 		_subimage,
 		1,
 		{});
@@ -72,8 +73,7 @@ void Image::upload(QRhi *rhi, QRhiResourceUpdateBatch *rub) {
 
 	const auto needsRecreate = !_texture
 		|| (_rhi != rhi)
-		|| (_textureSize.width() < _subimage.width())
-		|| (_textureSize.height() < _subimage.height());
+		|| (_textureSize != _subimage);
 
 	if (needsRecreate) {
 		ensureCreated(rhi);
