@@ -147,6 +147,7 @@ public:
 	void setDoubleClickSelectsParagraph(bool doubleClickSelectsParagraph);
 	void setContextCopyText(const QString &copyText);
 	void setBreakEverywhere(bool breakEverywhere);
+	void setElisionMiddle(bool elisionMiddle);
 	void setTryMakeSimilarLines(bool tryMakeSimilarLines);
 	void setSkipBlock(int width, int height);
 	void setColors(std::span<Text::SpecialColor> colors);
@@ -261,6 +262,7 @@ private:
 	int _textWidth = 0;
 	int _fullTextHeight = 0;
 	bool _breakEverywhere = false;
+	bool _elisionMiddle = false;
 	bool _tryMakeSimilarLines = false;
 	int _skipBlockWidth = 0;
 	int _skipBlockHeight = 0;

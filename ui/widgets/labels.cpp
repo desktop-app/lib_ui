@@ -331,6 +331,13 @@ void FlatLabel::setBreakEverywhere(bool breakEverywhere) {
 	_breakEverywhere = breakEverywhere;
 }
 
+void FlatLabel::setElisionMiddle(bool elisionMiddle) {
+	if (_elisionMiddle != elisionMiddle) {
+		_elisionMiddle = elisionMiddle;
+		update();
+	}
+}
+
 void FlatLabel::setTryMakeSimilarLines(bool tryMakeSimilarLines) {
 	_tryMakeSimilarLines = tryMakeSimilarLines;
 }
@@ -1095,6 +1102,7 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 		: _st.maxHeight
 		? qMax(_st.maxHeight, lineHeight)
 		: height();
+	const auto elisionLines = (renderElided && _elisionMiddle) ? 1 : 0;
 	const auto paused = _animationsPausedCallback
 		? _animationsPausedCallback()
 		: WhichAnimationsPaused::None;
@@ -1117,7 +1125,9 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
 			|| paused == WhichAnimationsPaused::All),
 		.selection = selection,
 		.elisionHeight = elisionHeight,
+		.elisionLines = elisionLines,
 		.elisionBreakEverywhere = renderElided && _breakEverywhere,
+		.elisionMiddle = (elisionLines == 1),
 	});
 }
 
