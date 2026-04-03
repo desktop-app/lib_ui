@@ -588,10 +588,8 @@ QImage RoundButton::prepareRippleMask() const {
 	}
 	if (_cornerRadii) {
 		const auto &r = *_cornerRadii;
-		return RippleAnimation::MaskByDrawer(rounded.size(), true, [&](
+		return RippleAnimation::MaskByDrawer(rounded.size(), false, [&](
 				QPainter &p) {
-			auto hq = PainterHighQualityEnabler(p);
-			p.setBrush(Qt::white);
 			p.drawPath(
 				ComplexRoundedRectPath(
 					Rect(rounded.size()),
