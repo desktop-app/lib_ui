@@ -687,6 +687,6 @@ rankAdminFg: #49a355; // admin badge text and pill, green
 rankOwnerFg: #956ac8; // owner badge text and pill, purple
 rankUserFg: windowSubTextFg; // regular user badge text, gray
 
-dialogsMentionIconFg: #40a7e3 | windowBgActive; // chat list mention icon
+dialogsMentionIconFg: #40a7e3 | dialogsVerifiedIconBg; // chat list mention icon
 dialogsReactionIconFg: #e05356 | attentionButtonFg; // chat list reaction icon
 dialogsPollIconFg: #997be1 | historyPeer5NameFg; // chat list poll icon
