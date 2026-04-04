@@ -6,6 +6,7 @@
 //
 #include "ui/rp_widget.h"
 
+#include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
 #include "ui/accessible/ui_accessible_item.h"
 #include "ui/accessible/ui_accessible_widget.h"
@@ -338,7 +339,7 @@ RpWidget::RpWidget(QWidget *parent)
 : RpWidgetBase<QWidget>(parent) {
 	[[maybe_unused]] static const auto Once = [] {
 		auto format = QSurfaceFormat::defaultFormat();
-		format.setSwapInterval(0);
+		format.setSwapInterval(::Platform::MetalSupported() ? 1 : 0);
 #ifdef DESKTOP_APP_USE_ANGLE
 		format.setRedBufferSize(8);
 		format.setGreenBufferSize(8);
