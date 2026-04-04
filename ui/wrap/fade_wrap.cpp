@@ -29,6 +29,18 @@ FadeWrap<RpWidget> *FadeWrap<RpWidget>::setDuration(int duration) {
 	return this;
 }
 
+FadeWrap<RpWidget> *FadeWrap<RpWidget>::setOpacity(float64 opacity) {
+	_animation.setOpacity(opacity);
+	if (_animation.visible() && !_animation.animating()) {
+		if (opacity < 1.) {
+			wrapped()->hide();
+		} else {
+			wrapped()->show();
+		}
+	}
+	return this;
+}
+
 FadeWrap<RpWidget> *FadeWrap<RpWidget>::toggle(
 		bool shown,
 		anim::type animated) {
@@ -36,9 +48,10 @@ FadeWrap<RpWidget> *FadeWrap<RpWidget>::toggle(
 	if (!_duration) {
 		animated = anim::type::instant;
 	}
+	const auto opaque = (_animation.opacity() >= 1.);
 	if (shown) {
 		if (animated == anim::type::normal) {
-			if (!_animation.animating()) {
+			if (!_animation.animating() && opaque) {
 				wrapped()->show();
 			}
 			_animation.fadeIn(_duration);
@@ -47,13 +60,13 @@ FadeWrap<RpWidget> *FadeWrap<RpWidget>::toggle(
 			}
 		} else {
 			_animation.show();
-			if (!_animation.animating()) {
+			if (!_animation.animating() && opaque) {
 				wrapped()->show();
 			}
 		}
 	} else {
 		if (animated == anim::type::normal) {
-			if (!_animation.animating()) {
+			if (!_animation.animating() && opaque) {
 				wrapped()->show();
 			}
 			_animation.fadeOut(_duration);
@@ -93,16 +106,20 @@ FadeWrap<RpWidget> *FadeWrap<RpWidget>::toggleOn(
 void FadeWrap<RpWidget>::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	if (_animation.paint(p)) {
-		if (!_animation.animating() && _animation.visible()) {
+		if (!_animation.animating()
+			&& _animation.visible()
+			&& _animation.opacity() >= 1.) {
 			crl::on_main(this, [=] {
-				if (!_animation.animating() && _animation.visible()) {
+				if (!_animation.animating()
+					&& _animation.visible()
+					&& _animation.opacity() >= 1.) {
 					wrapped()->show();
 				}
 			});
 		}
 		return;
 	}
-	if (!_animation.animating()) {
+	if (!_animation.animating() && _animation.opacity() >= 1.) {
 		wrapped()->show();
 	}
 }

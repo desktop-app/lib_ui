@@ -21,11 +21,31 @@ FadeAnimation::FadeAnimation(RpWidget *widget, float64 scale)
 , _scale(scale) {
 }
 
+void FadeAnimation::setOpacity(float64 opacity) {
+	if (_opacity == opacity) {
+		return;
+	}
+	_opacity = opacity;
+	if (_visible && !_animation.animating()) {
+		if (_opacity < 1.) {
+			if (_cache.isNull()) {
+				_cache = grabContent();
+				Assert(!_cache.isNull());
+			}
+		} else {
+			if (!_cache.isNull()) {
+				_cache = QPixmap();
+			}
+		}
+	}
+	_widget->update();
+}
+
 bool FadeAnimation::paint(QPainter &p) {
 	if (_cache.isNull()) return false;
 
 	const auto cache = _cache;
-	auto opacity = _animation.value(_visible ? 1. : 0.);
+	auto opacity = _animation.value(_visible ? 1. : 0.) * _opacity;
 	p.setOpacity(opacity);
 	if (_scale < 1.) {
 		PainterHighQualityEnabler hq(p);
@@ -109,13 +129,13 @@ void FadeAnimation::hide() {
 
 void FadeAnimation::stopAnimation() {
 	_animation.stop();
-	if (!_cache.isNull()) {
+	if (!_cache.isNull() && (!_visible || _opacity >= 1.)) {
 		_cache = QPixmap();
 		if (_finishedCallback) {
 			_finishedCallback();
 		}
 	}
-	if (_visible == _widget->isHidden()) {
+	if (_visible == _widget->isHidden() && _opacity >= 1.) {
 		_widget->setVisible(_visible);
 	}
 }

@@ -25,6 +25,11 @@ public:
 	using UpdatedCallback = Fn<void(float64)>;
 	void setUpdatedCallback(UpdatedCallback &&callback);
 
+	void setOpacity(float64 opacity);
+	[[nodiscard]] float64 opacity() const {
+		return _opacity;
+	}
+
 	void show();
 	void hide();
 
@@ -51,6 +56,7 @@ private:
 
 	RpWidget *_widget = nullptr;
 	float64 _scale = 1.;
+	float64 _opacity = 1.;
 
 	Ui::Animations::Simple _animation;
 	QSize _size;

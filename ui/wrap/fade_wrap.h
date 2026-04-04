@@ -28,6 +28,7 @@ public:
 		float64 scale = 1.);
 
 	FadeWrap *setDuration(int duration);
+	FadeWrap *setOpacity(float64 opacity);
 	FadeWrap *toggle(bool shown, anim::type animated);
 	FadeWrap *show(anim::type animated) {
 		return toggle(true, animated);
@@ -73,6 +74,9 @@ public:
 
 	FadeWrap *setDuration(int duration) {
 		return chain(Parent::setDuration(duration));
+	}
+	FadeWrap *setOpacity(float64 opacity) {
+		return chain(Parent::setOpacity(opacity));
 	}
 	FadeWrap *toggle(bool shown, anim::type animated) {
 		return chain(Parent::toggle(shown, animated));
