@@ -10,6 +10,7 @@
 #include "ui/rp_widget.h"
 #include "ui/painter.h"
 #include "base/debug_log.h"
+#include "base/platform/base_platform_info.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #include <QRhiWidget>
@@ -56,7 +57,9 @@ SurfaceRhi::SurfaceRhi(
 : RpWidgetBase<QRhiWidget, SurfaceRhiTraits>(parent)
 , _renderer(std::move(renderer)) {
 #ifdef Q_OS_MAC
-	setApi(QRhiWidget::Api::Metal);
+	setApi(::Platform::MetalSupported()
+		? QRhiWidget::Api::Metal
+		: QRhiWidget::Api::OpenGL);
 #elif defined(Q_OS_WIN)
 	setApi(QRhiWidget::Api::Direct3D11);
 #else
@@ -90,9 +93,13 @@ void SurfaceRhi::ensureBackingStoreRhi() {
 	QPlatformBackingStoreRhiConfig config;
 	config.setEnabled(true);
 #ifdef Q_OS_MAC
-	config.setApi(QPlatformBackingStoreRhiConfig::Metal);
-	if (wh->surfaceType() != QSurface::MetalSurface) {
-		wh->setSurfaceType(QSurface::MetalSurface);
+	if (::Platform::MetalSupported()) {
+		config.setApi(QPlatformBackingStoreRhiConfig::Metal);
+		if (wh->surfaceType() != QSurface::MetalSurface) {
+			wh->setSurfaceType(QSurface::MetalSurface);
+		}
+	} else {
+		config.setApi(QPlatformBackingStoreRhiConfig::OpenGL);
 	}
 #elif defined(Q_OS_WIN)
 	config.setApi(QPlatformBackingStoreRhiConfig::D3D11);
