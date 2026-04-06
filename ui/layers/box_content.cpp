@@ -145,8 +145,7 @@ QPointer<RoundButton> BoxContent::addButton(
 	auto button = object_ptr<RoundButton>(
 		this,
 		std::move(text),
-		st,
-		RoundButtonTextNoTransform);
+		st);
 	auto result = QPointer<RoundButton>(button.data());
 	result->setClickedCallback(std::move(clickCallback));
 	getDelegate()->addButton(std::move(button));
@@ -176,8 +175,7 @@ QPointer<RoundButton> BoxContent::addLeftButton(
 	auto button = object_ptr<RoundButton>(
 		this,
 		std::move(text),
-		st,
-		RoundButtonTextNoTransform);
+		st);
 	const auto result = QPointer<RoundButton>(button.data());
 	result->setClickedCallback(std::move(clickCallback));
 	getDelegate()->addLeftButton(std::move(button));

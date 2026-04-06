@@ -150,7 +150,7 @@ public:
 		QWidget *parent,
 		rpl::producer<QString> text,
 		const style::RoundButton &st,
-		RoundButtonTextTransform transform);
+		RoundButtonTextTransform transform = RoundButtonTextNoTransform);
 
 	QString accessibilityName() override {
 		return _textFull.current().text;
