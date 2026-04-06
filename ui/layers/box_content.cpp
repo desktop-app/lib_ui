@@ -142,9 +142,12 @@ QPointer<RoundButton> BoxContent::addButton(
 		rpl::producer<QString> text,
 		Fn<void()> clickCallback,
 		const style::RoundButton &st) {
-	auto button = object_ptr<RoundButton>(this, std::move(text), st);
+	auto button = object_ptr<RoundButton>(
+		this,
+		std::move(text),
+		st,
+		RoundButtonTextNoTransform);
 	auto result = QPointer<RoundButton>(button.data());
-	result->setTextTransform(RoundButton::TextTransform::NoTransform);
 	result->setClickedCallback(std::move(clickCallback));
 	getDelegate()->addButton(std::move(button));
 	return result;
@@ -170,9 +173,12 @@ QPointer<RoundButton> BoxContent::addLeftButton(
 		rpl::producer<QString> text,
 		Fn<void()> clickCallback,
 		const style::RoundButton &st) {
-	auto button = object_ptr<RoundButton>(this, std::move(text), st);
+	auto button = object_ptr<RoundButton>(
+		this,
+		std::move(text),
+		st,
+		RoundButtonTextNoTransform);
 	const auto result = QPointer<RoundButton>(button.data());
-	result->setTextTransform(RoundButton::TextTransform::NoTransform);
 	result->setClickedCallback(std::move(clickCallback));
 	getDelegate()->addLeftButton(std::move(button));
 	return result;
