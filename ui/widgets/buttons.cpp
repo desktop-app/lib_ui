@@ -299,19 +299,22 @@ void FlatButton::setTextMargins(QMargins margins) {
 RoundButton::RoundButton(
 	QWidget *parent,
 	rpl::producer<QString> text,
-	const style::RoundButton &st,
-	RoundButtonTextTransform transform)
+	const style::RoundButton &st)
 : RippleButton(parent, st.ripple)
 , _textFull(std::move(text) | rpl::map(Text::WithEntities))
 , _st(st)
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
-, _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver)
-, _transform(transform) {
+, _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
 	_textFull.value(
 	) | rpl::on_next([=](const TextWithEntities &text) {
 		accessibilityNameChanged();
 		resizeToText(text);
 	}, lifetime());
+}
+
+void RoundButton::setTextTransform(RoundButtonTextTransform transform) {
+	_transform = transform;
+	resizeToText(_textFull.current());
 }
 
 void RoundButton::setText(rpl::producer<QString> text) {
