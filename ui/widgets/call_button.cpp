@@ -103,11 +103,12 @@ void CallButton::setText(rpl::producer<QString> text) {
 	_label->show();
 	rpl::combine(
 		sizeValue(),
-		_label->sizeValue()
-	) | rpl::on_next([=](QSize my, QSize label) {
+		_label->naturalWidthValue()
+	) | rpl::on_next([=](QSize my, int naturalWidth) {
+		_label->resizeToWidth(std::min(my.width(), naturalWidth));
 		_label->moveToLeft(
-			(my.width() - label.width()) / 2,
-			my.height() - label.height(),
+			(my.width() - _label->width()) / 2,
+			my.height() - _label->height(),
 			my.width());
 	}, _label->lifetime());
 }
