@@ -172,9 +172,9 @@ struct LineGeometry {
 	bool elided = false;
 };
 struct LineLayoutInfo {
-	int top = 0;
 	int left = 0;
 	int width = 0;
+	int bottom = 0;
 	bool rtl = false;
 };
 struct GeometryDescriptor {

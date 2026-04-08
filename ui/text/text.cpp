@@ -1071,9 +1071,9 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
 	auto result = std::vector<LineLayoutInfo>();
 	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft, bool rtl) {
 		result.push_back({
-			.top = lineBottom,
 			.left = lineLeft,
 			.width = lineWidth.ceil().toInt(),
+			.bottom = lineBottom,
 			.rtl = rtl,
 		});
 	});

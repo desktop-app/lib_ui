@@ -65,6 +65,8 @@ public:
 		float64 to,
 		crl::time duration,
 		anim::transition transition = anim::linear);
+	template <typename Callback>
+	void setCallback(Callback &&callback);
 	void change(
 		float64 to,
 		crl::time duration,
@@ -123,6 +125,10 @@ private:
 
 	template <typename Callback>
 	[[nodiscard]] static decltype(auto) Prepare(Callback &&callback);
+	template <typename Callback>
+	[[nodiscard]] static decltype(auto) BasicCallback(
+		not_null<Data*> data,
+		Callback &&callback);
 
 	void prepare(float64 from, crl::time duration);
 	void startPrepared(
@@ -356,6 +362,50 @@ decltype(auto) Simple::Prepare(Callback &&callback) {
 }
 
 template <typename Callback>
+inline decltype(auto) Simple::BasicCallback(
+		not_null<Data*> data,
+		Callback &&callback) {
+	return [data, callback = Prepare(std::forward<Callback>(callback))](
+		crl::time now) {
+		const auto time = anim::Disabled()
+			? data->duration
+			: (now - data->animation.started());
+		const auto finished = (time >= data->duration);
+		const auto progressRatio = finished ? 1. : time / data->duration;
+		const auto progress = finished
+			? data->delta
+			: data->transition(data->delta, progressRatio);
+		data->value = data->from + progress;
+
+		if (finished) {
+			data->animation.stop();
+		}
+
+		auto deleted = false;
+		data->markOnDelete = &deleted;
+		const auto result = callback(data->value) && !finished;
+		if (!deleted) {
+			data->markOnDelete = nullptr;
+			if (finished && data->finishedCallback) {
+				data->finishedCallback();
+			}
+			if (!deleted && !result) {
+				data->tracker.release();
+			}
+		}
+		return result;
+	};
+}
+
+template <typename Callback>
+inline void Simple::setCallback(Callback &&callback) {
+	if (const auto data = _data.get()) {
+		data->animation.init(
+			BasicCallback(data, std::forward<Callback>(callback)));
+	}
+}
+
+template <typename Callback>
 inline void Simple::start(
 		Callback &&callback,
 		float64 from,
@@ -363,47 +413,7 @@ inline void Simple::start(
 		crl::time duration,
 		anim::transition transition) {
 	prepare(from, duration);
-	_data->animation.init([
-		that = _data.get(),
-		callback = Prepare(std::forward<Callback>(callback))
-	](crl::time now) {
-		Assert(!std::isnan(double(now - that->animation.started())));
-		const auto time = anim::Disabled()
-			? that->duration
-			: (now - that->animation.started());
-		Assert(!std::isnan(time));
-		Assert(!std::isnan(that->delta));
-		Assert(!std::isnan(that->duration));
-		const auto finished = (time >= that->duration);
-		Assert(finished || that->duration > 0);
-		const auto progressRatio = finished ? 1. : time / that->duration;
-		Assert(!std::isnan(progressRatio));
-		const auto progress = finished
-			? that->delta
-			: that->transition(that->delta, progressRatio);
-		Assert(!std::isnan(that->from));
-		Assert(!std::isnan(progress));
-		that->value = that->from + progress;
-		Assert(!std::isnan(that->value));
-
-		if (finished) {
-			that->animation.stop();
-		}
-
-		auto deleted = false;
-		that->markOnDelete = &deleted;
-		const auto result = callback(that->value) && !finished;
-		if (!deleted) {
-			that->markOnDelete = nullptr;
-			if (finished && that->finishedCallback) {
-				that->finishedCallback();
-			}
-			if (!deleted && !result) {
-				that->tracker.release();
-			}
-		}
-		return result;
-	});
+	setCallback(std::forward<Callback>(callback));
 	startPrepared(to, duration, transition);
 }
 
