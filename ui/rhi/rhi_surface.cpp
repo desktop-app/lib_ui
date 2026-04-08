@@ -35,6 +35,7 @@ class SurfaceRhi final
 	: public RpWidgetBase<QRhiWidget, SurfaceRhiTraits> {
 public:
 	SurfaceRhi(QWidget *parent, std::unique_ptr<Renderer> renderer);
+	~SurfaceRhi();
 
 protected:
 	void initialize(QRhiCommandBuffer *cb) override;
@@ -66,6 +67,15 @@ SurfaceRhi::SurfaceRhi(
 	setApi(QRhiWidget::Api::OpenGL);
 #endif
 	LOG(("QRhi: SurfaceRhi created"));
+}
+
+SurfaceRhi::~SurfaceRhi() {
+	// Call releaseResources() here in the destructor body, BEFORE
+	// member destruction begins. At this point QRhiWidget's QRhi is
+	// still alive (base destructor hasn't run yet), so QRhi resource
+	// deletion is safe. This handles the deleteChildren() teardown
+	// path where Qt doesn't call releaseResources() automatically.
+	releaseResources();
 }
 
 void SurfaceRhi::ensureBackingStoreRhi() {
