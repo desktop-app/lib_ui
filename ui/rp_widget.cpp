@@ -352,6 +352,10 @@ RpWidget::RpWidget(QWidget *parent)
 	}();
 }
 
+RpWidget::~RpWidget() {
+	_initer.accessibleItems = nullptr;
+}
+
 QAccessibleInterface *RpWidget::accessibilityCreate() {
 	return (accessibilityRole() != QAccessible::Role::NoRole)
 		? new Accessible::Widget(this)
