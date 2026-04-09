@@ -778,7 +778,7 @@ QPoint PopupMenu::ConstrainToParentScreen(
 }
 
 void PopupMenu::popup(const QPoint &p) {
-	if (prepareGeometryFor(p)) {
+	if (!empty() && prepareGeometryFor(p)) {
 		popupPrepared();
 		return;
 	}
