@@ -149,7 +149,7 @@ struct RendererDescriptor {
 class Renderer final : public base::has_weak_ptr {
 public:
 	explicit Renderer(RendererDescriptor &&descriptor);
-	virtual ~Renderer();
+	~Renderer();
 
 	PaintFrameResult paint(QPainter &p, const Context &context);
 	[[nodiscard]] std::optional<Cached> ready(const QString &entityData);
