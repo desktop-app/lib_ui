@@ -71,11 +71,23 @@ void ReInitOnTopPanel(not_null<QWidget*> panel) {
 
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 	NSWindow *wnd = [reinterpret_cast<NSView*>(widget->winId()) window];
-	[wnd setLevel:NSPopUpMenuWindowLevel];
-	if (!canFocus) {
-		[wnd setStyleMask:NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel];
-		[wnd setCollectionBehavior:NSWindowCollectionBehaviorMoveToActiveSpace|NSWindowCollectionBehaviorStationary|NSWindowCollectionBehaviorFullScreenAuxiliary|NSWindowCollectionBehaviorIgnoresCycle];
+
+	auto behavior = [wnd collectionBehavior];
+
+	if (widget->windowFlags() & Qt::Popup) {
+		behavior |= NSWindowCollectionBehaviorMoveToActiveSpace;
 	}
+
+	if (!canFocus) {
+		[wnd setStyleMask:NSWindowStyleMaskUtilityWindow
+			| NSWindowStyleMaskNonactivatingPanel];
+		behavior |= NSWindowCollectionBehaviorMoveToActiveSpace
+			| NSWindowCollectionBehaviorStationary
+			| NSWindowCollectionBehaviorFullScreenAuxiliary
+			| NSWindowCollectionBehaviorIgnoresCycle;
+	}
+
+	[wnd setCollectionBehavior:behavior];
 }
 
 void AcceptAllMouseInput(not_null<QWidget*> widget) {
