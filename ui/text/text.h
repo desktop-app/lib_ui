@@ -287,6 +287,9 @@ public:
 	String &operator=(String &&other);
 	~String();
 
+	[[nodiscard]] QSize countSize(
+		int width,
+		bool breakEverywhere = false) const;
 	[[nodiscard]] int countWidth(
 		int width,
 		bool breakEverywhere = false) const;

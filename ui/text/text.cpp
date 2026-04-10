@@ -1025,29 +1025,27 @@ String::DimensionsResult String::countDimensions(
 
 }
 
-int String::countWidth(int width, bool breakEverywhere) const {
+QSize String::countSize(int width, bool breakEverywhere) const {
 	if (QFixed(width) >= _maxWidth) {
-		return _maxWidth;
+		return { _maxWidth, _minHeight };
 	}
-
-	QFixed maxLineWidth = 0;
-	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int, int, bool) {
+	auto height = 0;
+	auto maxLineWidth = QFixed(0);
+	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineBottom, int, bool) {
 		if (lineWidth > maxLineWidth) {
 			maxLineWidth = lineWidth;
 		}
+		height = lineBottom;
 	});
-	return maxLineWidth.ceil().toInt();
+	return { maxLineWidth.ceil().toInt(), height };
+}
+
+int String::countWidth(int width, bool breakEverywhere) const {
+	return countSize(width, breakEverywhere).width();
 }
 
 int String::countHeight(int width, bool breakEverywhere) const {
-	if (QFixed(width) >= _maxWidth) {
-		return _minHeight;
-	}
-	int result = 0;
-	enumerateLines(width, breakEverywhere, [&](auto, int lineBottom, int, bool) {
-		result = lineBottom;
-	});
-	return result;
+	return countSize(width, breakEverywhere).height();
 }
 
 std::vector<int> String::countLineWidths(int width) const {
@@ -1224,7 +1222,11 @@ void String::enumerateLines(
 		if (qlinesleft > 0) {
 			--qlinesleft;
 		}
-		callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left(), paragraphRTL);
+		callback(
+			lineLeft + lineWidth - widthLeft,
+			top += lineHeight,
+			lineLeft + qpadding.left(),
+			paragraphRTL);
 		if (lineElided) {
 			return withElided(true);
 		}
