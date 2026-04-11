@@ -1005,10 +1005,15 @@ void PopupMenu::finishSwitchAnimation() {
 	if (!_switchState) {
 		return;
 	}
+	const auto positionShift = _switchState->positionShift;
+	const auto baseY = _switchState->baseY;
 	_switchState->overlay.destroy();
 	_switchState.reset();
 	_scroll->show();
 	handleMenuResize();
+	if (positionShift) {
+		move(x(), baseY + positionShift);
+	}
 }
 
 void PopupMenu::setupMenuWidget() {
@@ -1144,6 +1149,8 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 
 		std::swap(raw->oldSnapshot, raw->newSnapshot);
 		std::swap(raw->fromScrollHeight, raw->toScrollHeight);
+		raw->baseY = y();
+		raw->positionShift = computePositionShift(raw->toScrollHeight);
 		raw->direction = direction;
 		startSwitchAnimation(raw, 1. - progress);
 		return;
@@ -1195,6 +1202,9 @@ void PopupMenu::swapStashed(SwitchDirection direction) {
 		setFixedSize(maxSize);
 		resize(maxSize);
 	}
+
+	_switchState->baseY = y();
+	_switchState->positionShift = computePositionShift(newScrollHeight);
 	_inner = QRect(
 		_padding.left(),
 		_padding.top(),
@@ -1257,6 +1267,14 @@ void PopupMenu::startSwitchAnimation(
 			raw->toScrollHeight,
 			progress);
 
+		if (raw->positionShift) {
+			const auto shift = anim::interpolate(
+				0,
+				raw->positionShift,
+				progress);
+			move(x(), raw->baseY + shift);
+		}
+
 		raw->overlay->resize(scrollWidth, h);
 		raw->overlay->update();
 
@@ -1279,6 +1297,26 @@ void PopupMenu::startSwitchAnimation(
 
 bool PopupMenu::hasStashedContent() const {
 	return _stashedContent != nullptr;
+}
+
+int PopupMenu::computePositionShift(int targetScrollHeight) const {
+	const auto screen = QGuiApplication::screenAt(
+		QPoint(x() + width() / 2, y() + height() / 2));
+	if (!screen) {
+		return 0;
+	}
+	const auto r = screen->availableGeometry();
+	const auto targetH = _padding.top()
+		+ targetScrollHeight
+		+ _padding.bottom();
+	auto targetY = y();
+	if (targetY + targetH - _margins.bottom() > r.y() + r.height()) {
+		targetY = r.y() + r.height() + _margins.bottom() - targetH;
+	}
+	if (targetY + _margins.top() < r.y()) {
+		targetY = r.y() - _margins.top();
+	}
+	return targetY - y();
 }
 
 RpWidget *PopupMenu::accessibilityParent() const {
