@@ -1017,7 +1017,10 @@ void SeparatePanel::validateBorderImage() {
 }
 
 QPixmap SeparatePanel::createBorderImage(QColor color) const {
-	const auto shadowPadding = st::callShadow.extend;
+	const auto drawShadow = !::Platform::IsWayland();
+	const auto shadowPadding = drawShadow
+		? st::callShadow.extend
+		: style::margins(0, 0, 0, 0);
 	const auto cacheSize = st::separatePanelBorderCacheSize;
 	auto cache = QImage(
 		cacheSize * style::DevicePixelRatio(),
@@ -1029,7 +1032,9 @@ QPixmap SeparatePanel::createBorderImage(QColor color) const {
 		auto p = QPainter(&cache);
 		auto inner = QRect(0, 0, cacheSize, cacheSize).marginsRemoved(
 			shadowPadding);
-		Shadow::paint(p, inner, cacheSize, st::callShadow);
+		if (drawShadow) {
+			Shadow::paint(p, inner, cacheSize, st::callShadow);
+		}
 		p.setCompositionMode(QPainter::CompositionMode_Source);
 		p.setBrush(color);
 		p.setPen(Qt::NoPen);
@@ -1348,7 +1353,9 @@ void SeparatePanel::initGeometry(QSize size) {
 	}
 	_useTransparency = Platform::TranslucentWindowsSupported();
 	_padding = _useTransparency
-		? st::callShadow.extend
+		? (::Platform::IsWayland()
+			? style::margins(0, 0, 0, 0)
+			: st::callShadow.extend)
 		: style::margins(
 			st::lineWidth,
 			st::lineWidth,
