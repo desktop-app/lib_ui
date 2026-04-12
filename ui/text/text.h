@@ -183,6 +183,11 @@ struct GeometryDescriptor {
 	bool *outElided = nullptr;
 };
 
+struct LinePostprocess {
+	Fn<Fn<void(QImage&)>(int lineIndex)> method;
+	not_null<QImage*> cache;
+};
+
 [[nodiscard]] not_null<SpoilerMessCache*> DefaultSpoilerCache();
 
 [[nodiscard]] GeometryDescriptor SimpleGeometry(
@@ -267,6 +272,7 @@ struct PaintContext {
 	// Elision middle works only with elisionLines = 1 and is very limited.
 	bool elisionMiddle = false;
 	bool useFullWidth = false; // !(width = min(availableWidth, maxWidth()))
+	const LinePostprocess *linePostprocess = nullptr;
 };
 
 class String {

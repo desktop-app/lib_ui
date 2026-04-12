@@ -65,6 +65,9 @@ private:
 	bool drawLine(
 		uint16 lineEnd,
 		Blocks::const_iterator blocksEnd);
+	bool drawLinePostprocessed(
+		uint16 lineEnd,
+		Blocks::const_iterator blocksEnd);
 	[[nodiscard]] FixedRange findSelectEmojiRange(
 		const QScriptItem &si,
 		std::vector<Block>::const_iterator blockIt,
@@ -214,6 +217,8 @@ private:
 	StateResult _lookupResult;
 
 	bool _elisionMiddle = false;
+
+	const LinePostprocess *_linePostprocess = nullptr;
 
 };
 

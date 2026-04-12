@@ -159,6 +159,7 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_quotePreCache = context.pre;
 	_quoteBlockquoteCache = context.blockquote;
 	_elisionMiddle = context.elisionMiddle && (context.elisionLines == 1);
+	_linePostprocess = context.linePostprocess;
 	enumerate();
 }
 
@@ -220,7 +221,7 @@ void Renderer::enumerate() {
 			}
 			if (!hidden) {
 				fillParagraphBg(changed ? _quotePadding.bottom() : 0);
-				if (!drawLine(w->position(), begin(_t->_blocks) + blockIndex) && !_quoteExpandLinkLookup) {
+				if (!drawLinePostprocessed(w->position(), begin(_t->_blocks) + blockIndex) && !_quoteExpandLinkLookup) {
 					return;
 				}
 				_y += _lineHeight;
@@ -285,7 +286,7 @@ void Renderer::enumerate() {
 		while (_t->blockPosition(begin(_t->_blocks) + blockIndex + 1) < lineEnd) {
 			++blockIndex;
 		}
-		if (!drawLine(lineEnd, begin(_t->_blocks) + blockIndex) && !_quoteExpandLinkLookup) {
+		if (!drawLinePostprocessed(lineEnd, begin(_t->_blocks) + blockIndex) && !_quoteExpandLinkLookup) {
 			return;
 		}
 		_y += _lineHeight;
@@ -306,7 +307,7 @@ void Renderer::enumerate() {
 			--_quoteLinesLeft;
 
 			fillParagraphBg(_quotePadding.bottom());
-			if (!drawLine(_t->_text.size(), end(_t->_blocks))) {
+			if (!drawLinePostprocessed(_t->_text.size(), end(_t->_blocks))) {
 				return;
 			}
 		}
@@ -529,6 +530,58 @@ void Renderer::initParagraphBidi() {
 		_t->_blocks.cend(),
 		_paragraphStart);
 	bidi.process();
+}
+
+bool Renderer::drawLinePostprocessed(
+		uint16 lineEnd,
+		Blocks::const_iterator blocksEnd) {
+	if (!_linePostprocess || !_linePostprocess->method) {
+		return drawLine(lineEnd, blocksEnd);
+	}
+	const auto index = _lineIndex - 1;
+	auto postprocess = _linePostprocess->method(index);
+	if (!postprocess) {
+		return drawLine(lineEnd, blocksEnd);
+	}
+
+	const auto ratio = style::DevicePixelRatio();
+	const auto lineAreaLeft = _x.toInt() - _quotePadding.left();
+	const auto lineAreaWidth = _startLineWidth;
+	const auto lineAreaTop = _y;
+	const auto cacheWidth = lineAreaWidth * ratio;
+	const auto cacheHeight = _lineHeight * ratio;
+
+	auto &cache = *_linePostprocess->cache;
+	if (cache.width() < cacheWidth || cache.height() < cacheHeight) {
+		cache = QImage(
+			std::max(cache.width(), cacheWidth),
+			std::max(cache.height(), cacheHeight),
+			QImage::Format_ARGB32_Premultiplied);
+		cache.setDevicePixelRatio(ratio);
+	}
+	cache.fill(Qt::transparent);
+
+	auto savedP = _p;
+	auto cachePainter = QPainter(&cache);
+	cachePainter.setFont(savedP->font());
+	cachePainter.setPen(savedP->pen());
+	cachePainter.setRenderHints(savedP->renderHints());
+	cachePainter.translate(-lineAreaLeft, -lineAreaTop);
+
+	_p = &cachePainter;
+	const auto result = drawLine(lineEnd, blocksEnd);
+	cachePainter.end();
+
+	_p = savedP;
+
+	postprocess(cache);
+
+	_p->drawImage(
+		QRectF(lineAreaLeft, lineAreaTop, lineAreaWidth, _lineHeight),
+		cache,
+		QRectF(0, 0, cacheWidth, cacheHeight));
+
+	return result;
 }
 
 bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
