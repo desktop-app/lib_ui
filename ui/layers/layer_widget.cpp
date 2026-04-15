@@ -40,8 +40,8 @@ public:
 	void removeBodyCache();
 	[[nodiscard]] bool hasBodyCache() const;
 	void refreshBodyCache(QPixmap &&bodyCache);
-	void startAnimation(Action action);
-	void skipAnimation(Action action);
+	void startAnimation(Action action, crl::time duration = 0);
+	void skipAnimation(Action action, crl::time duration = 0);
 	void finishAnimating();
 
 	bool animating() const {
@@ -85,6 +85,7 @@ private:
 	bool _mainMenuShown = false;
 	bool _specialLayerShown = false;
 	bool _layerShown = false;
+	crl::time _duration = st::boxDuration;
 
 };
 
@@ -120,7 +121,10 @@ void LayerStackWidget::BackgroundWidget::refreshBodyCache(
 	setAttribute(Qt::WA_OpaquePaintEvent, !_bodyCache.isNull());
 }
 
-void LayerStackWidget::BackgroundWidget::startAnimation(Action action) {
+void LayerStackWidget::BackgroundWidget::startAnimation(
+		Action action,
+		crl::time duration) {
+	_duration = (duration > 0) ? duration : st::boxDuration;
 	if (action == Action::ShowMainMenu) {
 		setMainMenuShown(true);
 	} else if (action != Action::HideLayer
@@ -144,9 +148,11 @@ void LayerStackWidget::BackgroundWidget::startAnimation(Action action) {
 	checkIfDone();
 }
 
-void LayerStackWidget::BackgroundWidget::skipAnimation(Action action) {
+void LayerStackWidget::BackgroundWidget::skipAnimation(
+		Action action,
+		crl::time duration) {
 	_repaintIssued = false;
-	startAnimation(action);
+	startAnimation(action, duration);
 	finishAnimating();
 }
 
@@ -166,7 +172,12 @@ void LayerStackWidget::BackgroundWidget::setMainMenuShown(bool shown) {
 	auto wasShown = isShown();
 	if (_mainMenuShown != shown) {
 		_mainMenuShown = shown;
-		_a_mainMenuShown.start([this] { animationCallback(); }, _mainMenuShown ? 0. : 1., _mainMenuShown ? 1. : 0., st::boxDuration, anim::easeOutCirc);
+		_a_mainMenuShown.start(
+			[this] { animationCallback(); },
+			_mainMenuShown ? 0. : 1.,
+			_mainMenuShown ? 1. : 0.,
+			_duration,
+			anim::easeOutCirc);
 	}
 	_mainMenuCacheWidth = (_mainMenuCache.width() / style::DevicePixelRatio())
 		- st::boxRoundShadow.extend.right();
@@ -178,7 +189,11 @@ void LayerStackWidget::BackgroundWidget::setSpecialLayerShown(bool shown) {
 	auto wasShown = isShown();
 	if (_specialLayerShown != shown) {
 		_specialLayerShown = shown;
-		_a_specialLayerShown.start([this] { animationCallback(); }, _specialLayerShown ? 0. : 1., _specialLayerShown ? 1. : 0., st::boxDuration);
+		_a_specialLayerShown.start(
+			[this] { animationCallback(); },
+			_specialLayerShown ? 0. : 1.,
+			_specialLayerShown ? 1. : 0.,
+			_duration);
 	}
 	checkWasShown(wasShown);
 }
@@ -187,14 +202,23 @@ void LayerStackWidget::BackgroundWidget::setLayerShown(bool shown) {
 	auto wasShown = isShown();
 	if (_layerShown != shown) {
 		_layerShown = shown;
-		_a_layerShown.start([this] { animationCallback(); }, _layerShown ? 0. : 1., _layerShown ? 1. : 0., st::boxDuration);
+		_a_layerShown.start(
+			[this] { animationCallback(); },
+			_layerShown ? 0. : 1.,
+			_layerShown ? 1. : 0.,
+			_duration);
 	}
 	checkWasShown(wasShown);
 }
 
 void LayerStackWidget::BackgroundWidget::checkWasShown(bool wasShown) {
 	if (isShown() != wasShown) {
-		_a_shown.start([this] { animationCallback(); }, wasShown ? 1. : 0., wasShown ? 0. : 1., st::boxDuration, anim::easeOutCirc);
+		_a_shown.start(
+			[this] { animationCallback(); },
+			wasShown ? 1. : 0.,
+			wasShown ? 0. : 1.,
+			_duration,
+			anim::easeOutCirc);
 	}
 }
 
@@ -413,17 +437,29 @@ void LayerStackWidget::hideCurrent(anim::type animated) {
 }
 
 void LayerStackWidget::hideLayers(anim::type animated) {
+	const auto duration = (animated == anim::type::normal && currentLayer())
+		? currentLayer()->animationDuration()
+		: 0;
 	startAnimation([] {}, [&] {
 		clearLayers();
-	}, Action::HideLayer, animated);
+	}, Action::HideLayer, animated, duration);
 }
 
 void LayerStackWidget::hideAll(anim::type animated) {
+	const auto duration = (animated == anim::type::normal)
+		? currentLayer()
+			? currentLayer()->animationDuration()
+			: _specialLayer
+			? _specialLayer->animationDuration()
+			: _mainMenu
+			? _mainMenu->animationDuration()
+			: 0
+		: 0;
 	startAnimation([] {}, [&] {
 		clearLayers();
 		clearSpecialLayer();
 		_mainMenu.destroy();
-	}, Action::HideAll, animated);
+	}, Action::HideAll, animated, duration);
 }
 
 void LayerStackWidget::hideAllAnimatedPrepare() {
@@ -431,7 +467,7 @@ void LayerStackWidget::hideAllAnimatedPrepare() {
 		clearLayers();
 		clearSpecialLayer();
 		_mainMenu.destroy();
-	}, Action::HideAll, anim::type::normal);
+	}, Action::HideAll, anim::type::normal, 0);
 }
 
 void LayerStackWidget::hideAllAnimatedRun() {
@@ -605,12 +641,13 @@ bool LayerStackWidget::prepareAnimation(
 		SetupNew &&setupNewWidgets,
 		ClearOld &&clearOldWidgets,
 		Action action,
-		anim::type animated) {
+		anim::type animated,
+		crl::time duration) {
 	if (animated == anim::type::instant) {
 		setupNewWidgets();
 		clearOldWidgets();
 		prepareForAnimation();
-		_background->skipAnimation(action);
+		_background->skipAnimation(action, duration);
 	} else {
 		setupNewWidgets();
 		setCacheImages();
@@ -629,14 +666,16 @@ void LayerStackWidget::startAnimation(
 		SetupNew &&setupNewWidgets,
 		ClearOld &&clearOldWidgets,
 		Action action,
-		anim::type animated) {
+		anim::type animated,
+		crl::time duration) {
 	const auto alive = prepareAnimation(
 		std::forward<SetupNew>(setupNewWidgets),
 		std::forward<ClearOld>(clearOldWidgets),
 		action,
-		animated);
+		animated,
+		duration);
 	if (alive) {
-		_background->startAnimation(action);
+		_background->startAnimation(action, duration);
 	}
 }
 

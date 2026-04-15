@@ -147,6 +147,12 @@ public:
 
 	virtual void showFinished() {
 	}
+	[[nodiscard]] virtual crl::time layerAnimationDuration() const {
+		return _layerAnimationDuration;
+	}
+	void setLayerAnimationDuration(crl::time duration) {
+		_layerAnimationDuration = duration;
+	}
 	void setCustomCornersFilling(RectParts corners) {
 		getDelegate()->setCustomCornersFilling(corners);
 	}
@@ -325,6 +331,8 @@ private:
 	Ui::Animations::Simple _scrollAnimation;
 
 	rpl::event_stream<> _boxClosingStream;
+
+	crl::time _layerAnimationDuration = 0;
 
 };
 

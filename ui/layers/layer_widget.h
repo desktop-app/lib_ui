@@ -126,6 +126,9 @@ public:
 	virtual bool closeByOutsideClick() const {
 		return true;
 	}
+	[[nodiscard]] virtual crl::time animationDuration() const {
+		return 0;
+	}
 
 	void closeLayer() {
 		if (const auto callback = base::take(_closedCallback)) {
@@ -252,13 +255,15 @@ private:
 		SetupNew &&setupNewWidgets,
 		ClearOld &&clearOldWidgets,
 		Action action,
-		anim::type animated);
+		anim::type animated,
+		crl::time duration);
 	template <typename SetupNew, typename ClearOld>
 	void startAnimation(
 		SetupNew &&setupNewWidgets,
 		ClearOld &&clearOldWidgets,
 		Action action,
-		anim::type animated);
+		anim::type animated,
+		crl::time duration = 0);
 
 	void prepareForAnimation();
 	void animationDone();
