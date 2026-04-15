@@ -1244,7 +1244,9 @@ void String::enumerateLines(
 	if (widthLeft < lineWidth) {
 		const auto useSkipHeight = (_blocks.back()->type() == TextBlockType::Skip)
 			&& (widthLeft + _words.back().f_width() == lineWidth);
-		const auto useLineHeight = useSkipHeight
+		const auto useLineHeight = !qlinesleft
+			? 0
+			: useSkipHeight
 			? _blocks.back().unsafe<SkipBlock>().height()
 			: lineHeight;
 		callback(
