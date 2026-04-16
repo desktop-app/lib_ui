@@ -462,7 +462,15 @@ std::array<QImage, 4> PrepareCorners(
 	result.format = reader.format().toLower();
 	result.animated = reader.supportsAnimation()
 		&& (reader.imageCount() > 1);
+	result.image = QImage(size, QImage::Format_ARGB32_Premultiplied);
+	if (result.image.isNull()) {
+		return {};
+	}
+	result.image.fill(Qt::transparent);
 	if (!reader.read(&result.image) || result.image.isNull()) {
+		return {};
+	}
+	if (reader.error() != QImageReader::UnknownError) {
 		return {};
 	}
 	return result;
@@ -1251,9 +1259,7 @@ QImage Prepare(QImage image, int w, int h, const PrepareArgs &args) {
 			image.setDevicePixelRatio(ratio);
 			auto result = QImage(outer, QImage::Format_ARGB32_Premultiplied);
 			result.setDevicePixelRatio(ratio);
-			if (args.options & Images::Option::TransparentBackground) {
-				result.fill(Qt::transparent);
-			}
+			result.fill(Qt::transparent);
 			{
 				QPainter p(&result);
 				if (!(args.options & Images::Option::TransparentBackground)) {
