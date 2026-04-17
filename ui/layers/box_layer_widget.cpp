@@ -46,6 +46,8 @@ BoxLayerWidget::BoxLayerWidget(
 		updateSize();
 		update();
 	}, lifetime());
+
+	updateMaxRealHeight();
 }
 
 BoxLayerWidget::~BoxLayerWidget() = default;
@@ -80,6 +82,7 @@ const style::Box &BoxLayerWidget::st() const {
 void BoxLayerWidget::setStyle(const style::Box &st) {
 	_st = &st;
 	_roundRect.setColor(st.bg);
+	updateMaxRealHeight();
 }
 
 const style::Box &BoxLayerWidget::style() {
@@ -155,6 +158,7 @@ void BoxLayerWidget::paintAdditionalTitle(Painter &p) {
 }
 
 void BoxLayerWidget::parentResized() {
+	updateMaxRealHeight();
 	auto newHeight = countRealHeight();
 	auto parentSize = parentWidget()->size();
 	setGeometry(
@@ -163,6 +167,15 @@ void BoxLayerWidget::parentResized() {
 		width(),
 		newHeight);
 	update();
+}
+
+void BoxLayerWidget::updateMaxRealHeight() {
+	const auto &margin = st().margin;
+	const auto max = parentWidget()->height()
+		- margin.top()
+		- margin.bottom();
+	_realHeightMax = max;
+	_contentHeightMax = max - contentTop() - buttonsHeight();
 }
 
 void BoxLayerWidget::setTitle(
@@ -206,6 +219,14 @@ void BoxLayerWidget::setCloseByOutsideClick(bool close) {
 
 bool BoxLayerWidget::closeByOutsideClick() const {
 	return _closeByOutsideClick;
+}
+
+rpl::producer<int> BoxLayerWidget::layerHeightMaxValue() {
+	return _realHeightMax.value();
+}
+
+rpl::producer<int> BoxLayerWidget::contentHeightMaxValue() {
+	return _contentHeightMax.value();
 }
 
 bool BoxLayerWidget::hasTitle() const {
@@ -361,7 +382,10 @@ void BoxLayerWidget::showLoading(bool show) {
 }
 
 
-void BoxLayerWidget::setDimensions(int newWidth, int maxHeight, bool forceCenterPosition) {
+void BoxLayerWidget::setDimensions(
+		int newWidth,
+		int maxHeight,
+		bool forceCenterPosition) {
 	_maxContentHeight = maxHeight;
 
 	auto fullHeight = countFullHeight();
@@ -393,10 +417,7 @@ void BoxLayerWidget::setDimensions(int newWidth, int maxHeight, bool forceCenter
 }
 
 int BoxLayerWidget::countRealHeight() const {
-	const auto &margin = st().margin;
-	return std::min(
-		_fullHeight,
-		parentWidget()->height() - margin.top() - margin.bottom());
+	return std::min(_fullHeight, _realHeightMax.current());
 }
 
 int BoxLayerWidget::countFullHeight() const {
@@ -407,8 +428,7 @@ int BoxLayerWidget::contentTop() const {
 	return hasTitle()
 		? titleHeight()
 		: _noContentMargin
-		?
-		0
+		? 0
 		: st::boxTopMargin;
 }
 

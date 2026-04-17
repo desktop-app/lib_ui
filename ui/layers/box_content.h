@@ -72,6 +72,8 @@ public:
 		Text::MarkedContext context = {}) = 0;
 	virtual void setAdditionalTitle(rpl::producer<QString> additional) = 0;
 	virtual void setCloseByOutsideClick(bool close) = 0;
+	[[nodiscard]] virtual rpl::producer<int> layerHeightMaxValue() = 0;
+	[[nodiscard]] virtual rpl::producer<int> contentHeightMaxValue() = 0;
 
 	virtual void setCustomCornersFilling(RectParts corners) = 0;
 	virtual void clearButtons() = 0;

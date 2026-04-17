@@ -2210,11 +2210,25 @@ void InputField::setMaxLength(int length) {
 }
 
 void InputField::setMinHeight(int height) {
+	if (_minHeight == height) {
+		return;
+	}
 	_minHeight = height;
+	if (_maxHeight >= 0 && _maxHeight < height) {
+		_maxHeight = height;
+	}
+	heightAutoupdated();
 }
 
 void InputField::setMaxHeight(int height) {
+	if (_maxHeight == height) {
+		return;
+	}
 	_maxHeight = height;
+	if (_minHeight >= 0 && _minHeight > height) {
+		_minHeight = height;
+	}
+	heightAutoupdated();
 }
 
 void InputField::setMode(Mode mode) {
