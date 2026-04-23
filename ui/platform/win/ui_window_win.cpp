@@ -232,8 +232,14 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 	updateWindowFrameColors();
 }
 
+void WindowHelper::setManualFramelessOwned(bool enabled) {
+	_manualFramelessOwned = enabled;
+}
+
 void WindowHelper::setNativeFrame(bool enabled) {
-	if (_handle && !::Platform::IsWindows8OrGreater() && window()->windowHandle()) {
+	if (_handle
+		&& !::Platform::IsWindows8OrGreater()
+		&& !_manualFramelessOwned) {
 		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
 		if (!enabled) {
 			FixAeroSnap(_handle);
@@ -356,7 +362,7 @@ void WindowHelper::init() {
 	window()->winIdValue() | rpl::on_next([=](WId winId) {
 		_handle = reinterpret_cast<HWND>(winId);
 
-		if (!::Platform::IsWindows8OrGreater()) {
+		if (!::Platform::IsWindows8OrGreater() && !_manualFramelessOwned) {
 			const auto native = _title->isHidden();
 			window()->setWindowFlag(Qt::FramelessWindowHint, !native);
 			if (_handle && !native) {
@@ -427,12 +433,10 @@ void WindowHelper::init() {
 			}
 		}
 	};
-	if (const auto handle = window()->windowHandle()) {
-		Ui::Connect(
-			handle,
-			&QWindow::windowStateChanged,
-			handleStateChanged);
-	}
+	Ui::Connect(
+		window()->windowHandle(),
+		&QWindow::windowStateChanged,
+		handleStateChanged);
 
 	ActivateDirectManipulation(window());
 

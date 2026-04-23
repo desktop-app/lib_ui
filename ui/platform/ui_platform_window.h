@@ -54,6 +54,15 @@ public:
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);
+	// Opt-out from the helper's internal management of the
+	// Qt::FramelessWindowHint flag, used when the embedder wants to
+	// keep the window frameless independently of whether the helper's
+	// TitleWidget is visible (e.g. a call panel that replaces the
+	// helper's title with its own SeparateTitleControls overlay).
+	// Default implementation is a no-op on platforms where the helper
+	// does not drive the flag itself.
+	virtual void setManualFramelessOwned(bool enabled) {
+	}
 	virtual void setMinimumSize(QSize size);
 	virtual void setFixedSize(QSize size);
 	virtual void setStaysOnTop(bool enabled);
