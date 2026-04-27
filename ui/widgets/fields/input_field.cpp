@@ -15,6 +15,7 @@
 #include "ui/platform/ui_platform_utility.h"
 #include "emoji_suggestions_helper.h"
 #include "ui/text/text.h"
+#include "ui/text/text_html_tags.h"
 #include "ui/text/text_renderer.h" // kQuoteCollapsedLines
 #include "ui/widgets/fields/custom_field_object.h"
 #include "ui/widgets/labels.h"
@@ -141,6 +142,48 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	return (tag == kTagBlockquote)
 		|| (tag == kTagBlockquoteCollapsed)
 		|| IsTagPre(tag);
+}
+
+[[nodiscard]] bool IsUsernameChar(QChar ch) {
+	const auto code = ch.unicode();
+	return (code >= 'a' && code <= 'z')
+		|| (code >= 'A' && code <= 'Z')
+		|| (code >= '0' && code <= '9')
+		|| (ch == '_');
+}
+
+[[nodiscard]] QStringView TrimmedView(QStringView text) {
+	auto from = 0;
+	auto till = text.size();
+	while (from != till && text[from].isSpace()) {
+		++from;
+	}
+	while (till != from && text[till - 1].isSpace()) {
+		--till;
+	}
+	return text.mid(from, till - from);
+}
+
+[[nodiscard]] QString StartingMention(QStringView text) {
+	const auto trimmed = TrimmedView(text);
+	if (trimmed.size() < 3 || trimmed[0] != '@') {
+		return QString();
+	}
+	auto till = 1;
+	while (till != trimmed.size() && IsUsernameChar(trimmed[till])) {
+		++till;
+	}
+	return (till > 1 && till != trimmed.size())
+		? trimmed.mid(0, till).toString()
+		: QString();
+}
+
+[[nodiscard]] bool HtmlTextMatchesPlainTextStart(
+		const QString &htmlText,
+		const QString &plainText) {
+	const auto htmlMention = StartingMention(QStringView(htmlText));
+	return htmlMention.isEmpty()
+		|| StartingMention(QStringView(plainText)) == htmlMention;
 }
 
 [[nodiscard]] QStringView FindBlockTag(QStringView tag) {
@@ -3690,10 +3733,18 @@ QMimeData *InputField::createMimeDataFromSelectionInner() const {
 	const auto cursor = _inner->textCursor();
 	const auto start = cursor.selectionStart();
 	const auto end = cursor.selectionEnd();
-	const auto result = TextUtilities::MimeDataFromText((end > start)
+	auto selected = (end > start)
 		? getTextWithTagsPart(start, end)
-		: TextWithTags()
+		: TextWithTags();
+	const auto html = selected.text.isEmpty()
+		? QString()
+		: TextUtilities::TextWithTagsToHtml(selected);
+	const auto result = TextUtilities::MimeDataFromText(
+		std::move(selected)
 	).release();
+	if (result && !html.isEmpty()) {
+		result->setHtml(html);
+	}
 	return result ? result : new QMimeData;
 }
 
@@ -5322,6 +5373,9 @@ bool InputField::canInsertFromMimeDataInner(const QMimeData *source) const {
 }
 
 void InputField::insertFromMimeDataInner(const QMimeData *source) {
+	if (!source) {
+		return;
+	}
 	if (source
 		&& _mimeDataHook
 		&& _mimeDataHook(source, MimeAction::Insert)) {
@@ -5333,21 +5387,38 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 		const auto modifiers = QGuiApplication::keyboardModifiers();
 		const auto plain = (modifiers & Qt::ControlModifier)
 			&& (modifiers & Qt::ShiftModifier);
-		const auto skipTags = plain
-			|| !source->hasFormat(textMime)
-			|| !source->hasFormat(tagsMime);
-		if (skipTags) {
+		const auto plainText = [&] {
 			_insertedTags.clear();
+			_insertedTagsAreFromMime = false;
 
 			auto result = source->text();
 			return result.replace(u"\r\n"_q, u"\n"_q);
+		};
+		if (plain) {
+			return plainText();
 		}
-		auto result = QString::fromUtf8(source->data(textMime));
-		_insertedTags = TextUtilities::DeserializeTags(
-			source->data(tagsMime),
-			result.size());
-		_insertedTagsAreFromMime = true;
-		return result;
+		if (source->hasFormat(textMime) && source->hasFormat(tagsMime)) {
+			auto result = QString::fromUtf8(source->data(textMime));
+			_insertedTags = TextUtilities::DeserializeTags(
+				source->data(tagsMime),
+				result.size());
+			_insertedTagsAreFromMime = true;
+			return result;
+		}
+		if (source->hasHtml()) {
+			if (auto parsed = TextUtilities::TextWithTagsFromHtml(
+					source->html())) {
+				if (!HtmlTextMatchesPlainTextStart(
+						parsed->text,
+						source->text())) {
+					return plainText();
+				}
+				_insertedTags = std::move(parsed->tags);
+				_insertedTagsAreFromMime = false;
+				return std::move(parsed->text);
+			}
+		}
+		return plainText();
 	}();
 	auto cursor = textCursor();
 	if (!text.isEmpty()) {

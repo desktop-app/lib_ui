@@ -180,6 +180,8 @@ PRIVATE
     ui/text/text_entity.h
     ui/text/text_extended_data.cpp
     ui/text/text_extended_data.h
+    ui/text/text_html_tags.cpp
+    ui/text/text_html_tags.h
     ui/text/text_isolated_emoji.h
     ui/text/text_renderer.cpp
     ui/text/text_renderer.h
