@@ -364,11 +364,14 @@ void PopupMenu::handleTriggered(const Menu::CallbackData &data) {
 		if (!data.preventClose) {
 			hideMenu();
 		}
+		auto weak = base::make_weak(this);
 		data.action->trigger();
-		_triggering = false;
-		if (_deleteLater) {
-			_deleteLater = false;
-			deleteLater();
+		if (weak) {
+			_triggering = false;
+			if (_deleteLater) {
+				_deleteLater = false;
+				deleteLater();
+			}
 		}
 	}
 }
