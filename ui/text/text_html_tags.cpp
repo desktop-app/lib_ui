@@ -168,7 +168,7 @@ void AddUnique(
 [[nodiscard]] QString VisibleEntityText(
 		const TextWithEntities &text,
 		const EntityInText &entity) {
-	const auto textSize = text.text.size();
+	const auto textSize = int(text.text.size());
 	const auto from = std::clamp(entity.offset(), 0, textSize);
 	const auto till = std::clamp(entity.offset() + entity.length(), 0, textSize);
 	return (till > from)
@@ -319,7 +319,7 @@ void AddLinkRunSegment(
 }
 
 [[nodiscard]] std::vector<LinkRun> LinkRuns(const TextWithTags &text) {
-	const auto textSize = text.text.size();
+	const auto textSize = int(text.text.size());
 	auto events = std::vector<HtmlTagEvent>();
 	events.reserve(2 * text.tags.size());
 	for (const auto &tag : text.tags) {
@@ -584,7 +584,7 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 
 [[nodiscard]] int FindTagEnd(QStringView html, int from) {
 	auto quote = QChar();
-	for (auto i = from, size = html.size(); i != size; ++i) {
+	for (auto i = from, size = int(html.size()); i != size; ++i) {
 		const auto ch = html[i];
 		if (!quote.isNull()) {
 			if (ch == quote) {
@@ -719,7 +719,7 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		NamedEntityCache &cache) {
 	auto result = QString();
 	result.reserve(text.size());
-	for (auto i = 0, size = text.size(); i != size;) {
+	for (auto i = 0, size = int(text.size()); i != size;) {
 		if (text[i] != '&') {
 			result.append(text[i++]);
 			continue;
@@ -1022,10 +1022,10 @@ void AppendTaggedText(
 		return;
 	}
 	RememberAnchorVisibleOffset(state, tagId);
-	const auto offset = state.result.text.size();
+	const auto offset = int(state.result.text.size());
 	state.result.text.append(text);
 	if (!tagId.isEmpty()) {
-		state.tags.push_back({ offset, text.size(), tagId });
+		state.tags.push_back({ offset, int(text.size()), tagId });
 	}
 	state.trailingStructuralNewlines = 0;
 }
@@ -1071,7 +1071,7 @@ void AppendText(ParseState &state, QString text) {
 		return;
 	}
 	auto start = 0;
-	for (auto i = 0, size = text.size(); i != size;) {
+	for (auto i = 0, size = int(text.size()); i != size;) {
 		if (!IsCollapsibleSpace(text[i])) {
 			++i;
 			continue;
@@ -1346,7 +1346,7 @@ QString TextWithTagsToHtml(const TextWithTags &text) {
 	if (text.text.isEmpty()) {
 		return QString();
 	}
-	const auto textSize = text.text.size();
+	const auto textSize = int(text.text.size());
 	const auto linkRuns = LinkRuns(text);
 	auto events = std::vector<HtmlTagEvent>();
 	events.reserve(4 * text.tags.size());
@@ -1425,7 +1425,7 @@ QString TextForMimeDataToHtml(const TextForMimeData &text) {
 
 std::optional<TextWithTags> TextWithTagsFromHtml(QStringView html) {
 	auto state = ParseState();
-	for (auto i = 0, size = html.size(); i != size;) {
+	for (auto i = 0, size = int(html.size()); i != size;) {
 		const auto nextTag = html.indexOf(QChar('<'), i);
 		if (nextTag < 0) {
 			if (state.hidden.empty()) {
