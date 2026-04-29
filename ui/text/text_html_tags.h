@@ -13,6 +13,7 @@
 namespace TextUtilities {
 
 [[nodiscard]] QString TextWithTagsToHtml(const TextWithTags &text);
+[[nodiscard]] QString TextForMimeDataToHtml(const TextForMimeData &text);
 [[nodiscard]] std::optional<TextWithTags> TextWithTagsFromHtml(
 	QStringView html);
 

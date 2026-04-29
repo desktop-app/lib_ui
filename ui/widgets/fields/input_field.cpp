@@ -3736,15 +3736,9 @@ QMimeData *InputField::createMimeDataFromSelectionInner() const {
 	auto selected = (end > start)
 		? getTextWithTagsPart(start, end)
 		: TextWithTags();
-	const auto html = selected.text.isEmpty()
-		? QString()
-		: TextUtilities::TextWithTagsToHtml(selected);
 	const auto result = TextUtilities::MimeDataFromText(
 		std::move(selected)
 	).release();
-	if (result && !html.isEmpty()) {
-		result->setHtml(html);
-	}
 	return result ? result : new QMimeData;
 }
 

@@ -1853,7 +1853,7 @@ TextForMimeData String::toText(
 				entity.type,
 				linkStart,
 				int(result.rich.text.size() - linkStart),
-				plainUrl ? QString() : entity.data });
+				entity.data });
 		}
 	};
 	const auto appendPartCallback = [&](

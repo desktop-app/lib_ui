@@ -51,15 +51,22 @@ struct ActiveTags {
 	std::vector<QString> links;
 };
 
+struct OpenAnchor {
+	QString href;
+	int visibleOffset = -1;
+};
+
 struct ParseState {
 	TextWithTags result;
 	TextWithTags::Tags tags;
 	ActiveTags active;
+	std::vector<OpenAnchor> openAnchors;
 	NamedEntityCache entityCache;
 	std::vector<QString> hidden;
 	int trailingStructuralNewlines = 0;
 	bool pendingWhitespace = false;
 	QString pendingWhitespaceTagId;
+	bool removedRedundantLinks = false;
 };
 
 struct HtmlTagCounts {
@@ -154,6 +161,55 @@ void AddUnique(
 		if (IsSupportedLinkTag(tag)) {
 			result = tag.toString();
 		}
+	}
+	return result;
+}
+
+[[nodiscard]] QString VisibleEntityText(
+		const TextWithEntities &text,
+		const EntityInText &entity) {
+	const auto textSize = text.text.size();
+	const auto from = std::clamp(entity.offset(), 0, textSize);
+	const auto till = std::clamp(entity.offset() + entity.length(), 0, textSize);
+	return (till > from)
+		? QStringView(text.text).mid(from, till - from).toString()
+		: QString();
+}
+
+[[nodiscard]] EntitiesInText HtmlExportEntities(const TextForMimeData &text) {
+	auto result = EntitiesInText();
+	result.reserve(text.rich.entities.size());
+	for (const auto &original : text.rich.entities) {
+		auto entity = original;
+		const auto offset = entity.offset();
+		const auto length = entity.length();
+		switch (entity.type()) {
+		case EntityType::CustomEmoji:
+		case EntityType::FormattedDate:
+			continue;
+		case EntityType::Url: {
+			const auto url = entity.data().isEmpty()
+				? VisibleEntityText(text.rich, entity)
+				: entity.data();
+			entity = EntityInText(
+				EntityType::CustomUrl,
+				offset,
+				length,
+				UrlClickHandler::EncodeForOpening(url));
+		} break;
+		case EntityType::Email: {
+			const auto email = entity.data().isEmpty()
+				? VisibleEntityText(text.rich, entity)
+				: entity.data();
+			entity = EntityInText(
+				EntityType::CustomUrl,
+				offset,
+				length,
+				email);
+		} break;
+		default: break;
+		}
+		result.push_back(std::move(entity));
 	}
 	return result;
 }
@@ -380,6 +436,16 @@ void AddLinkRunSegment(
 	return result;
 }
 
+[[nodiscard]] QString SerializeLinkHref(QStringView link) {
+	if (link.indexOf(':') < 0) {
+		const auto value = link.toString();
+		if (UrlClickHandler::IsEmail(value)) {
+			return u"mailto:%1"_q.arg(value);
+		}
+	}
+	return link.toString();
+}
+
 void AppendOpenTag(QString &result, const HtmlTagDescriptor &descriptor) {
 	switch (descriptor.tag) {
 	case HtmlTag::Pre: result.append(u"<pre>"_q); break;
@@ -393,7 +459,7 @@ void AppendOpenTag(QString &result, const HtmlTagDescriptor &descriptor) {
 	case HtmlTag::StrikeOut: result.append(u"<s>"_q); break;
 	case HtmlTag::Link:
 		result.append(u"<a href=\""_q);
-		result.append(EscapeHtmlAttribute(descriptor.data));
+		result.append(EscapeHtmlAttribute(SerializeLinkHref(descriptor.data)));
 		result.append(u"\">"_q);
 		break;
 	}
@@ -885,6 +951,69 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 	return result;
 }
 
+[[nodiscard]] bool TagIdContains(QStringView tagId, QStringView value) {
+	return !value.isEmpty()
+		&& TextUtilities::SplitTags(tagId).contains(value);
+}
+
+void RememberAnchorVisibleOffset(ParseState &state, const QString &tagId) {
+	if (state.openAnchors.empty()) {
+		return;
+	}
+	auto &anchor = state.openAnchors.back();
+	if (anchor.visibleOffset < 0 && TagIdContains(tagId, anchor.href)) {
+		anchor.visibleOffset = state.result.text.size();
+	}
+}
+
+void RemoveRedundantAnchorLink(ParseState &state, const OpenAnchor &anchor) {
+	if (anchor.href.isEmpty() || anchor.visibleOffset < 0) {
+		return;
+	}
+	const auto offset = anchor.visibleOffset;
+	const auto till = state.result.text.size();
+	if (till <= offset) {
+		return;
+	}
+	const auto visible = QStringView(state.result.text).mid(offset, till - offset);
+	if (anchor.href != UrlClickHandler::EncodeForOpening(visible.toString())) {
+		return;
+	}
+	auto removed = false;
+	for (auto i = state.tags.begin(); i != state.tags.end();) {
+		const auto tagTill = i->offset + i->length;
+		if (i->offset < offset || tagTill > till) {
+			++i;
+			continue;
+		}
+		const auto updated = TextUtilities::TagWithRemoved(i->id, anchor.href);
+		if (updated == i->id) {
+			++i;
+			continue;
+		}
+		removed = true;
+		if (updated.isEmpty()) {
+			i = state.tags.erase(i);
+		} else {
+			i->id = updated;
+			++i;
+		}
+	}
+	if (state.pendingWhitespace
+		&& TagIdContains(state.pendingWhitespaceTagId, anchor.href)) {
+		const auto updated = TextUtilities::TagWithRemoved(
+			state.pendingWhitespaceTagId,
+			anchor.href);
+		if (updated != state.pendingWhitespaceTagId) {
+			state.pendingWhitespaceTagId = updated;
+			removed = true;
+		}
+	}
+	if (removed) {
+		state.removedRedundantLinks = true;
+	}
+}
+
 void AppendTaggedText(
 		ParseState &state,
 		QStringView text,
@@ -892,6 +1021,7 @@ void AppendTaggedText(
 	if (text.isEmpty()) {
 		return;
 	}
+	RememberAnchorVisibleOffset(state, tagId);
 	const auto offset = state.result.text.size();
 	state.result.text.append(text);
 	if (!tagId.isEmpty()) {
@@ -1163,11 +1293,17 @@ void ProcessTag(
 	}
 	if (name == u"a"_q && !selfClosing) {
 		if (closing) {
+			if (!state.openAnchors.empty()) {
+				RemoveRedundantAnchorLink(state, state.openAnchors.back());
+				state.openAnchors.pop_back();
+			}
 			if (!state.active.links.empty()) {
 				state.active.links.pop_back();
 			}
 		} else {
-			state.active.links.push_back(ValidatedHref(attributes));
+			const auto href = ValidatedHref(attributes);
+			state.active.links.push_back(href);
+			state.openAnchors.push_back({ href });
 		}
 		return;
 	}
@@ -1272,6 +1408,21 @@ QString TextWithTagsToHtml(const TextWithTags &text) {
 	return u"<html><body>"_q + result + u"</body></html>"_q;
 }
 
+QString TextForMimeDataToHtml(const TextForMimeData &text) {
+	if (text.rich.text.isEmpty()) {
+		return QString();
+	}
+	const auto tags = ConvertEntitiesToTextTags(HtmlExportEntities(text));
+	const auto html = TextWithTagsToHtml({ text.rich.text, tags });
+	if (!html.isEmpty()) {
+		return html;
+	}
+	auto result = QString();
+	result.reserve(text.rich.text.size() * 2);
+	AppendEscaped(result, text.rich.text, false);
+	return u"<html><body>"_q + result + u"</body></html>"_q;
+}
+
 std::optional<TextWithTags> TextWithTagsFromHtml(QStringView html) {
 	auto state = ParseState();
 	for (auto i = 0, size = html.size(); i != size;) {
@@ -1338,7 +1489,7 @@ std::optional<TextWithTags> TextWithTagsFromHtml(QStringView html) {
 	}
 	state.result.tags = SimplifyParserTags(std::move(state.tags));
 	TrimTrailingStructuralNewlines(state);
-	if (state.result.tags.isEmpty()) {
+	if (state.result.tags.isEmpty() && !state.removedRedundantLinks) {
 		return std::nullopt;
 	}
 	return state.result;
