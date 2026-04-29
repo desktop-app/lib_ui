@@ -7,6 +7,7 @@
 #include "ui/text/text_html_tags.h"
 
 #include "ui/widgets/fields/input_field.h"
+#include "ui/basic_click_handlers.h"
 
 #include <QtCore/QHash>
 #include <QtGui/QTextDocumentFragment>
@@ -24,6 +25,7 @@ enum class HtmlTag {
 	Pre,
 	Code,
 	Blockquote,
+	Link,
 	Bold,
 	Italic,
 	Underline,
@@ -31,6 +33,12 @@ enum class HtmlTag {
 };
 
 using NamedEntityCache = QHash<QString, std::optional<QString>>;
+
+struct HtmlAttribute {
+	QString name;
+	QString value;
+	bool hasValue = false;
+};
 
 struct ActiveTags {
 	int pre = 0;
@@ -40,6 +48,7 @@ struct ActiveTags {
 	int italic = 0;
 	int underline = 0;
 	int strikeOut = 0;
+	std::vector<QString> links;
 };
 
 struct ParseState {
@@ -61,77 +70,166 @@ struct HtmlTagCounts {
 	int italic = 0;
 	int underline = 0;
 	int strikeOut = 0;
+	std::vector<QString> links;
+};
+
+struct HtmlTagDescriptor {
+	HtmlTag tag = HtmlTag::Bold;
+	QString data;
+
+	[[nodiscard]] bool operator==(const HtmlTagDescriptor &other) const {
+		return tag == other.tag && data == other.data;
+	}
 };
 
 struct HtmlTagEvent {
 	int offset = 0;
-	HtmlTag tag = HtmlTag::Bold;
+	HtmlTagDescriptor descriptor;
 	int delta = 0;
+};
+
+struct LinkRun {
+	int from = 0;
+	int till = 0;
+	QString link;
+	bool suppress = false;
 };
 
 [[nodiscard]] int HtmlTagOrder(HtmlTag tag) {
 	switch (tag) {
 	case HtmlTag::Blockquote: return 0;
-	case HtmlTag::Pre: return 1;
-	case HtmlTag::Code: return 2;
-	case HtmlTag::Bold: return 3;
-	case HtmlTag::Italic: return 4;
-	case HtmlTag::Underline: return 5;
-	case HtmlTag::StrikeOut: return 6;
+	case HtmlTag::Link: return 1;
+	case HtmlTag::Bold: return 2;
+	case HtmlTag::Italic: return 3;
+	case HtmlTag::Underline: return 4;
+	case HtmlTag::StrikeOut: return 5;
+	case HtmlTag::Pre: return 6;
+	case HtmlTag::Code: return 7;
 	}
 	return 0;
 }
 
-void AddUnique(std::vector<HtmlTag> &tags, HtmlTag tag) {
-	if (std::find(tags.begin(), tags.end(), tag) != tags.end()) {
+[[nodiscard]] bool HtmlTagEventLess(
+		const HtmlTagEvent &a,
+		const HtmlTagEvent &b) {
+	if (a.offset != b.offset) {
+		return a.offset < b.offset;
+	}
+	if (a.delta != b.delta) {
+		return a.delta < b.delta;
+	}
+	const auto aOrder = HtmlTagOrder(a.descriptor.tag);
+	const auto bOrder = HtmlTagOrder(b.descriptor.tag);
+	if (aOrder != bOrder) {
+		return aOrder < bOrder;
+	}
+	return a.descriptor.data < b.descriptor.data;
+}
+
+void AddUnique(
+		std::vector<HtmlTagDescriptor> &descriptors,
+		HtmlTagDescriptor descriptor) {
+	const auto i = std::find(
+		descriptors.begin(),
+		descriptors.end(),
+		descriptor);
+	if (i != descriptors.end()) {
 		return;
 	}
-	tags.push_back(tag);
+	descriptors.push_back(std::move(descriptor));
 }
 
 [[nodiscard]] bool IsPreTag(QStringView tag) {
 	return tag.startsWith(Ui::InputField::kTagPre);
 }
 
-[[nodiscard]] std::vector<HtmlTag> SupportedTags(QStringView id) {
-	auto result = std::vector<HtmlTag>();
+[[nodiscard]] bool IsSupportedLinkTag(QStringView tag) {
+	return Ui::InputField::IsValidMarkdownLink(tag)
+		&& !TextUtilities::IsMentionLink(tag);
+}
+
+[[nodiscard]] QString SupportedLink(QStringView id) {
+	auto result = QString();
+	for (const auto &tag : TextUtilities::SplitTags(id)) {
+		if (IsSupportedLinkTag(tag)) {
+			result = tag.toString();
+		}
+	}
+	return result;
+}
+
+[[nodiscard]] bool HasTag(
+		const std::vector<HtmlTagDescriptor> &descriptors,
+		HtmlTag tag) {
+	return std::any_of(
+		descriptors.begin(),
+		descriptors.end(),
+		[=](const auto &descriptor) {
+			return descriptor.tag == tag;
+		});
+}
+
+[[nodiscard]] std::vector<HtmlTagDescriptor> SupportedTags(
+		QStringView id,
+		bool suppressLink) {
+	auto result = std::vector<HtmlTagDescriptor>();
 	auto hasPre = false;
 	auto hasCode = false;
+	auto link = QString();
 	for (const auto &tag : TextUtilities::SplitTags(id)) {
 		if (tag == Ui::InputField::kTagBold) {
-			AddUnique(result, HtmlTag::Bold);
+			AddUnique(result, { HtmlTag::Bold });
 		} else if (tag == Ui::InputField::kTagItalic) {
-			AddUnique(result, HtmlTag::Italic);
+			AddUnique(result, { HtmlTag::Italic });
 		} else if (tag == Ui::InputField::kTagUnderline) {
-			AddUnique(result, HtmlTag::Underline);
+			AddUnique(result, { HtmlTag::Underline });
 		} else if (tag == Ui::InputField::kTagStrikeOut) {
-			AddUnique(result, HtmlTag::StrikeOut);
+			AddUnique(result, { HtmlTag::StrikeOut });
 		} else if (tag == Ui::InputField::kTagCode) {
 			hasCode = true;
 		} else if (IsPreTag(tag)) {
 			hasPre = true;
 		} else if (tag == Ui::InputField::kTagBlockquote
 			|| tag == Ui::InputField::kTagBlockquoteCollapsed) {
-			AddUnique(result, HtmlTag::Blockquote);
+			AddUnique(result, { HtmlTag::Blockquote });
+		} else if (IsSupportedLinkTag(tag)) {
+			link = tag.toString();
 		}
 	}
 	if (hasPre) {
-		AddUnique(result, HtmlTag::Pre);
-	} else if (hasCode) {
-		AddUnique(result, HtmlTag::Code);
+		return { { HtmlTag::Pre } };
 	}
-	std::sort(result.begin(), result.end(), [](HtmlTag a, HtmlTag b) {
-		return HtmlTagOrder(a) < HtmlTagOrder(b);
+	if (hasCode) {
+		return { { HtmlTag::Code } };
+	}
+	if (!link.isEmpty() && !suppressLink) {
+		AddUnique(result, { HtmlTag::Link, link });
+	}
+	std::sort(result.begin(), result.end(), [](const auto &a, const auto &b) {
+		return HtmlTagOrder(a.tag) < HtmlTagOrder(b.tag);
 	});
 	return result;
 }
 
-[[nodiscard]] bool HasTag(const std::vector<HtmlTag> &tags, HtmlTag tag) {
-	return (std::find(tags.begin(), tags.end(), tag) != tags.end());
-}
-
-void UpdateCount(HtmlTagCounts &counts, HtmlTag tag, int delta) {
-	switch (tag) {
+void UpdateCount(
+		HtmlTagCounts &counts,
+		const HtmlTagDescriptor &descriptor,
+		int delta) {
+	if (descriptor.tag == HtmlTag::Link) {
+		if (delta > 0) {
+			counts.links.push_back(descriptor.data);
+		} else if (delta < 0) {
+			for (auto i = counts.links.end(); i != counts.links.begin();) {
+				--i;
+				if (*i == descriptor.data) {
+					counts.links.erase(i);
+					break;
+				}
+			}
+		}
+		return;
+	}
+	switch (descriptor.tag) {
 	case HtmlTag::Pre: counts.pre += delta; break;
 	case HtmlTag::Code: counts.code += delta; break;
 	case HtmlTag::Blockquote: counts.blockquote += delta; break;
@@ -139,37 +237,151 @@ void UpdateCount(HtmlTagCounts &counts, HtmlTag tag, int delta) {
 	case HtmlTag::Italic: counts.italic += delta; break;
 	case HtmlTag::Underline: counts.underline += delta; break;
 	case HtmlTag::StrikeOut: counts.strikeOut += delta; break;
+	case HtmlTag::Link: break;
 	}
 }
 
-[[nodiscard]] std::vector<HtmlTag> ActiveHtmlTags(const HtmlTagCounts &counts) {
-	auto result = std::vector<HtmlTag>();
-	result.reserve(7);
-	if (counts.blockquote > 0) {
-		result.push_back(HtmlTag::Blockquote);
+[[nodiscard]] QString ActiveLink(const HtmlTagCounts &counts) {
+	return counts.links.empty() ? QString() : counts.links.back();
+}
+
+void AddLinkRunSegment(
+		std::vector<LinkRun> &runs,
+		int from,
+		int till,
+		const QString &link) {
+	if (link.isEmpty() || till <= from) {
+		return;
 	}
-	if (counts.pre > 0) {
-		result.push_back(HtmlTag::Pre);
-	} else if (counts.code > 0) {
-		result.push_back(HtmlTag::Code);
+	if (!runs.empty()
+		&& runs.back().till == from
+		&& runs.back().link == link) {
+		runs.back().till = till;
+	} else {
+		runs.push_back({ from, till, link });
 	}
-	if (counts.bold > 0) {
-		result.push_back(HtmlTag::Bold);
+}
+
+[[nodiscard]] std::vector<LinkRun> LinkRuns(const TextWithTags &text) {
+	const auto textSize = text.text.size();
+	auto events = std::vector<HtmlTagEvent>();
+	events.reserve(2 * text.tags.size());
+	for (const auto &tag : text.tags) {
+		const auto link = SupportedLink(tag.id);
+		if (link.isEmpty()) {
+			continue;
+		}
+		const auto from = std::clamp(tag.offset, 0, textSize);
+		const auto till = std::clamp(tag.offset + tag.length, 0, textSize);
+		if (till <= from) {
+			continue;
+		}
+		const auto descriptor = HtmlTagDescriptor{ HtmlTag::Link, link };
+		events.push_back({ from, descriptor, 1 });
+		events.push_back({ till, descriptor, -1 });
 	}
-	if (counts.italic > 0) {
-		result.push_back(HtmlTag::Italic);
+	if (events.empty()) {
+		return {};
 	}
-	if (counts.underline > 0) {
-		result.push_back(HtmlTag::Underline);
+	std::sort(events.begin(), events.end(), HtmlTagEventLess);
+
+	auto result = std::vector<LinkRun>();
+	auto counts = HtmlTagCounts();
+	auto position = 0;
+	for (auto i = size_t(0), size = events.size(); i != size;) {
+		const auto offset = events[i].offset;
+		AddLinkRunSegment(result, position, offset, ActiveLink(counts));
+		do {
+			UpdateCount(counts, events[i].descriptor, events[i].delta);
+			++i;
+		} while (i != size && events[i].offset == offset);
+		position = offset;
 	}
-	if (counts.strikeOut > 0) {
-		result.push_back(HtmlTag::StrikeOut);
+	AddLinkRunSegment(result, position, textSize, ActiveLink(counts));
+	for (auto &run : result) {
+		const auto visible = QStringView(text.text).mid(
+			run.from,
+			run.till - run.from);
+		run.suppress = (run.link
+			== UrlClickHandler::EncodeForOpening(visible.toString()));
 	}
 	return result;
 }
 
-void AppendOpenTag(QString &result, HtmlTag tag) {
-	switch (tag) {
+[[nodiscard]] bool IsSuppressedLinkRun(
+		const std::vector<LinkRun> &runs,
+		int from,
+		int till,
+		const QString &link) {
+	const auto i = std::upper_bound(
+		runs.begin(),
+		runs.end(),
+		from,
+		[](int offset, const LinkRun &run) {
+			return offset < run.from;
+		});
+	if (i == runs.begin()) {
+		return false;
+	}
+	const auto &run = *(i - 1);
+	return run.suppress
+		&& run.link == link
+		&& run.from <= from
+		&& till <= run.till;
+}
+
+[[nodiscard]] std::vector<HtmlTagDescriptor> ActiveHtmlTags(
+		const HtmlTagCounts &counts) {
+	auto result = std::vector<HtmlTagDescriptor>();
+	result.reserve(7);
+	if (counts.pre > 0) {
+		return { { HtmlTag::Pre } };
+	}
+	if (counts.code > 0) {
+		return { { HtmlTag::Code } };
+	}
+	if (counts.blockquote > 0) {
+		result.push_back({ HtmlTag::Blockquote });
+	}
+	if (!counts.links.empty()) {
+		result.push_back({ HtmlTag::Link, counts.links.back() });
+	}
+	if (counts.bold > 0) {
+		result.push_back({ HtmlTag::Bold });
+	}
+	if (counts.italic > 0) {
+		result.push_back({ HtmlTag::Italic });
+	}
+	if (counts.underline > 0) {
+		result.push_back({ HtmlTag::Underline });
+	}
+	if (counts.strikeOut > 0) {
+		result.push_back({ HtmlTag::StrikeOut });
+	}
+	return result;
+}
+
+[[nodiscard]] QString EscapeHtmlAttribute(QStringView value) {
+	auto result = QString();
+	result.reserve(value.size());
+	for (const auto ch : value) {
+		if (ch == '&') {
+			result.append(u"&amp;"_q);
+		} else if (ch == '"') {
+			result.append(u"&quot;"_q);
+		} else if (ch == '<') {
+			result.append(u"&lt;"_q);
+		} else if (ch == '>') {
+			result.append(u"&gt;"_q);
+		} else {
+			result.append(ch);
+		}
+	}
+	return result;
+}
+
+void AppendOpenTag(QString &result, const HtmlTagDescriptor &descriptor) {
+	switch (descriptor.tag) {
 	case HtmlTag::Pre: result.append(u"<pre>"_q); break;
 	case HtmlTag::Code: result.append(u"<code>"_q); break;
 	case HtmlTag::Blockquote:
@@ -179,6 +391,11 @@ void AppendOpenTag(QString &result, HtmlTag tag) {
 	case HtmlTag::Italic: result.append(u"<i>"_q); break;
 	case HtmlTag::Underline: result.append(u"<u>"_q); break;
 	case HtmlTag::StrikeOut: result.append(u"<s>"_q); break;
+	case HtmlTag::Link:
+		result.append(u"<a href=\""_q);
+		result.append(EscapeHtmlAttribute(descriptor.data));
+		result.append(u"\">"_q);
+		break;
 	}
 }
 
@@ -193,13 +410,14 @@ void AppendCloseTag(QString &result, HtmlTag tag) {
 	case HtmlTag::Italic: result.append(u"</i>"_q); break;
 	case HtmlTag::Underline: result.append(u"</u>"_q); break;
 	case HtmlTag::StrikeOut: result.append(u"</s>"_q); break;
+	case HtmlTag::Link: result.append(u"</a>"_q); break;
 	}
 }
 
 void SwitchTags(
 		QString &result,
-		const std::vector<HtmlTag> &current,
-		const std::vector<HtmlTag> &next) {
+		const std::vector<HtmlTagDescriptor> &current,
+		const std::vector<HtmlTagDescriptor> &next) {
 	auto shared = 0;
 	const auto currentSize = int(current.size());
 	const auto nextSize = int(next.size());
@@ -209,7 +427,7 @@ void SwitchTags(
 		++shared;
 	}
 	for (auto i = currentSize; i != shared; --i) {
-		AppendCloseTag(result, current[i - 1]);
+		AppendCloseTag(result, current[i - 1].tag);
 	}
 	for (auto i = shared; i != nextSize; ++i) {
 		AppendOpenTag(result, next[i]);
@@ -244,6 +462,17 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 
 [[nodiscard]] bool IsTagNameChar(QChar ch) {
 	return ch.isLetterOrNumber();
+}
+
+[[nodiscard]] bool IsAttributeNameStartChar(QChar ch) {
+	return (ch.isLetterOrNumber()
+		|| ch == '-'
+		|| ch == '_'
+		|| ch == ':');
+}
+
+[[nodiscard]] bool IsAttributeNameChar(QChar ch) {
+	return IsAttributeNameStartChar(ch);
 }
 
 [[nodiscard]] int FindSequence(
@@ -459,6 +688,138 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 	return result;
 }
 
+[[nodiscard]] std::vector<HtmlAttribute> ReadAttributes(
+		QStringView html,
+		int from,
+		int till,
+		NamedEntityCache &cache) {
+	while (from != till && html[till - 1].isSpace()) {
+		--till;
+	}
+	if (from != till && html[till - 1] == '/') {
+		--till;
+	}
+	auto result = std::vector<HtmlAttribute>();
+	while (from != till) {
+		while (from != till && html[from].isSpace()) {
+			++from;
+		}
+		if (from == till) {
+			break;
+		}
+		if (!IsAttributeNameStartChar(html[from])) {
+			++from;
+			continue;
+		}
+		const auto nameStart = from;
+		do {
+			++from;
+		} while (from != till && IsAttributeNameChar(html[from]));
+
+		auto attribute = HtmlAttribute();
+		attribute.name = html.mid(nameStart, from - nameStart).toString().toLower();
+		while (from != till && html[from].isSpace()) {
+			++from;
+		}
+		if (from == till || html[from] != '=') {
+			result.push_back(std::move(attribute));
+			continue;
+		}
+		attribute.hasValue = true;
+		++from;
+		while (from != till && html[from].isSpace()) {
+			++from;
+		}
+		if (from != till && (html[from] == '"' || html[from] == '\'')) {
+			const auto quote = html[from++];
+			const auto valueStart = from;
+			while (from != till && html[from] != quote) {
+				++from;
+			}
+			attribute.value = DecodeEntities(
+				html.mid(valueStart, from - valueStart),
+				cache);
+			if (from != till) {
+				++from;
+			}
+		} else {
+			const auto valueStart = from;
+			while (from != till && !html[from].isSpace()) {
+				++from;
+			}
+			attribute.value = DecodeEntities(
+				html.mid(valueStart, from - valueStart),
+				cache);
+		}
+		result.push_back(std::move(attribute));
+	}
+	return result;
+}
+
+[[nodiscard]] std::optional<QString> AttributeValue(
+		const std::vector<HtmlAttribute> &attributes,
+		QStringView name) {
+	for (const auto &attribute : attributes) {
+		if (attribute.name == name && attribute.hasValue) {
+			return attribute.value;
+		}
+	}
+	return std::nullopt;
+}
+
+[[nodiscard]] bool HasAttribute(
+		const std::vector<HtmlAttribute> &attributes,
+		QStringView name) {
+	return std::any_of(
+		attributes.begin(),
+		attributes.end(),
+		[=](const auto &attribute) {
+			return attribute.name == name;
+		});
+}
+
+[[nodiscard]] QString NormalizedStyleValue(QStringView value) {
+	auto result = QString();
+	result.reserve(value.size());
+	for (const auto ch : value) {
+		if (!ch.isSpace()) {
+			result.append(ch.toLower());
+		}
+	}
+	return result;
+}
+
+[[nodiscard]] bool IsHiddenByAttributes(
+		const std::vector<HtmlAttribute> &attributes) {
+	if (HasAttribute(attributes, u"hidden"_q)) {
+		return true;
+	}
+	if (const auto value = AttributeValue(attributes, u"aria-hidden"_q)) {
+		if (value->trimmed().toLower() == u"true"_q) {
+			return true;
+		}
+	}
+	if (const auto value = AttributeValue(attributes, u"style"_q)) {
+		const auto normalized = NormalizedStyleValue(*value);
+		return (normalized.contains(u"display:none"_q)
+			|| normalized.contains(u"visibility:hidden"_q));
+	}
+	return false;
+}
+
+[[nodiscard]] QString ValidatedHref(
+		const std::vector<HtmlAttribute> &attributes) {
+	const auto value = AttributeValue(attributes, u"href"_q);
+	if (!value) {
+		return QString();
+	}
+	const auto href = value->trimmed();
+	return (Ui::InputField::IsValidMarkdownLink(href)
+		&& !TextUtilities::IsMentionLink(href))
+		? href
+		: QString();
+}
+
 [[nodiscard]] QString NormalizeNewlines(QString text) {
 	text.replace(u"\r\n"_q, u"\n"_q);
 	text.replace('\r', '\n');
@@ -478,14 +839,21 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 }
 
 [[nodiscard]] QString ActiveTagId(const ActiveTags &active) {
-	auto tags = QList<QStringView>();
 	if (active.pre > 0) {
-		tags.push_back(Ui::InputField::kTagPre);
-	} else if (active.code > 0) {
-		tags.push_back(Ui::InputField::kTagCode);
+		return Ui::InputField::kTagPre;
 	}
+	if (active.code > 0) {
+		return Ui::InputField::kTagCode;
+	}
+	auto tags = QList<QStringView>();
 	if (active.blockquote > 0) {
 		tags.push_back(Ui::InputField::kTagBlockquote);
+	}
+	for (auto i = active.links.crbegin(); i != active.links.crend(); ++i) {
+		if (!i->isEmpty()) {
+			tags.push_back(QStringView(*i));
+			break;
+		}
 	}
 	if (active.bold > 0) {
 		tags.push_back(Ui::InputField::kTagBold);
@@ -754,6 +1122,7 @@ void UpdateActive(ActiveTags &active, HtmlTag tag, bool closing) {
 	case HtmlTag::Italic: update(active.italic); break;
 	case HtmlTag::Underline: update(active.underline); break;
 	case HtmlTag::StrikeOut: update(active.strikeOut); break;
+	case HtmlTag::Link: break;
 	}
 }
 
@@ -771,22 +1140,35 @@ void CloseHiddenElement(ParseState &state, const QString &name) {
 void ProcessTag(
 		ParseState &state,
 		const QString &name,
+		const std::vector<HtmlAttribute> &attributes,
 		bool closing,
 		bool selfClosing) {
 	if (!state.hidden.empty()) {
 		if (closing) {
 			CloseHiddenElement(state, name);
-		} else if (!selfClosing && IsHiddenElement(name)) {
+		} else if (!selfClosing) {
 			state.hidden.push_back(name);
 		}
 		return;
 	}
-	if (!closing && !selfClosing && IsHiddenElement(name)) {
+	if (!closing
+		&& !selfClosing
+		&& (IsHiddenElement(name) || IsHiddenByAttributes(attributes))) {
 		state.hidden.push_back(name);
 		return;
 	}
 	if (!closing && name == u"br"_q) {
 		AppendLine(state, true, LineBreakKind::Visible);
+		return;
+	}
+	if (name == u"a"_q && !selfClosing) {
+		if (closing) {
+			if (!state.active.links.empty()) {
+				state.active.links.pop_back();
+			}
+		} else {
+			state.active.links.push_back(ValidatedHref(attributes));
+		}
 		return;
 	}
 	const auto blockBoundary = IsBlockBoundary(name);
@@ -829,30 +1211,35 @@ QString TextWithTagsToHtml(const TextWithTags &text) {
 		return QString();
 	}
 	const auto textSize = text.text.size();
+	const auto linkRuns = LinkRuns(text);
 	auto events = std::vector<HtmlTagEvent>();
 	events.reserve(4 * text.tags.size());
 	for (const auto &tag : text.tags) {
 		const auto from = std::clamp(tag.offset, 0, textSize);
 		const auto till = std::clamp(tag.offset + tag.length, 0, textSize);
-		const auto supported = SupportedTags(tag.id);
-		if (till <= from || supported.empty()) {
+		if (till <= from) {
 			continue;
 		}
-		for (const auto htmlTag : supported) {
-			events.push_back({ from, htmlTag, 1 });
-			events.push_back({ till, htmlTag, -1 });
+		const auto link = SupportedLink(tag.id);
+		const auto suppressLink = !link.isEmpty()
+			&& IsSuppressedLinkRun(linkRuns, from, till, link);
+		const auto supported = SupportedTags(tag.id, suppressLink);
+		if (supported.empty()) {
+			continue;
+		}
+		for (const auto &descriptor : supported) {
+			events.push_back({ from, descriptor, 1 });
+			events.push_back({ till, descriptor, -1 });
 		}
 	}
 	if (events.empty()) {
 		return QString();
 	}
-	std::sort(events.begin(), events.end(), [](const auto &a, const auto &b) {
-		return a.offset < b.offset;
-	});
+	std::sort(events.begin(), events.end(), HtmlTagEventLess);
 
 	auto result = QString();
 	result.reserve(text.text.size() * 2);
-	auto current = std::vector<HtmlTag>();
+	auto current = std::vector<HtmlTagDescriptor>();
 	auto counts = HtmlTagCounts();
 	auto position = 0;
 	for (auto i = size_t(0), size = events.size(); i != size;) {
@@ -868,7 +1255,7 @@ QString TextWithTagsToHtml(const TextWithTags &text) {
 			position = offset;
 		}
 		do {
-			UpdateCount(counts, events[i].tag, events[i].delta);
+			UpdateCount(counts, events[i].descriptor, events[i].delta);
 			++i;
 		} while (i != size && events[i].offset == offset);
 	}
@@ -933,7 +1320,20 @@ std::optional<TextWithTags> TextWithTagsFromHtml(QStringView html) {
 			++i;
 			continue;
 		}
-		ProcessTag(state, name, closing, IsSelfClosing(html, tagStart, tagEnd));
+		auto attributes = std::vector<HtmlAttribute>();
+		if (!closing) {
+			attributes = ReadAttributes(
+				html,
+				nameEnd,
+				tagEnd,
+				state.entityCache);
+		}
+		ProcessTag(
+			state,
+			name,
+			attributes,
+			closing,
+			IsSelfClosing(html, tagStart, tagEnd));
 		i = tagEnd + 1;
 	}
 	state.result.tags = SimplifyParserTags(std::move(state.tags));
