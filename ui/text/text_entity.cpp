@@ -2364,6 +2364,10 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 				: Ui::InputField::kTagBlockquoteCollapsed);
 			break;
 		case EntityType::Spoiler: push(Ui::InputField::kTagSpoiler); break;
+		case EntityType::Subscript:
+		case EntityType::Superscript:
+		case EntityType::Marked:
+			break;
 		case EntityType::FormattedDate: {
 			const auto [date, flags] = DeserializeFormattedDateData(
 				entity.data());

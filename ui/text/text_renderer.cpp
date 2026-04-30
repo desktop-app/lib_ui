@@ -742,7 +742,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		initParagraphBidi(); // if was not inited
 	}
 
-	_f = _t->_st->font;
+	_f = _t->blockFont(startBlock, _t->_st->font);
 	auto leftLineLengthLeft = _elisionMiddle
 		? (_lineWidth.toReal() - _f->elidew) / 2.
 		: -1;
@@ -802,6 +802,18 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			width,
 			block.height());
 	};
+	const auto fillMarked = [&](FixedRange range, int top, int height) {
+		if (range.empty()) {
+			return;
+		}
+		const auto &color = _t->_inlineHtmlMetrics.markBackgroundColor;
+		if (!color.isValid() || !color.alpha()) {
+			return;
+		}
+		const auto left = range.from.toInt();
+		const auto width = range.till.toInt() - left;
+		_p->fillRect(left, top, width, height, color);
+	};
 
 	auto lastLeftToMiddleX = x;
 
@@ -818,6 +830,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		const auto rtl = (si.analysis.bidiLevel % 2);
 
 		applyBlockProperties(e, block);
+		const auto marked = (block->flags() & TextBlockFlag::Marked)
+			&& _t->_inlineHtmlMetrics.markBackgroundColor.isValid()
+			&& _t->_inlineHtmlMetrics.markBackgroundColor.alpha();
+		const auto baselineShift = _t->blockBaselineShift(block);
+		const auto textTop = textY + baselineShift - _f->ascent;
+		const auto textHeight = _f->height;
 		if (si.analysis.flags >= QScriptAnalysis::TabOrObject) {
 			const auto _type = block->type();
 			if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
@@ -888,10 +906,13 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							const auto bigWidth = x - lastLeftToMiddleX;
 							const auto smallWidth = _f->elidew;
 							const auto left = lastLeftToMiddleX;
+							_p->save();
+							_p->setFont(_f);
 							_p->drawText(
 								(left + (bigWidth - smallWidth) / 2).toReal(),
-								textY,
+								textY + baselineShift,
 								kQEllipsis);
+							_p->restore();
 						}
 						continue;
 					} else {
@@ -911,6 +932,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 					const auto box = inlineObjectRect(
 						static_cast<const InlineObjectBlock&>(*block),
 						x);
+					if (marked) {
+						fillMarked(
+							{ x, x + si.width },
+							box.top(),
+							box.height());
+					}
 					fillSelectRange(
 						fillSelect,
 						box.top(),
@@ -1081,10 +1108,13 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						const auto bigWidth = x - itemWidth - lastLeftToMiddleX;
 						const auto smallWidth = _f->elidew;
 						const auto left = lastLeftToMiddleX;
+						_p->save();
+						_p->setFont(_f);
 						_p->drawText(
 							(left + (bigWidth - smallWidth) / 2).toReal(),
-							textY,
+							textY + baselineShift,
 							kQEllipsis);
+						_p->restore();
 					}
 					break;
 				} else {
@@ -1101,7 +1131,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				return false;
 			}
 			if (_lookupLink) {
-				if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
+				if (_lookupY >= textTop && _lookupY < textTop + textHeight) {
 					if (const auto link = lookupLink(block)) {
 						_lookupResult.link = link;
 					}
@@ -1175,14 +1205,17 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				const auto from = fillSelect.from.toInt();
 				selectedRect = QRect(
 					from,
-					_y + _yDelta,
+					textTop,
 					fillSelect.till.toInt() - from,
-					_fontHeight);
+					textHeight);
 			}
 			const auto hasSelected = !fillSelect.empty();
 			const auto hasNotSelected = (fillSelect.from != itemRange.from)
 				|| (fillSelect.till != itemRange.till);
-			fillSelectRange(fillSelect);
+			if (marked) {
+				fillMarked(itemRange, textTop, textHeight);
+			}
+			fillSelectRange(fillSelect, textTop, textHeight);
 
 			if (_highlight) {
 				pushHighlightRange(findSelectTextRange(
@@ -1238,7 +1271,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						const auto clippingRegion = _p->clipRegion();
 						_p->setClipRect(selectedRect, Qt::IntersectClip);
 						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+						_p->drawTextItem(
+							QPointF(x.toReal(), textY + baselineShift),
+							gf);
 						const auto externalClipping = clippingEnabled
 							? clippingRegion
 							: QRegion(QRect(
@@ -1248,7 +1283,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 								_y + 2 * _lineHeight));
 						_p->setClipRegion(externalClipping - selectedRect);
 						_p->setPen(*_currentPen);
-						_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+						_p->drawTextItem(
+							QPointF(x.toReal(), textY + baselineShift),
+							gf);
 #ifdef Q_OS_MAC
 						_p->restore();
 #else // Q_OS_MAC
@@ -1260,11 +1297,15 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 #endif // Q_OS_MAC
 					} else {
 						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+						_p->drawTextItem(
+							QPointF(x.toReal(), textY + baselineShift),
+							gf);
 					}
 				} else {
 					_p->setPen(*_currentPen);
-					_p->drawTextItem(QPointF(x.toReal(), textY), gf);
+					_p->drawTextItem(
+						QPointF(x.toReal(), textY + baselineShift),
+						gf);
 				}
 				if (complexClipping) {
 					if (complexClippingEnabled) {
@@ -1592,7 +1633,7 @@ void Renderer::prepareElidedLine(
 		const auto nextBlock = (blockIndex + 1 < _blocksSize)
 			? _t->_blocks[blockIndex + 1].get()
 			: nullptr;
-		const auto font = WithFlags(_t->_st->font, block->flags());
+		const auto font = _t->blockFont(block, _t->_st->font);
 		elisionWidth = font->elidew;
 		auto &si = e.layoutData->items[firstItem + i];
 		const auto _type = block->type();
@@ -1700,13 +1741,10 @@ void Renderer::applyBlockProperties(
 		}
 		return _t->_st->font;
 	}();
-	const auto newFont = WithFlags(usedFont, flags);
+	const auto newFont = _t->blockFont(block, usedFont);
 	if (_f != newFont) {
 		_f = newFont;
-		const auto use = (_f->family() == _t->_st->font->family())
-			? WithFlags(_t->_st->font, flags, _f->flags())
-			: _f;
-		e.fnt = use->f;
+		e.fnt = _f->f;
 		e.resetFontEngineCache();
 	}
 	if (_p) {

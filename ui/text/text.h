@@ -100,6 +100,14 @@ struct FormattedDateResult {
 };
 using FormattedDateFactory = Fn<FormattedDateResult(int32 date, FormattedDateFlags flags)>;
 
+struct InlineHtmlMetrics {
+	double subscriptScale = 1.;
+	double superscriptScale = 1.;
+	int subscriptBaselineOffset = 0;
+	int superscriptBaselineOffset = 0;
+	QColor markBackgroundColor;
+};
+
 struct MarkedContext {
 	Fn<void()> repaint;
 	CustomEmojiFactory customEmojiFactory;
@@ -481,6 +489,10 @@ private:
 	[[nodiscard]] QMargins quotePadding(QuoteDetails *quote) const;
 	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
 	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
+	[[nodiscard]] style::font blockFont(
+		const AbstractBlock *block,
+		const style::font &base) const;
+	[[nodiscard]] int blockBaselineShift(const AbstractBlock *block) const;
 	[[nodiscard]] LineGeometry defaultLineGeometry() const;
 	[[nodiscard]] LineGeometry resolveLineGeometry(
 		int lineStart,
@@ -541,6 +553,7 @@ private:
 	std::vector<Block> _blocks;
 	std::vector<Word> _words;
 	ExtendedWrap _extended;
+	InlineHtmlMetrics _inlineHtmlMetrics;
 
 	int _minResizeWidth = 0;
 	int _maxWidth = 0;
@@ -553,6 +566,7 @@ private:
 	bool _isOnlyCustomEmoji : 1 = false;
 	bool _hasNotEmojiAndSpaces : 1 = false;
 	bool _hasInlineObjects : 1 = false;
+	bool _hasSubscriptsOrSuperscripts : 1 = false;
 	bool _skipBlockAddedNewline : 1 = false;
 	bool _endsWithQuoteOrOtherDirection : 1 = false;
 
