@@ -53,6 +53,9 @@ enum class EntityType : uchar {
 	Pre,  // block
 	Blockquote,
 	Spoiler,
+	Subscript,
+	Superscript,
+	Marked,
 	FormattedDate,
 };
 

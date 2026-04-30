@@ -201,12 +201,9 @@ void StackEngine::itemize() {
 }
 
 void StackEngine::updateFont(not_null<const AbstractBlock*> block) {
-	const auto flags = block->flags();
-	const auto newFont = WithFlags(_t->_st->font, flags);
+	const auto newFont = _t->blockFont(block, _t->_st->font);
 	if (_font != newFont) {
-		_font = (newFont->family() == _t->_st->font->family())
-			? WithFlags(_t->_st->font, flags, newFont->flags())
-			: newFont;
+		_font = newFont;
 		_engine.fnt = _font->f;
 		_engine.resetFontEngineCache();
 	}

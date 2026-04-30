@@ -43,6 +43,9 @@ enum class TextBlockFlag : uint16 {
 	Spoiler    = 0x100,
 	Blockquote = 0x200,
 	FormattedDate = 0x400,
+	Subscript = 0x800,
+	Superscript = 0x1000,
+	Marked = 0x2000,
 };
 inline constexpr bool is_flag_type(TextBlockFlag) { return true; }
 using TextBlockFlags = base::flags<TextBlockFlag>;
@@ -77,8 +80,8 @@ protected:
 	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
 
 	uint16 _position = 0;
-	uint16 _type : 4 = 0;
-	uint16 _flags : 12 = 0;
+	uint16 _type = 0;
+	uint16 _flags = 0;
 	uint16 _linkIndex = 0;
 	uint16 _colorIndex = 0;
 

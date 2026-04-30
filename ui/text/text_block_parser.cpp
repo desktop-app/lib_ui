@@ -51,6 +51,9 @@ constexpr auto kMaxDiacAfterSymbol = 2;
 						|| type == EntityType::Italic
 						|| type == EntityType::Underline
 						|| type == EntityType::StrikeOut
+						|| type == EntityType::Subscript
+						|| type == EntityType::Superscript
+						|| type == EntityType::Marked
 						|| type == EntityType::Colorized
 						|| type == EntityType::Spoiler
 						|| type == EntityType::Code
@@ -439,6 +442,14 @@ bool BlockParser::checkEntities() {
 		flags = TextBlockFlag::Spoiler;
 	} else if (entityType == EntityType::StrikeOut) {
 		flags = TextBlockFlag::StrikeOut;
+	} else if (entityType == EntityType::Subscript) {
+		flags = TextBlockFlag::Subscript;
+		_t->_hasSubscriptsOrSuperscripts = true;
+	} else if (entityType == EntityType::Superscript) {
+		flags = TextBlockFlag::Superscript;
+		_t->_hasSubscriptsOrSuperscripts = true;
+	} else if (entityType == EntityType::Marked) {
+		flags = TextBlockFlag::Marked;
 	} else if (entityType == EntityType::FormattedDate) {
 		const auto entityData = _waitingEntity->data();
 		const auto [dateValue, dateFlags] = DeserializeFormattedDateData(
