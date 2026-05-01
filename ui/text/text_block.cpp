@@ -13,6 +13,11 @@
 namespace Ui {
 namespace Text {
 
+[[nodiscard]] uint16 InlineObjectValue(int value, int max = 0xFFFF) {
+	Expects(value >= 0 && value <= max);
+	return uint16(value);
+}
+
 style::font WithFlags(
 		const style::font &font,
 		TextBlockFlags flags,
@@ -84,6 +89,8 @@ int AbstractBlock::objectWidth() const {
 		return static_cast<const CustomEmojiBlock*>(this)->custom()->width();
 	case TextBlockType::Skip:
 		return static_cast<const SkipBlock*>(this)->width();
+	case TextBlockType::InlineObject:
+		return static_cast<const InlineObjectBlock*>(this)->width();
 	}
 	Unexpected("Type in AbstractBlock::objectWidth.");
 }
@@ -135,6 +142,56 @@ int SkipBlock::height() const {
 	return _height;
 }
 
+InlineObjectBlock::InlineObjectBlock(
+	BlockDescriptor descriptor,
+	int width,
+	int descriptorIndex,
+	InlineObjectVerticalAlign align,
+	int ascent,
+	int descent)
+: AbstractBlock(TextBlockType::InlineObject, descriptor)
+, _width(InlineObjectValue(width))
+, _descriptorIndexAndMode(
+	InlineObjectValue(descriptorIndex, 0x7FFF)
+		| ((align == InlineObjectVerticalAlign::CenterInText)
+			? uint16(0x8000)
+			: uint16(0)))
+, _metricA(InlineObjectValue(ascent))
+, _metricB(InlineObjectValue(descent)) {
+}
+
+int InlineObjectBlock::width() const {
+	return _width;
+}
+
+int InlineObjectBlock::descriptorIndex() const {
+	return (_descriptorIndexAndMode & 0x7FFF);
+}
+
+InlineObjectVerticalAlign InlineObjectBlock::align() const {
+	return (_descriptorIndexAndMode & 0x8000)
+		? InlineObjectVerticalAlign::CenterInText
+		: InlineObjectVerticalAlign::AscentDescent;
+}
+
+int InlineObjectBlock::ascent() const {
+	return (align() == InlineObjectVerticalAlign::CenterInText)
+		? 0
+		: _metricA;
+}
+
+int InlineObjectBlock::descent() const {
+	return (align() == InlineObjectVerticalAlign::CenterInText)
+		? 0
+		: _metricB;
+}
+
+int InlineObjectBlock::height() const {
+	return (align() == InlineObjectVerticalAlign::CenterInText)
+		? _metricA
+		: (_metricA + _metricB);
+}
+
 Block::Block() {
 	Unexpected("Should not be called.");
 }
@@ -156,6 +213,9 @@ Block::Block(Block &&other) {
 		break;
 	case TextBlockType::Skip:
 		emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
+		break;
+	case TextBlockType::InlineObject:
+		emplace<InlineObjectBlock>(std::move(other.unsafe<InlineObjectBlock>()));
 		break;
 	default:
 		Unexpected("Bad text block type in Block(Block&&).");
@@ -183,6 +243,9 @@ Block &Block::operator=(Block &&other) {
 		break;
 	case TextBlockType::Skip:
 		emplace<SkipBlock>(std::move(other.unsafe<SkipBlock>()));
+		break;
+	case TextBlockType::InlineObject:
+		emplace<InlineObjectBlock>(std::move(other.unsafe<InlineObjectBlock>()));
 		break;
 	default:
 		Unexpected("Bad text block type in operator=(Block&&).");
@@ -214,6 +277,22 @@ Block Block::CustomEmoji(
 
 Block Block::Skip(BlockDescriptor descriptor, int width, int height) {
 	return New<SkipBlock>(descriptor, width, height);
+}
+
+Block Block::InlineObject(
+		BlockDescriptor descriptor,
+		int width,
+		int descriptorIndex,
+		InlineObjectVerticalAlign align,
+		int ascent,
+		int descent) {
+	return New<InlineObjectBlock>(
+		descriptor,
+		width,
+		descriptorIndex,
+		align,
+		ascent,
+		descent);
 }
 
 AbstractBlock *Block::get() {
@@ -257,6 +336,9 @@ void Block::destroy() {
 	case TextBlockType::Skip:
 		unsafe<SkipBlock>().~SkipBlock();
 		break;
+	case TextBlockType::InlineObject:
+		unsafe<InlineObjectBlock>().~InlineObjectBlock();
+		break;
 	default:
 		Unexpected("Bad text block type in Block(Block&&).");
 	}
@@ -267,6 +349,8 @@ int CountBlockHeight(
 		const style::TextStyle *st) {
 	return (block->type() == TextBlockType::Skip)
 		? static_cast<const SkipBlock*>(block)->height()
+		: (block->type() == TextBlockType::InlineObject)
+		? static_cast<const InlineObjectBlock*>(block)->height()
 		: st->lineHeight
 		? st->lineHeight
 		: st->font->height;

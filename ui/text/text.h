@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "ui/text/text_inline_object.h"
 #include "ui/text/text_entity.h"
 #include "ui/click_handler.h"
 #include "base/flags.h"
@@ -103,6 +104,7 @@ struct MarkedContext {
 	Fn<void()> repaint;
 	CustomEmojiFactory customEmojiFactory;
 	FormattedDateFactory formattedDateFactory;
+	InlineObjectPlacements inlineObjects;
 	std::any other;
 };
 
@@ -451,6 +453,15 @@ private:
 
 	};
 
+	struct LineGeometry {
+		int ascent = 0;
+		int descent = 0;
+
+		[[nodiscard]] int height() const {
+			return ascent + descent;
+		}
+	};
+
 	[[nodiscard]] not_null<ExtendedData*> ensureExtended();
 	[[nodiscard]] not_null<QuotesData*> ensureQuotes();
 
@@ -470,6 +481,16 @@ private:
 	[[nodiscard]] QMargins quotePadding(QuoteDetails *quote) const;
 	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
 	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
+	[[nodiscard]] LineGeometry defaultLineGeometry() const;
+	[[nodiscard]] LineGeometry resolveLineGeometry(
+		int lineStart,
+		int lineEnd,
+		int blockIndexHint) const;
+	[[nodiscard]] int inlineObjectHeight(
+		const InlineObjectDescriptor &object) const;
+	[[nodiscard]] const InlineObjectDescriptor *inlineObjectData(
+		const AbstractBlock *block) const;
+	[[nodiscard]] bool hasInlineObjectAt(int position) const;
 
 	// Returns -1 in case there is no limit.
 	[[nodiscard]] int quoteLinesLimit(QuoteDetails *quote) const;
@@ -531,6 +552,7 @@ private:
 	bool _isIsolatedEmoji : 1 = false;
 	bool _isOnlyCustomEmoji : 1 = false;
 	bool _hasNotEmojiAndSpaces : 1 = false;
+	bool _hasInlineObjects : 1 = false;
 	bool _skipBlockAddedNewline : 1 = false;
 	bool _endsWithQuoteOrOtherDirection : 1 = false;
 

@@ -118,7 +118,7 @@ void StackEngine::itemize() {
 #endif // Qt < 6.0.0
 	}
 
-	// Override script and flags for emoji and custom emoji blocks.
+	// Override script and flags for object-like blocks.
 	const auto end = _offset + length;
 	for (auto block = _bStart; blockPosition(block) < end; ++block) {
 		const auto type = (*block)->type();
@@ -127,7 +127,8 @@ void StackEngine::itemize() {
 		if (till > from) {
 			if (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji
-				|| type == TextBlockType::Skip) {
+				|| type == TextBlockType::Skip
+				|| type == TextBlockType::InlineObject) {
 				for (auto i = from - _offset, count = till - _offset; i != count; ++i) {
 					_analysis[i].script = QChar::Script_Common;
 					_analysis[i].flags = (chars[i] == QChar::Space)

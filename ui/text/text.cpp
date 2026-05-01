@@ -543,6 +543,7 @@ void String::recountNaturalSize(
 		bool initial,
 		Qt::LayoutDirection optionsDirection) {
 	auto lastNewlineBlock = begin(_blocks);
+	auto lineStartBlockHint = 0;
 	auto lastNewlineStart = 0;
 	const auto computeParagraphDirection = [&](int paragraphEnd) {
 		const auto direction = (optionsDirection != Qt::LayoutDirectionAuto)
@@ -577,7 +578,6 @@ void String::recountNaturalSize(
 
 	_maxWidth = 0;
 	_minHeight = qpadding.top();
-	const auto lineHeight = this->lineHeight();
 	auto maxWidth = QFixed();
 	auto width = QFixed(qminwidth);
 	auto last_rBearing = QFixed();
@@ -612,7 +612,12 @@ void String::recountNaturalSize(
 			if (initial) {
 				computeParagraphDirection(word.position());
 			}
+			const auto lineHeight = resolveLineGeometry(
+				lastNewlineStart,
+				word.position(),
+				lineStartBlockHint).height();
 			lastNewlineStart = word.position();
+			lineStartBlockHint = block + 1;
 
 			if (!hidden) {
 				_minHeight += lineHeight;
@@ -646,12 +651,18 @@ void String::recountNaturalSize(
 		computeParagraphDirection(_text.size());
 	}
 	if (width > 0) {
+		const auto lineHeight = resolveLineGeometry(
+			lastNewlineStart,
+			_text.size(),
+			lineStartBlockHint).height();
 		const auto useSkipHeight = (_blocks.back()->type() == TextBlockType::Skip)
 			&& (_words.back().f_width() == width);
 		_minHeight += qpadding.bottom();
 		if (qlinesleft != 0) {
 			_minHeight += useSkipHeight
-				? _blocks.back().unsafe<SkipBlock>().height()
+				? std::max(
+					lineHeight,
+					_blocks.back().unsafe<SkipBlock>().height())
 				: lineHeight;
 		}
 		accumulate_max(maxWidth, width);
@@ -1112,6 +1123,8 @@ void String::enumerateLines(
 	auto qpadding = QMargins();
 
 	auto top = 0;
+	auto lineStart = 0;
+	auto lineStartBlockHint = 0;
 	auto lineLeft = 0;
 	auto lineWidth = 0;
 	auto lineElided = false;
@@ -1127,7 +1140,7 @@ void String::enumerateLines(
 		}
 		widthLeft = lineWidth - qpadding.left() - qpadding.right();
 	};
-	const auto initNextParagraph = [&](int16 paragraphIndex) {
+	const auto initNextParagraph = [&](int16 paragraphIndex, int nextLineStart) {
 		if (qindex != paragraphIndex) {
 			//top += qpadding.bottom(); // This was done before callback().
 			qindex = paragraphIndex;
@@ -1137,6 +1150,7 @@ void String::enumerateLines(
 			top += qpadding.top();
 			qpadding.setTop(0);
 		}
+		lineStart = nextLineStart;
 		initNextLine();
 	};
 
@@ -1148,10 +1162,9 @@ void String::enumerateLines(
 		UnpackParagraphDirection(_startParagraphLTR, _startParagraphRTL));
 
 	if ((*_blocks.cbegin())->type() != TextBlockType::Newline) {
-		initNextParagraph(_startQuoteIndex);
+		initNextParagraph(_startQuoteIndex, 0);
 	}
 
-	const auto lineHeight = this->lineHeight();
 	auto last_rBearing = QFixed();
 	auto last_rPadding = QFixed();
 	auto longWordLine = true;
@@ -1171,6 +1184,10 @@ void String::enumerateLines(
 				--qlinesleft;
 			}
 			if (!hidden) {
+				const auto lineHeight = resolveLineGeometry(
+					lineStart,
+					w->position(),
+					lineStartBlockHint).height();
 				callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left(), paragraphRTL);
 			}
 			if (lineElided) {
@@ -1182,7 +1199,8 @@ void String::enumerateLines(
 
 			paragraphRTL = resolveRTL(static_cast<const NewlineBlock*>(
 				_blocks[block].get())->paragraphDirection());
-			initNextParagraph(index);
+			lineStartBlockHint = block + 1;
+			initNextParagraph(index, w->position());
 			longWordLine = true;
 			lastWordStart = w;
 			lastWordStart_wLeft = widthLeft;
@@ -1222,6 +1240,10 @@ void String::enumerateLines(
 		if (qlinesleft > 0) {
 			--qlinesleft;
 		}
+		const auto lineHeight = resolveLineGeometry(
+			lineStart,
+			w->position(),
+			lineStartBlockHint).height();
 		callback(
 			lineLeft + lineWidth - widthLeft,
 			top += lineHeight,
@@ -1231,6 +1253,12 @@ void String::enumerateLines(
 			return withElided(true);
 		}
 
+		while ((lineStartBlockHint + 1) < _blocks.size()
+			&& blockPosition(begin(_blocks) + lineStartBlockHint + 1)
+				<= w->position()) {
+			++lineStartBlockHint;
+		}
+		lineStart = w->position();
 		initNextLine();
 
 		last_rBearing = w->f_rbearing();
@@ -1242,12 +1270,18 @@ void String::enumerateLines(
 		lastWordStart_wLeft = widthLeft;
 	}
 	if (widthLeft < lineWidth) {
+		const auto lineHeight = resolveLineGeometry(
+			lineStart,
+			_text.size(),
+			lineStartBlockHint).height();
 		const auto useSkipHeight = (_blocks.back()->type() == TextBlockType::Skip)
 			&& (widthLeft + _words.back().f_width() == lineWidth);
 		const auto useLineHeight = !qlinesleft
 			? 0
 			: useSkipHeight
-			? _blocks.back().unsafe<SkipBlock>().height()
+			? std::max(
+				lineHeight,
+				_blocks.back().unsafe<SkipBlock>().height())
 			: lineHeight;
 		callback(
 			lineLeft + lineWidth - widthLeft,
@@ -1363,6 +1397,14 @@ TextSelection String::adjustSelection(TextSelection selection, TextSelectType se
 	uint16 from = selection.from, to = selection.to;
 	if (from < _text.size() && from <= to) {
 		if (to > _text.size()) to = _text.size();
+		if ((selectType == TextSelectType::Words)
+			|| (selectType == TextSelectType::Paragraphs)) {
+			if (hasInlineObjectAt(from)) {
+				return { from, uint16(from + 1) };
+			} else if (to > from && hasInlineObjectAt(to - 1)) {
+				return { uint16(to - 1), to };
+			}
+		}
 		if (selectType == TextSelectType::Paragraphs) {
 
 			// Full selection of monospace entity.
@@ -1551,6 +1593,82 @@ const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 		: quote->language;
 }
 
+String::LineGeometry String::defaultLineGeometry() const {
+	const auto lineHeight = this->lineHeight();
+	const auto fontHeight = _st->font->height;
+	const auto top = std::max(lineHeight - fontHeight, 0) / 2;
+	return {
+		.ascent = top + _st->font->ascent,
+		.descent = std::max(lineHeight - top - _st->font->ascent, 0),
+	};
+}
+
+String::LineGeometry String::resolveLineGeometry(
+		int lineStart,
+		int lineEnd,
+		int blockIndexHint) const {
+	auto result = defaultLineGeometry();
+	if (!_hasInlineObjects || lineStart >= lineEnd) {
+		return result;
+	}
+	auto i = begin(_blocks) + blockIndexHint;
+	auto e = end(_blocks);
+	while (i != e && blockEnd(i) <= lineStart) {
+		++i;
+	}
+	for (; i != e && blockPosition(i) < lineEnd; ++i) {
+		if ((*i)->type() != TextBlockType::InlineObject) {
+			continue;
+		}
+		const auto &block = i->unsafe<InlineObjectBlock>();
+		if (block.align() == InlineObjectVerticalAlign::CenterInText) {
+			const auto delta = block.height() - result.height();
+			if (delta > 0) {
+				result.ascent += delta / 2;
+				result.descent += delta - (delta / 2);
+			}
+		} else {
+			accumulate_max(result.ascent, block.ascent());
+			accumulate_max(result.descent, block.descent());
+		}
+	}
+	return result;
+}
+
+int String::inlineObjectHeight(const InlineObjectDescriptor &object) const {
+	if (!object.image.isNull()) {
+		const auto ratio = object.image.devicePixelRatio();
+		return ratio ? int(object.image.height() / ratio) : object.image.height();
+	}
+	return _st->font->height;
+}
+
+const InlineObjectDescriptor *String::inlineObjectData(
+		const AbstractBlock *block) const {
+	if (!_extended || block->type() != TextBlockType::InlineObject) {
+		return nullptr;
+	}
+	const auto index = static_cast<const InlineObjectBlock*>(block)
+		->descriptorIndex();
+	const auto &objects = _extended->inlineObjects;
+	return (index >= 0 && index < objects.size()) ? &objects[index] : nullptr;
+}
+
+bool String::hasInlineObjectAt(int position) const {
+	if (!_hasInlineObjects || position < 0 || position >= _text.size()) {
+		return false;
+	}
+	auto i = begin(_blocks);
+	auto e = end(_blocks);
+	while (i != e && blockEnd(i) <= position) {
+		++i;
+	}
+	return (i != e)
+		&& ((*i)->type() == TextBlockType::InlineObject)
+		&& (blockPosition(i) <= position)
+		&& (blockEnd(i) > position);
+}
+
 int String::quoteLinesLimit(QuoteDetails *quote) const {
 	return (quote && quote->collapsed && !quote->expanded)
 		? kQuoteCollapsedLines
@@ -1658,6 +1776,12 @@ void String::enumerateText(
 			selection.to,
 			uint16(blockPosition + blockLength(i)));
 		if (rangeTo > rangeFrom) {
+			if (blockType == TextBlockType::InlineObject) {
+				if (const auto object = inlineObjectData(i->get())) {
+					appendPartCallback(object->textForCopy(), QString());
+				}
+				continue;
+			}
 			const auto customEmojiData = (blockType == TextBlockType::CustomEmoji)
 				? static_cast<const CustomEmojiBlock*>(i->get())->custom()->entityData()
 				: QString();
@@ -1821,7 +1945,7 @@ TextForMimeData String::toText(
 		linkStart = result.rich.text.size();
 	};
 	const auto clickHandlerFinishCallback = [&](
-			QStringView inText,
+			QStringView,
 			const ClickHandlerPtr &handler,
 			EntityType type) {
 		if (!handler || (!composeExpanded && !composeEntities)) {
@@ -1833,6 +1957,7 @@ TextForMimeData String::toText(
 			|| (entity.type == EntityType::Email)
 			|| (entity.type == EntityType::BankCard)
 			|| (entity.type == EntityType::Phone);
+		const auto inText = QStringView(result.rich.text).mid(linkStart);
 		const auto full = plainUrl
 			? QStringView(entity.data).mid(0, entity.data.size())
 			: inText;
@@ -1947,6 +2072,13 @@ void String::clear() {
 	_startQuoteIndex = 0;
 	_startParagraphLTR = false;
 	_startParagraphRTL = false;
+	_hasCustomEmoji = false;
+	_isIsolatedEmoji = false;
+	_isOnlyCustomEmoji = false;
+	_hasNotEmojiAndSpaces = false;
+	_hasInlineObjects = false;
+	_skipBlockAddedNewline = false;
+	_endsWithQuoteOrOtherDirection = false;
 }
 
 bool IsBad(QChar ch) {
@@ -1993,6 +2125,7 @@ bool IsWordSeparator(QChar ch) {
 	case '`':
 	case '~':
 	case '|':
+	case QChar::ObjectReplacementCharacter:
 		return true;
 	default:
 		break;
@@ -2064,7 +2197,7 @@ bool IsReplacedBySpace(QChar ch) {
 }
 
 bool IsTrimmed(QChar ch) {
-	return IsSpace(ch)
+	return ((ch != QChar::ObjectReplacementCharacter) && IsSpace(ch))
 		|| IsBad(ch)
 		|| (ch == QChar(8203)); // zero width space
 }

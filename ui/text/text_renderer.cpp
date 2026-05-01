@@ -167,6 +167,7 @@ void Renderer::enumerate() {
 	Expects(!_geometry.outElided);
 
 	_lineHeight = _t->lineHeight();
+	_lineAscent = _t->_st->font->ascent;
 	_blocksSize = _t->_blocks.size();
 	_str = _t->_text.unicode();
 
@@ -191,7 +192,6 @@ void Renderer::enumerate() {
 				_t->_startParagraphRTL));
 	}
 
-	_lineHeight = _t->lineHeight();
 	_fontHeight = _t->_st->font->height;
 	auto last_rBearing = QFixed(0);
 	_last_rPadding = QFixed(0);
@@ -220,6 +220,7 @@ void Renderer::enumerate() {
 				--_quoteLinesLeft;
 			}
 			if (!hidden) {
+				resolveLineGeometry(w->position());
 				fillParagraphBg(changed ? _quotePadding.bottom() : 0);
 				if (!drawLinePostprocessed(w->position(), begin(_t->_blocks) + blockIndex) && !_quoteExpandLinkLookup) {
 					return;
@@ -282,6 +283,7 @@ void Renderer::enumerate() {
 		if (_quoteLinesLeft) {
 			--_quoteLinesLeft;
 		}
+		resolveLineGeometry(lineEnd);
 		fillParagraphBg(0);
 		while (_t->blockPosition(begin(_t->_blocks) + blockIndex + 1) < lineEnd) {
 			++blockIndex;
@@ -306,6 +308,7 @@ void Renderer::enumerate() {
 		if (_quoteLinesLeft) {
 			--_quoteLinesLeft;
 
+			resolveLineGeometry(_t->_text.size());
 			fillParagraphBg(_quotePadding.bottom());
 			if (!drawLinePostprocessed(_t->_text.size(), end(_t->_blocks))) {
 				return;
@@ -316,6 +319,16 @@ void Renderer::enumerate() {
 		_lookupResult.symbol = _t->_text.size();
 		_lookupResult.afterSymbol = false;
 	}
+}
+
+void Renderer::resolveLineGeometry(uint16 lineEnd) {
+	const auto metrics = _t->resolveLineGeometry(
+		_lineStart,
+		lineEnd,
+		_lineStartBlock);
+	_lineHeight = metrics.height();
+	_lineAscent = metrics.ascent;
+	_yDelta = _lineAscent - _t->_st->font->ascent;
 }
 
 void Renderer::fillParagraphBg(int paddingBottom) {
@@ -585,11 +598,10 @@ bool Renderer::drawLinePostprocessed(
 }
 
 bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
-	_yDelta = (_lineHeight - _fontHeight) / 2;
-	if (_yTo >= 0 && (_y + _yDelta >= _yTo || _y >= _yTo)) {
+	if (_yTo >= 0 && _y >= _yTo) {
 		return false;
 	}
-	if (_y + _yDelta + _fontHeight <= _yFrom) {
+	if (_y + _lineHeight <= _yFrom) {
 		if (_lookupSymbol) {
 			_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
 			_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
@@ -773,8 +785,23 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		visualOrder[0] = skipIndex;
 	}
 
-	auto textY = _y + _yDelta + _t->_st->font->ascent;
+	auto textY = _y + _lineAscent;
 	auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
+	const auto inlineObjectRect = [&](const InlineObjectBlock &block, QFixed x) {
+		const auto width = block.width();
+		if (block.align() == InlineObjectVerticalAlign::CenterInText) {
+			return QRect(
+				x.toInt(),
+				_y + ((_lineHeight - block.height()) / 2),
+				width,
+				block.height());
+		}
+		return QRect(
+			x.toInt(),
+			_y + _lineAscent - block.ascent(),
+			width,
+			block.height());
+	};
 
 	auto lastLeftToMiddleX = x;
 
@@ -798,7 +825,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 					return false;
 				}
 				if (_lookupLink) {
-					if (_lookupY >= _y + _yDelta && _lookupY < _y + _yDelta + _fontHeight) {
+					if (_lookupY >= _y && _lookupY < _y + _lineHeight) {
 						if (const auto link = lookupLink(block)) {
 							_lookupResult.link = link;
 						}
@@ -836,7 +863,8 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				return false;
 			} else if (_p
 				&& (_type == TextBlockType::Emoji
-					|| _type == TextBlockType::CustomEmoji)) {
+					|| _type == TextBlockType::CustomEmoji
+					|| _type == TextBlockType::InlineObject)) {
 				if (_elisionMiddle && !paintRightToMiddleElision) {
 					if (leftLineLengthLeft - si.width.toReal() < 0) {
 						leftLineLengthLeft = 0;
@@ -874,14 +902,24 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				}
 				const auto fillSelect = _background.selectActiveBlock
 					? FixedRange{ x, x + si.width }
-					: findSelectEmojiRange(
+					: findSelectObjectRange(
 						si,
 						blockIt,
 						x,
 						_selection);
-				fillSelectRange(fillSelect);
+				if (_type == TextBlockType::InlineObject) {
+					const auto box = inlineObjectRect(
+						static_cast<const InlineObjectBlock&>(*block),
+						x);
+					fillSelectRange(
+						fillSelect,
+						box.top(),
+						box.height());
+				} else {
+					fillSelectRange(fillSelect);
+				}
 				if (_highlight) {
-					pushHighlightRange(findSelectEmojiRange(
+					pushHighlightRange(findSelectObjectRange(
 						si,
 						blockIt,
 						x,
@@ -907,7 +945,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							Emoji::GetSizeNormal(),
 							ex,
 							ey);
-					} else {
+					} else if (_type == TextBlockType::CustomEmoji) {
 						const auto custom = static_cast<const CustomEmojiBlock*>(block)->custom();
 						const auto selected = (fillSelect.from <= x)
 							&& (fillSelect.till > x);
@@ -930,6 +968,25 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							ey + _customEmojiSkip,
 						};
 						custom->paint(*_p, *_customEmojiContext);
+					} else if (const auto object = _t->inlineObjectData(block)) {
+						const auto box = inlineObjectRect(
+							static_cast<const InlineObjectBlock&>(*block),
+							x);
+						if (!object->image.isNull()) {
+							_p->drawImage(box.topLeft(), object->image);
+						} else if (!object->fallbackText.isEmpty()) {
+							_p->save();
+							_p->setClipRect(box, Qt::IntersectClip);
+							_p->setPen(((fillSelect.from <= x)
+								&& (fillSelect.till > x))
+								? *_currentPenSelected
+								: *_currentPen);
+							_p->drawText(
+								box,
+								Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+								object->fallbackText);
+							_p->restore();
+						}
 					}
 					if (hasSpoiler) {
 						_p->setOpacity(opacity);
@@ -1238,7 +1295,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	return !_elidedLine;
 }
 
-FixedRange Renderer::findSelectEmojiRange(
+FixedRange Renderer::findSelectObjectRange(
 		const QScriptItem &si,
 		std::vector<Block>::const_iterator blockIt,
 		QFixed x,
@@ -1318,12 +1375,16 @@ FixedRange Renderer::findSelectTextRange(
 }
 
 void Renderer::fillSelectRange(FixedRange range) {
+	fillSelectRange(range, _y + _yDelta, _fontHeight);
+}
+
+void Renderer::fillSelectRange(FixedRange range, int top, int height) {
 	if (range.empty()) {
 		return;
 	}
 	const auto left = range.from.toInt();
 	const auto width = range.till.toInt() - left;
-	_p->fillRect(left, _y + _yDelta, width, _fontHeight, _palette->selectBg);
+	_p->fillRect(left, top, width, height, _palette->selectBg);
 }
 
 void Renderer::pushHighlightRange(FixedRange range) {
@@ -1373,6 +1434,7 @@ void Renderer::fillRectsFromRanges(
 	}
 	auto lastTill = ranges.front().from.toInt() - 1;
 	const auto y = _y + _yDelta;
+	const auto height = _fontHeight;
 	for (const auto &range : ranges) {
 		auto from = range.from.toInt();
 		auto till = range.till.toInt();
@@ -1380,9 +1442,9 @@ void Renderer::fillRectsFromRanges(
 			auto &last = rects.back();
 			from = std::min(from, last.x());
 			till = std::max(till, last.x() + last.width());
-			last = { from, y, till - from, _fontHeight };
+			last = { from, y, till - from, height };
 		} else {
-			rects.push_back({ from, y, till - from, _fontHeight });
+			rects.push_back({ from, y, till - from, height });
 		}
 		lastTill = till;
 	}
@@ -1536,6 +1598,7 @@ void Renderer::prepareElidedLine(
 		const auto _type = block->type();
 		if (_type == TextBlockType::Emoji
 			|| _type == TextBlockType::CustomEmoji
+			|| _type == TextBlockType::InlineObject
 			|| _type == TextBlockType::Skip
 			|| _type == TextBlockType::Newline) {
 			if (_wLeft < elisionWidth + si.width) {

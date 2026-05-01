@@ -61,6 +61,7 @@ private:
 		int16 paragraphIndex,
 		Qt::LayoutDirection direction);
 	void initNextLine();
+	void resolveLineGeometry(uint16 lineEnd);
 	void initParagraphBidi();
 	bool drawLine(
 		uint16 lineEnd,
@@ -68,7 +69,7 @@ private:
 	bool drawLinePostprocessed(
 		uint16 lineEnd,
 		Blocks::const_iterator blocksEnd);
-	[[nodiscard]] FixedRange findSelectEmojiRange(
+	[[nodiscard]] FixedRange findSelectObjectRange(
 		const QScriptItem &si,
 		std::vector<Block>::const_iterator blockIt,
 		QFixed x,
@@ -82,6 +83,7 @@ private:
 		const QTextItemInt &gf,
 		TextSelection selection) const;
 	void fillSelectRange(FixedRange range);
+	void fillSelectRange(FixedRange range, int top, int height);
 	void pushHighlightRange(FixedRange range);
 	void pushSpoilerRange(
 		FixedRange range,
@@ -193,6 +195,7 @@ private:
 	int _yDelta = 0;
 	int _lineIndex = 0;
 	int _lineHeight = 0;
+	int _lineAscent = 0;
 	int _fontHeight = 0;
 	bool _breakEverywhere = false;
 	bool _elidedLine = false;

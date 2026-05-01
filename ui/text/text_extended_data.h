@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "ui/text/text_inline_object.h"
 #include "ui/effects/spoiler_mess.h"
 #include "ui/effects/animations.h"
 #include "ui/click_handler.h"
@@ -120,6 +121,7 @@ struct ExtendedData {
 	std::unique_ptr<QuotesData> quotes;
 	std::unique_ptr<SpoilerData> spoiler;
 	std::unique_ptr<CustomEmojiData> customEmoji;
+	std::vector<InlineObjectDescriptor> inlineObjects;
 	std::vector<Modification> modifications;
 	int32 nextFormattedDateUpdate = 0;
 

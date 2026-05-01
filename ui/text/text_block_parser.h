@@ -58,6 +58,7 @@ private:
 
 	void trimSourceRange();
 	void createBlock(int skipBack = 0);
+	void createInlineObjectBlock(const InlineObjectDescriptor &object);
 	void createNewlineBlock(bool fromOriginalText);
 	void ensureAtNewline(QuoteDetails quote);
 
@@ -69,6 +70,7 @@ private:
 
 	void closeQuote();
 	void finishEntities();
+	void skipPassedInlineObjects();
 	void skipPassedEntities();
 	void skipBadEntities();
 
@@ -91,8 +93,10 @@ private:
 	const QChar * const _start = nullptr;
 	const QChar *_end = nullptr; // mutable, because we trim by decrementing.
 	const QChar *_ptr = nullptr;
+	const gsl::span<const InlineObjectPlacement> _inlineObjects;
 	const EntitiesInText::const_iterator _entitiesEnd;
 	EntitiesInText::const_iterator _waitingEntity;
+	gsl::span<const InlineObjectPlacement>::iterator _waitingInlineObject;
 	QString _customEmojiData;
 	const bool _multiline = false;
 
