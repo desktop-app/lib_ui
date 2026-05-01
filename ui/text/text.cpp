@@ -2039,8 +2039,11 @@ bool IsSpace(QChar ch) {
 		|| (ch == QChar::Tabulation);
 }
 
-bool IsDiacritic(QChar ch) { // diacritic and variation selectors
-	return (ch.category() == QChar::Mark_NonSpacing)
+bool IsDiacritic(QChar ch) { // diacritic, combining and variation selectors
+	const auto category = ch.category();
+	return (category == QChar::Mark_NonSpacing)
+		|| (category == QChar::Mark_Enclosing)
+		|| (category == QChar::Mark_SpacingCombining)
 		|| (ch.unicode() == 1652)
 		|| (ch.unicode() >= 64606 && ch.unicode() <= 64611);
 }
