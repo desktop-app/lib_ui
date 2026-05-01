@@ -76,14 +76,16 @@ public:
 	[[nodiscard]] uint16 linkIndex() const;
 	void setLinkIndex(uint16 index);
 
+	static constexpr auto kMaxColorIndex = (1 << 12) - 1;
+
 protected:
 	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
 
 	uint16 _position = 0;
-	uint16 _type = 0;
+	uint16 _type : 4 = 0;
+	uint16 _colorIndex : 12 = 0;
 	uint16 _flags = 0;
 	uint16 _linkIndex = 0;
-	uint16 _colorIndex = 0;
 
 };
 

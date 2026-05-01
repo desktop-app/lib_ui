@@ -65,9 +65,9 @@ Qt::LayoutDirection UnpackParagraphDirection(bool ltr, bool rtl) {
 AbstractBlock::AbstractBlock(TextBlockType type, BlockDescriptor descriptor)
 : _position(descriptor.position)
 , _type(static_cast<uint16>(type))
+, _colorIndex(descriptor.colorIndex)
 , _flags(descriptor.flags)
-, _linkIndex(descriptor.linkIndex)
-, _colorIndex(descriptor.colorIndex) {
+, _linkIndex(descriptor.linkIndex) {
 }
 
 uint16 AbstractBlock::position() const {

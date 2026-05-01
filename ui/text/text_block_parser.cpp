@@ -550,7 +550,10 @@ bool BlockParser::checkEntities() {
 		createBlock();
 
 		const auto data = _waitingEntity->data();
-		_colorIndex = data.isEmpty() ? 1 : (data.front().unicode() + 1);
+		_colorIndex = std::clamp(
+			data.isEmpty() ? 1 : (data.front().unicode() + 1),
+			1,
+			AbstractBlock::kMaxColorIndex);
 		_startedEntities[entityEnd].emplace_back(
 			_colorIndex,
 			Type::Colorized);
