@@ -11,6 +11,7 @@
 #include "ui/text/text_extended_data.h"
 #include "ui/text/text_stack_engine.h"
 #include "ui/text/text_word.h"
+#include "ui/style/style_core.h"
 #include "styles/style_basic.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -996,7 +997,29 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							static_cast<const InlineObjectBlock&>(*block),
 							x);
 						if (!object->image.isNull()) {
-							_p->drawImage(box.topLeft(), object->image);
+							if (object->colorizeToTextColor) {
+								const auto selected = (fillSelect.from <= x)
+									&& (fillSelect.till > x);
+								const auto color = (selected
+									? _currentPenSelected
+									: _currentPen)->color();
+								const auto size = object->image.size();
+								if (object->colorizedImage.isNull()
+									|| (object->colorizedImage.size() != size)
+									|| (object->colorizedImageSize != size)
+									|| (object->colorizedImageColor != color)) {
+									object->colorizedImage = style::colorizeImage(
+										object->image,
+										color);
+									object->colorizedImageColor = color;
+									object->colorizedImageSize = size;
+								}
+								_p->drawImage(
+									box.topLeft(),
+									object->colorizedImage);
+							} else {
+								_p->drawImage(box.topLeft(), object->image);
+							}
 						} else if (!object->fallbackText.isEmpty()) {
 							_p->save();
 							_p->setClipRect(box, Qt::IntersectClip);
