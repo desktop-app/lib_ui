@@ -8,7 +8,9 @@
 
 #include <gsl/span>
 
+#include <QtCore/QSize>
 #include <QtCore/QString>
+#include <QtGui/QColor>
 #include <QtGui/QImage>
 
 namespace Ui::Text {
@@ -26,6 +28,10 @@ struct InlineObjectDescriptor {
 	QString copySource;
 	QString fallbackText;
 	QImage image;
+	bool colorizeToTextColor = false;
+	mutable QImage colorizedImage;
+	mutable QColor colorizedImageColor;
+	mutable QSize colorizedImageSize;
 
 	[[nodiscard]] QStringView textForCopy() const {
 		return !copySource.isEmpty()
