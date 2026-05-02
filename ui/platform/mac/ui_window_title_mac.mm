@@ -111,7 +111,7 @@ void TitleWidget::init(int height) {
 		}
 	}
 	if (!_textStyle) {
-		setFromFont(style::font(13, style::FontFlag::Semibold, 0));
+		setFromFont(style::font(13, style::FontFlag::Bold, 0));
 	}
 }
 
