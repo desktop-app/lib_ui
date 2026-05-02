@@ -742,7 +742,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		initParagraphBidi(); // if was not inited
 	}
 
-	_f = _t->blockFont(startBlock, _t->_st->font);
+	_f = _t->_st->font;
 	auto leftLineLengthLeft = _elisionMiddle
 		? (_lineWidth.toReal() - _f->elidew) / 2.
 		: -1;
@@ -803,16 +803,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			block.height());
 	};
 	const auto fillMarked = [&](FixedRange range, int top, int height) {
-		if (range.empty()) {
-			return;
-		}
-		const auto &color = _t->_inlineHtmlMetrics.markBackgroundColor;
-		if (!color.isValid() || !color.alpha()) {
+		if (range.empty() || !_palette || !_palette->markBg->c.alpha()) {
 			return;
 		}
 		const auto left = range.from.toInt();
 		const auto width = range.till.toInt() - left;
-		_p->fillRect(left, top, width, height, color);
+		_p->fillRect(left, top, width, height, _palette->markBg);
 	};
 
 	auto lastLeftToMiddleX = x;
@@ -830,9 +826,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		const auto rtl = (si.analysis.bidiLevel % 2);
 
 		applyBlockProperties(e, block);
-		const auto marked = (block->flags() & TextBlockFlag::Marked)
-			&& _t->_inlineHtmlMetrics.markBackgroundColor.isValid()
-			&& _t->_inlineHtmlMetrics.markBackgroundColor.alpha();
+		const auto marked = (block->flags() & TextBlockFlag::Marked);
 		const auto baselineShift = _t->blockBaselineShift(block);
 		const auto textTop = textY + baselineShift - _f->ascent;
 		const auto textHeight = _f->height;
@@ -906,13 +900,15 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							const auto bigWidth = x - lastLeftToMiddleX;
 							const auto smallWidth = _f->elidew;
 							const auto left = lastLeftToMiddleX;
-							_p->save();
-							_p->setFont(_f);
+							_p->setFont(WithFlags(
+								_t->_st->font,
+								(block->flags()
+									& ~(TextBlockFlag::Subscript
+										| TextBlockFlag::Superscript))));
 							_p->drawText(
 								(left + (bigWidth - smallWidth) / 2).toReal(),
-								textY + baselineShift,
+								textY,
 								kQEllipsis);
-							_p->restore();
 						}
 						continue;
 					} else {
@@ -1108,13 +1104,15 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						const auto bigWidth = x - itemWidth - lastLeftToMiddleX;
 						const auto smallWidth = _f->elidew;
 						const auto left = lastLeftToMiddleX;
-						_p->save();
-						_p->setFont(_f);
+						_p->setFont(WithFlags(
+							_t->_st->font,
+							(block->flags()
+								& ~(TextBlockFlag::Subscript
+									| TextBlockFlag::Superscript))));
 						_p->drawText(
 							(left + (bigWidth - smallWidth) / 2).toReal(),
-							textY + baselineShift,
+							textY,
 							kQEllipsis);
-						_p->restore();
 					}
 					break;
 				} else {
@@ -1633,7 +1631,7 @@ void Renderer::prepareElidedLine(
 		const auto nextBlock = (blockIndex + 1 < _blocksSize)
 			? _t->_blocks[blockIndex + 1].get()
 			: nullptr;
-		const auto font = _t->blockFont(block, _t->_st->font);
+		const auto font = WithFlags(_t->_st->font, block->flags());
 		elisionWidth = font->elidew;
 		auto &si = e.layoutData->items[firstItem + i];
 		const auto _type = block->type();
@@ -1741,10 +1739,13 @@ void Renderer::applyBlockProperties(
 		}
 		return _t->_st->font;
 	}();
-	const auto newFont = _t->blockFont(block, usedFont);
+	const auto newFont = WithFlags(usedFont, block->flags());
 	if (_f != newFont) {
 		_f = newFont;
-		e.fnt = _f->f;
+		const auto use = (_f->family() == _t->_st->font->family())
+			? WithFlags(_t->_st->font, flags, _f->flags())
+			: _f;
+		e.fnt = use->f;
 		e.resetFontEngineCache();
 	}
 	if (_p) {

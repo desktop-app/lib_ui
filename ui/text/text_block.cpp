@@ -31,11 +31,11 @@ style::font WithFlags(
 		return font->monospace();
 	}
 	auto result = font;
-	if ((flags & TextBlockFlag::Bold) || (fontFlags & Flag::Bold)) {
+	if ((flags & TextBlockFlag::Bold)
+		|| (flags & TextBlockFlag::Semibold)
+		|| (flags & TextBlockFlag::Tilde) // Tilde fix in OpenSans.
+		|| (fontFlags & Flag::Bold)) {
 		result = result->bold();
-	} else if ((flags & TextBlockFlag::Semibold)
-		|| (fontFlags & Flag::Semibold)) {
-		result = result->semibold();
 	}
 	if ((flags & TextBlockFlag::Italic) || (fontFlags & Flag::Italic)) {
 		result = result->italic();
@@ -48,8 +48,10 @@ style::font WithFlags(
 		|| (fontFlags & Flag::StrikeOut)) {
 		result = result->strikeout();
 	}
-	if (flags & TextBlockFlag::Tilde) { // Tilde fix in OpenSans.
-		result = result->semibold();
+	if ((flags & TextBlockFlag::Subscript)
+		|| (flags & TextBlockFlag::Superscript)
+		|| (fontFlags & Flag::SubOrSuper)) {
+		result = result->suborsuper();
 	}
 	return result;
 }

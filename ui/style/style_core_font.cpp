@@ -41,6 +41,8 @@ void style_InitFontsResource() {
 namespace style {
 namespace {
 
+constexpr auto kSubSuperMultiplier = 0.75;
+
 QString Custom;
 
 } // namespace
@@ -320,23 +322,30 @@ struct Metrics {
 
 	const auto adjust = (overriden || system);
 	const auto metrics = ComputeMetrics(font, adjust);
-	font.setPixelSize(metrics.pixelSize);
 
-	font.setWeight((flags & (FontFlag::Bold | FontFlag::Semibold))
-		? QFont::DemiBold
-		: QFont::Normal);
-	if (font.bold()) {
-		const auto style = QFontInfo(font).styleName();
-		if (!style.isEmpty() && !style.startsWith(
-				"Semibold",
-				Qt::CaseInsensitive)) {
-			font.setBold(true);
-		}
+	if (monospace || !(flags & FontFlag::SubOrSuper)) {
+		font.setPixelSize(metrics.pixelSize);
+	} else {
+		font.setPixelSize(
+			int(base::SafeRound(metrics.pixelSize * kSubSuperMultiplier)));
 	}
+	if (!monospace) {
+		font.setWeight((flags & FontFlag::Bold)
+			? QFont::DemiBold
+			: QFont::Normal);
+		if (font.bold()) {
+			const auto style = QFontInfo(font).styleName();
+			if (!style.isEmpty() && !style.startsWith(
+					"Semibold",
+					Qt::CaseInsensitive)) {
+				font.setBold(true);
+			}
+		}
 
-	font.setItalic(flags & FontFlag::Italic);
-	font.setUnderline(flags & FontFlag::Underline);
-	font.setStrikeOut(flags & FontFlag::StrikeOut);
+		font.setItalic(flags & FontFlag::Italic);
+		font.setUnderline(flags & FontFlag::Underline);
+		font.setStrikeOut(flags & FontFlag::StrikeOut);
+	}
 
 	const auto index = (family == Custom) ? 0 : RegisterFontFamily(family);
 	return {
@@ -446,8 +455,8 @@ Font FontData::strikeout(bool set) const {
 	return otherFlagsFont(FontFlag::StrikeOut, set);
 }
 
-Font FontData::semibold(bool set) const {
-	return otherFlagsFont(FontFlag::Semibold, set);
+Font FontData::suborsuper(bool set) const {
+	return otherFlagsFont(FontFlag::SubOrSuper, set);
 }
 
 Font FontData::monospace(bool set) const {
@@ -467,7 +476,11 @@ int FontData::family() const {
 }
 
 Font FontData::otherFlagsFont(FontFlag flag, bool set) const {
-	const auto newFlags = set ? (_flags | flag) : (_flags & ~flag);
+	const auto newFlags = !set
+		? (_flags & ~flag)
+		: (flag == FontFlag::Monospace)
+		? FontFlag::Monospace
+		: (_flags | flag);
 	if (!_modified[newFlags]) {
 		_modified[newFlags] = Font(_size, newFlags, _family, &_modified);
 	}

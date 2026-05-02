@@ -20,12 +20,13 @@ namespace style {
 void SetCustomFont(const QString &font);
 
 enum class FontFlag : uchar {
-	Bold = 0x01,
-	Italic = 0x02,
-	Underline = 0x04,
-	StrikeOut = 0x08,
-	Semibold = 0x10,
-	Monospace = 0x20,
+	Bold       = 0x01,
+	Italic     = 0x02,
+	Underline  = 0x04,
+	StrikeOut  = 0x08,
+	SubOrSuper = 0x10, // Subscript or superscript.
+
+	Monospace  = 0x20,
 };
 inline constexpr bool is_flag_type(FontFlag) { return true; }
 using FontFlags = base::flags<FontFlag>;
@@ -42,14 +43,16 @@ struct FontResolveResult {
 };
 [[nodiscard]] const FontResolveResult *FindAdjustResult(const QFont &font);
 
-namespace internal {
+} // namespace style
+
+namespace style::internal {
 
 void StartFonts();
 
 void DestroyFonts();
 int RegisterFontFamily(const QString &family);
 
-inline constexpr auto kFontVariants = 0x40;
+inline constexpr auto kFontVariants = 0x21;
 
 class Font;
 using FontVariants = std::array<Font, kFontVariants>;
@@ -112,7 +115,7 @@ public:
 	[[nodiscard]] Font italic(bool set = true) const;
 	[[nodiscard]] Font underline(bool set = true) const;
 	[[nodiscard]] Font strikeout(bool set = true) const;
-	[[nodiscard]] Font semibold(bool set = true) const;
+	[[nodiscard]] Font suborsuper(bool set = true) const;
 	[[nodiscard]] Font monospace(bool set = true) const;
 
 	[[nodiscard]] int size() const;
@@ -184,5 +187,4 @@ private:
 
 };
 
-} // namespace internal
-} // namespace style
+} // namespace style::internal

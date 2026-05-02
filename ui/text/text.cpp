@@ -33,14 +33,6 @@ namespace {
 
 constexpr auto kDefaultSpoilerCacheCapacity = 24;
 
-[[nodiscard]] InlineHtmlMetrics InlineHtmlMetricsFromContext(
-		const MarkedContext &context) {
-	if (const auto metrics = std::any_cast<InlineHtmlMetrics>(&context.other)) {
-		return *metrics;
-	}
-	return {};
-}
-
 [[nodiscard]] Qt::LayoutDirection StringDirection(
 		const QString &str,
 		int from,
@@ -715,10 +707,8 @@ void String::setMarkedText(
 		const TextWithEntities &textWithEntities,
 		const TextParseOptions &options,
 		const MarkedContext &context) {
-	const auto inlineHtmlMetrics = InlineHtmlMetricsFromContext(context);
 	_st = &st;
 	clear();
-	_inlineHtmlMetrics = inlineHtmlMetrics;
 	{
 		// utf codes of the text display for emoji extraction
 //		auto text = textWithEntities.text;
@@ -1603,31 +1593,12 @@ const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 		: quote->language;
 }
 
-style::font String::blockFont(
-		const AbstractBlock *block,
-		const style::font &base) const {
-	const auto flags = block->flags();
-	const auto result = WithFlags(base, flags);
-	const auto scale = (flags & TextBlockFlag::Subscript)
-		? _inlineHtmlMetrics.subscriptScale
-		: (flags & TextBlockFlag::Superscript)
-		? _inlineHtmlMetrics.superscriptScale
-		: 1.;
-	if (scale == 1.) {
-		return result;
-	}
-	const auto size = std::max(
-		1,
-		int(std::lround(result->size() * scale)));
-	return style::font(size, result->flags(), result->family());
-}
-
 int String::blockBaselineShift(const AbstractBlock *block) const {
 	const auto flags = block->flags();
 	return (flags & TextBlockFlag::Subscript)
-		? _inlineHtmlMetrics.subscriptBaselineOffset
+		? int(base::SafeRound(_st->font->size() / 4.))
 		: (flags & TextBlockFlag::Superscript)
-		? _inlineHtmlMetrics.superscriptBaselineOffset
+		? -int(base::SafeRound(_st->font->size() / 3.))
 		: 0;
 }
 
@@ -1662,7 +1633,7 @@ String::LineGeometry String::resolveLineGeometry(
 			&& (raw->type() == TextBlockType::Text)
 			&& (flags
 				& (TextBlockFlag::Subscript | TextBlockFlag::Superscript))) {
-			const auto font = blockFont(raw, _st->font);
+			const auto font = WithFlags(_st->font, raw->flags());
 			const auto shift = blockBaselineShift(raw);
 			accumulate_max(result.ascent, font->ascent - shift);
 			accumulate_max(result.descent, font->descent + shift);
@@ -2133,7 +2104,6 @@ void String::clear() {
 	_hasSubscriptsOrSuperscripts = false;
 	_skipBlockAddedNewline = false;
 	_endsWithQuoteOrOtherDirection = false;
-	_inlineHtmlMetrics = {};
 }
 
 bool IsBad(QChar ch) {

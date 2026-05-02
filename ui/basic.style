@@ -9,6 +9,7 @@ using "ui/colors.palette";
 TextPalette {
 	linkFg: color;
 	monoFg: color;
+	markBg: color;
 	spoilerFg: color;
 	selectBg: color;
 	selectFg: color;
@@ -68,6 +69,7 @@ IconEmoji {
 defaultTextPalette: TextPalette {
 	linkFg: windowActiveTextFg;
 	monoFg: msgInMonoFg;
+	markBg: windowBgOver;
 	spoilerFg: msgInDateFg;
 	selectBg: msgInBgSelected;
 	selectFg: transparent; // use painter current pen instead

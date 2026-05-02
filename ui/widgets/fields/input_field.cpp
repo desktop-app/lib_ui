@@ -3048,7 +3048,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 	const auto processTilde = (_st.style.font->f.pixelSize() * ratio == 13)
 		&& (_st.style.font->f.family() == qstr("Open Sans"));
 	auto isTildeFragment = false;
-	auto tildeFixedFont = _st.style.font->semibold()->f;
+	auto tildeFixedFont = _st.style.font->bold()->f;
 
 	// First tag handling (the one we inserted text to).
 	bool startTagFound = false;

@@ -23,29 +23,29 @@ struct TextStyle;
 namespace Ui::Text {
 
 enum class TextBlockType : uint16 {
-	Newline     = 0x01,
-	Text        = 0x02,
-	Emoji       = 0x03,
-	CustomEmoji = 0x04,
-	Skip        = 0x05,
+	Newline      = 0x01,
+	Text         = 0x02,
+	Emoji        = 0x03,
+	CustomEmoji  = 0x04,
+	Skip         = 0x05,
 	InlineObject = 0x06,
 };
 
 enum class TextBlockFlag : uint16 {
-	Bold       = 0x001,
-	Italic     = 0x002,
-	Underline  = 0x004,
-	StrikeOut  = 0x008,
-	Tilde      = 0x010, // Tilde fix in OpenSans.
-	Semibold   = 0x020,
-	Code       = 0x040,
-	Pre        = 0x080,
-	Spoiler    = 0x100,
-	Blockquote = 0x200,
-	FormattedDate = 0x400,
-	Subscript = 0x800,
-	Superscript = 0x1000,
-	Marked = 0x2000,
+	Bold          = 0x0001,
+	Italic        = 0x0002,
+	Underline     = 0x0004,
+	StrikeOut     = 0x0008,
+	Tilde         = 0x0010, // Tilde fix in OpenSans.
+	Semibold      = 0x0020,
+	Code          = 0x0040,
+	Pre           = 0x0080,
+	Spoiler       = 0x0100,
+	Blockquote    = 0x0200,
+	FormattedDate = 0x0400,
+	Subscript     = 0x0800,
+	Superscript   = 0x1000,
+	Marked        = 0x2000,
 };
 inline constexpr bool is_flag_type(TextBlockFlag) { return true; }
 using TextBlockFlags = base::flags<TextBlockFlag>;
