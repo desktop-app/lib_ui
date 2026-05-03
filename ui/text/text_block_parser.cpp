@@ -68,14 +68,6 @@ constexpr auto kMaxDiacAfterSymbol = 2;
 	return result;
 }
 
-// Tilde fix in OpenSans.
-[[nodiscard]] bool ComputeCheckTilde(const style::TextStyle &st) {
-	const auto &font = st.font;
-	return (font->size() * style::DevicePixelRatio() == 13)
-		&& (font->flags() == 0)
-		&& (font->f.family() == qstr("Open Sans"));
-}
-
 [[nodiscard]] bool IsDiacriticAllowedAfter(QChar ch) {
 	const auto code = ch.unicode();
 	const auto category = ch.category();
@@ -169,8 +161,7 @@ BlockParser::BlockParser(
 , _entitiesEnd(_source.entities.end())
 , _waitingEntity(_source.entities.begin())
 , _waitingInlineObject(_inlineObjects.begin())
-, _multiline(options.flags & TextParseMultiline)
-, _checkTilde(ComputeCheckTilde(*_t->_st)) {
+, _multiline(options.flags & TextParseMultiline) {
 	parse(options);
 }
 
@@ -638,7 +629,6 @@ void BlockParser::parseCurrentChar() {
 	const auto isNewLine = !inCustomEmoji && _multiline && IsNewline(_ch);
 	const auto replaceWithSpace = IsSpace(_ch) && (_ch != QChar::Nbsp);
 	const auto isDiacritic = IsDiacritic(_ch);
-	const auto isTilde = !inCustomEmoji && _checkTilde && (_ch == '~');
 	const auto skip = [&] {
 		if (IsBad(_ch) || _ch.isLowSurrogate()) {
 			return true;
@@ -693,17 +683,6 @@ void BlockParser::parseCurrentChar() {
 		_ch = QChar(0);
 		_allowDiacritic = false;
 	} else {
-		if (isTilde) { // Tilde fix in OpenSans.
-			if (!(_flags & TextBlockFlag::Tilde)) {
-				createBlock(-_emojiLookback);
-				_flags |= TextBlockFlag::Tilde;
-			}
-		} else {
-			if (_flags & TextBlockFlag::Tilde) {
-				createBlock(-_emojiLookback);
-				_flags &= ~TextBlockFlag::Tilde;
-			}
-		}
 		if (isNewLine) {
 			createBlock();
 			createNewlineBlock(true);

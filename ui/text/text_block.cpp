@@ -33,7 +33,6 @@ style::font WithFlags(
 	auto result = font;
 	if ((flags & TextBlockFlag::Bold)
 		|| (flags & TextBlockFlag::Semibold)
-		|| (flags & TextBlockFlag::Tilde) // Tilde fix in OpenSans.
 		|| (fontFlags & Flag::Bold)) {
 		result = result->bold();
 	}

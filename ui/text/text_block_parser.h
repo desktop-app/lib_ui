@@ -100,8 +100,6 @@ private:
 	QString _customEmojiData;
 	const bool _multiline = false;
 
-	const bool _checkTilde = false; // do we need a special text block for tilde symbol
-
 	std::vector<uint16> _linksIndexes;
 
 	std::vector<EntityLinkData> _links;

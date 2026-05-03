@@ -1324,7 +1324,6 @@ struct FormattingAction {
 		InsertEmoji,
 		InsertCustomEmoji,
 		RemoveCustomEmoji,
-		TildeFont,
 		RemoveTag,
 		RemoveNewline,
 		ClearInstantReplace,
@@ -1339,8 +1338,6 @@ struct FormattingAction {
 
 	Type type = Type::Invalid;
 	EmojiPtr emoji = nullptr;
-	bool isTilde = false;
-	QString tildeTag;
 	QString existingTags;
 	QString customEmojiText;
 	QString customEmojiLink;
@@ -3043,13 +3040,6 @@ bool InputField::isRedoAvailable() const {
 }
 
 void InputField::processFormatting(int insertPosition, int insertEnd) {
-	// Tilde formatting.
-	const auto ratio = style::DevicePixelRatio();
-	const auto processTilde = (_st.style.font->f.pixelSize() * ratio == 13)
-		&& (_st.style.font->f.family() == qstr("Open Sans"));
-	auto isTildeFragment = false;
-	auto tildeFixedFont = _st.style.font->bold()->f;
-
 	// First tag handling (the one we inserted text to).
 	bool startTagFound = false;
 	bool breakTagOnNotLetter = false;
@@ -3147,15 +3137,6 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					action.intervalEnd = fragmentEnd;
 					break;
 				}
-				if (processTilde) {
-					const auto formatFont = format.font();
-					if (!tildeFixedFont.styleName().isEmpty()
-						&& formatFont.styleName().isEmpty()) {
-						tildeFixedFont.setStyleName(QString());
-					}
-					isTildeFragment = (format.font() == tildeFixedFont);
-				}
-
 				auto fragmentText = fragment.text();
 				auto *textStart = fragmentText.constData();
 				auto *textEnd = textStart + fragmentText.size();
@@ -3259,23 +3240,6 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 							break;
 						}
 					}
-					if (processTilde) { // Tilde symbol fix in OpenSans.
-						bool tilde = (ch->unicode() == '~');
-						if ((tilde && !isTildeFragment) || (!tilde && isTildeFragment)) {
-							if (action.type == ActionType::Invalid) {
-								action.type = ActionType::TildeFont;
-								action.intervalStart = fragmentPosition + (ch - textStart);
-								action.intervalEnd = action.intervalStart + 1;
-								action.tildeTag = format.property(kTagProperty).toString();
-								action.isTilde = tilde;
-							} else {
-								++action.intervalEnd;
-							}
-						} else if (action.type == ActionType::TildeFont) {
-							break;
-						}
-					}
-
 					if (ch + 1 < textEnd && ch->isHighSurrogate() && (ch + 1)->isLowSurrogate()) {
 						++ch;
 					}
@@ -3441,13 +3405,6 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 					action.existingTags,
 					action.intervalStart,
 					action.intervalEnd);
-			} else if (action.type == ActionType::TildeFont) {
-				auto format = QTextCharFormat();
-				format.setFont(action.isTilde
-					? tildeFixedFont
-					: PrepareTagFormat(_st, action.tildeTag).font());
-				cursor.mergeCharFormat(format);
-				insertPosition = action.intervalEnd;
 			} else if (action.type == ActionType::ClearInstantReplace) {
 				auto format = _defaultCharFormat;
 				ApplyTagFormat(format, cursor.charFormat());
