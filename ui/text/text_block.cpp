@@ -43,9 +43,6 @@ style::font WithFlags(
 		|| (fontFlags & Flag::StrikeOut)) {
 		result = result->strikeout();
 	}
-	if (flags & TextBlockFlag::Tilde) { // Tilde fix in OpenSans.
-		result = result->semibold();
-	}
 	return result;
 }
 

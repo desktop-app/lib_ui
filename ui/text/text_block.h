@@ -34,7 +34,6 @@ enum class TextBlockFlag : uint16 {
 	Italic     = 0x002,
 	Underline  = 0x004,
 	StrikeOut  = 0x008,
-	Tilde      = 0x010, // Tilde fix in OpenSans.
 	Semibold   = 0x020,
 	Code       = 0x040,
 	Pre        = 0x080,
