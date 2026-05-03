@@ -996,20 +996,31 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						const auto box = inlineObjectRect(
 							static_cast<const InlineObjectBlock&>(*block),
 							x);
-						if (!object->image.isNull()) {
+						const auto image = [&] {
+							if (!object->image.isNull()) {
+								return object->image;
+							}
+							return object->imageProvider
+								? object->imageProvider(
+									std::max(style::DevicePixelRatio(), 1))
+								: QImage();
+						}();
+						if (!image.isNull()) {
 							if (object->colorizeToTextColor) {
 								const auto selected = (fillSelect.from <= x)
 									&& (fillSelect.till > x);
 								const auto color = (selected
 									? _currentPenSelected
 									: _currentPen)->color();
-								const auto size = object->image.size();
+								const auto size = image.size();
 								if (object->colorizedImage.isNull()
 									|| (object->colorizedImage.size() != size)
 									|| (object->colorizedImageSize != size)
+									|| (object->colorizedImage.devicePixelRatio()
+										!= image.devicePixelRatio())
 									|| (object->colorizedImageColor != color)) {
 									object->colorizedImage = style::colorizeImage(
-										object->image,
+										image,
 										color);
 									object->colorizedImageColor = color;
 									object->colorizedImageSize = size;
@@ -1018,7 +1029,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 									box.topLeft(),
 									object->colorizedImage);
 							} else {
-								_p->drawImage(box.topLeft(), object->image);
+								_p->drawImage(box.topLeft(), image);
 							}
 						} else if (!object->fallbackText.isEmpty()) {
 							_p->save();

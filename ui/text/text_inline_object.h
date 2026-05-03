@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "base/basic_types.h"
+
 #include <gsl/span>
 
 #include <QtCore/QSize>
@@ -14,6 +16,8 @@
 #include <QtGui/QImage>
 
 namespace Ui::Text {
+
+using InlineObjectImageProvider = Fn<QImage(int devicePixelRatio)>;
 
 enum class InlineObjectVerticalAlign : uchar {
 	AscentDescent = 0,
@@ -28,6 +32,7 @@ struct InlineObjectDescriptor {
 	QString copySource;
 	QString fallbackText;
 	QImage image;
+	InlineObjectImageProvider imageProvider;
 	bool colorizeToTextColor = false;
 	mutable QImage colorizedImage;
 	mutable QColor colorizedImageColor;
