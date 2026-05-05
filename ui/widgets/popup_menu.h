@@ -204,7 +204,10 @@ private:
 		not_null<PopupMenu*> submenu,
 		int actionTop,
 		TriggeredSource source);
-	bool prepareGeometryFor(const QPoint &p, PopupMenu *parent);
+	bool prepareGeometryFor(
+		const QPoint &p,
+		PopupMenu *parent,
+		QWidget *parentActionWidget);
 	void showPrepared(TriggeredSource source);
 	void updateRoundingOverlay();
 
