@@ -788,20 +788,30 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 
 	auto textY = _y + _lineAscent;
 	auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
-	const auto inlineObjectRect = [&](const InlineObjectBlock &block, QFixed x) {
-		const auto width = block.width();
-		if (block.align() == InlineObjectVerticalAlign::CenterInText) {
+	const auto customObjectRect = [&](
+			CustomEmoji *custom,
+			QFixed x,
+			const std::optional<CustomEmojiVerticalMetrics> &vertical) {
+		if (vertical) {
+			const auto width = custom->width();
+			if (vertical->align == CustomEmojiVerticalAlign::CenterInText) {
+				return QRect(
+					x.toInt(),
+					_y + ((_lineHeight - vertical->height()) / 2),
+					width,
+					vertical->height());
+			}
 			return QRect(
 				x.toInt(),
-				_y + ((_lineHeight - block.height()) / 2),
+				_y + _lineAscent - vertical->ascent,
 				width,
-				block.height());
+				vertical->height());
 		}
 		return QRect(
 			x.toInt(),
-			_y + _lineAscent - block.ascent(),
-			width,
-			block.height());
+			_y + _yDelta + emojiY,
+			custom->width(),
+			st::emojiSize);
 	};
 	const auto fillMarked = [&](FixedRange range, int top, int height) {
 		if (range.empty() || !_palette || !_palette->markBg->c.alpha()) {
@@ -876,8 +886,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				return false;
 			} else if (_p
 				&& (_type == TextBlockType::Emoji
-					|| _type == TextBlockType::CustomEmoji
-					|| _type == TextBlockType::InlineObject)) {
+					|| _type == TextBlockType::CustomEmoji)) {
 				if (_elisionMiddle && !paintRightToMiddleElision) {
 					if (leftLineLengthLeft - si.width.toReal() < 0) {
 						leftLineLengthLeft = 0;
@@ -925,10 +934,20 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						blockIt,
 						x,
 						_selection);
-				if (_type == TextBlockType::InlineObject) {
-					const auto box = inlineObjectRect(
-						static_cast<const InlineObjectBlock&>(*block),
-						x);
+				CustomEmoji *custom = nullptr;
+				if (_type == TextBlockType::CustomEmoji) {
+					custom = static_cast<const CustomEmojiBlock*>(block)->custom();
+				}
+				const auto vertical = custom
+					? custom->vertical(*_t->_st)
+					: std::nullopt;
+				const auto box = custom
+					? customObjectRect(
+						custom,
+						x,
+						vertical)
+					: QRect();
+				if (custom) {
 					if (marked) {
 						fillMarked(
 							{ x, x + si.width },
@@ -987,51 +1006,21 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						} else {
 							_customEmojiContext->textColor = color;
 						}
-						_customEmojiContext->position = {
-							ex + _customEmojiSkip,
-							ey + _customEmojiSkip,
-						};
-						custom->paint(*_p, *_customEmojiContext);
-					} else if (const auto object = _t->inlineObjectData(block)) {
-						const auto box = inlineObjectRect(
-							static_cast<const InlineObjectBlock&>(*block),
-							x);
-						const auto image = [&] {
-							if (!object->image.isNull()) {
-								return object->image;
-							}
-							return object->imageProvider
-								? object->imageProvider(
-									std::max(style::DevicePixelRatio(), 1))
-								: QImage();
-						}();
-						if (!image.isNull()) {
-							if (object->colorizeToTextColor) {
-								const auto selected = (fillSelect.from <= x)
-									&& (fillSelect.till > x);
-								const auto color = (selected
-									? _currentPenSelected
-									: _currentPen)->color();
-								const auto size = image.size();
-								if (object->colorizedImage.isNull()
-									|| (object->colorizedImage.size() != size)
-									|| (object->colorizedImageSize != size)
-									|| (object->colorizedImage.devicePixelRatio()
-										!= image.devicePixelRatio())
-									|| (object->colorizedImageColor != color)) {
-									object->colorizedImage = style::colorizeImage(
-										image,
-										color);
-									object->colorizedImageColor = color;
-									object->colorizedImageSize = size;
-								}
-								_p->drawImage(
-									box.topLeft(),
-									object->colorizedImage);
-							} else {
-								_p->drawImage(box.topLeft(), image);
-							}
-						} else if (!object->fallbackText.isEmpty()) {
+						const auto replacementText = custom->replacementText();
+						const auto semantics = custom->semantics();
+						const auto showFallbackText = !semantics.isRealCustomEmoji
+							&& !replacementText.isEmpty()
+							&& !custom->ready()
+							&& !custom->readyInDefaultState();
+						if (!showFallbackText) {
+							_customEmojiContext->position = vertical
+								? box.topLeft()
+								: QPoint(
+									ex + _customEmojiSkip,
+									ey + _customEmojiSkip);
+							custom->paint(*_p, *_customEmojiContext);
+						}
+						if (showFallbackText) {
 							_p->save();
 							_p->setClipRect(box, Qt::IntersectClip);
 							_p->setPen(((fillSelect.from <= x)
@@ -1041,7 +1030,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							_p->drawText(
 								box,
 								Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-								object->fallbackText);
+								replacementText);
 							_p->restore();
 						}
 					}
@@ -1671,7 +1660,6 @@ void Renderer::prepareElidedLine(
 		const auto _type = block->type();
 		if (_type == TextBlockType::Emoji
 			|| _type == TextBlockType::CustomEmoji
-			|| _type == TextBlockType::InlineObject
 			|| _type == TextBlockType::Skip
 			|| _type == TextBlockType::Newline) {
 			if (_wLeft < elisionWidth + si.width) {
@@ -1853,7 +1841,11 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
 			return nullptr;
 		}
 		const auto customBlock = static_cast<const CustomEmojiBlock*>(block);
-		customEmoji->entityData = customBlock->custom()->entityData();
+		const auto custom = customBlock->custom();
+		if (!custom->semantics().allowCustomEmojiClick) {
+			return nullptr;
+		}
+		customEmoji->entityData = custom->entityData();
 		if (customEmoji->predicate
 			&& !customEmoji->predicate(customEmoji->entityData)) {
 			return nullptr;

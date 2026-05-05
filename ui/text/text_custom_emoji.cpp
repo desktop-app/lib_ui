@@ -7,8 +7,8 @@
 #include "ui/text/text_custom_emoji.h"
 
 #include "ui/style/style_core.h"
-#include "ui/text/text_utilities.h"
 #include "ui/text/text.h"
+#include "ui/text/text_utilities.h"
 #include "ui/emoji_config.h"
 
 namespace Ui::Emoji {
@@ -60,6 +60,19 @@ QString ShiftedEmoji::entityData() {
 	return _wrapped->entityData();
 }
 
+std::optional<CustomEmojiVerticalMetrics> ShiftedEmoji::vertical(
+	const style::TextStyle &st) {
+	return _wrapped->vertical(st);
+}
+
+QString ShiftedEmoji::replacementText() {
+	return _wrapped->replacementText();
+}
+
+CustomEmojiSemantics ShiftedEmoji::semantics() {
+	return _wrapped->semantics();
+}
+
 void ShiftedEmoji::paint(QPainter &p, const Context &context) {
 	auto copy = context;
 	copy.position += _shift;
@@ -88,6 +101,19 @@ int FirstFrameEmoji::width() {
 
 QString FirstFrameEmoji::entityData() {
 	return _wrapped->entityData();
+}
+
+std::optional<CustomEmojiVerticalMetrics> FirstFrameEmoji::vertical(
+	const style::TextStyle &st) {
+	return _wrapped->vertical(st);
+}
+
+QString FirstFrameEmoji::replacementText() {
+	return _wrapped->replacementText();
+}
+
+CustomEmojiSemantics FirstFrameEmoji::semantics() {
+	return _wrapped->semantics();
 }
 
 void FirstFrameEmoji::paint(QPainter &p, const Context &context) {
@@ -124,6 +150,19 @@ int LimitedLoopsEmoji::width() {
 
 QString LimitedLoopsEmoji::entityData() {
 	return _wrapped->entityData();
+}
+
+std::optional<CustomEmojiVerticalMetrics> LimitedLoopsEmoji::vertical(
+	const style::TextStyle &st) {
+	return _wrapped->vertical(st);
+}
+
+QString LimitedLoopsEmoji::replacementText() {
+	return _wrapped->replacementText();
+}
+
+CustomEmojiSemantics LimitedLoopsEmoji::semantics() {
+	return _wrapped->semantics();
 }
 
 void LimitedLoopsEmoji::paint(QPainter &p, const Context &context) {

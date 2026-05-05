@@ -6,7 +6,6 @@
 //
 #pragma once
 
-#include "ui/text/text_inline_object.h"
 #include "base/flags.h"
 #include "ui/text/text_custom_emoji.h"
 #include "ui/style/style_core.h"
@@ -28,7 +27,6 @@ enum class TextBlockType : uint16 {
 	Emoji        = 0x03,
 	CustomEmoji  = 0x04,
 	Skip         = 0x05,
-	InlineObject = 0x06,
 };
 
 enum class TextBlockFlag : uint16 {
@@ -160,31 +158,6 @@ private:
 
 };
 
-class InlineObjectBlock final : public AbstractBlock {
-public:
-	InlineObjectBlock(
-		BlockDescriptor descriptor,
-		int width,
-		int descriptorIndex,
-		InlineObjectVerticalAlign align,
-		int ascent,
-		int descent);
-
-	[[nodiscard]] int width() const;
-	[[nodiscard]] int descriptorIndex() const;
-	[[nodiscard]] InlineObjectVerticalAlign align() const;
-	[[nodiscard]] int ascent() const;
-	[[nodiscard]] int descent() const;
-	[[nodiscard]] int height() const;
-
-private:
-	uint16 _width = 0;
-	uint16 _descriptorIndexAndMode = 0;
-	uint16 _metricA = 0;
-	uint16 _metricB = 0;
-
-};
-
 class Block final {
 public:
 	Block();
@@ -207,13 +180,6 @@ public:
 		BlockDescriptor descriptor,
 		int width,
 		int height);
-	[[nodiscard]] static Block InlineObject(
-		BlockDescriptor descriptor,
-		int width,
-		int descriptorIndex,
-		InlineObjectVerticalAlign align,
-		int ascent,
-		int descent);
 
 	template <typename FinalBlock>
 	[[nodiscard]] FinalBlock &unsafe() {
@@ -263,8 +229,6 @@ private:
 	static_assert(alignof(TextBlock) <= alignof(void*));
 	static_assert(sizeof(CustomEmojiBlock) <= sizeof(SkipBlock));
 	static_assert(alignof(CustomEmojiBlock) <= alignof(void*));
-	static_assert(sizeof(InlineObjectBlock) <= sizeof(SkipBlock));
-	static_assert(alignof(InlineObjectBlock) <= alignof(void*));
 
 	std::aligned_storage_t<sizeof(SkipBlock), alignof(void*)> _data;
 

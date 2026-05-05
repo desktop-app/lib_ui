@@ -127,11 +127,13 @@ void StackEngine::itemize() {
 		if (till > from) {
 			if (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji
-				|| type == TextBlockType::Skip
-				|| type == TextBlockType::InlineObject) {
+				|| type == TextBlockType::Skip) {
 				for (auto i = from - _offset, count = till - _offset; i != count; ++i) {
 					_analysis[i].script = QChar::Script_Common;
-					_analysis[i].flags = (chars[i] == QChar::Space)
+					const auto emojiTrailingSpace =
+						(type == TextBlockType::Emoji)
+						&& (chars[i] == QChar::Space);
+					_analysis[i].flags = emojiTrailingSpace
 						? QScriptAnalysis::None
 						: QScriptAnalysis::Object;
 				}

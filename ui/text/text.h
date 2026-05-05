@@ -6,7 +6,6 @@
 //
 #pragma once
 
-#include "ui/text/text_inline_object.h"
 #include "ui/text/text_entity.h"
 #include "ui/click_handler.h"
 #include "base/flags.h"
@@ -104,7 +103,6 @@ struct MarkedContext {
 	Fn<void()> repaint;
 	CustomEmojiFactory customEmojiFactory;
 	FormattedDateFactory formattedDateFactory;
-	InlineObjectPlacements inlineObjects;
 	std::any other;
 };
 
@@ -487,11 +485,8 @@ private:
 		int lineStart,
 		int lineEnd,
 		int blockIndexHint) const;
-	[[nodiscard]] int inlineObjectHeight(
-		const InlineObjectDescriptor &object) const;
-	[[nodiscard]] const InlineObjectDescriptor *inlineObjectData(
-		const AbstractBlock *block) const;
-	[[nodiscard]] bool hasInlineObjectAt(int position) const;
+	[[nodiscard]] bool hasObjectAtPosition(int position) const;
+	[[nodiscard]] bool hasReplacementObjectAtPosition(int position) const;
 
 	// Returns -1 in case there is no limit.
 	[[nodiscard]] int quoteLinesLimit(QuoteDetails *quote) const;
@@ -553,7 +548,6 @@ private:
 	bool _isIsolatedEmoji : 1 = false;
 	bool _isOnlyCustomEmoji : 1 = false;
 	bool _hasNotEmojiAndSpaces : 1 = false;
-	bool _hasInlineObjects : 1 = false;
 	bool _hasSubscriptsOrSuperscripts : 1 = false;
 	bool _skipBlockAddedNewline : 1 = false;
 	bool _endsWithQuoteOrOtherDirection : 1 = false;

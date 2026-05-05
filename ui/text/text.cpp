@@ -72,6 +72,21 @@ bool IsParagraphSeparator(QChar ch) {
 	return false;
 }
 
+[[nodiscard]] CustomEmoji *BlockCustomEmoji(
+		const AbstractBlock *block) {
+	if (block->type() != TextBlockType::CustomEmoji) {
+		return nullptr;
+	}
+	return static_cast<const CustomEmojiBlock*>(block)->custom();
+}
+
+[[nodiscard]] bool IsReplacementCustomObject(
+		not_null<CustomEmoji*> custom) {
+	const auto semantics = custom->semantics();
+	return !semantics.exportEntity
+		|| !custom->replacementText().isEmpty();
+}
+
 } // namespace
 } // namespace Ui::Text
 
@@ -1399,9 +1414,9 @@ TextSelection String::adjustSelection(TextSelection selection, TextSelectType se
 		if (to > _text.size()) to = _text.size();
 		if ((selectType == TextSelectType::Words)
 			|| (selectType == TextSelectType::Paragraphs)) {
-			if (hasInlineObjectAt(from)) {
+			if (hasReplacementObjectAtPosition(from)) {
 				return { from, uint16(from + 1) };
-			} else if (to > from && hasInlineObjectAt(to - 1)) {
+			} else if (to > from && hasReplacementObjectAtPosition(to - 1)) {
 				return { uint16(to - 1), to };
 			}
 		}
@@ -1617,8 +1632,7 @@ String::LineGeometry String::resolveLineGeometry(
 		int lineEnd,
 		int blockIndexHint) const {
 	auto result = defaultLineGeometry();
-	if ((!_hasInlineObjects && !_hasSubscriptsOrSuperscripts)
-		|| lineStart >= lineEnd) {
+	if (lineStart >= lineEnd) {
 		return result;
 	}
 	auto i = begin(_blocks) + blockIndexHint;
@@ -1638,45 +1652,30 @@ String::LineGeometry String::resolveLineGeometry(
 			accumulate_max(result.ascent, font->ascent - shift);
 			accumulate_max(result.descent, font->descent + shift);
 		}
-		if (!_hasInlineObjects || (raw->type() != TextBlockType::InlineObject)) {
+		const auto custom = BlockCustomEmoji(raw);
+		if (!custom) {
 			continue;
 		}
-		const auto &block = i->unsafe<InlineObjectBlock>();
-		if (block.align() == InlineObjectVerticalAlign::CenterInText) {
-			const auto delta = block.height() - result.height();
+		const auto vertical = custom->vertical(*_st);
+		if (!vertical) {
+			continue;
+		}
+		if (vertical->align == CustomEmojiVerticalAlign::CenterInText) {
+			const auto delta = vertical->height() - result.height();
 			if (delta > 0) {
 				result.ascent += delta / 2;
 				result.descent += delta - (delta / 2);
 			}
 		} else {
-			accumulate_max(result.ascent, block.ascent());
-			accumulate_max(result.descent, block.descent());
+			accumulate_max(result.ascent, vertical->ascent);
+			accumulate_max(result.descent, vertical->descent);
 		}
 	}
 	return result;
 }
 
-int String::inlineObjectHeight(const InlineObjectDescriptor &object) const {
-	if (!object.image.isNull()) {
-		const auto ratio = object.image.devicePixelRatio();
-		return ratio ? int(object.image.height() / ratio) : object.image.height();
-	}
-	return _st->font->height;
-}
-
-const InlineObjectDescriptor *String::inlineObjectData(
-		const AbstractBlock *block) const {
-	if (!_extended || block->type() != TextBlockType::InlineObject) {
-		return nullptr;
-	}
-	const auto index = static_cast<const InlineObjectBlock*>(block)
-		->descriptorIndex();
-	const auto &objects = _extended->inlineObjects;
-	return (index >= 0 && index < objects.size()) ? &objects[index] : nullptr;
-}
-
-bool String::hasInlineObjectAt(int position) const {
-	if (!_hasInlineObjects || position < 0 || position >= _text.size()) {
+bool String::hasObjectAtPosition(int position) const {
+	if (position < 0 || position >= _text.size()) {
 		return false;
 	}
 	auto i = begin(_blocks);
@@ -1685,9 +1684,25 @@ bool String::hasInlineObjectAt(int position) const {
 		++i;
 	}
 	return (i != e)
-		&& ((*i)->type() == TextBlockType::InlineObject)
+		&& ((*i)->type() == TextBlockType::CustomEmoji)
 		&& (blockPosition(i) <= position)
 		&& (blockEnd(i) > position);
+}
+
+bool String::hasReplacementObjectAtPosition(int position) const {
+	if (!hasObjectAtPosition(position)) {
+		return false;
+	}
+	auto i = begin(_blocks);
+	auto e = end(_blocks);
+	while (i != e && blockEnd(i) <= position) {
+		++i;
+	}
+	if (i == e) {
+		return false;
+	}
+	const auto custom = BlockCustomEmoji(i->get());
+	return custom && IsReplacementCustomObject(custom);
 }
 
 int String::quoteLinesLimit(QuoteDetails *quote) const {
@@ -1797,14 +1812,24 @@ void String::enumerateText(
 			selection.to,
 			uint16(blockPosition + blockLength(i)));
 		if (rangeTo > rangeFrom) {
-			if (blockType == TextBlockType::InlineObject) {
-				if (const auto object = inlineObjectData(i->get())) {
-					appendPartCallback(object->textForCopy(), QString());
+			const auto custom = BlockCustomEmoji(i->get());
+			if (custom) {
+				const auto semantics = custom->semantics();
+				if (!semantics.exportEntity) {
+					const auto replacement = custom->replacementText();
+					appendPartCallback(
+						replacement.isEmpty()
+							? base::StringViewMid(
+								_text,
+								rangeFrom,
+								rangeTo - rangeFrom)
+							: QStringView(replacement),
+						QString());
+					continue;
 				}
-				continue;
 			}
 			const auto customEmojiData = (blockType == TextBlockType::CustomEmoji)
-				? static_cast<const CustomEmojiBlock*>(i->get())->custom()->entityData()
+				? custom->entityData()
 				: QString();
 			appendPartCallback(
 				base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom),
@@ -1814,16 +1839,23 @@ void String::enumerateText(
 }
 
 bool String::hasPersistentAnimation() const {
-	return _hasCustomEmoji || hasSpoilers();
+	if (hasSpoilers()) {
+		return true;
+	}
+	for (const auto &block : _blocks) {
+		const auto custom = BlockCustomEmoji(block.get());
+		if (custom && custom->semantics().unloadPersistentAnimation) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void String::unloadPersistentAnimation() {
-	if (_hasCustomEmoji) {
-		for (const auto &block : _blocks) {
-			const auto raw = block.get();
-			if (raw->type() == TextBlockType::CustomEmoji) {
-				static_cast<const CustomEmojiBlock*>(raw)->custom()->unload();
-			}
+	for (const auto &block : _blocks) {
+		const auto custom = BlockCustomEmoji(block.get());
+		if (custom && custom->semantics().unloadPersistentAnimation) {
+			custom->unload();
 		}
 	}
 }
@@ -1840,10 +1872,12 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
 	result.lines.emplace_back();
 	for (const auto &block : _blocks) {
 		const auto raw = block.get();
-		if (raw->type() == TextBlockType::CustomEmoji) {
-			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
+		if (const auto custom = BlockCustomEmoji(raw)) {
+			if (!custom->semantics().isRealCustomEmoji) {
+				return {};
+			}
 			result.lines.back().push_back({
-				.entityData = custom->custom()->entityData(),
+				.entityData = custom->entityData(),
 			});
 		} else if (raw->type() == TextBlockType::Newline) {
 			result.lines.emplace_back();
@@ -2074,9 +2108,11 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 			return {};
 		} else if (type == TextBlockType::Emoji) {
 			result.items[index++] = block.unsafe<EmojiBlock>().emoji();
-		} else if (type == TextBlockType::CustomEmoji) {
-			result.items[index++]
-				= block.unsafe<CustomEmojiBlock>().custom()->entityData();
+		} else if (const auto custom = BlockCustomEmoji(block.get())) {
+			if (!custom->semantics().isRealCustomEmoji) {
+				return {};
+			}
+			result.items[index++] = custom->entityData();
 		} else if (type != TextBlockType::Skip) {
 			return {};
 		}
@@ -2100,7 +2136,6 @@ void String::clear() {
 	_isIsolatedEmoji = false;
 	_isOnlyCustomEmoji = false;
 	_hasNotEmojiAndSpaces = false;
-	_hasInlineObjects = false;
 	_hasSubscriptsOrSuperscripts = false;
 	_skipBlockAddedNewline = false;
 	_endsWithQuoteOrOtherDirection = false;
