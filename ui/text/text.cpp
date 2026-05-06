@@ -87,6 +87,14 @@ bool IsParagraphSeparator(QChar ch) {
 		|| !custom->replacementText().isEmpty();
 }
 
+[[nodiscard]] bool IsTrailingSkipOnlyLine(
+		const std::vector<Block> &blocks,
+		int lineStartBlockHint) {
+	return !blocks.empty()
+		&& (blocks.back()->type() == TextBlockType::Skip)
+		&& (lineStartBlockHint == int(blocks.size()) - 1);
+}
+
 } // namespace
 } // namespace Ui::Text
 
@@ -670,15 +678,18 @@ void String::recountNaturalSize(
 			lastNewlineStart,
 			_text.size(),
 			lineStartBlockHint).height();
-		const auto useSkipHeight = (_blocks.back()->type() == TextBlockType::Skip)
-			&& (_words.back().f_width() == width);
+		const auto trailingSkip = (!_blocks.empty()
+			&& (_blocks.back()->type() == TextBlockType::Skip))
+			? &_blocks.back().unsafe<SkipBlock>()
+			: nullptr;
+		const auto finalLineHeight = trailingSkip
+			? IsTrailingSkipOnlyLine(_blocks, lineStartBlockHint)
+				? trailingSkip->height()
+				: std::max(lineHeight, trailingSkip->height())
+			: lineHeight;
 		_minHeight += qpadding.bottom();
 		if (qlinesleft != 0) {
-			_minHeight += useSkipHeight
-				? std::max(
-					lineHeight,
-					_blocks.back().unsafe<SkipBlock>().height())
-				: lineHeight;
+			_minHeight += finalLineHeight;
 		}
 		accumulate_max(maxWidth, width);
 		accumulate_max(qmaxwidth, width);
@@ -1289,15 +1300,18 @@ void String::enumerateLines(
 			lineStart,
 			_text.size(),
 			lineStartBlockHint).height();
-		const auto useSkipHeight = (_blocks.back()->type() == TextBlockType::Skip)
-			&& (widthLeft + _words.back().f_width() == lineWidth);
+		const auto trailingSkip = (!_blocks.empty()
+			&& (_blocks.back()->type() == TextBlockType::Skip))
+			? &_blocks.back().unsafe<SkipBlock>()
+			: nullptr;
+		const auto finalLineHeight = trailingSkip
+			? IsTrailingSkipOnlyLine(_blocks, lineStartBlockHint)
+				? trailingSkip->height()
+				: std::max(lineHeight, trailingSkip->height())
+			: lineHeight;
 		const auto useLineHeight = !qlinesleft
 			? 0
-			: useSkipHeight
-			? std::max(
-				lineHeight,
-				_blocks.back().unsafe<SkipBlock>().height())
-			: lineHeight;
+			: finalLineHeight;
 		callback(
 			lineLeft + lineWidth - widthLeft,
 			top + useLineHeight + qpadding.bottom(),

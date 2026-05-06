@@ -640,7 +640,15 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		trimmedLineEnd = _t->blockEnd(end(_t->_blocks));
 	}
 
-	const auto startBlock = _t->_blocks[_lineStartBlock].get();
+	const auto startBlockIt = begin(_t->_blocks) + _lineStartBlock;
+	const auto startBlock = startBlockIt->get();
+	const auto startBlockEnd = _t->blockEnd(startBlockIt);
+	if (!_elidedLine
+		&& (trimmedLineEnd == _lineStart)
+		&& (startBlock->type() == TextBlockType::CustomEmoji)
+		&& (startBlockEnd > trimmedLineEnd)) {
+		trimmedLineEnd = startBlockEnd;
+	}
 
 	const auto extendLeft = (startBlock->position() < _lineStart)
 		? qMin(_lineStart - startBlock->position(), 2)
