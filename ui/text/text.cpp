@@ -1050,14 +1050,16 @@ String::DimensionsResult String::countDimensions(
 	if (request.lineWidths && request.reserve) {
 		result.lineWidths.reserve(request.reserve);
 	}
-	enumerateLines(geometry, [&](QFixed lineWidth, int lineBottom, int, bool) {
-		const auto width = lineWidth.ceil().toInt();
-		if (request.lineWidths) {
-			result.lineWidths.push_back(width);
-		}
-		result.width = std::max(result.width, width);
-		result.height = lineBottom;
-	});
+	enumerateLines(
+		geometry,
+		[&](QFixed lineWidth, int lineBottom, int, int, bool) {
+			const auto width = lineWidth.ceil().toInt();
+			if (request.lineWidths) {
+				result.lineWidths.push_back(width);
+			}
+			result.width = std::max(result.width, width);
+			result.height = lineBottom;
+		});
 	return result;
 
 }
@@ -1068,12 +1070,15 @@ QSize String::countSize(int width, bool breakEverywhere) const {
 	}
 	auto height = 0;
 	auto maxLineWidth = QFixed(0);
-	enumerateLines(width, breakEverywhere, [&](QFixed lineWidth, int lineBottom, int, bool) {
-		if (lineWidth > maxLineWidth) {
-			maxLineWidth = lineWidth;
-		}
-		height = lineBottom;
-	});
+	enumerateLines(
+		width,
+		breakEverywhere,
+		[&](QFixed lineWidth, int lineBottom, int, int, bool) {
+			if (lineWidth > maxLineWidth) {
+				maxLineWidth = lineWidth;
+			}
+			height = lineBottom;
+		});
 	return { maxLineWidth.ceil().toInt(), height };
 }
 
@@ -1096,22 +1101,36 @@ std::vector<int> String::countLineWidths(
 	if (options.reserve) {
 		result.reserve(options.reserve);
 	}
-	enumerateLines(width, options.breakEverywhere, [&](QFixed lineWidth, int, int, bool) {
-		result.push_back(lineWidth.ceil().toInt());
-	});
+	enumerateLines(
+		width,
+		options.breakEverywhere,
+		[&](QFixed lineWidth, int, int, int, bool) {
+			result.push_back(lineWidth.ceil().toInt());
+		});
 	return result;
 }
 
-std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
+std::vector<LineLayoutInfo> String::countLinesGeometry(
+		int width,
+		bool breakEverywhere) const {
 	auto result = std::vector<LineLayoutInfo>();
-	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft, bool rtl) {
-		result.push_back({
-			.left = lineLeft,
-			.width = lineWidth.ceil().toInt(),
-			.bottom = lineBottom,
-			.rtl = rtl,
+	enumerateLines(
+		width,
+		breakEverywhere,
+		[&](
+				QFixed lineWidth,
+				int lineBottom,
+				int lineLeft,
+				int lineBaseline,
+				bool rtl) {
+			result.push_back({
+				.left = lineLeft,
+				.width = lineWidth.ceil().toInt(),
+				.bottom = lineBottom,
+				.rtl = rtl,
+				.baseline = lineBaseline,
+			});
 		});
-	});
 	return result;
 }
 
@@ -1210,11 +1229,17 @@ void String::enumerateLines(
 				--qlinesleft;
 			}
 			if (!hidden) {
-				const auto lineHeight = resolveLineGeometry(
+				const auto lineGeometry = resolveLineGeometry(
 					lineStart,
 					w->position(),
-					lineStartBlockHint).height();
-				callback(lineLeft + lineWidth - widthLeft, top += lineHeight, lineLeft + qpadding.left(), paragraphRTL);
+					lineStartBlockHint);
+				top += lineGeometry.height();
+				callback(
+					lineLeft + lineWidth - widthLeft,
+					top,
+					lineLeft + qpadding.left(),
+					top - lineGeometry.descent,
+					paragraphRTL);
 			}
 			if (lineElided) {
 				return withElided(true);
@@ -1266,14 +1291,16 @@ void String::enumerateLines(
 		if (qlinesleft > 0) {
 			--qlinesleft;
 		}
-		const auto lineHeight = resolveLineGeometry(
+		const auto lineGeometry = resolveLineGeometry(
 			lineStart,
 			w->position(),
-			lineStartBlockHint).height();
+			lineStartBlockHint);
+		top += lineGeometry.height();
 		callback(
 			lineLeft + lineWidth - widthLeft,
-			top += lineHeight,
+			top,
 			lineLeft + qpadding.left(),
+			top - lineGeometry.descent,
 			paragraphRTL);
 		if (lineElided) {
 			return withElided(true);
@@ -1296,10 +1323,11 @@ void String::enumerateLines(
 		lastWordStart_wLeft = widthLeft;
 	}
 	if (widthLeft < lineWidth) {
-		const auto lineHeight = resolveLineGeometry(
+		const auto lineGeometry = resolveLineGeometry(
 			lineStart,
 			_text.size(),
-			lineStartBlockHint).height();
+			lineStartBlockHint);
+		const auto lineHeight = lineGeometry.height();
 		const auto trailingSkip = (!_blocks.empty()
 			&& (_blocks.back()->type() == TextBlockType::Skip))
 			? &_blocks.back().unsafe<SkipBlock>()
@@ -1316,6 +1344,7 @@ void String::enumerateLines(
 			lineLeft + lineWidth - widthLeft,
 			top + useLineHeight + qpadding.bottom(),
 			lineLeft + qpadding.left(),
+			top + std::min(lineGeometry.ascent, useLineHeight),
 			paragraphRTL);
 	}
 	return withElided(false);
