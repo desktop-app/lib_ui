@@ -549,7 +549,9 @@ void BlockParser::parseCurrentChar() {
 	_emojiLookback = 0;
 	const auto inCustomEmoji = !_customEmojiData.isEmpty();
 	const auto isNewLine = !inCustomEmoji && _multiline && IsNewline(_ch);
-	const auto replaceWithSpace = IsSpace(_ch) && (_ch != QChar::Nbsp);
+	const auto replaceWithSpace = IsSpace(_ch)
+		&& (_ch != QChar::Nbsp)
+		&& (!inCustomEmoji || _ch != QChar::ObjectReplacementCharacter);
 	const auto isDiacritic = IsDiacritic(_ch);
 	const auto skip = [&] {
 		if (IsBad(_ch) || _ch.isLowSurrogate()) {
