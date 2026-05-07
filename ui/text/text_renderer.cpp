@@ -1452,6 +1452,14 @@ void Renderer::fillSelectRange(FixedRange range, int top, int height) {
 	if (range.empty()) {
 		return;
 	}
+
+	const auto defaultLineTop = _y + _lineAscent - _t->_st->font->ascent;
+	const auto defaultLineBottom = defaultLineTop + _t->_st->font->height;
+	const auto bottom = std::max(top + height, defaultLineBottom);
+
+	top = std::min(top, defaultLineTop);
+	height = bottom - top;
+
 	const auto left = range.from.toInt();
 	const auto width = range.till.toInt() - left;
 	_p->fillRect(left, top, width, height, _palette->selectBg);
