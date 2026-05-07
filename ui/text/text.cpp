@@ -1674,16 +1674,8 @@ String::LineGeometry String::resolveLineGeometry(
 		if (!vertical) {
 			continue;
 		}
-		if (vertical->align == CustomEmojiVerticalAlign::CenterInText) {
-			const auto delta = vertical->height() - result.height();
-			if (delta > 0) {
-				result.ascent += delta / 2;
-				result.descent += delta - (delta / 2);
-			}
-		} else {
-			accumulate_max(result.ascent, vertical->ascent);
-			accumulate_max(result.descent, vertical->descent);
-		}
+		accumulate_max(result.ascent, vertical->ascent);
+		accumulate_max(result.descent, vertical->descent);
 	}
 	return result;
 }

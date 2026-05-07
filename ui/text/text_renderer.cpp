@@ -800,26 +800,13 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			CustomEmoji *custom,
 			QFixed x,
 			const std::optional<CustomEmojiVerticalMetrics> &vertical) {
-		if (vertical) {
-			const auto width = custom->width();
-			if (vertical->align == CustomEmojiVerticalAlign::CenterInText) {
-				return QRect(
-					x.toInt(),
-					_y + ((_lineHeight - vertical->height()) / 2),
-					width,
-					vertical->height());
-			}
-			return QRect(
-				x.toInt(),
-				_y + _lineAscent - vertical->ascent,
-				width,
-				vertical->height());
-		}
 		return QRect(
 			x.toInt(),
-			_y + _yDelta + emojiY,
+			_y + (vertical
+				? (_lineAscent - vertical->ascent)
+				: (_yDelta + emojiY)),
 			custom->width(),
-			st::emojiSize);
+			vertical ? vertical->height() : st::emojiSize);
 	};
 	const auto fillMarked = [&](FixedRange range, int top, int height) {
 		if (range.empty() || !_palette || !_palette->markBg->c.alpha()) {

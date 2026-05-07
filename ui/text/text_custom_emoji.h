@@ -54,15 +54,9 @@ struct CustomEmojiPaintContext {
 	} internal;
 };
 
-enum class CustomEmojiVerticalAlign : uchar {
-	AscentDescent = 0,
-	CenterInText = 1,
-};
-
 struct CustomEmojiVerticalMetrics {
 	int ascent = 0;
 	int descent = 0;
-	CustomEmojiVerticalAlign align = CustomEmojiVerticalAlign::AscentDescent;
 
 	[[nodiscard]] int height() const {
 		return ascent + descent;
