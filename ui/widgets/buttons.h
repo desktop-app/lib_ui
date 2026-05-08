@@ -303,16 +303,16 @@ public:
 	SettingsButton(
 		QWidget *parent,
 		rpl::producer<QString> &&text,
-		const style::SettingsButton &st = st::defaultSettingsButton);
+		sv::SettingsButton st = sv::defaultSettingsButton);
 	SettingsButton(
 		QWidget *parent,
 		rpl::producer<TextWithEntities> &&text,
-		const style::SettingsButton &st = st::defaultSettingsButton,
+		sv::SettingsButton st = sv::defaultSettingsButton,
 		const Text::MarkedContext &context = {});
 	SettingsButton(
 		QWidget *parent,
 		std::nullptr_t,
-		const style::SettingsButton &st = st::defaultSettingsButton);
+		sv::SettingsButton st = sv::defaultSettingsButton);
 	~SettingsButton();
 
 	QString accessibilityName() override {
@@ -359,7 +359,7 @@ private:
 	void setText(TextWithEntities &&text);
 	[[nodiscard]] QRect toggleRect() const;
 
-	const style::SettingsButton &_st;
+	sp::SettingsButton _st;
 	style::margins _padding;
 	Ui::Text::String _text;
 	std::unique_ptr<Ui::ToggleView> _toggle;

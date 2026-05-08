@@ -857,7 +857,7 @@ QImage CrossButton::prepareRippleMask() const {
 SettingsButton::SettingsButton(
 	QWidget *parent,
 	rpl::producer<QString> &&text,
-	const style::SettingsButton &st)
+	sv::SettingsButton st)
 : SettingsButton(parent, std::move(text) | rpl::map([=](QString &&text) {
 	return TextWithEntities{ std::move(text) };
 }), st) {
@@ -866,11 +866,11 @@ SettingsButton::SettingsButton(
 SettingsButton::SettingsButton(
 	QWidget *parent,
 	rpl::producer<TextWithEntities> &&text,
-	const style::SettingsButton &st,
+	sv::SettingsButton st,
 	const Text::MarkedContext &context)
-: RippleButton(parent, st.ripple)
-, _st(st)
-, _padding(_st.padding)
+: RippleButton(parent, st.ripple())
+, _st(parent, st)
+, _padding(_st->padding)
 , _context(context) {
 	std::move(
 		text
@@ -882,10 +882,10 @@ SettingsButton::SettingsButton(
 SettingsButton::SettingsButton(
 	QWidget *parent,
 	std::nullptr_t,
-	const style::SettingsButton &st)
-: RippleButton(parent, st.ripple)
-, _st(st)
-, _padding(_st.padding) {
+	sv::SettingsButton st)
+: RippleButton(parent, st.ripple())
+, _st(parent, st)
+, _padding(_st->padding) {
 }
 
 SettingsButton::~SettingsButton() = default;
@@ -903,7 +903,7 @@ SettingsButton *SettingsButton::toggleOn(
 	Expects(_toggle == nullptr);
 
 	_toggle = std::make_unique<Ui::ToggleView>(
-		isOver() ? _st.toggleOver : _st.toggle,
+		isOver() ? _st->toggleOver : _st->toggle,
 		false,
 		[this] { rtlupdate(toggleRect()); });
 	if (!ignoreClick) {
@@ -966,7 +966,7 @@ void SettingsButton::setPaddingOverride(style::margins padding) {
 }
 
 const style::SettingsButton &SettingsButton::st() const {
-	return _st;
+	return *_st;
 }
 
 int SettingsButton::fullTextWidth() const {
@@ -990,7 +990,7 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
 }
 
 void SettingsButton::paintBg(Painter &p, const QRect &rect, bool over) const {
-	p.fillRect(rect, over ? _st.textBgOver : _st.textBg);
+	p.fillRect(rect, over ? _st->textBgOver : _st->textBg);
 }
 
 void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
@@ -1004,8 +1004,8 @@ void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
 	p.setPen(_textColorOverride
 		? QPen(*_textColorOverride)
 		: over
-		? _st.textFgOver
-		: _st.textFg);
+		? _st->textFgOver
+		: _st->textFg);
 	_text.drawLeftElided(
 		p,
 		_padding.left(),
@@ -1025,7 +1025,7 @@ QRect SettingsButton::toggleRect() const {
 	Expects(_toggle != nullptr);
 
 	auto size = _toggle->getSize();
-	auto left = width() - _st.toggleSkip - size.width();
+	auto left = width() - _st->toggleSkip - size.width();
 	auto top = (height() - size.height()) / 2;
 	return { QPoint(left, top), size };
 }
@@ -1035,7 +1035,7 @@ QRect SettingsButton::maybeToggleRect() const {
 }
 
 int SettingsButton::resizeGetHeight(int newWidth) {
-	return _padding.top() + _st.height + _padding.bottom();
+	return _padding.top() + _st->height + _padding.bottom();
 }
 
 void SettingsButton::onStateChanged(
@@ -1047,7 +1047,7 @@ void SettingsButton::onStateChanged(
 		RippleButton::onStateChanged(was, source);
 	}
 	if (_toggle) {
-		_toggle->setStyle(isOver() ? _st.toggleOver : _st.toggle);
+		_toggle->setStyle(isOver() ? _st->toggleOver : _st->toggle);
 	}
 	if (nowDisabled != wasDisabled) {
 		setPointerCursor(!isDisabled());
@@ -1055,7 +1055,7 @@ void SettingsButton::onStateChanged(
 }
 
 void SettingsButton::setText(TextWithEntities &&text) {
-	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
+	_text.setMarkedText(_st->style, text, kMarkupTextOptions, _context);
 	accessibilityNameChanged();
 	update();
 }
