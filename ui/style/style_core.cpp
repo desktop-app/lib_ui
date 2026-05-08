@@ -46,6 +46,10 @@ void registerModule(ModuleBase *module) {
 	StyleModules().push_back(module);
 }
 
+void IncrementPaletteVersion() {
+	++PaletteVersion;
+}
+
 void StartShortAnimation() {
 	if (++RunningShortAnimations == 1) {
 		ShortAnimationRunning = true;
@@ -79,7 +83,7 @@ int PaletteVersion() {
 }
 
 void NotifyPaletteChanged() {
-	++internal::PaletteVersion;
+	internal::IncrementPaletteVersion();
 	internal::PaletteChanges.fire({});
 }
 

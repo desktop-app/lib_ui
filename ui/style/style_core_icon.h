@@ -93,6 +93,7 @@ public:
 
 private:
 	void ensureLoaded() const;
+	void ensurePaletteFresh() const;
 	void createCachedPixmap() const;
 	void ensureColorizedImage(QColor color) const;
 	[[nodiscard]] QSize inner() const;
@@ -103,6 +104,7 @@ private:
 	mutable QImage _maskImage, _colorizedImage;
 	mutable QPixmap _pixmap; // for pixmaps
 	mutable QSize _size; // for rects
+	mutable int _materializedPaletteVersion = -1;
 
 };
 
@@ -110,13 +112,11 @@ class IconData {
 public:
 	template <typename ...MonoIcons>
 	IconData(std::in_place_t, MonoIcons &&...icons) {
-		created();
 		_parts.reserve(sizeof...(MonoIcons));
 		addIcons(std::forward<MonoIcons>(icons)...);
 	}
 
 	IconData(const IconData &other, const style::palette &palette);
-	~IconData();
 
 	void reset() {
 		for (const auto &part : _parts) {
@@ -168,8 +168,6 @@ public:
 	int height() const;
 
 private:
-	void created();
-
 	template <typename ... MonoIcons>
 	void addIcons() {
 	}
@@ -183,11 +181,6 @@ private:
 	std::vector<MonoIcon> _parts;
 	mutable int _width = -1;
 	mutable int _height = -1;
-
-	// withPalette() copies are bound to one style::palette copy and are only
-	// ever reset through it, so they stay out of the global registry - which
-	// also means they never touch it from whatever thread built them.
-	bool _registered = false;
 
 };
 

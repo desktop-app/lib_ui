@@ -226,6 +226,7 @@ QByteArray save() {
 
 bool load(const QByteArray &cache) {
 	if (GetMutable().load(cache)) {
+		style::internal::IncrementPaletteVersion();
 		style::internal::ResetIcons();
 		return true;
 	}
@@ -242,16 +243,19 @@ palette::SetResult setColor(QLatin1String name, QLatin1String from) {
 
 void apply(const palette &other) {
 	GetMutable() = other;
+	style::internal::IncrementPaletteVersion();
 	style::internal::ResetIcons();
 }
 
 void reset() {
 	GetMutable().reset();
+	style::internal::IncrementPaletteVersion();
 	style::internal::ResetIcons();
 }
 
 void reset(const colorizer &with) {
 	GetMutable().reset(with);
+	style::internal::IncrementPaletteVersion();
 	style::internal::ResetIcons();
 }
 
