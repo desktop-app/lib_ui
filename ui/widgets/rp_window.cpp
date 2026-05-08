@@ -7,8 +7,28 @@
 #include "ui/widgets/rp_window.h"
 
 #include "ui/platform/ui_platform_window.h"
+#include "ui/style/style_runtime.h"
+#include "ui/style/style_core_scale.h"
+
+#include <QtGui/QScreen>
 
 namespace Ui {
+namespace {
+
+// Compute the ScaleKey for this window from its current screen. Scale
+// component is the global user-set interface multiplier (today's
+// `style::Scale()`); DPR component is the screen's rounded device pixel
+// ratio. Phase 6d will refine the dpr part with native-API queries to catch
+// sub-rounded changes.
+[[nodiscard]] style::ScaleKey ScaleKeyFor(const QWidget *window) {
+	const auto screen = window->screen();
+	const auto dpr = screen
+		? std::max(int(std::round(screen->devicePixelRatio())), 1)
+		: 1;
+	return style::MakeScaleKey(style::Scale(), dpr);
+}
+
+} // namespace
 
 RpWindow::RpWindow(QWidget *parent)
 : RpWidget(parent)
@@ -16,6 +36,30 @@ RpWindow::RpWindow(QWidget *parent)
 	Expects(_helper != nullptr);
 
 	_helper->initInWindow(this);
+
+	if (style::RuntimeScaleEnabled()) {
+		style::AttachContextToWindow(this, ScaleKeyFor(this));
+
+		// Refresh ScaleKey on Qt-reported screen / DPR transitions.
+		// ScreenChangeInternal fires when the window moves to another
+		// monitor; DevicePixelRatioChange (Qt 6+) fires when the same
+		// monitor's reported DPR changes. Sub-rounded changes that don't
+		// cross Qt's rounding threshold (e.g. Windows 225%->250% with
+		// default policy) need native event hooks — Phase 6d.
+		events(
+		) | rpl::on_next([this](not_null<QEvent*> e) {
+			const auto type = e->type();
+			if (type == QEvent::ScreenChangeInternal
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+				|| type == QEvent::DevicePixelRatioChange
+#endif
+			) {
+				style::UpdateWindowScaleKey(this, ScaleKeyFor(this));
+				update();
+			}
+		}, lifetime());
+	}
+
 	hide();
 }
 

@@ -155,14 +155,47 @@ private:
 
 [[nodiscard]] Context &GlobalContext();
 
+// Identifier for the experimental option that gates per-window runtime
+// scaling. Exposed so the experimental settings UI can list it.
+inline constexpr auto kOptionApplyRuntimeScaleChanges
+	= "apply_runtime_scale_changes";
+
 // Read once at startup from the apply_runtime_scale_changes toggle. False in
 // production by default — sp::pointer always resolves to the global Context's
 // initial Modules, which never changes.
 [[nodiscard]] bool RuntimeScaleEnabled();
 
-// Resolves the Context for an owner widget. Phase 1: returns &GlobalContext()
-// regardless of toggle. Phase 5 will start consulting the owner's window
-// when the toggle is on.
+// Owns a `style::Context` and lives as a child QObject of a top-level
+// QWidget. Stored on the widget as a dynamic property so `ResolveContext`
+// can find it via `owner->window()`. Auto-destroyed when the window dies.
+class ContextOwner : public QObject {
+public:
+	ContextOwner(
+		QObject *parent,
+		std::shared_ptr<const Modules> modules);
+
+	[[nodiscard]] Context *context() {
+		return &_context;
+	}
+
+private:
+	Context _context;
+};
+
+// Attach a fresh ContextOwner to `window` (must be a top-level widget).
+// Looks up / builds the Modules for `key` from GlobalRegistry. No-op if the
+// window already has a ContextOwner. Returns the bound Context*.
+Context *AttachContextToWindow(QWidget *window, ScaleKey key);
+
+// Replace the modules of an already-attached ContextOwner with the ones for
+// `key`. Used when the window's screen / DPR changes. No-op if the window
+// has no ContextOwner.
+void UpdateWindowScaleKey(QWidget *window, ScaleKey key);
+
+// Resolves the Context for an owner widget. Toggle off (production default):
+// always returns &GlobalContext(). Toggle on: walks `owner->window()` and
+// returns its ContextOwner's context if attached, else falls back to
+// &GlobalContext().
 [[nodiscard]] Context *ResolveContext(QWidget *owner);
 
 } // namespace style

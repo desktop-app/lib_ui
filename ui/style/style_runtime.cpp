@@ -9,19 +9,25 @@
 #include "base/options.h"
 #include "base/algorithm.h"
 
+#include <QtCore/QPointer>
+#include <QtCore/QVariant>
+#include <QtWidgets/QWidget>
+
 namespace style {
 namespace {
 
 // Read once at startup. Default off — production behavior is identical to
 // today (single global scale, no per-window context resolution).
 base::options::toggle OptionApplyRuntimeScaleChanges({
-	.id = "apply_runtime_scale_changes",
+	.id = kOptionApplyRuntimeScaleChanges,
 	.name = "Per-window runtime scale changes",
 	.description = "Resolve interface scale per top-level window rather than"
 		" globally. Required for per-monitor scaling. Disabled until the new"
 		" style runtime migration is complete.",
 	.restartRequired = true,
 });
+
+constexpr auto kContextProperty = "ui::style::context";
 
 } // namespace
 
@@ -142,11 +148,56 @@ bool RuntimeScaleEnabled() {
 	return value;
 }
 
+ContextOwner::ContextOwner(
+	QObject *parent,
+	std::shared_ptr<const Modules> modules)
+: QObject(parent)
+, _context(std::move(modules)) {
+}
+
+namespace {
+
+[[nodiscard]] ContextOwner *FindContextOwner(QWidget *window) {
+	if (!window) {
+		return nullptr;
+	}
+	const auto value = window->property(kContextProperty);
+	// Property is set only by AttachContextToWindow with a ContextOwner*,
+	// so a static_cast is sufficient (no Q_OBJECT / no qobject_cast).
+	return static_cast<ContextOwner*>(value.value<QObject*>());
+}
+
+} // namespace
+
+Context *AttachContextToWindow(QWidget *window, ScaleKey key) {
+	Expects(window != nullptr);
+	Expects(window->isWindow());
+
+	if (const auto existing = FindContextOwner(window)) {
+		return existing->context();
+	}
+	auto modules = GlobalRegistry().get(key);
+	const auto owner = new ContextOwner(window, std::move(modules));
+	window->setProperty(kContextProperty,
+		QVariant::fromValue<QObject*>(owner));
+	return owner->context();
+}
+
+void UpdateWindowScaleKey(QWidget *window, ScaleKey key) {
+	if (const auto owner = FindContextOwner(window)) {
+		if (owner->context()->key() != key) {
+			owner->context()->setModules(GlobalRegistry().get(key));
+		}
+	}
+}
+
 Context *ResolveContext(QWidget *owner) {
-	// Phase 1: per-window resolution is not implemented yet. Always use the
-	// global context. Phase 5 will read owner->window()'s ContextOwner
-	// property when the toggle is on.
-	(void)owner;
+	if (!RuntimeScaleEnabled() || !owner) {
+		return &GlobalContext();
+	}
+	if (const auto attached = FindContextOwner(owner->window())) {
+		return attached->context();
+	}
 	return &GlobalContext();
 }
 
