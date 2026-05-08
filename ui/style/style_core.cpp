@@ -8,6 +8,8 @@
 
 #include "ui/effects/animation_value.h"
 #include "ui/painter.h"
+#include "ui/style/style_runtime.h"
+#include "styles/lib_ui_modules.h"
 #include "styles/style_basic.h"
 #include "styles/palette.h"
 
@@ -67,6 +69,19 @@ void StopShortAnimation() {
 void StartManager(int scale) {
 	internal::RegisterFontFamily("Open Sans");
 	internal::StartModules(scale);
+
+	// Wire up the new runtime-modules registry. lib_ui registers its own
+	// modules here; td_ui (Telegram-side) registers its modules separately
+	// via style::td_ui::RegisterModules() before calling StartManager().
+	auto &registry = GlobalRegistry();
+	style::lib_ui::RegisterModules(registry);
+	registry.freeze();
+
+	const auto key = ScaleKey{
+		.scale = uint32(scale),
+		.dpr = uint32(DevicePixelRatio()),
+	};
+	GlobalContext().setModules(registry.get(key));
 }
 
 void StopManager() {

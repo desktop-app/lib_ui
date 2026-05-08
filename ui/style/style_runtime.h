@@ -1,0 +1,168 @@
+// This file is part of Desktop App Toolkit,
+// a set of libraries for developing nice desktop applications.
+//
+// For license and copyright information please follow this link:
+// https://github.com/desktop-app/legal/blob/master/LEGAL
+//
+#pragma once
+
+#include "ui/style/sp.h"
+#include "ui/style/style_core_scale.h"
+#include "base/assertion.h"
+
+#include <QtCore/QSize>
+#include <QtCore/QPoint>
+#include <QtCore/QMargins>
+
+#include <memory>
+#include <vector>
+
+namespace style {
+
+// Passed to a generated Module's Build function. Carries the ScaleKey plus
+// helpers so generated code can write `context.px(8)` instead of relying on
+// global pxN values.
+struct BuildContext {
+	ScaleKey key;
+
+	template <typename T>
+	[[nodiscard]] T px(T value) const {
+		return ConvertScale(value, int(key.scale));
+	}
+
+	[[nodiscard]] QSize px(QSize value) const {
+		return { px(value.width()), px(value.height()) };
+	}
+
+	[[nodiscard]] QPoint px(QPoint value) const {
+		return { px(value.x()), px(value.y()) };
+	}
+
+	[[nodiscard]] QMargins px(QMargins value) const {
+		return {
+			px(value.left()),
+			px(value.top()),
+			px(value.right()),
+			px(value.bottom()),
+		};
+	}
+};
+
+class Modules;
+
+using ModuleBuildFn = std::shared_ptr<const void> (*)(
+	const BuildContext &context,
+	const Modules &alreadyBuilt);
+
+// Generated. Address is stable; `id` is filled by Registry::freeze().
+struct ModuleDescriptor {
+	const char *name = nullptr;
+
+	// Generated as a static span of pointers to other ModuleDescriptors.
+	const ModuleDescriptor *const *dependencies = nullptr;
+	int dependenciesCount = 0;
+
+	ModuleBuildFn build = nullptr;
+
+	mutable ModuleId id = kInvalidModuleId;
+};
+
+// Immutable resolved set of generated modules for one ScaleKey.
+class Modules final {
+public:
+	Modules() = default;
+	Modules(const Modules &) = delete;
+	Modules &operator=(const Modules &) = delete;
+
+	[[nodiscard]] ScaleKey key() const {
+		return _key;
+	}
+
+	[[nodiscard]] const void *raw(ModuleId id) const {
+		Expects(id < _raw.size());
+		return _raw[id];
+	}
+
+private:
+	friend class Registry;
+
+	ScaleKey _key = kInvalidScaleKey;
+	std::vector<std::shared_ptr<const void>> _owned;
+	std::vector<const void*> _raw;
+};
+
+// Owns the descriptor set and a ScaleKey -> Modules cache.
+class Registry final {
+public:
+	Registry();
+
+	// Adds descriptors for later sorting + freezing. Pointers must remain
+	// valid for the lifetime of the Registry (typically static-storage).
+	void add(
+		const ModuleDescriptor *const *descriptors,
+		int count);
+
+	template <int N>
+	void add(const ModuleDescriptor *const (&descriptors)[N]) {
+		add(descriptors, N);
+	}
+
+	// Topologically sort descriptors and assign dense ModuleIds.
+	// Must be called after all add() calls and before any get().
+	void freeze();
+
+	// Builds (or returns cached) Modules for the given ScaleKey.
+	[[nodiscard]] std::shared_ptr<const Modules> get(ScaleKey key);
+
+private:
+	std::vector<const ModuleDescriptor*> _descriptors;
+	std::vector<const ModuleDescriptor*> _sorted;
+	bool _frozen = false;
+
+	struct CacheEntry {
+		ScaleKey key = kInvalidScaleKey;
+		std::weak_ptr<const Modules> modules;
+	};
+	std::vector<CacheEntry> _cache;
+};
+
+[[nodiscard]] Registry &GlobalRegistry();
+
+// Mutable holder of "current modules". Owned by a top-level window (Phase 5)
+// or by the global default (Phase 1).
+class Context final {
+public:
+	Context() = default;
+	explicit Context(std::shared_ptr<const Modules> modules);
+
+	[[nodiscard]] const Modules *modulesPointer() const {
+		return _modules.get();
+	}
+
+	[[nodiscard]] const std::shared_ptr<const Modules> &modulesPtr() const {
+		return _modules;
+	}
+
+	[[nodiscard]] ScaleKey key() const {
+		return _modules ? _modules->key() : kInvalidScaleKey;
+	}
+
+	void setModules(std::shared_ptr<const Modules> modules);
+
+private:
+	std::shared_ptr<const Modules> _modules;
+};
+
+[[nodiscard]] Context &GlobalContext();
+
+// Read once at startup from the apply_runtime_scale_changes toggle. False in
+// production by default — sp::pointer always resolves to the global Context's
+// initial Modules, which never changes.
+[[nodiscard]] bool RuntimeScaleEnabled();
+
+// Resolves the Context for an owner widget. Phase 1: returns &GlobalContext()
+// regardless of toggle. Phase 5 will start consulting the owner's window
+// when the toggle is on.
+[[nodiscard]] Context *ResolveContext(QWidget *owner);
+
+} // namespace style
