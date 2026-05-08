@@ -46,7 +46,6 @@ public:
 	MonoIcon(const MonoIcon &other, const style::palette &palette);
 	MonoIcon(const IconMask *mask, Color color, QMargins padding);
 
-	void reset() const;
 	[[nodiscard]] int width() const;
 	[[nodiscard]] int height() const;
 	[[nodiscard]] QSize size() const;
@@ -81,6 +80,7 @@ public:
 
 private:
 	void ensureLoaded() const;
+	void ensurePaletteFresh() const;
 	void createCachedPixmap() const;
 	void ensureColorizedImage(QColor color) const;
 	[[nodiscard]] QSize inner() const;
@@ -91,6 +91,7 @@ private:
 	mutable QImage _maskImage, _colorizedImage;
 	mutable QPixmap _pixmap; // for pixmaps
 	mutable QSize _size; // for rects
+	mutable int _materializedPaletteVersion = -1;
 
 };
 
@@ -98,19 +99,12 @@ class IconData {
 public:
 	template <typename ...MonoIcons>
 	IconData(std::in_place_t, MonoIcons &&...icons) {
-		created();
 		_parts.reserve(sizeof...(MonoIcons));
 		addIcons(std::forward<MonoIcons>(icons)...);
 	}
 
 	IconData(const IconData &other, const style::palette &palette);
-	~IconData();
 
-	void reset() {
-		for (const auto &part : _parts) {
-			part.reset();
-		}
-	}
 	bool empty() const {
 		return _parts.empty();
 	}
@@ -156,8 +150,6 @@ public:
 	int height() const;
 
 private:
-	void created();
-
 	template <typename ... MonoIcons>
 	void addIcons() {
 	}

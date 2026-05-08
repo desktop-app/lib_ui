@@ -33,6 +33,8 @@ void EnsureContrast(ColorData &over, const ColorData &under);
 void StartShortAnimation();
 void StopShortAnimation();
 
+void IncrementPaletteVersion();
+
 } // namespace internal
 
 void StartManager(int scale);

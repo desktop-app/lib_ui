@@ -30,7 +30,6 @@ base::flat_map<const IconMask*, QImage> IconMasks;
 QMutex IconMasksMutex;
 
 base::flat_map<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
-base::flat_set<IconData*> iconData;
 
 [[nodiscard]] QImage CreateIconMask(
 		not_null<const IconMask*> mask,
@@ -174,11 +173,6 @@ MonoIcon::MonoIcon(const IconMask *mask, Color color, QMargins padding)
 , _padding(padding) {
 }
 
-void MonoIcon::reset() const {
-	_pixmap = QPixmap();
-	_size = QSize();
-}
-
 int MonoIcon::width() const {
 	ensureLoaded();
 	return _size.width();
@@ -205,6 +199,7 @@ void MonoIcon::paint(QPainter &p, const QPoint &pos, int outerw) const {
 		: (pos.x() + _padding.left());
 	const auto partPosY = pos.y() + _padding.top();
 
+	ensurePaletteFresh();
 	ensureLoaded();
 	if (_pixmap.isNull()) {
 		p.fillRect(QRect(QPoint(partPosX, partPosY), inner()), _color);
@@ -216,6 +211,7 @@ void MonoIcon::paint(QPainter &p, const QPoint &pos, int outerw) const {
 void MonoIcon::fill(QPainter &p, const QRect &rect) const {
 	Expects(_padding.isNull());
 
+	ensurePaletteFresh();
 	ensureLoaded();
 	if (_pixmap.isNull()) {
 		p.fillRect(rect, _color);
@@ -234,6 +230,7 @@ void MonoIcon::paint(
 		: (pos.x() + _padding.left());
 	const auto partPosY = pos.y() + _padding.top();
 
+	ensurePaletteFresh();
 	ensureLoaded();
 	if (_pixmap.isNull()) {
 		p.fillRect(
@@ -251,6 +248,7 @@ void MonoIcon::fill(
 		QColor colorOverride) const {
 	Expects(_padding.isNull());
 
+	ensurePaletteFresh();
 	ensureLoaded();
 	if (_pixmap.isNull()) {
 		p.fillRect(rect, colorOverride);
@@ -320,6 +318,7 @@ QImage MonoIcon::instance(
 	Expects(_padding.isNull() || scale == kScaleAuto);
 
 	if (scale == kScaleAuto) {
+		ensurePaletteFresh();
 		ensureLoaded();
 		const auto ratio = DevicePixelRatio();
 		auto result = QImage(
@@ -368,6 +367,10 @@ QImage MonoIcon::instance(
 
 void MonoIcon::ensureLoaded() const {
 	if (_size.isValid()) {
+		if (!_maskImage.isNull() && _pixmap.isNull()) {
+			// _pixmap was dropped by ensurePaletteFresh(); recolorize.
+			createCachedPixmap();
+		}
 		return;
 	} else if (!_maskImage.isNull()) {
 		createCachedPixmap();
@@ -380,6 +383,16 @@ void MonoIcon::ensureLoaded() const {
 	} else {
 		_maskImage = ResolveIconMask(_mask);
 		createCachedPixmap();
+	}
+}
+
+void MonoIcon::ensurePaletteFresh() const {
+	const auto version = style::PaletteVersion();
+	if (_materializedPaletteVersion != version) {
+		// _maskImage is palette-independent; only colorized state goes.
+		_pixmap = QPixmap();
+		_colorizedImage = QImage();
+		_materializedPaletteVersion = version;
 	}
 }
 
@@ -406,19 +419,10 @@ void MonoIcon::createCachedPixmap() const {
 }
 
 IconData::IconData(const IconData &other, const style::palette &palette) {
-	created();
 	_parts.reserve(other._parts.size());
 	for (const auto &part : other._parts) {
 		_parts.push_back(MonoIcon(part, palette));
 	}
-}
-
-void IconData::created() {
-	iconData.emplace(this);
-}
-
-IconData::~IconData() {
-	iconData.remove(this);
 }
 
 void IconData::fill(QPainter &p, const QRect &rect) const {
@@ -499,14 +503,12 @@ void Icon::paintInCenter(
 }
 
 void ResetIcons() {
+	// Drop palette-dependent global pixmap cache. MonoIcon caches are
+	// invalidated lazily on next paint by comparing PaletteVersion().
 	iconPixmaps.clear();
-	for (const auto data : iconData) {
-		data->reset();
-	}
 }
 
 void DestroyIcons() {
-	iconData.clear();
 	iconPixmaps.clear();
 
 	QMutexLocker lock(&IconMasksMutex);
