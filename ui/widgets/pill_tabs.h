@@ -7,17 +7,22 @@
 #pragma once
 
 #include "ui/rp_widget.h"
+#include "ui/style/sp.h"
 #include "ui/widgets/shadow.h"
 #include "ui/effects/animations.h"
 
 namespace style {
 struct BoxShadow;
-struct PillTabs;
 } // namespace style
 
-namespace st {
-extern const style::PillTabs &defaultPillTabs;
-} // namespace st
+namespace sv {
+struct PillTabs;
+extern const PillTabs defaultPillTabs;
+} // namespace sv
+
+namespace sp {
+using PillTabs = pointer<sv::PillTabs>;
+} // namespace sp
 
 namespace Ui {
 
@@ -26,8 +31,12 @@ public:
 	PillTabs(
 		QWidget *parent,
 		const std::vector<QString> &labels,
-		int activeIndex = 0,
-		const style::PillTabs &st = st::defaultPillTabs);
+		int activeIndex = 0);
+	PillTabs(
+		QWidget *parent,
+		const std::vector<QString> &labels,
+		int activeIndex,
+		sv::PillTabs st);
 
 	void setActiveIndex(int index);
 	void setShowProgress(float64 progress, float64 opacity);
@@ -40,7 +49,7 @@ private:
 	void setupButtons();
 	void paint();
 
-	const style::PillTabs &_st;
+	sp::PillTabs _st;
 	std::vector<QString> _labels;
 	int _activeIndex = 0;
 	float64 _showProgress = 1.;

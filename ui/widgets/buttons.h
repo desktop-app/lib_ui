@@ -10,7 +10,7 @@
 #include "ui/round_rect.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text.h"
-#include "styles/style_widgets.h"
+#include "styles/widgets.h"
 
 #include <cstddef>
 #include <memory>
@@ -60,7 +60,7 @@ private:
 
 class RippleButton : public AbstractButton {
 public:
-	RippleButton(QWidget *parent, const style::RippleAnimation &st);
+	RippleButton(QWidget *parent, sv::RippleAnimation st);
 
 	void setForceRippled(
 		bool rippled,
@@ -98,7 +98,7 @@ protected:
 private:
 	void ensureRipple();
 
-	const style::RippleAnimation &_st;
+	sp::RippleAnimation _st;
 	std::unique_ptr<RippleAnimation> _ripple;
 	bool _forceRippled = false;
 	rpl::lifetime _forceRippledSubscription;
@@ -145,7 +145,7 @@ public:
 	RoundButton(
 		QWidget *parent,
 		rpl::producer<QString> text,
-		const style::RoundButton &st);
+		sv::RoundButton st);
 
 	void setTextTransform(RoundButtonTextTransform transform);
 
@@ -154,7 +154,7 @@ public:
 	}
 
 	[[nodiscard]] const style::RoundButton &st() const {
-		return _st;
+		return *_st;
 	}
 
 	void setText(rpl::producer<QString> text);
@@ -206,7 +206,7 @@ private:
 
 	int _fullWidthOverride = 0;
 
-	const style::RoundButton &_st;
+	sp::RoundButton _st;
 	std::optional<QBrush> _brushOverride;
 	std::optional<QColor> _rippleOverride;
 	std::optional<QPen> _penOverride;
