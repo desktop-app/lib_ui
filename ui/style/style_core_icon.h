@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "ui/style/sp.h"
 #include "ui/style/style_core_color.h"
 #include "ui/style/style_core_scale.h"
 #include "base/algorithm.h"
@@ -44,7 +45,11 @@ public:
 	MonoIcon(MonoIcon &&other) = default;
 	MonoIcon &operator=(MonoIcon &&other) = default;
 	MonoIcon(const MonoIcon &other, const style::palette &palette);
-	MonoIcon(const IconMask *mask, Color color, QMargins padding);
+	MonoIcon(
+		const IconMask *mask,
+		Color color,
+		QMargins padding,
+		style::ScaleKey key);
 
 	[[nodiscard]] int width() const;
 	[[nodiscard]] int height() const;
@@ -88,6 +93,7 @@ private:
 	const IconMask *_mask = nullptr;
 	Color _color;
 	QMargins _padding = { 0, 0, 0, 0 };
+	style::ScaleKey _key;
 	mutable QImage _maskImage, _colorizedImage;
 	mutable QPixmap _pixmap; // for pixmaps
 	mutable QSize _size; // for rects

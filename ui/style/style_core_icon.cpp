@@ -26,16 +26,33 @@ namespace {
 		| uint32(c.alpha());
 }
 
-base::flat_map<const IconMask*, QImage> IconMasks;
+// Cache key combines mask pointer with the ScaleKey (scale + dpr) used to
+// render it. Different scales / DPRs render different bitmaps.
+struct MaskKey {
+	const IconMask *mask = nullptr;
+	style::ScaleKey key;
+
+	friend auto operator<=>(MaskKey, MaskKey) = default;
+};
+
+struct PixmapKey {
+	const IconMask *mask = nullptr;
+	uint32 colorKey = 0;
+	style::ScaleKey key;
+
+	friend auto operator<=>(PixmapKey, PixmapKey) = default;
+};
+
+base::flat_map<MaskKey, QImage> IconMasks;
 QMutex IconMasksMutex;
 
-base::flat_map<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
+base::flat_map<PixmapKey, QPixmap> iconPixmaps;
 
 [[nodiscard]] QImage CreateIconMask(
 		not_null<const IconMask*> mask,
-		int scale,
-		bool ignoreDpr = false) {
-	const auto ratio = ignoreDpr ? 1 : DevicePixelRatio();
+		style::ScaleKey key) {
+	const auto scale = int(key.scale);
+	const auto ratio = int(key.dpr);
 	const auto realscale = scale * ratio;
 
 	auto data = QByteArray::fromRawData(
@@ -109,14 +126,17 @@ base::flat_map<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
 		Qt::SmoothTransformation);
 }
 
-[[nodiscard]] QImage ResolveIconMask(not_null<const IconMask*> mask) {
+[[nodiscard]] QImage ResolveIconMask(
+		not_null<const IconMask*> mask,
+		style::ScaleKey key) {
+	const auto cacheKey = MaskKey{ mask, key };
 	QMutexLocker lock(&IconMasksMutex);
-	if (const auto i = IconMasks.find(mask); i != end(IconMasks)) {
+	if (const auto i = IconMasks.find(cacheKey); i != end(IconMasks)) {
 		return i->second;
 	}
 	return IconMasks.emplace(
-		mask,
-		CreateIconMask(mask, Scale())
+		cacheKey,
+		CreateIconMask(mask, key)
 	).first->second;
 }
 
@@ -164,13 +184,19 @@ MonoIcon::MonoIcon(const MonoIcon &other, const style::palette &palette)
 , _color(
 	palette.colorAtIndex(
 		style::main_palette::indexOfColor(other._color)))
-, _padding(other._padding) {
+, _padding(other._padding)
+, _key(other._key) {
 }
 
-MonoIcon::MonoIcon(const IconMask *mask, Color color, QMargins padding)
+MonoIcon::MonoIcon(
+	const IconMask *mask,
+	Color color,
+	QMargins padding,
+	style::ScaleKey key)
 : _mask(mask)
 , _color(std::move(color))
-, _padding(padding) {
+, _padding(padding)
+, _key(key) {
 }
 
 int MonoIcon::width() const {
@@ -263,11 +289,11 @@ void MonoIcon::paint(
 		const QPoint &pos,
 		int outerw,
 		const style::palette &paletteOverride) const {
-	auto size = readGeneratedSize(_mask, Scale());
+	auto size = readGeneratedSize(_mask, int(_key.scale));
 	auto maskImage = QImage();
 	if (size.isEmpty()) {
-		maskImage = CreateIconMask(_mask, Scale());
-		size = maskImage.size() / DevicePixelRatio();
+		maskImage = CreateIconMask(_mask, _key);
+		size = maskImage.size() / int(_key.dpr);
 	}
 
 	const auto partPosX = RightToLeft()
@@ -294,11 +320,11 @@ void MonoIcon::fill(
 		const style::palette &paletteOverride) const {
 	Expects(_padding.isNull());
 
-	auto size = readGeneratedSize(_mask, Scale());
+	auto size = readGeneratedSize(_mask, int(_key.scale));
 	auto maskImage = QImage();
 	if (size.isEmpty()) {
-		maskImage = CreateIconMask(_mask, Scale());
-		size = maskImage.size() / DevicePixelRatio();
+		maskImage = CreateIconMask(_mask, _key);
+		size = maskImage.size() / int(_key.dpr);
 	}
 	if (!maskImage.isNull()) {
 		auto colorized = QImage(
@@ -320,7 +346,7 @@ QImage MonoIcon::instance(
 	if (scale == kScaleAuto) {
 		ensurePaletteFresh();
 		ensureLoaded();
-		const auto ratio = DevicePixelRatio();
+		const auto ratio = int(_key.dpr);
 		auto result = QImage(
 			size() * ratio,
 			QImage::Format_ARGB32_Premultiplied);
@@ -348,7 +374,7 @@ QImage MonoIcon::instance(
 		}
 		return result;
 	}
-	const auto ratio = ignoreDpr ? 1 : DevicePixelRatio();
+	const auto ratio = ignoreDpr ? 1 : int(_key.dpr);
 	auto size = readGeneratedSize(_mask, scale, ignoreDpr);
 	if (!size.isEmpty()) {
 		auto result = QImage(
@@ -358,7 +384,7 @@ QImage MonoIcon::instance(
 		result.fill(colorOverride);
 		return result;
 	}
-	auto mask = CreateIconMask(_mask, scale, ignoreDpr);
+	auto mask = CreateIconMask(_mask, style::MakeScaleKey(scale, ratio));
 	auto result = QImage(mask.size(), QImage::Format_ARGB32_Premultiplied);
 	result.setDevicePixelRatio(ratio);
 	colorizeImage(mask, colorOverride, &result);
@@ -377,11 +403,11 @@ void MonoIcon::ensureLoaded() const {
 		return;
 	}
 
-	_size = readGeneratedSize(_mask, Scale());
+	_size = readGeneratedSize(_mask, int(_key.scale));
 	if (!_size.isEmpty()) {
 		_size = _size.grownBy(_padding);
 	} else {
-		_maskImage = ResolveIconMask(_mask);
+		_maskImage = ResolveIconMask(_mask, _key);
 		createCachedPixmap();
 	}
 }
@@ -406,7 +432,7 @@ void MonoIcon::ensureColorizedImage(QColor color) const {
 }
 
 void MonoIcon::createCachedPixmap() const {
-	auto key = qMakePair(_mask, ColorKey(_color->c));
+	const auto key = PixmapKey{ _mask, ColorKey(_color->c), _key };
 	auto j = iconPixmaps.find(key);
 	if (j == end(iconPixmaps)) {
 		auto image = colorizeImage(_maskImage, _color);
@@ -415,7 +441,7 @@ void MonoIcon::createCachedPixmap() const {
 			QPixmap::fromImage(std::move(image))).first;
 	}
 	_pixmap = j->second;
-	_size = (_pixmap.size() / DevicePixelRatio()).grownBy(_padding);
+	_size = (_pixmap.size() / int(_key.dpr)).grownBy(_padding);
 }
 
 IconData::IconData(const IconData &other, const style::palette &palette) {

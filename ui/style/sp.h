@@ -31,6 +31,16 @@ struct ScaleKey {
 
 inline constexpr auto kInvalidScaleKey = ScaleKey{};
 
+// Helper builder. Using an inline aggregate-init expression for ScaleKey
+// nested inside other aggregates triggers a spurious MSVC C4101 warning;
+// going through this function avoids it.
+[[nodiscard]] inline ScaleKey MakeScaleKey(int scale, int dpr) {
+	auto result = ScaleKey{};
+	result.scale = uint32(scale);
+	result.dpr = uint32(dpr);
+	return result;
+}
+
 using ModuleId = uint16;
 inline constexpr ModuleId kInvalidModuleId = 0xFFFFu;
 
