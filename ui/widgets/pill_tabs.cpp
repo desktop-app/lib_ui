@@ -10,20 +10,27 @@
 #include "ui/qt_object_factory.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
-#include "styles/style_widgets.h"
+#include "styles/widgets.h"
 
 namespace Ui {
 
 PillTabs::PillTabs(
 	QWidget *parent,
 	const std::vector<QString> &labels,
+	int activeIndex)
+: PillTabs(parent, labels, activeIndex, sv::defaultPillTabs) {
+}
+
+PillTabs::PillTabs(
+	QWidget *parent,
+	const std::vector<QString> &labels,
 	int activeIndex,
-	const style::PillTabs &st)
+	sv::PillTabs st)
 : RpWidget(parent)
-, _st(st)
+, _st(this, st)
 , _labels(labels)
 , _activeIndex(activeIndex) {
-	resize(0, _st.height);
+	resize(0, _st->height);
 
 	if (_activeIndex > 0 && _activeIndex < int(_labels.size())) {
 		// Compute initial position without animation.
@@ -47,7 +54,7 @@ void PillTabs::setActiveIndex(int index) {
 		return;
 	}
 	const auto m = _shadowMargins;
-	const auto bw = _st.borderWidth;
+	const auto bw = _st->borderWidth;
 	const auto innerWidth = width() - rect::m::sum::h(m) - 2 * bw;
 	const auto tabWidth = float64(innerWidth) / int(_labels.size());
 	const auto targetPos = index * tabWidth;
@@ -59,7 +66,7 @@ void PillTabs::setActiveIndex(int index) {
 		},
 		_animatedPosition,
 		targetPos,
-		_st.duration,
+		_st->duration,
 		anim::easeOutQuint);
 	_activeIndex = index;
 	_activeIndexChanges.fire_copy(index);
@@ -106,7 +113,7 @@ void PillTabs::setupButtons() {
 				tabWidth,
 				inner.height());
 			if (i == _activeIndex && !_animation.animating()) {
-				const auto bw = _st.borderWidth;
+				const auto bw = _st->borderWidth;
 				_animatedPosition = i
 					* (float64(inner.width() - 2 * bw) / count);
 			}
@@ -125,7 +132,7 @@ void PillTabs::paint() {
 	auto hq = PainterHighQualityEnabler(p);
 
 	const auto r = rect() - _shadowMargins;
-	const auto h = _st.height;
+	const auto h = _st->height;
 	const auto radius = h / 2.;
 	const auto count = int(_labels.size());
 
@@ -148,9 +155,9 @@ void PillTabs::paint() {
 	}
 
 	// Background border (outer frame).
-	const auto bw = _st.borderWidth;
+	const auto bw = _st->borderWidth;
 	p.setPen(Qt::NoPen);
-	p.setBrush(_st.bgBorder);
+	p.setBrush(_st->bgBorder);
 	p.drawRoundedRect(QRectF(r), radius, radius);
 
 	// Inner area (inside border).
@@ -163,7 +170,7 @@ void PillTabs::paint() {
 	const auto tabWidth = ir.width() / count;
 
 	// Background fill.
-	p.setBrush(_st.bg);
+	p.setBrush(_st->bg);
 	p.drawRoundedRect(ir, iradius, iradius);
 
 	// Active pill (with overlap into neighbors).
@@ -174,22 +181,22 @@ void PillTabs::paint() {
 	const auto pillRight = std::min(
 		ir.x() + ir.width(),
 		ir.x() + _animatedPosition + tabWidth + overlap);
-	p.setBrush(_st.bgActive);
+	p.setBrush(_st->bgActive);
 	p.drawRoundedRect(
 		QRectF(pillLeft, ir.y(), pillRight - pillLeft, ir.height()),
 		iradius,
 		iradius);
 
 	// Text.
-	p.setFont(_st.textStyle.font);
+	p.setFont(_st->textStyle.font);
 	for (auto i = 0; i < count; ++i) {
 		const auto active = (_activeIndex == i);
-		p.setPen(active ? _st.fgActive : _st.fg);
+		p.setPen(active ? _st->fgActive : _st->fg);
 		const auto left = int(std::round(r.x() + i * (r.width() / count)));
 		const auto right = int(std::round(
 			r.x() + (i + 1) * (r.width() / count)));
 		const auto textRect = QRect(left, r.y(), right - left, h);
-		const auto elided = _st.textStyle.font->elided(
+		const auto elided = _st->textStyle.font->elided(
 			_labels[i],
 			textRect.width() - h);
 		p.drawText(textRect, elided, style::al_center);
