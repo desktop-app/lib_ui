@@ -551,7 +551,10 @@ public:
 		const auto check = [&](Edge edge) {
 			if (_position > 0) {
 				const auto before = text[_position - 1];
-				if (tag == kTagPre && before != '\n' && before != '\r') {
+				if (edge == Edge::Open
+					&& tag == kTagPre
+					&& before != '\n'
+					&& before != '\r') {
 					return false;
 				}
 				if ((edge == Edge::Open && !isGoodBefore(before))
