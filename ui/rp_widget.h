@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/unique_qptr.h"
+#include "ui/style/sp.h"
 #include "ui/style/style_core_direction.h"
 
 #include <rpl/event_stream.h>
@@ -108,6 +109,15 @@ public:
 	}
 
 	[[nodiscard]] rpl::lifetime &lifetime();
+
+	// Construct an `sp::pointer` bound to this widget's window context.
+	// Reads correctly as "make an `sp::` value off this widget" — not as
+	// "this widget's style". Useful when external code needs the same
+	// scale-correct values that the widget itself would paint with.
+	template <typename SvType>
+	[[nodiscard]] ::sp::pointer<SvType> sp(SvType v) {
+		return ::sp::pointer<SvType>(rpWidget(), v);
+	}
 
 protected:
 	bool handleEvent(QEvent *event);

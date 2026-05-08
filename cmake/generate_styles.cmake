@@ -12,8 +12,16 @@ function(generate_styles target_name src_loc style_files dependent_style_files)
         list(APPEND gen_files
             ${gen_dst}/styles/style_${file_name}.cpp
             ${gen_dst}/styles/style_${file_name}.h
+            ${gen_dst}/styles/style_${file_name}_masks.cpp
+            ${gen_dst}/styles/style_${file_name}_masks.h
+            ${gen_dst}/styles/${file_name}.cpp
+            ${gen_dst}/styles/${file_name}.h
         )
     endforeach()
+    list(APPEND gen_files
+        ${gen_dst}/styles/${target_name}_modules.cpp
+        ${gen_dst}/styles/${target_name}_modules.h
+    )
     list(APPEND full_dependencies_list ${full_generation_sources})
 
     add_custom_command(
@@ -29,6 +37,7 @@ function(generate_styles target_name src_loc style_files dependent_style_files)
         -o${gen_dst}/styles
         -t${gen_dst}/styles/${target_name}_style
         -w${CMAKE_CURRENT_SOURCE_DIR}
+        -p${target_name}
         ${full_generation_sources}
     COMMENT "Generating styles (${target_name})"
     DEPENDS
