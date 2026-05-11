@@ -8,27 +8,8 @@
 
 #include "ui/platform/ui_platform_window.h"
 #include "ui/style/style_runtime.h"
-#include "ui/style/style_core_scale.h"
-
-#include <QtGui/QScreen>
 
 namespace Ui {
-namespace {
-
-// Compute the ScaleKey for this window from its current screen. Scale
-// component is the global user-set interface multiplier (today's
-// `style::Scale()`); DPR component is the screen's rounded device pixel
-// ratio. Phase 6d will refine the dpr part with native-API queries to catch
-// sub-rounded changes.
-[[nodiscard]] style::ScaleKey ScaleKeyFor(const QWidget *window) {
-	const auto screen = window->screen();
-	const auto dpr = screen
-		? std::max(int(std::round(screen->devicePixelRatio())), 1)
-		: 1;
-	return style::MakeScaleKey(style::Scale(), dpr);
-}
-
-} // namespace
 
 RpWindow::RpWindow(QWidget *parent)
 : RpWidget(parent)
@@ -38,14 +19,17 @@ RpWindow::RpWindow(QWidget *parent)
 	_helper->initInWindow(this);
 
 	if (style::RuntimeScaleEnabled()) {
-		style::AttachContextToWindow(this, ScaleKeyFor(this));
+		style::AttachContextToWindow(
+			this,
+			style::ComputeScaleKeyFor(this));
 
-		// Refresh ScaleKey on Qt-reported screen / DPR transitions.
-		// ScreenChangeInternal fires when the window moves to another
-		// monitor; DevicePixelRatioChange (Qt 6+) fires when the same
-		// monitor's reported DPR changes. Sub-rounded changes that don't
-		// cross Qt's rounding threshold (e.g. Windows 225%->250% with
-		// default policy) need native event hooks — Phase 6d.
+		// React to Qt-reported screen / DPR transitions. Same-monitor
+		// sub-rounded changes (e.g. Windows 225% -> 250% under default
+		// Qt rounding policy) don't fire ScreenChangeInternal — those
+		// come in natively per platform (Phase 6d). Either path calls
+		// `ScheduleScaleKeyRefresh` which coalesces repeated signals
+		// into one async recomputation that reads consistent settled
+		// values for both system DPI and Qt's DPR.
 		events(
 		) | rpl::on_next([this](not_null<QEvent*> e) {
 			const auto type = e->type();
@@ -54,8 +38,7 @@ RpWindow::RpWindow(QWidget *parent)
 				|| type == QEvent::DevicePixelRatioChange
 #endif
 			) {
-				style::UpdateWindowScaleKey(this, ScaleKeyFor(this));
-				update();
+				style::ScheduleScaleKeyRefresh(this);
 			}
 		}, lifetime());
 	}
@@ -146,17 +129,16 @@ void RpWindow::close() {
 	_helper->close();
 }
 
-void RpWindow::setBodyTitleArea(
-		Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
+int RpWindow::manualRoundingRadius() const {
+	return _helper->manualRoundingRadius();
+}
+
+void RpWindow::setBodyTitleArea(Fn<WindowTitleHitTestFlags(QPoint)> testMethod) {
 	_helper->setBodyTitleArea(std::move(testMethod));
 }
 
 bool RpWindow::mousePressCancelled() const {
 	return _helper->mousePressCancelled();
-}
-
-int RpWindow::manualRoundingRadius() const {
-	return _helper->manualRoundingRadius();
 }
 
 const style::TextStyle &RpWindow::titleTextStyle() const {

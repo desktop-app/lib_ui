@@ -28,6 +28,15 @@ void SetDevicePixelRatio(int ratio);
 [[nodiscard]] int Scale();
 void SetScale(int scale);
 
+// Raw DPI (e.g., 240 for a Windows 250% display, 96 for 100%) of the main
+// screen at startup, captured once when `style::Scale()` and
+// `style::DevicePixelRatio()` are first decided. `ComputeScaleKey` uses
+// this baseline to derive per-window ScaleKeys proportionally for windows
+// on non-primary screens: a window on a 225% secondary screen with the
+// main at 250% gets `Scale() * 225/250`.
+[[nodiscard]] int MainScreenDpi();
+void SetMainScreenDpi(int dpi);
+
 [[nodiscard]] int MaxScaleForRatio(int ratio);
 [[nodiscard]] int CheckScale(int scale);
 

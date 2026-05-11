@@ -12,6 +12,8 @@
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
 #include "ui/widgets/elastic_scroll.h"
+#include "ui/style/style_runtime.h"
+#include "ui/style/style_core_scale.h"
 #include "ui/qt_object_factory.h"
 #include "ui/ui_utility.h"
 #include "base/platform/win/base_windows_safe_library.h"
@@ -679,6 +681,15 @@ bool WindowHelper::filterNativeEvent(
 		InvokeQueued(_title, [=] {
 			_title->refreshAdditionalPaddings(_handle);
 		});
+		// Native hook so per-window scaling reacts to Windows DPI changes
+		// even when Qt's own ScreenChangeInternal isn't fired (e.g. user
+		// changes scale in Settings on the same monitor). The scheduler
+		// coalesces this with any incoming Qt screen events and reads
+		// settled values on the next event loop tick — by which time
+		// Qt will have updated its screen DPR / logicalDotsPerInch.
+		if (style::RuntimeScaleEnabled()) {
+			style::ScheduleScaleKeyRefresh(window());
+		}
 	} return false;
 
 	}

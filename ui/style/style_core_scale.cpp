@@ -14,6 +14,14 @@ namespace {
 int DevicePixelRatioValue = 1;
 int ScaleValue = kScaleDefault;
 
+// Default 96 = 100% (Windows-style base DPI). Reset by SetMainScreenDpi
+// during Sandbox::setupScreenScale; on platforms where logicalBaseDpi is
+// different (e.g. macOS uses 72) the value stored here is still in the
+// same units as the per-window `systemDpi` passed to ComputeScaleKey
+// (both come from QScreen::logicalDotsPerInch()), so the ratio is the
+// platform-agnostic part.
+int MainScreenDpiValue = 96;
+
 } // namespace
 
 int DevicePixelRatio() {
@@ -32,6 +40,16 @@ void SetScale(int scale) {
 	Expects(scale != 0);
 
 	ScaleValue = scale;
+}
+
+int MainScreenDpi() {
+	return MainScreenDpiValue;
+}
+
+void SetMainScreenDpi(int dpi) {
+	Expects(dpi > 0);
+
+	MainScreenDpiValue = dpi;
 }
 
 int MaxScaleForRatio(int ratio) {
