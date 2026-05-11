@@ -119,9 +119,16 @@ private:
 	std::vector<const ModuleDescriptor*> _sorted;
 	bool _frozen = false;
 
+	// Strong (not weak) so once a Modules is built it stays alive for the
+	// whole app run. This is required because consumers like
+	// `Ui::Text::String` store raw `const style::TextStyle *` pointers into
+	// the Modules' memory; freeing a Modules when its Context moves to a
+	// different one would dangle those pointers and crash on next paint.
+	// The memory cost is bounded by the number of distinct ScaleKeys the
+	// app actually encounters during a session.
 	struct CacheEntry {
 		ScaleKey key = kInvalidScaleKey;
-		std::weak_ptr<const Modules> modules;
+		std::shared_ptr<const Modules> modules;
 	};
 	std::vector<CacheEntry> _cache;
 };
@@ -178,6 +185,12 @@ public:
 		return &_context;
 	}
 
+	// Set by `ScheduleScaleKeyRefresh`, cleared when the queued refresh
+	// runs. Used to coalesce multiple incoming scale-change signals (Qt
+	// `ScreenChangeInternal`, Qt `DevicePixelRatioChange`, native
+	// `WM_DPICHANGED`) into one async recomputation per window.
+	bool refreshPending = false;
+
 private:
 	Context _context;
 };
@@ -191,6 +204,36 @@ Context *AttachContextToWindow(QWidget *window, ScaleKey key);
 // `key`. Used when the window's screen / DPR changes. No-op if the window
 // has no ContextOwner.
 void UpdateWindowScaleKey(QWidget *window, ScaleKey key);
+
+// Compute a ScaleKey from a system-reported DPI and Qt's rounded DPR.
+//
+// `style::Scale()` is the user's chosen scale percentage as it appears in
+// Settings, calibrated for the main screen at the moment the app was
+// launched. For windows on the same scale as the main screen (the common
+// case) we use Scale() directly. For windows on a screen with a different
+// system DPI we adjust proportionally:
+//
+//     key.scale = round(Scale() * systemDpi / MainScreenDpi())
+//     key.dpr   = qtDpr
+//
+// On main screen `systemDpi == MainScreenDpi()` so key.scale == Scale()
+// (identity, no surprises). On a secondary screen with 225% system scale
+// while main is 250%, the scale is reduced by 225/250, preserving the
+// user-relative size.
+[[nodiscard]] ScaleKey ComputeScaleKey(int systemDpi, int qtDpr);
+
+// Helper that reads the window's current screen state
+// (`screen()->logicalDotsPerInch()` for system DPI, `devicePixelRatio()`
+// rounded for Qt's DPR) and feeds them into `ComputeScaleKey`.
+[[nodiscard]] ScaleKey ComputeScaleKeyFor(QWidget *window);
+
+// Queue an async recomputation of the window's ScaleKey. Multiple calls
+// before the queued callback fires are coalesced into one. By the time the
+// callback runs, Qt has finished any in-flight processing of native
+// scale-change events, so `ComputeScaleKeyFor(window)` reads consistent,
+// settled values for both system DPI and Qt's DPR — avoiding the race
+// where a fast native handler computes from a pre-event DPR.
+void ScheduleScaleKeyRefresh(QWidget *window);
 
 // Resolves the Context for an owner widget. Toggle off (production default):
 // always returns &GlobalContext(). Toggle on: walks `owner->window()` and

@@ -9,9 +9,14 @@
 #include "base/options.h"
 #include "base/algorithm.h"
 
+#include <crl/crl_on_main.h>
+
 #include <QtCore/QPointer>
 #include <QtCore/QVariant>
+#include <QtGui/QScreen>
 #include <QtWidgets/QWidget>
+
+#include <cmath>
 
 namespace style {
 namespace {
@@ -93,14 +98,9 @@ std::shared_ptr<const Modules> Registry::get(ScaleKey key) {
 	Expects(_frozen);
 	Expects(key.valid());
 
-	for (auto i = _cache.begin(); i != _cache.end();) {
-		if (auto alive = i->modules.lock()) {
-			if (i->key == key) {
-				return alive;
-			}
-			++i;
-		} else {
-			i = _cache.erase(i);
+	for (const auto &entry : _cache) {
+		if (entry.key == key) {
+			return entry.modules;
 		}
 	}
 
@@ -184,10 +184,22 @@ Context *AttachContextToWindow(QWidget *window, ScaleKey key) {
 }
 
 void UpdateWindowScaleKey(QWidget *window, ScaleKey key) {
-	if (const auto owner = FindContextOwner(window)) {
-		if (owner->context()->key() != key) {
-			owner->context()->setModules(GlobalRegistry().get(key));
-		}
+	const auto owner = FindContextOwner(window);
+	if (!owner || owner->context()->key() == key) {
+		return;
+	}
+	owner->context()->setModules(GlobalRegistry().get(key));
+
+	// Trigger a repaint of every descendant. sp::pointer's cache check
+	// `_modules != modules` will detect the swap on next `_st->...` access
+	// and re-resolve. Layout-sensitive widgets whose geometry is computed
+	// from `_st` won't automatically resize — that needs a styleChanged
+	// event handler in each widget; for now they keep their current size
+	// and just repaint with new field values.
+	window->update();
+	const auto descendants = window->findChildren<QWidget*>();
+	for (const auto child : descendants) {
+		child->update();
 	}
 }
 
@@ -199,6 +211,47 @@ Context *ResolveContext(QWidget *owner) {
 		return attached->context();
 	}
 	return &GlobalContext();
+}
+
+ScaleKey ComputeScaleKey(int systemDpi, int qtDpr) {
+	const auto safeDpr = std::max(qtDpr, 1);
+	const auto baseline = MainScreenDpi();
+	// On the main screen `systemDpi == baseline` so this is a no-op and
+	// the window gets exactly the user's chosen `style::Scale()` (matching
+	// the value visible in Settings). On other screens the scale is
+	// adjusted proportionally so the user-relative size is preserved.
+	const auto scaled = (baseline > 0)
+		? std::lround(double(Scale()) * systemDpi / double(baseline))
+		: Scale();
+	return MakeScaleKey(int(scaled), safeDpr);
+}
+
+ScaleKey ComputeScaleKeyFor(QWidget *window) {
+	const auto screen = window ? window->screen() : nullptr;
+	if (!screen) {
+		return MakeScaleKey(Scale(), 1);
+	}
+	const auto qtDpr = std::max(
+		int(std::round(screen->devicePixelRatio())),
+		1);
+	const auto systemDpi = int(std::lround(screen->logicalDotsPerInch()));
+	return ComputeScaleKey(systemDpi, qtDpr);
+}
+
+void ScheduleScaleKeyRefresh(QWidget *window) {
+	const auto owner = FindContextOwner(window);
+	if (!owner || owner->refreshPending) {
+		return;
+	}
+	owner->refreshPending = true;
+	// `crl::on_main(window, ...)` posts to the main thread and cancels if
+	// `window` is destroyed before the callback runs. By the time the queued
+	// callback fires, Qt has finished processing whatever event led here, so
+	// `screen()->logicalDotsPerInch()` / `devicePixelRatio()` are settled.
+	crl::on_main(window, [window, owner] {
+		owner->refreshPending = false;
+		UpdateWindowScaleKey(window, ComputeScaleKeyFor(window));
+	});
 }
 
 } // namespace style
