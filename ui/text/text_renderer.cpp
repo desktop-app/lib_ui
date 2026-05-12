@@ -21,7 +21,6 @@
 namespace Ui::Text {
 namespace {
 
-constexpr auto kMaxItemLength = 4096;
 constexpr auto kQuoteHeaderTextLarge = 25;
 
 void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
