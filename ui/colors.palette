@@ -646,7 +646,9 @@ sideBarTextFgActive: #64b9fa; // filters side bar active item text
 sideBarIconFg: #8393a3; // filters side bar icon
 sideBarIconFgActive: #5eb5f7; // filters side bar active item icon
 sideBarBadgeBg: #5eb5f7; // filters side bar badge background
+sideBarBadgeBgActive: sideBarBadgeBg; // filters side bar badge background when folder is open
 sideBarBadgeBgMuted: #8393a3; // filters side bar unimportant badge background
+sideBarBadgeBgMutedActive: sideBarBadgeBg; // filters side bar unimportant badge background when folder is open
 sideBarBadgeFg: #ffffff; // filters side bar badge text
 
 songCoverOverlayFg: #00000066; // song cover overlay

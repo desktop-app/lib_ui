@@ -159,9 +159,9 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 
 		auto hq = PainterHighQualityEnabler(p);
 		p.setPen(Qt::NoPen);
-		p.setBrush((_badgeMuted && !_active)
-			? _st.badgeBgMuted
-			: _st.badgeBg);
+		p.setBrush(_active
+			? (_badgeMuted ? _st.badgeBgMutedActive : _st.badgeBgActive)
+			: (_badgeMuted ? _st.badgeBgMuted : _st.badgeBg));
 		const auto r = _st.badgeHeight / 2;
 		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
 

@@ -632,7 +632,9 @@ SideBarButton {
 	textFg: color;
 	textFgActive: color;
 	badgeBg: color;
+	badgeBgActive: color;
 	badgeBgMuted: color;
+	badgeBgMutedActive: color;
 	badgeFg: color;
 	ripple: RippleAnimation;
 }
@@ -1536,7 +1538,9 @@ defaultSideBarButton: SideBarButton {
 	textFg: sideBarTextFg;
 	textFgActive: sideBarTextFgActive;
 	badgeBg: sideBarBadgeBg;
+	badgeBgActive: sideBarBadgeBgActive;
 	badgeBgMuted: sideBarBadgeBgMuted;
+	badgeBgMutedActive: sideBarBadgeBgMutedActive;
 	badgeFg: sideBarBadgeFg;
 	ripple: RippleAnimation(defaultRippleAnimation) {
 		color: sideBarBgRipple;
