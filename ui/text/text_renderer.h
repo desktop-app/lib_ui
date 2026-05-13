@@ -139,6 +139,8 @@ private:
 	const QPen *_currentPen = nullptr;
 	const QPen *_currentPenSelected = nullptr;
 	struct {
+		const QBrush *brush = nullptr;
+		const QBrush *brushSelected = nullptr;
 		bool spoiler = false;
 		bool selectActiveBlock = false; // For monospace.
 	} _background;

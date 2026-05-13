@@ -808,13 +808,55 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			custom->width(),
 			vertical ? vertical->height() : st::emojiSize);
 	};
-	const auto fillMarked = [&](FixedRange range, int top, int height) {
-		if (range.empty() || !_palette || !_palette->markBg->c.alpha()) {
+	const auto fillBackground = [&](
+			FixedRange range,
+			int top,
+			int height,
+			const QBrush &brush) {
+		if (range.empty() || brush.style() == Qt::NoBrush) {
 			return;
 		}
 		const auto left = range.from.toInt();
 		const auto width = range.till.toInt() - left;
-		_p->fillRect(left, top, width, height, _palette->markBg);
+		_p->fillRect(left, top, width, height, brush);
+	};
+	const auto fillMarked = [&](FixedRange range, int top, int height) {
+		if (!_palette || !_palette->markBg->c.alpha()) {
+			return;
+		}
+		fillBackground(range, top, height, _palette->markBg->b);
+	};
+	const auto fillColorizedBackground = [&](
+			FixedRange range,
+			FixedRange selected,
+			int top,
+			int height) {
+		if (!_background.brush) {
+			return;
+		}
+		if (selected.empty()) {
+			fillBackground(range, top, height, *_background.brush);
+			return;
+		}
+		if (range.from < selected.from) {
+			fillBackground(
+				{ range.from, selected.from },
+				top,
+				height,
+				*_background.brush);
+		}
+		if (const auto selectedBrush = _background.brushSelected) {
+			fillBackground(selected, top, height, *selectedBrush);
+		} else if (_palette && _palette->selectBg->c.alpha()) {
+			fillBackground(selected, top, height, _palette->selectBg->b);
+		}
+		if (selected.till < range.till) {
+			fillBackground(
+				{ selected.till, range.till },
+				top,
+				height,
+				*_background.brush);
+		}
 	};
 
 	auto lastLeftToMiddleX = x;
@@ -949,12 +991,28 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 							box.top(),
 							box.height());
 					}
-					fillSelectRange(
-						fillSelect,
-						box.top(),
-						box.height());
+					if (_background.brush) {
+						fillColorizedBackground(
+							{ x, x + si.width },
+							fillSelect,
+							box.top(),
+							box.height());
+					} else {
+						fillSelectRange(
+							fillSelect,
+							box.top(),
+							box.height());
+					}
 				} else {
-					fillSelectRange(fillSelect);
+					if (_background.brush) {
+						fillColorizedBackground(
+							{ x, x + si.width },
+							fillSelect,
+							_y + _yDelta,
+							_fontHeight);
+					} else {
+						fillSelectRange(fillSelect);
+					}
 				}
 				if (_highlight) {
 					pushHighlightRange(findSelectObjectRange(
@@ -1231,7 +1289,15 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			if (marked) {
 				fillMarked(itemRange, textTop, textHeight);
 			}
-			fillSelectRange(fillSelect, textTop, textHeight);
+			if (_background.brush) {
+				fillColorizedBackground(
+					itemRange,
+					fillSelect,
+					textTop,
+					textHeight);
+			} else {
+				fillSelectRange(fillSelect, textTop, textHeight);
+			}
 
 			if (_highlight) {
 				pushHighlightRange(findSelectTextRange(
@@ -1599,6 +1665,7 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
 			.flags = (*_elideSavedBlock)->flags(),
 			.linkIndex = (*_elideSavedBlock)->linkIndex(),
 			.colorIndex = (*_elideSavedBlock)->colorIndex(),
+			.bgIndex = (*_elideSavedBlock)->bgIndex(),
 		});
 	}
 	_indexOfElidedBlock = blockIndex;
@@ -1805,6 +1872,11 @@ void Renderer::applyBlockProperties(
 			} else {
 				_currentPen = &_originalPen;
 				_currentPenSelected = &_originalPenSelected;
+			}
+			if (const auto bgIndex = block->bgIndex()
+				; bgIndex && (bgIndex <= _colors.size())) {
+				_background.brush = _colors[bgIndex - 1].bg;
+				_background.brushSelected = _colors[bgIndex - 1].bgSelected;
 			}
 		} else if (isMono) {
 			_currentPen = &_palette->monoFg->p;

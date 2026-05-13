@@ -164,6 +164,8 @@ private:
 struct SpecialColor {
 	const QPen *pen = nullptr;
 	const QPen *penSelected = nullptr;
+	const QBrush *bg = nullptr;
+	const QBrush *bgSelected = nullptr;
 };
 
 struct LineGeometry {

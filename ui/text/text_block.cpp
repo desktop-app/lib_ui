@@ -62,6 +62,7 @@ AbstractBlock::AbstractBlock(TextBlockType type, BlockDescriptor descriptor)
 : _position(descriptor.position)
 , _type(static_cast<uint16>(type))
 , _colorIndex(descriptor.colorIndex)
+, _bgIndex(descriptor.bgIndex)
 , _flags(descriptor.flags)
 , _linkIndex(descriptor.linkIndex) {
 }
@@ -95,6 +96,10 @@ uint16 AbstractBlock::linkIndex() const {
 
 uint16 AbstractBlock::colorIndex() const {
 	return _colorIndex;
+}
+
+uint16 AbstractBlock::bgIndex() const {
+	return _bgIndex;
 }
 
 void AbstractBlock::setLinkIndex(uint16 index) {

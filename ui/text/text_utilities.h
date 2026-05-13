@@ -31,10 +31,12 @@ class CustomEmoji;
 [[nodiscard]] TextWithEntities Link(TextWithEntities text, int index);
 [[nodiscard]] TextWithEntities Colorized(
 	const QString &text,
-	int index = 0);
+	int index = 0,
+	int backgroundIndex = 0);
 [[nodiscard]] TextWithEntities Colorized(
 	TextWithEntities text,
-	int index = 0);
+	int index = 0,
+	int backgroundIndex = 0);
 [[nodiscard]] TextWithEntities Wrapped(
 	TextWithEntities text,
 	EntityType type,

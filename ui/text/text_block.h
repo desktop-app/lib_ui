@@ -61,6 +61,7 @@ struct BlockDescriptor {
 	TextBlockFlags flags;
 	uint16 linkIndex = 0;
 	uint16 colorIndex = 0;
+	uint16 bgIndex = 0;
 };
 
 class AbstractBlock {
@@ -70,17 +71,20 @@ public:
 	[[nodiscard]] TextBlockFlags flags() const;
 	[[nodiscard]] int objectWidth() const;
 	[[nodiscard]] uint16 colorIndex() const;
+	[[nodiscard]] uint16 bgIndex() const;
 	[[nodiscard]] uint16 linkIndex() const;
 	void setLinkIndex(uint16 index);
 
-	static constexpr auto kMaxColorIndex = (1 << 12) - 1;
+	static constexpr auto kMaxColorIndex = (1 << 6) - 1;
+	static constexpr auto kMaxBgIndex = kMaxColorIndex;
 
 protected:
 	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
 
 	uint16 _position = 0;
 	uint16 _type : 4 = 0;
-	uint16 _colorIndex : 12 = 0;
+	uint16 _colorIndex : 6 = 0;
+	uint16 _bgIndex : 6 = 0;
 	uint16 _flags = 0;
 	uint16 _linkIndex = 0;
 

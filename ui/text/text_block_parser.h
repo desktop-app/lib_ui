@@ -27,6 +27,11 @@ private:
 
 	class StartedEntity {
 	public:
+		struct ColorIndices {
+			uint16 colorIndex = 0;
+			uint16 bgIndex = 0;
+		};
+
 		enum class Type {
 			Flags,
 			Link,
@@ -37,13 +42,22 @@ private:
 
 		explicit StartedEntity(TextBlockFlags flags);
 		explicit StartedEntity(uint16 index, Type type);
+		explicit StartedEntity(ColorIndices indices);
 
 		[[nodiscard]] Type type() const;
 		[[nodiscard]] std::optional<TextBlockFlags> flags() const;
 		[[nodiscard]] std::optional<uint16> linkIndex() const;
-		[[nodiscard]] std::optional<uint16> colorIndex() const;
+		[[nodiscard]] std::optional<ColorIndices> colorIndices() const;
 
 	private:
+		static constexpr auto kBgIndexShift = 6;
+		static constexpr auto kColorIndexMask = AbstractBlock::kMaxColorIndex;
+
+		[[nodiscard]] static constexpr int PackColorIndices(
+			ColorIndices indices) {
+			return indices.colorIndex | (indices.bgIndex << kBgIndexShift);
+		}
+
 		const int _value = 0;
 		const Type _type;
 
@@ -111,6 +125,7 @@ private:
 	TextBlockFlags _flags;
 	uint16 _linkIndex = 0;
 	uint16 _colorIndex = 0;
+	uint16 _bgIndex = 0;
 	uint16 _internalIndex = 0;
 	uint16 _quoteIndex = 0;
 	int _quoteStartPosition = 0;

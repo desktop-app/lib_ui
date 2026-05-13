@@ -94,6 +94,13 @@ BlockParser::StartedEntity::StartedEntity(uint16 index, Type type)
 		: (_value < kStringLinkIndexShift));
 }
 
+BlockParser::StartedEntity::StartedEntity(ColorIndices indices)
+: _value(PackColorIndices(indices))
+, _type(Type::Colorized) {
+	Expects(indices.colorIndex <= AbstractBlock::kMaxColorIndex);
+	Expects(indices.bgIndex <= AbstractBlock::kMaxBgIndex);
+}
+
 BlockParser::StartedEntity::Type BlockParser::StartedEntity::type() const {
 	return _type;
 }
@@ -113,9 +120,13 @@ std::optional<uint16> BlockParser::StartedEntity::linkIndex() const {
 	return std::nullopt;
 }
 
-std::optional<uint16> BlockParser::StartedEntity::colorIndex() const {
+std::optional<BlockParser::StartedEntity::ColorIndices>
+BlockParser::StartedEntity::colorIndices() const {
 	if (_type == Type::Colorized) {
-		return uint16(_value);
+		return ColorIndices{
+			.colorIndex = uint16(_value & kColorIndexMask),
+			.bgIndex = uint16(_value >> kBgIndexShift),
+		};
 	}
 	return std::nullopt;
 }
@@ -194,6 +205,7 @@ void BlockParser::createBlock(int skipBack) {
 			.flags = _flags,
 			.linkIndex = linkIndex,
 			.colorIndex = _colorIndex,
+			.bgIndex = _bgIndex,
 		}, std::forward<decltype(args)>(args)...));
 	};
 	if (custom) {
@@ -306,10 +318,12 @@ void BlockParser::finishEntities() {
 					createBlock();
 					_linkIndex = 0;
 				}
-			} else if (const auto colorIndex = list.back().colorIndex()) {
-				if (_colorIndex == *colorIndex) {
+			} else if (const auto colorIndices = list.back().colorIndices()) {
+				if (_colorIndex == colorIndices->colorIndex
+					&& _bgIndex == colorIndices->bgIndex) {
 					createBlock();
 					_colorIndex = 0;
+					_bgIndex = 0;
 				}
 			}
 			list.pop_back();
@@ -474,13 +488,21 @@ bool BlockParser::checkEntities() {
 		createBlock();
 
 		const auto data = _waitingEntity->data();
-		_colorIndex = std::clamp(
+		const auto colorIndex = std::clamp(
 			data.isEmpty() ? 1 : (data.front().unicode() + 1),
 			1,
 			AbstractBlock::kMaxColorIndex);
+		const auto bgIndex = std::clamp(
+			(data.size() > 1) ? data[1].unicode() : 0,
+			0,
+			AbstractBlock::kMaxBgIndex);
+		_colorIndex = colorIndex;
+		_bgIndex = bgIndex;
 		_startedEntities[entityEnd].emplace_back(
-			_colorIndex,
-			Type::Colorized);
+			StartedEntity::ColorIndices{
+				.colorIndex = _colorIndex,
+				.bgIndex = _bgIndex,
+			});
 	}
 
 	if (link.type != EntityType::Invalid) {
