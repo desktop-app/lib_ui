@@ -727,6 +727,13 @@ void SeparatePanel::setBackAllowed(bool allowed) {
 	updateBackToggled();
 }
 
+void SeparatePanel::setCloseAllowed(bool allowed) {
+	if (_closeAllowed != allowed) {
+		_closeAllowed = allowed;
+		updateControlsVisibility(_fullscreen.current());
+	}
+}
+
 void SeparatePanel::updateBackToggled() {
 	const auto toggled = _backAllowed || (_searchField != nullptr);
 	if (_back->toggled() != toggled) {
@@ -1097,7 +1104,7 @@ void SeparatePanel::updateControlsVisibility(bool fullscreen) {
 	if (_titleBadge) {
 		_titleBadge->setVisible(!fullscreen);
 	}
-	_close->setVisible(!fullscreen);
+	_close->setVisible(_closeAllowed && !fullscreen);
 	if (_menuToggle) {
 		_menuToggle->setVisible(!fullscreen);
 	}
@@ -1132,6 +1139,16 @@ int SeparatePanel::hideGetDuration() {
 		return 0;
 	}
 	return st::separatePanelDuration;
+}
+
+void SeparatePanel::hideForStacking() {
+	if (isHidden() && !_visible) {
+		return;
+	}
+	_opacityAnimation.stop();
+	_visible = false;
+	_animationCache = QPixmap();
+	hide();
 }
 
 void SeparatePanel::showBox(

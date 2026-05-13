@@ -11,6 +11,8 @@
 #include "base/object_ptr.h"
 #include "base/flags.h"
 
+#include <optional>
+
 namespace Window {
 class SectionMemento;
 struct SectionShow;
@@ -35,6 +37,58 @@ inline constexpr auto is_flag_type(LayerOption) { return true; };
 class Show;
 using ShowPtr = std::shared_ptr<Show>;
 using ShowFactory = Fn<ShowPtr()>;
+
+// Delegate the BoxLayerWidget queries for higher-level layer-stack concerns:
+// style overrides, nested box showing, layer hiding, popup outer container.
+// Implemented by LayerStackWidget for embedded usage and by standalone
+// controllers that want to show each box as its own top-level window.
+class LayerStackDelegate {
+public:
+	virtual ~LayerStackDelegate() = default;
+
+	[[nodiscard]] virtual const style::Box *boxStyleOverride() const {
+		return nullptr;
+	}
+	[[nodiscard]] virtual const style::Box *boxStyleOverrideLayer() const {
+		return nullptr;
+	}
+
+	virtual void showBox(
+		object_ptr<BoxContent> box,
+		LayerOptions options,
+		anim::type animated) = 0;
+	virtual void hideLayers(anim::type animated) = 0;
+	[[nodiscard]] virtual ShowFactory showFactory() = 0;
+
+	// Returned by BoxLayerWidget::outerContainer() unless null — then the
+	// BoxLayerWidget returns its own parent (or itself when standalone).
+	[[nodiscard]] virtual QPointer<QWidget> layerOuterContainer() {
+		return nullptr;
+	}
+
+	// Size of the outer container the box positions within. Used by
+	// BoxLayerWidget to cap the box's real height. nullopt = use
+	// parentWidget()->size() (or no cap if no parent).
+	[[nodiscard]] virtual std::optional<QSize> layerOuterSize() {
+		return std::nullopt;
+	}
+
+	// When true, the BoxLayerWidget centers / repositions itself within
+	// its parent on setDimensions / parentResized. When false (standalone
+	// mode) the box only resizes itself to its natural size and the
+	// outer container (e.g. a SeparatePanel wrapper) follows it.
+	[[nodiscard]] virtual bool centerWithinOuter() {
+		return true;
+	}
+
+	// When true, BoxLayerWidget treats mouse presses in its title area
+	// (excluding top buttons) as a window drag — calls startSystemMove()
+	// on its containing top-level QWindow.
+	[[nodiscard]] virtual bool dragByTitle() {
+		return false;
+	}
+
+};
 
 class LayerWidget : public RpWidget {
 public:
@@ -97,7 +151,7 @@ private:
 
 };
 
-class LayerStackWidget : public RpWidget {
+class LayerStackWidget : public RpWidget, public LayerStackDelegate {
 public:
 	LayerStackWidget(QWidget *parent, ShowFactory showFactory);
 
@@ -107,20 +161,23 @@ public:
 	void setStyleOverrides(
 		const style::Box *boxSt,
 		const style::Box *layerSt);
-	[[nodiscard]] const style::Box *boxStyleOverrideLayer() const {
+	[[nodiscard]] const style::Box *boxStyleOverrideLayer() const override {
 		return _layerSt;
 	}
-	[[nodiscard]] const style::Box *boxStyleOverride() const {
+	[[nodiscard]] const style::Box *boxStyleOverride() const override {
 		return _boxSt;
 	}
-	[[nodiscard]] ShowFactory showFactory() const {
+	[[nodiscard]] ShowFactory showFactory() override {
 		return _showFactory;
+	}
+	[[nodiscard]] QPointer<QWidget> layerOuterContainer() override {
+		return this;
 	}
 
 	void showBox(
 		object_ptr<BoxContent> box,
 		LayerOptions options,
-		anim::type animated);
+		anim::type animated) override;
 	void showLayer(
 		std::unique_ptr<LayerWidget> layer,
 		LayerOptions options,
@@ -139,7 +196,7 @@ public:
 	bool contentOverlapped(const QRect &globalRect);
 
 	void hideSpecialLayer(anim::type animated);
-	void hideLayers(anim::type animated);
+	void hideLayers(anim::type animated) override;
 	void hideAll(anim::type animated);
 	void hideTopLayer(anim::type animated);
 	void setHideByBackgroundClick(bool hide);

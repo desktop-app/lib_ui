@@ -27,12 +27,15 @@ struct Box;
 namespace Ui {
 
 class AbstractButton;
+class BoxContent;
 class FlatLabel;
+class BoxLayerWidget;
 
 class BoxLayerWidget : public LayerWidget, public BoxContentDelegate {
 public:
 	BoxLayerWidget(
-		not_null<LayerStackWidget*> layer,
+		QWidget *parent,
+		not_null<LayerStackDelegate*> delegate,
 		object_ptr<BoxContent> content);
 	~BoxLayerWidget();
 
@@ -93,6 +96,7 @@ public:
 
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
+	void mousePressEvent(QMouseEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
 
@@ -122,7 +126,7 @@ private:
 	void updateSize();
 
 	const style::Box *_st = nullptr;
-	not_null<LayerStackWidget*> _layer;
+	not_null<LayerStackDelegate*> _layer;
 	rpl::variable<int> _realHeightMax;
 	rpl::variable<int> _contentHeightMax;
 	int _fullHeight = 0;

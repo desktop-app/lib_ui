@@ -73,6 +73,11 @@ public:
 	void showAndActivate();
 	int hideGetDuration();
 
+	// Instant, animation-less hide that keeps the panel alive and ready
+	// to be re-shown via showAndActivate(). Used by layer stacks that
+	// stash a panel below a newer one. Does not fire close events.
+	void hideForStacking();
+
 	[[nodiscard]] RpWidget *inner() const;
 	void showInner(base::unique_qptr<RpWidget> inner);
 	void showBox(
@@ -89,6 +94,7 @@ public:
 	[[nodiscard]] rpl::producer<> closeRequests() const;
 	[[nodiscard]] rpl::producer<> closeEvents() const;
 	void setBackAllowed(bool allowed);
+	void setCloseAllowed(bool allowed);
 
 	void updateBackToggled();
 
@@ -207,6 +213,7 @@ private:
 	bool _hideOnDeactivate = false;
 	bool _useTransparency = true;
 	bool _backAllowed = false;
+	bool _closeAllowed = true;
 	style::margins _padding;
 
 	bool _dragging = false;
