@@ -70,6 +70,14 @@ void OverlayWidgetCache(QPainter &p, Ui::RpWidget *widget) {
 	return geometry;
 }
 
+[[nodiscard]] bool SameForeignParent(
+		const Platform::ForeignParent &a,
+		const Platform::ForeignParent &b) {
+	return (a.type == b.type)
+		&& (a.x11 == b.x11)
+		&& (a.wayland == b.wayland);
+}
+
 class PanelShow final : public Show {
 public:
 	explicit PanelShow(not_null<SeparatePanel*> panel);
@@ -411,7 +419,7 @@ void SeparatePanel::ResizeEdge::updateFromResize(QPoint delta) {
 SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 : RpWidget(args.parent)
 , _anchorGeometry(std::move(args.anchorGeometry))
-, _transientParent(args.transientParent)
+, _transientParent(std::move(args.transientParent))
 , _menuSt(args.menuSt ? *args.menuSt : st::popupMenuWithIcons)
 , _close(this, st::separatePanelClose)
 , _back(this, object_ptr<IconButton>(this, st::separatePanelBack))
@@ -979,6 +987,19 @@ void SeparatePanel::setHideOnDeactivate(bool hideOnDeactivate) {
 	}
 }
 
+void SeparatePanel::setAnchorData(
+		std::optional<QRect> geometry,
+		Platform::ForeignParent transientParent) {
+	_anchorGeometry = std::move(geometry);
+	if (!SameForeignParent(_transientParent, transientParent)) {
+		_transientParent = std::move(transientParent);
+		_foreignTransientParentApplied = false;
+		if (!_transientParent && windowHandle()) {
+			Platform::ClearTransientParent(this);
+		}
+	}
+}
+
 void SeparatePanel::showAndActivate() {
 	if (isHidden()) {
 		while (const auto widget = QApplication::activePopupWidget()) {
@@ -986,8 +1007,12 @@ void SeparatePanel::showAndActivate() {
 				break;
 			}
 		}
+		moveToAnchorGeometry();
 	}
-	if (!_foreignTransientParentApplied && _transientParent) {
+	if (_transientParent
+		&& (!_foreignTransientParentApplied
+			|| (_transientParent.type
+				== Platform::ForeignParent::Type::Wayland))) {
 		createWinId();
 		if (windowHandle()) {
 			Platform::SetForeignTransientParent(this, _transientParent);
@@ -999,6 +1024,19 @@ void SeparatePanel::showAndActivate() {
 	setWindowState(windowState() | Qt::WindowActive);
 	activateWindow();
 	setFocus();
+}
+
+void SeparatePanel::moveToAnchorGeometry() {
+	if (!_anchorGeometry || _anchorGeometry->isEmpty()) {
+		return;
+	}
+	const auto screen = QGuiApplication::screenAt(_anchorGeometry->center())
+		? QGuiApplication::screenAt(_anchorGeometry->center())
+		: QGuiApplication::primaryScreen();
+	const auto available = screen ? screen->availableGeometry() : QRect();
+	auto geometry = QRect(QPoint(), size());
+	geometry.moveCenter(_anchorGeometry->center());
+	Ui::SetGeometryAndScreen(this, ClampToAvailable(geometry, available));
 }
 
 void SeparatePanel::keyPressEvent(QKeyEvent *e) {

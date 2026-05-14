@@ -6,13 +6,18 @@
 //
 #pragma once
 
-#include <QtCore/QRect>
+#include "base/basic_types.h"
 
+#include <QtCore/QRect>
+#include <QtCore/QString>
+
+#include <cstdint>
 #include <optional>
 
 class QPoint;
 class QPainter;
 class QPaintEvent;
+class QWidget;
 
 namespace Ui {
 class PopupMenu;
@@ -31,8 +36,27 @@ void ReInitOnTopPanel(not_null<QWidget*> panel);
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus = true);
 void IgnoreAllActivation(not_null<QWidget*> widget);
 void ClearTransientParent(not_null<QWidget*> widget);
-[[nodiscard]] std::optional<QRect> ForeignWindowGeometry(void *nativeId);
-void SetForeignTransientParent(not_null<QWidget*> widget, void *nativeId);
+struct ForeignParent {
+	enum class Type {
+		None,
+		X11,
+		Wayland,
+	};
+
+	Type type = Type::None;
+	uintptr_t x11 = 0;
+	QString wayland;
+
+	[[nodiscard]] explicit operator bool() const {
+		return ((type == Type::X11) && x11)
+			|| ((type == Type::Wayland) && !wayland.isEmpty());
+	}
+};
+[[nodiscard]] std::optional<QRect> ForeignWindowGeometry(
+	const ForeignParent &parent);
+void SetForeignTransientParent(
+	not_null<QWidget*> widget,
+	const ForeignParent &parent);
 void AcceptAllMouseInput(not_null<QWidget*> widget);
 
 void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio);
