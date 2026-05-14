@@ -15,6 +15,8 @@
 
 #include <rpl/variable.h>
 
+#include <optional>
+
 class Painter;
 
 namespace style {
@@ -48,6 +50,8 @@ class FadeWrap;
 
 struct SeparatePanelArgs {
 	QWidget *parent = nullptr;
+	std::optional<QRect> anchorGeometry;
+	void *transientParent = nullptr;
 	bool onAllSpaces = false;
 	Fn<bool(int zorder)> animationsPaused;
 	const style::PopupMenu *menuSt = nullptr;
@@ -180,6 +184,10 @@ private:
 	void toggleSearch(bool shown);
 	[[nodiscard]] rpl::producer<> allBackRequests() const;
 	[[nodiscard]] rpl::producer<> allCloseRequests() const;
+
+	const std::optional<QRect> _anchorGeometry;
+	void *_transientParent = nullptr;
+	bool _foreignTransientParentApplied = false;
 
 	const style::PopupMenu &_menuSt;
 	object_ptr<IconButton> _close;

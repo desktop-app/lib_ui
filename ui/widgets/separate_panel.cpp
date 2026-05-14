@@ -49,6 +49,27 @@ void OverlayWidgetCache(QPainter &p, Ui::RpWidget *widget) {
 	}
 }
 
+[[nodiscard]] QRect ClampToAvailable(QRect geometry, const QRect &available) {
+	if (available.isNull()) {
+		return geometry;
+	}
+	auto topLeft = geometry.topLeft();
+	if (topLeft.x() + geometry.width() > available.x() + available.width()) {
+		topLeft.setX(available.x() + available.width() - geometry.width());
+	}
+	if (topLeft.x() < available.x()) {
+		topLeft.setX(available.x());
+	}
+	if (topLeft.y() + geometry.height() > available.y() + available.height()) {
+		topLeft.setY(available.y() + available.height() - geometry.height());
+	}
+	if (topLeft.y() < available.y()) {
+		topLeft.setY(available.y());
+	}
+	geometry.moveTopLeft(topLeft);
+	return geometry;
+}
+
 class PanelShow final : public Show {
 public:
 	explicit PanelShow(not_null<SeparatePanel*> panel);
@@ -389,6 +410,8 @@ void SeparatePanel::ResizeEdge::updateFromResize(QPoint delta) {
 
 SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 : RpWidget(args.parent)
+, _anchorGeometry(std::move(args.anchorGeometry))
+, _transientParent(args.transientParent)
 , _menuSt(args.menuSt ? *args.menuSt : st::popupMenuWithIcons)
 , _close(this, st::separatePanelClose)
 , _back(this, object_ptr<IconButton>(this, st::separatePanelBack))
@@ -964,6 +987,13 @@ void SeparatePanel::showAndActivate() {
 			}
 		}
 	}
+	if (!_foreignTransientParentApplied && _transientParent) {
+		createWinId();
+		if (windowHandle()) {
+			Platform::SetForeignTransientParent(this, _transientParent);
+			_foreignTransientParentApplied = true;
+		}
+	}
 	toggleOpacityAnimation(true);
 	raise();
 	setWindowState(windowState() | Qt::WindowActive);
@@ -1334,35 +1364,24 @@ QMargins SeparatePanel::computePadding() const {
 
 void SeparatePanel::initGeometry(QSize size) {
 	const auto active = QApplication::activeWindow();
-	const auto available = !active
-		? QGuiApplication::primaryScreen()->availableGeometry()
-		: active->screen()->availableGeometry();
-	const auto parentGeometry = (active
-		&& active->isVisible()
-		&& active->isActiveWindow())
-		? active->geometry()
-		: available;
-
-	auto center = parentGeometry.center();
-	if (size.height() > available.height()) {
-		size = QSize(size.width(), available.height());
-	}
-	if (center.x() + size.width() / 2
-		> available.x() + available.width()) {
-		center.setX(
-			available.x() + available.width() - size.width() / 2);
-	}
-	if (center.x() - size.width() / 2 < available.x()) {
-		center.setX(available.x() + size.width() / 2);
-	}
-	if (center.y() + size.height() / 2
-		> available.y() + available.height()) {
-		center.setY(
-			available.y() + available.height() - size.height() / 2);
-	}
-	if (center.y() - size.height() / 2 < available.y()) {
-		center.setY(available.y() + size.height() / 2);
-	}
+	const auto anchor = (_anchorGeometry && !_anchorGeometry->isEmpty())
+		? _anchorGeometry
+		: std::optional<QRect>();
+	const auto screen = anchor
+		? ([&] {
+			if (const auto result = QGuiApplication::screenAt(
+					anchor->center())) {
+				return result;
+			}
+			return QGuiApplication::primaryScreen();
+		}())
+		: (active ? active->screen() : QGuiApplication::primaryScreen());
+	const auto available = screen ? screen->availableGeometry() : QRect();
+	const auto parentGeometry = anchor
+		? *anchor
+		: ((active && active->isVisible() && active->isActiveWindow())
+			? active->geometry()
+			: available);
 	_useTransparency = Platform::TranslucentWindowsSupported();
 	_padding = _useTransparency
 		? st::callShadow.extend
@@ -1377,17 +1396,20 @@ void SeparatePanel::initGeometry(QSize size) {
 
 	setAttribute(Qt::WA_OpaquePaintEvent, !_useTransparency);
 	if (!_fullscreen.current()) {
-		const auto rect = [&] {
-			const auto initRect = QRect(QPoint(), size);
-			const auto shift = center - initRect.center();
-			return initRect.translated(shift).marginsAdded(_padding);
-		}();
-		move(rect.topLeft());
+		if (!available.isNull() && size.height() > available.height()) {
+			size = QSize(size.width(), available.height());
+		}
+		const auto rect = ClampToAvailable([&] {
+			auto result = QRect(QPoint(), size).marginsAdded(_padding);
+			result.moveCenter(parentGeometry.center());
+			return result;
+		}(), available);
 		if (_allowResize) {
 			setMinimumSize(rect.size());
 		} else {
 			setFixedSize(rect.size());
 		}
+		Ui::SetGeometryAndScreen(this, rect);
 		updateControlsGeometry();
 	}
 }

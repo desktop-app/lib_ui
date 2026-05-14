@@ -6,6 +6,10 @@
 //
 #pragma once
 
+#include <QtCore/QRect>
+
+#include <optional>
+
 class QPoint;
 class QPainter;
 class QPaintEvent;
@@ -27,6 +31,8 @@ void ReInitOnTopPanel(not_null<QWidget*> panel);
 void ShowOverAll(not_null<QWidget*> widget, bool canFocus = true);
 void IgnoreAllActivation(not_null<QWidget*> widget);
 void ClearTransientParent(not_null<QWidget*> widget);
+[[nodiscard]] std::optional<QRect> ForeignWindowGeometry(void *nativeId);
+void SetForeignTransientParent(not_null<QWidget*> widget, void *nativeId);
 void AcceptAllMouseInput(not_null<QWidget*> widget);
 
 void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio);
