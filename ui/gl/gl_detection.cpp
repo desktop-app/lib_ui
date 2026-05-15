@@ -60,11 +60,9 @@ void CrashCheckStart() {
 } // namespace
 
 Capabilities CheckCapabilities(QWidget *widget) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	if (qEnvironmentVariableIsSet("QT_WIDGETS_RHI")) {
+	if (WidgetsRhiEnabled()) {
 		return {};
 	}
-#endif // Qt >= 6.8
 	if (!Platform::IsMac()) {
 		if (ForceDisabled) {
 			LOG_ONCE(("OpenGL: Force-disabled."));
@@ -208,17 +206,23 @@ Capabilities CheckCapabilities(QWidget *widget) {
 }
 
 Backend ChooseBackendDefault(Capabilities capabilities) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	if (qEnvironmentVariableIsSet("QT_WIDGETS_RHI")) {
+	if (WidgetsRhiEnabled()) {
 		return Backend::QRhi;
 	}
-#endif // Qt >= 6.8
 	const auto use = ::Platform::IsMac()
 		? true
 		: ::Platform::IsWindows()
 		? capabilities.supported
 		: capabilities.transparency;
 	return use ? Backend::OpenGL : Backend::Raster;
+}
+
+bool WidgetsRhiEnabled() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	return qEnvironmentVariableIsSet("QT_WIDGETS_RHI");
+#else
+	return false;
+#endif
 }
 
 void DetectLastCheckCrash() {
