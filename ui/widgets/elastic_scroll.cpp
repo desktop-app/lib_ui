@@ -1064,14 +1064,23 @@ void ElasticScroll::sendWheelEvent(Qt::ScrollPhase phase, QPoint delta) {
 	handleWheelEvent(&e, true);
 }
 
+void ElasticScroll::setBarTopInset(int inset) {
+	if (_barTopInset == inset) {
+		return;
+	}
+	_barTopInset = inset;
+	auto event = QResizeEvent(size(), size());
+	resizeEvent(&event);
+}
+
 void ElasticScroll::resizeEvent(QResizeEvent *e) {
 	const auto rtl = (layoutDirection() == Qt::RightToLeft);
 	_bar->setGeometry(_vertical
 		? QRect(
 			(rtl ? 0 : (width() - _st.width)),
-			0,
+			_barTopInset,
 			_st.width,
-			height())
+			std::max(0, height() - _barTopInset))
 		: QRect(0, height() - _st.width, width(), _st.width));
 	_geometryChanged.fire({});
 	updateState();
