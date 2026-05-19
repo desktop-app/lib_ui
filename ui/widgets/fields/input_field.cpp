@@ -11,11 +11,13 @@
 #include "base/qt/qt_common_adapters.h"
 #include "base/invoke_queued.h"
 #include "base/qthelp_regex.h"
+#include "base/qthelp_url.h"
 #include "base/random.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "emoji_suggestions_helper.h"
 #include "ui/text/text.h"
 #include "ui/text/text_html_tags.h"
+#include "ui/basic_click_handlers.h"
 #include "ui/text/text_renderer.h" // kQuoteCollapsedLines
 #include "ui/widgets/fields/custom_field_object.h"
 #include "ui/widgets/labels.h"
@@ -184,6 +186,39 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	const auto htmlMention = StartingMention(QStringView(htmlText));
 	return htmlMention.isEmpty()
 		|| StartingMention(QStringView(plainText)) == htmlMention;
+}
+
+// Sometimes browsers, like Firefox, for copying the address bar
+// put URL in text/plain and <a href=URL>PageTitle</a> in text/html
+// We want to ignore such text/html and paste plain URL in those cases.
+[[nodiscard]] bool HtmlIsSingleLinkOfPlainUrl(
+		const TextWithTags &parsed,
+		const QString &plainText) {
+	const auto plain = plainText.trimmed();
+	if (plain.isEmpty()
+		|| parsed.tags.size() != 1
+		|| parsed.tags.front().offset != 0
+		|| parsed.tags.front().length != int(parsed.text.size())) {
+		return false;
+	}
+	auto href = QString();
+	const auto &tag = parsed.tags.front().id;
+	for (const auto &single : TextUtilities::SplitTags(tag)) {
+		if (InputField::IsValidMarkdownLink(single)
+				&& !TextUtilities::IsMentionLink(single)) {
+			href = single.toString();
+		}
+	}
+	if (href.isEmpty()) {
+		return false;
+	}
+	const auto protocolMatch = qthelp::RegExpProtocol().match(plain);
+	if (protocolMatch.hasMatch()
+			&& qthelp::IsGoodProtocol(protocolMatch.captured(1))) {
+		return true;
+	}
+	const auto domainMatch = qthelp::RegExpDomainExplicit().match(plain);
+	return domainMatch.hasMatch() && domainMatch.capturedStart() == 0;
 }
 
 [[nodiscard]] QStringView FindBlockTag(QStringView tag) {
@@ -5361,6 +5396,9 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 					source->html())) {
 				if (!HtmlTextMatchesPlainTextStart(
 						parsed->text,
+						source->text())
+					|| HtmlIsSingleLinkOfPlainUrl(
+						*parsed,
 						source->text())) {
 					return plainText();
 				}
