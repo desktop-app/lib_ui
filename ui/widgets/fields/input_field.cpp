@@ -5356,7 +5356,7 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 			_insertedTagsAreFromMime = true;
 			return result;
 		}
-		if (source->hasHtml()) {
+		if (source->hasHtml() && !_markdownEnabledState.disabled()) {
 			if (auto parsed = TextUtilities::TextWithTagsFromHtml(
 					source->html())) {
 				if (!HtmlTextMatchesPlainTextStart(
