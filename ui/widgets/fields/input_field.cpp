@@ -42,6 +42,8 @@
 #include <QtWidgets/QTextEdit>
 #include <QShortcut>
 
+#include <private/qkeymapper_p.h>
+
 #include <crl/crl_async.h>
 
 namespace Ui {
@@ -219,6 +221,55 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 	}
 	const auto domainMatch = qthelp::RegExpDomainExplicit().match(plain);
 	return domainMatch.hasMatch() && domainMatch.capturedStart() == 0;
+}
+
+// Detects Ctrl+Shift+V (or any "Paste shortcut with extra Shift") in a way
+// that survives non-Latin keyboard layouts. QKeyEvent::matches() only looks
+// at the layout-translated key(), so on Russian etc. the V key reports as
+// Cyrillic М and stripping Shift is not enough. QKeyMapper::possibleKeys()
+// returns the Latin fallback as one of the alternatives, which is exactly
+// what QShortcutMap uses for plain Ctrl+V to keep working across layouts.
+[[nodiscard]] bool IsPasteWithShift(not_null<QKeyEvent*> e) {
+	if (!(e->modifiers() & Qt::ShiftModifier)) {
+		return false;
+	}
+	const auto bindings = QKeySequence::keyBindings(QKeySequence::Paste);
+	if (bindings.empty()) {
+		return false;
+	}
+	const auto match = [&](Qt::KeyboardModifiers mods, int key) {
+		if (!(mods & Qt::ShiftModifier)) {
+			return false;
+		}
+		const auto combined = (int(mods & ~Qt::ShiftModifier) | key)
+			& ~int(Qt::KeypadModifier | Qt::GroupSwitchModifier);
+		const auto sequence = QKeySequence(combined);
+		for (const auto &binding : bindings) {
+			if (binding == sequence) {
+				return true;
+			}
+		}
+		return false;
+	};
+	if (match(e->modifiers(), e->key())) {
+		return true;
+	}
+	const auto possible = QKeyMapper::possibleKeys(e);
+	for (const auto &p : possible) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+		if (match(p.keyboardModifiers(), int(p.key()))) {
+			return true;
+		}
+#else // Qt >= 6.7.0
+		const auto mods = Qt::KeyboardModifiers(
+			p & Qt::KeyboardModifierMask);
+		const auto key = p & ~int(Qt::KeyboardModifierMask);
+		if (match(mods, key)) {
+			return true;
+		}
+#endif // Qt < 6.7.0
+	}
+	return false;
 }
 
 [[nodiscard]] QStringView FindBlockTag(QStringView tag) {
@@ -4020,6 +4071,12 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 		e->ignore();
 	} else if (handleMarkdownKey(e)) {
 		e->accept();
+	} else if (IsPasteWithShift(e)) {
+		// Layout-independent Ctrl+Shift+V (Paste as Plain Text).
+		// insertFromMimeDataInner() looks at the live keyboard state
+		// to take the plain-text branch.
+		e->accept();
+		_inner->paste();
 	} else if (_customUpDown
 		&& (key == Qt::Key_Up
 			|| key == Qt::Key_Down
@@ -4086,26 +4143,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			}
 			e->accept();
 		} else {
-			// Ctrl+Shift+V as "Paste as Plain Text" support.
-			auto removedShift = false;
-			const auto nowModifiers = e->modifiers();
-			if ((e != QKeySequence::Paste)
-				&& (oldModifiers & Qt::ShiftModifier)) {
-				// If we had Shift+Smth and we see that Smth == Paste,
-				// then we'll "Paste as Plain Text". Like Ctrl+Shift+V.
-				e->setModifiers(oldModifiers & ~Qt::ShiftModifier);
-				if (e == QKeySequence::Paste) {
-					removedShift = true;
-				} else {
-					e->setModifiers(nowModifiers);
-				}
-			}
-
 			_inner->QTextEdit::keyPressEvent(e);
-
-			if (removedShift) {
-				e->setModifiers(nowModifiers);
-			}
 		}
 		if (createEditBlock) {
 			cursor.endEditBlock();
