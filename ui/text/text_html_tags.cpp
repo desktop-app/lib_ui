@@ -8,6 +8,7 @@
 
 #include "ui/widgets/fields/input_field.h"
 #include "ui/basic_click_handlers.h"
+#include "base/qthelp_url.h"
 
 #include <QtCore/QHash>
 #include <QtGui/QTextDocumentFragment>
@@ -880,10 +881,16 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		return QString();
 	}
 	const auto href = value->trimmed();
-	return (Ui::InputField::IsValidMarkdownLink(href)
-		&& !TextUtilities::IsMentionLink(href))
-		? href
-		: QString();
+	if (!Ui::InputField::IsValidMarkdownLink(href)
+		|| TextUtilities::IsMentionLink(href)) {
+		return QString();
+	}
+	const auto protocolMatch = qthelp::RegExpProtocol().match(href);
+	if (!protocolMatch.hasMatch()
+		|| !qthelp::IsGoodProtocol(protocolMatch.captured(1))) {
+		return QString();
+	}
+	return href;
 }
 
 [[nodiscard]] QString NormalizeNewlines(QString text) {
