@@ -152,15 +152,21 @@ void AddUnique(
 }
 
 [[nodiscard]] bool IsSupportedLinkTag(QStringView tag) {
-	return Ui::InputField::IsValidMarkdownLink(tag)
-		&& !TextUtilities::IsMentionLink(tag);
+	const auto link = tag.toString();
+	const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(link);
+	const auto candidate = external.isEmpty() ? link : external;
+	return Ui::InputField::IsValidMarkdownLink(candidate)
+		&& !TextUtilities::IsMentionLink(candidate);
 }
 
 [[nodiscard]] QString SupportedLink(QStringView id) {
 	auto result = QString();
 	for (const auto &tag : TextUtilities::SplitTags(id)) {
 		if (IsSupportedLinkTag(tag)) {
-			result = tag.toString();
+			const auto link = tag.toString();
+			const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
+				link);
+			result = external.isEmpty() ? link : external;
 		}
 	}
 	return result;
@@ -207,6 +213,17 @@ void AddUnique(
 				offset,
 				length,
 				email);
+		} break;
+		case EntityType::CustomUrl: {
+			const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
+				entity.data());
+			if (!external.isEmpty()) {
+				entity = EntityInText(
+					EntityType::CustomUrl,
+					offset,
+					length,
+					external);
+			}
 		} break;
 		default: break;
 		}

@@ -2055,15 +2055,23 @@ TextForMimeData String::toText(
 			? QStringView(entity.data).mid(0, entity.data.size())
 			: inText;
 		const auto customTextLink = (entity.type == EntityType::CustomUrl);
+		auto entityData = entity.data;
+		if (customTextLink) {
+			if (const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
+					entityData);
+					!external.isEmpty()) {
+				entityData = external;
+			}
+		}
 		const auto internalLink = customTextLink
-			&& entity.data.startsWith(qstr("internal:"));
+			&& entityData.startsWith(u"internal:"_q);
 		if (composeExpanded) {
 			const auto sameAsTextLink = customTextLink
-				&& (entity.data
+				&& (entityData
 					== UrlClickHandler::EncodeForOpening(full.toString()));
 			if (customTextLink && !internalLink && !sameAsTextLink) {
-				const auto &url = entity.data;
-				result.expanded.append(qstr(" (")).append(url).append(')');
+				const auto &url = entityData;
+				result.expanded.append(u" ("_q).append(url).append(')');
 			}
 		}
 		if (composeEntities && !internalLink) {
@@ -2071,7 +2079,7 @@ TextForMimeData String::toText(
 				entity.type,
 				linkStart,
 				int(result.rich.text.size() - linkStart),
-				entity.data });
+				entityData });
 		}
 	};
 	const auto appendPartCallback = [&](

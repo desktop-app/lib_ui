@@ -1171,7 +1171,10 @@ const QRegularExpression &RegExpWordSplit() {
 		if (till > offset) {
 			result.append(base::StringViewMid(original, offset, till - offset));
 		}
-		result.append(qstr(" (")).append(entity.data()).append(')');
+		const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
+			entity.data());
+		const auto url = external.isEmpty() ? entity.data() : external;
+		result.append(u" ("_q).append(url).append(')');
 		offset = till;
 	}
 	if (original.size() > offset) {
@@ -2323,7 +2326,12 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 			}
 		} break;
 		case EntityType::CustomUrl: {
-			const auto url = entity.data();
+			auto url = entity.data();
+			if (const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
+					url);
+					!external.isEmpty()) {
+				url = external;
+			}
 			if (Ui::InputField::IsValidMarkdownLink(url)
 				&& !IsMentionLink(url)) {
 				push(url);
@@ -2423,8 +2431,10 @@ TextForMimeData TextForMimeData::WithExpandedLinks(
 				continue;
 			}
 			// This logic is duplicated in Ui::Text::String::toText.
-			const auto &data = entity.data();
-			if (!data.startsWith(qstr("internal:"))
+			const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
+				entity.data());
+			const auto data = external.isEmpty() ? entity.data() : external;
+			if (!data.startsWith(u"internal:"_q)
 				&& (data != UrlClickHandler::EncodeForOpening(
 					text.text.mid(entity.offset(), entity.length())))) {
 				const auto till = entity.offset() + entity.length();
@@ -2432,7 +2442,7 @@ TextForMimeData TextForMimeData::WithExpandedLinks(
 					result.expanded.append(text.text.data() + from, add);
 					from = till;
 				}
-				result.expanded.append(qstr(" (")).append(data).append(')');
+				result.expanded.append(u" ("_q).append(data).append(')');
 			}
 		}
 		const auto till = text.text.size();

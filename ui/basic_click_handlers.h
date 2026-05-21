@@ -63,6 +63,11 @@ public:
 		return ((at > 0) && (slash < 0 || slash > at));
 	}
 	[[nodiscard]] static QString EncodeForOpening(const QString &originalUrl);
+	[[nodiscard]] static QString EncodeInternalWrappedUrl(
+		const QString &url,
+		const QString &extraQuery = QString());
+	[[nodiscard]] static QString ExternalUrlFromInternalUrl(
+		const QString &url);
 	[[nodiscard]] static bool IsSuspicious(const QString &url);
 	[[nodiscard]] static QString ShowEncoded(const QString &url);
 

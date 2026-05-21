@@ -19,10 +19,11 @@
 
 QString TextClickHandler::readable() const {
 	const auto result = url();
-	return !result.startsWith(qstr("internal:"))
+	const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(result);
+	return !external.isEmpty()
+		? external
+		: !result.startsWith(u"internal:"_q)
 		? result
-		: result.startsWith(qstr("internal:url:"))
-		? result.mid(qstr("internal:url:").size())
 		: QString();
 }
 
@@ -31,19 +32,19 @@ UrlClickHandler::UrlClickHandler(const QString &url, bool fullDisplayed)
 , _originalUrl(url) {
 	if (isEmail()) {
 		_readable = _originalUrl;
-	} else if (!_originalUrl.startsWith(qstr("internal:"))) {
-		const auto original = QUrl(_originalUrl);
-		const auto good = QUrl(original.isValid()
-			? original.toEncoded()
-			: QString());
-		_readable = good.isValid() ? good.toDisplayString() : _originalUrl;
-	} else if (_originalUrl.startsWith(qstr("internal:url:"))) {
-		const auto external = _originalUrl.mid(qstr("internal:url:").size());
+	} else if (const auto external = ExternalUrlFromInternalUrl(_originalUrl);
+			!external.isEmpty()) {
 		const auto original = QUrl(external);
 		const auto good = QUrl(original.isValid()
 			? original.toEncoded()
 			: QString());
 		_readable = good.isValid() ? good.toDisplayString() : external;
+	} else if (!_originalUrl.startsWith(u"internal:"_q)) {
+		const auto original = QUrl(_originalUrl);
+		const auto good = QUrl(original.isValid()
+			? original.toEncoded()
+			: QString());
+		_readable = good.isValid() ? good.toDisplayString() : _originalUrl;
 	}
 }
 
@@ -77,6 +78,26 @@ QString UrlClickHandler::EncodeForOpening(const QString &originalUrl) {
 		return u"https://"_q + result;
 	}
 	return result;
+}
+
+QString UrlClickHandler::EncodeInternalWrappedUrl(
+		const QString &url,
+		const QString &extraQuery) {
+	auto result = u"internal:wrapped?url=%1"_q.arg(qthelp::url_encode(url));
+	if (!extraQuery.isEmpty()) {
+		result += '&' + extraQuery;
+	}
+	return result;
+}
+
+QString UrlClickHandler::ExternalUrlFromInternalUrl(const QString &url) {
+	const auto wrappedPrefix = u"internal:wrapped?"_q;
+	if (!url.startsWith(wrappedPrefix)) {
+		return QString();
+	}
+	return qthelp::url_parse_params(
+		url.mid(wrappedPrefix.size())
+	).value(u"url"_q);
 }
 
 void UrlClickHandler::Open(QString url, QVariant context) {
