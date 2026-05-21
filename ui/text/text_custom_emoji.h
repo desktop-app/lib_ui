@@ -14,7 +14,9 @@
 #include <crl/crl_time.h>
 
 #include <any>
+#include <memory>
 #include <optional>
+#include <utility>
 
 class QPainter;
 
@@ -163,6 +165,17 @@ private:
 	bool _stopOnLast = false;
 
 };
+
+template <typename Wrapper, typename ...Args>
+[[nodiscard]] std::unique_ptr<CustomEmoji> MakeWrappedEmoji(
+		std::unique_ptr<CustomEmoji> wrapped,
+		Args &&...args) {
+	return wrapped
+		? std::make_unique<Wrapper>(
+			std::move(wrapped),
+			std::forward<Args>(args)...)
+		: nullptr;
+}
 
 class PaletteDependentCustomEmoji final : public CustomEmoji {
 public:

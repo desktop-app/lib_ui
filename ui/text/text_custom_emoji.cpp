@@ -50,6 +50,7 @@ ShiftedEmoji::ShiftedEmoji(
 	QPoint shift)
 : _wrapped(std::move(wrapped))
 , _shift(shift) {
+	Expects(_wrapped != nullptr);
 }
 
 int ShiftedEmoji::width() {
@@ -93,6 +94,7 @@ bool ShiftedEmoji::readyInDefaultState() {
 
 FirstFrameEmoji::FirstFrameEmoji(std::unique_ptr<CustomEmoji> wrapped)
 : _wrapped(std::move(wrapped)) {
+	Expects(_wrapped != nullptr);
 }
 
 int FirstFrameEmoji::width() {
@@ -142,6 +144,7 @@ LimitedLoopsEmoji::LimitedLoopsEmoji(
 : _wrapped(std::move(wrapped))
 , _limit(limit)
 , _stopOnLast(stopOnLast) {
+	Expects(_wrapped != nullptr);
 }
 
 int LimitedLoopsEmoji::width() {
