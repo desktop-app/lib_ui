@@ -470,11 +470,22 @@ void SeparatePanel::setTitleHeight(int height) {
 	updateControlsGeometry();
 }
 
-void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
-	if (badge) {
-		badge->setParent(this);
+void SeparatePanel::setTitleBadge(TitleBadgeDescriptor descriptor) {
+	if (!descriptor.paint || descriptor.size.isEmpty()) {
+		_titleBadge.destroy();
+	} else {
+		_titleBadge = object_ptr<RpWidget>(this);
+		const auto raw = _titleBadge.data();
+		raw->resize(descriptor.size);
+		raw->paintRequest() | rpl::on_next([
+			raw,
+			paint = std::move(descriptor.paint)
+		](const QRect &) {
+			auto p = QPainter(raw);
+			paint(p, raw->size());
+		}, raw->lifetime());
+		raw->setVisible(!_fullscreen.current());
 	}
-	_titleBadge = std::move(badge);
 	updateTitleGeometry(width());
 }
 

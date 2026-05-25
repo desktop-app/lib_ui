@@ -58,6 +58,11 @@ struct SeparatePanelArgs {
 	const style::PopupMenu *menuSt = nullptr;
 };
 
+struct TitleBadgeDescriptor {
+	QSize size;
+	Fn<void(QPainter &p, QSize size)> paint;
+};
+
 class SeparatePanel final : public RpWidget {
 public:
 	explicit SeparatePanel(SeparatePanelArgs &&args = {});
@@ -65,7 +70,7 @@ public:
 
 	void setTitle(rpl::producer<QString> title);
 	void setTitleHeight(int height);
-	void setTitleBadge(object_ptr<RpWidget> badge);
+	void setTitleBadge(TitleBadgeDescriptor descriptor);
 	void setInnerSize(QSize size, bool allowResize = false);
 	[[nodiscard]] QRect innerGeometry() const;
 
