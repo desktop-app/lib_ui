@@ -11,6 +11,7 @@
 #include "ui/qt_object_factory.h"
 #include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
+#include "base/qt_signal_producer.h"
 #include "base/platform/base_platform_info.h"
 #include "styles/palette.h"
 
@@ -539,20 +540,22 @@ rpl::producer<FullScreenEvent> FullScreenEvents(
 			}
 
 			WindowObserver *observer = nullptr;
+			rpl::lifetime screenChanges;
 		};
 		const auto state = result.make_state<State>();
 
-		window->winIdValue() | rpl::on_next([=](WId winId) {
+		const auto attach = [=](WId winId) {
 			if (const auto was = base::take(state->observer)) {
 				[was release];
 			}
 			if (!winId) {
-				return;
+				return false;
 			}
 			const auto view = reinterpret_cast<NSView*>(winId);
 			const auto win = [view window];
-			Ensures(win != nullptr);
-
+			if (!win) {
+				return false;
+			}
 			const auto handler = [=](FullScreenEvent event) {
 				consumer.put_next_copy(event);
 			};
@@ -569,6 +572,28 @@ rpl::producer<FullScreenEvent> FullScreenEvents(
 			add(NSWindowWillExitFullScreenNotification, @selector(windowWillExitFullScreen:));
 			add(NSWindowDidEnterFullScreenNotification, @selector(windowDidEnterFullScreen:));
 			add(NSWindowDidExitFullScreenNotification, @selector(windowDidExitFullScreen:));
+			return true;
+		};
+
+		window->winIdValue() | rpl::on_next([=](WId winId) {
+			state->screenChanges.destroy();
+			if (attach(winId)) {
+				return;
+			}
+			// NSView exists but its NSWindow is not attached yet — happens
+			// when the parent window is on a screen with a different device
+			// pixel ratio and Qt is mid-flight rebuilding the native window.
+			// Re-try whenever Qt assigns a screen to the QWindow.
+			const auto handle = window->windowHandle();
+			if (!handle) {
+				return;
+			}
+			base::qt_signal_producer(
+				handle,
+				&QWindow::screenChanged
+			) | rpl::on_next([=](QScreen*) {
+				attach(window->internalWinId());
+			}, state->screenChanges);
 		}, result);
 
 		return result;
