@@ -1065,6 +1065,15 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 		: st.style.font->height;
 }
 
+[[nodiscard]] Qt::Alignment HorizontalTextAlign(style::align align) {
+	const auto horizontal = align
+		& (Qt::AlignLeft
+			| Qt::AlignRight
+			| Qt::AlignHCenter
+			| Qt::AlignJustify);
+	return (horizontal != 0) ? horizontal : Qt::AlignLeft;
+}
+
 void SetBlockMargins(QTextBlockFormat &format, const style::QuoteStyle &st) {
 	format.setLeftMargin(st.padding.left());
 	format.setTopMargin(st.padding.top()
@@ -1096,6 +1105,7 @@ void SetBlockMargins(QTextBlockFormat &format, const style::QuoteStyle &st) {
 			BlockLineHeight(st),
 			QTextBlockFormat::FixedHeight);
 	}
+	result.setAlignment(HorizontalTextAlign(st.textAlign));
 	const auto id = (quoteId < 0) ? ++AutoincrementId : quoteId;
 	if (tag == kTagBlockquote || tag == kTagBlockquoteCollapsed) {
 		result.setProperty(kQuoteFormatId, tag.toString());
