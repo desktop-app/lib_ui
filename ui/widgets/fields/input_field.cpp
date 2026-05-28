@@ -1059,6 +1059,12 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 	return (Text::kQuoteCollapsedLines + 0.8) * st.style.font->height;
 }
 
+[[nodiscard]] int BlockLineHeight(const style::InputField &st) {
+	return (st.style.lineHeight > 0)
+		? std::max(st.style.lineHeight, st.style.font->height)
+		: st.style.font->height;
+}
+
 void SetBlockMargins(QTextBlockFormat &format, const style::QuoteStyle &st) {
 	format.setLeftMargin(st.padding.left());
 	format.setTopMargin(st.padding.top()
@@ -1087,7 +1093,7 @@ void SetBlockMargins(QTextBlockFormat &format, const style::QuoteStyle &st) {
 	auto result = QTextBlockFormat();
 	if (tag != kTagBlockquoteCollapsed) {
 		result.setLineHeight(
-			st.style.font->height,
+			BlockLineHeight(st),
 			QTextBlockFormat::FixedHeight);
 	}
 	const auto id = (quoteId < 0) ? ++AutoincrementId : quoteId;
