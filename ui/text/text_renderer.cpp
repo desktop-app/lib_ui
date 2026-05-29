@@ -168,7 +168,7 @@ void Renderer::enumerate() {
 	Expects(!_geometry.outElided);
 
 	_lineHeight = _t->lineHeight();
-	_lineAscent = _t->_st->font->ascent;
+	_lineAscent = _t->_st->font->fascent;
 	_blocksSize = _t->_blocks.size();
 	_str = _t->_text.unicode();
 
@@ -323,13 +323,13 @@ void Renderer::enumerate() {
 }
 
 void Renderer::resolveLineGeometry(uint16 lineEnd) {
-	const auto metrics = _t->resolveLineGeometry(
+	const auto metrics = _t->resolveLineMetrics(
 		_lineStart,
 		lineEnd,
 		_lineStartBlock);
 	_lineHeight = metrics.height();
 	_lineAscent = metrics.ascent;
-	_yDelta = _lineAscent - _t->_st->font->ascent;
+	_yDelta = _lineAscent - _t->_st->font->fascent;
 }
 
 void Renderer::fillParagraphBg(int paddingBottom) {
@@ -804,7 +804,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			x.toInt(),
 			_y + (vertical
 				? (_lineAscent - vertical->ascent)
-				: (_yDelta + emojiY)),
+				: (_yDelta + emojiY)).toInt(),
 			custom->width(),
 			vertical ? vertical->height() : st::emojiSize);
 	};
@@ -876,7 +876,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		applyBlockProperties(e, block);
 		const auto marked = (block->flags() & TextBlockFlag::Marked);
 		const auto baselineShift = _t->blockBaselineShift(block);
-		const auto textTop = textY + baselineShift - _f->ascent;
+		const auto textTop = (textY + baselineShift - _f->fascent).toInt();
 		const auto textHeight = _f->height;
 		if (si.analysis.flags >= QScriptAnalysis::TabOrObject) {
 			const auto _type = block->type();
@@ -954,7 +954,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 										| TextBlockFlag::Superscript))));
 							_p->drawText(
 								(left + (bigWidth - smallWidth) / 2).toReal(),
-								textY,
+								textY.toInt(),
 								kQEllipsis);
 						}
 						continue;
@@ -1008,7 +1008,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						fillColorizedBackground(
 							{ x, x + si.width },
 							fillSelect,
-							_y + _yDelta,
+							(_y + _yDelta).toInt(),
 							_fontHeight);
 					} else {
 						fillSelectRange(fillSelect);
@@ -1033,7 +1033,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						_p->setOpacity(opacity * (1. - _spoilerOpacity));
 					}
 					const auto ex = (x + st::emojiPadding).toInt();
-					const auto ey = _y + _yDelta + emojiY;
+					const auto ey = (_y + _yDelta + emojiY).toInt();
 					if (_type == TextBlockType::Emoji) {
 						Emoji::Draw(
 							*_p,
@@ -1187,7 +1187,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 									| TextBlockFlag::Superscript))));
 						_p->drawText(
 							(left + (bigWidth - smallWidth) / 2).toReal(),
-							textY,
+							textY.toInt(),
 							kQEllipsis);
 					}
 					break;
@@ -1353,9 +1353,10 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						const auto clippingRegion = _p->clipRegion();
 						_p->setClipRect(selectedRect, Qt::IntersectClip);
 						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(
-							QPointF(x.toReal(), textY + baselineShift),
-							gf);
+						_p->drawTextItem(QPointF(
+							x.toReal(),
+							(textY + baselineShift).toReal()
+						), gf);
 						const auto externalClipping = clippingEnabled
 							? clippingRegion
 							: QRegion(QRect(
@@ -1365,9 +1366,10 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 								_y + 2 * _lineHeight));
 						_p->setClipRegion(externalClipping - selectedRect);
 						_p->setPen(*_currentPen);
-						_p->drawTextItem(
-							QPointF(x.toReal(), textY + baselineShift),
-							gf);
+						_p->drawTextItem(QPointF(
+							x.toReal(),
+							(textY + baselineShift).toReal()
+						), gf);
 #ifdef Q_OS_MAC
 						_p->restore();
 #else // Q_OS_MAC
@@ -1379,15 +1381,17 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 #endif // Q_OS_MAC
 					} else {
 						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(
-							QPointF(x.toReal(), textY + baselineShift),
-							gf);
+						_p->drawTextItem(QPointF(
+							x.toReal(),
+							(textY + baselineShift).toReal()
+						), gf);
 					}
 				} else {
 					_p->setPen(*_currentPen);
-					_p->drawTextItem(
-						QPointF(x.toReal(), textY + baselineShift),
-						gf);
+					_p->drawTextItem(QPointF(
+						x.toReal(),
+						(textY + baselineShift).toReal()
+					), gf);
 				}
 				if (complexClipping) {
 					if (complexClippingEnabled) {
@@ -1498,7 +1502,7 @@ FixedRange Renderer::findSelectTextRange(
 }
 
 void Renderer::fillSelectRange(FixedRange range) {
-	fillSelectRange(range, _y + _yDelta, _fontHeight);
+	fillSelectRange(range, (_y + _yDelta).toInt(), _fontHeight);
 }
 
 void Renderer::fillSelectRange(FixedRange range, int top, int height) {
@@ -1506,11 +1510,11 @@ void Renderer::fillSelectRange(FixedRange range, int top, int height) {
 		return;
 	}
 
-	const auto defaultLineTop = _y + _lineAscent - _t->_st->font->ascent;
+	const auto defaultLineTop = _y + _lineAscent - _t->_st->font->fascent;
 	const auto defaultLineBottom = defaultLineTop + _t->_st->font->height;
-	const auto bottom = std::max(top + height, defaultLineBottom);
+	const auto bottom = std::max(top + height, defaultLineBottom.toInt());
 
-	top = std::min(top, defaultLineTop);
+	top = std::min(top, defaultLineTop.toInt());
 	height = bottom - top;
 
 	const auto left = range.from.toInt();
@@ -1564,7 +1568,7 @@ void Renderer::fillRectsFromRanges(
 		return;
 	}
 	auto lastTill = ranges.front().from.toInt() - 1;
-	const auto y = _y + _yDelta;
+	const auto y = (_y + _yDelta).toInt();
 	const auto height = _fontHeight;
 	for (const auto &range : ranges) {
 		auto from = range.from.toInt();

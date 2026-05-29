@@ -194,10 +194,10 @@ private:
 	int _startLineWidth = 0;
 	QFixed _x, _wLeft, _last_rPadding;
 	int _y = 0;
-	int _yDelta = 0;
+	QFixed _yDelta = 0;
 	int _lineIndex = 0;
 	int _lineHeight = 0;
-	int _lineAscent = 0;
+	QFixed _lineAscent = 0;
 	int _fontHeight = 0;
 	bool _breakEverywhere = false;
 	bool _elidedLine = false;

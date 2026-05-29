@@ -128,12 +128,11 @@ public:
 	int height = 0;
 	int ascent = 0;
 	int descent = 0;
-	QFixed fheight = 0;
-	QFixed fascent = 0;
-	QFixed fdescent = 0;
-	QFixed fleading = 0;
 	int spacew = 0;
 	int elidew = 0;
+
+	QFixed fascent = 0;
+	QFixed fleading = 0;
 
 private:
 	friend class OwnedFont;

@@ -455,12 +455,12 @@ private:
 
 	};
 
-	struct LineGeometry {
-		int ascent = 0;
-		int descent = 0;
+	struct LineMetrics {
+		QFixed ascent = 0;
+		QFixed descent = 0;
 
 		[[nodiscard]] int height() const {
-			return ascent + descent;
+			return (ascent + descent).toInt();
 		}
 	};
 
@@ -484,8 +484,8 @@ private:
 	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
 	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
 	[[nodiscard]] int blockBaselineShift(const AbstractBlock *block) const;
-	[[nodiscard]] LineGeometry defaultLineGeometry() const;
-	[[nodiscard]] LineGeometry resolveLineGeometry(
+	[[nodiscard]] LineMetrics defaultLineMetrics() const;
+	[[nodiscard]] LineMetrics resolveLineMetrics(
 		int lineStart,
 		int lineEnd,
 		int blockIndexHint) const;
