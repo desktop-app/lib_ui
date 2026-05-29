@@ -481,7 +481,7 @@ int FontData::family() const {
 Font FontData::otherFlagsFont(FontFlag flag, bool set) const {
 	const auto newFlags = !set
 		? (_flags & ~flag)
-		: (flag == FontFlag::Monospace)
+		: ((_flags | flag) & FontFlag::Monospace)
 		? FontFlag::Monospace
 		: (_flags | flag);
 	if (!_modified[newFlags]) {
