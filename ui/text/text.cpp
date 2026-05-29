@@ -21,6 +21,8 @@
 
 #include <QtGui/QGuiApplication>
 
+#include <algorithm>
+
 namespace Ui {
 
 const QString kQEllipsis = u"..."_q;
@@ -1662,6 +1664,19 @@ int String::blockBaselineShift(const AbstractBlock *block) const {
 
 String::LineGeometry String::defaultLineGeometry() const {
 	const auto lineHeight = this->lineHeight();
+	if (_st->qtextEditLineMetrics) {
+		const auto leading = (_st->font->fleading > QFixed(0))
+			? _st->font->fleading
+			: QFixed(0);
+		const auto ascent = std::clamp(
+			(((QFixed(lineHeight) * 4) / 5) - leading).toInt(),
+			0,
+			lineHeight);
+		return {
+			.ascent = ascent,
+			.descent = lineHeight - ascent,
+		};
+	}
 	const auto fontHeight = _st->font->height;
 	const auto top = std::max(lineHeight - fontHeight, 0) / 2;
 	return {
@@ -2164,6 +2179,9 @@ IsolatedEmoji String::toIsolatedEmoji() const {
 }
 
 int String::lineHeight() const {
+	if (_st->qtextEditLineMetrics) {
+		return std::max(_st->lineHeight, _st->font->height);
+	}
 	return _st->lineHeight ? _st->lineHeight : _st->font->height;
 }
 

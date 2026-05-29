@@ -435,6 +435,10 @@ FontData::FontData(const FontResolveResult &result, FontVariants *modified)
 	height = int(base::SafeRound(result.height));
 	ascent = int(base::SafeRound(result.ascent));
 	descent = height - ascent;
+	fheight = QFixed::fromReal(_m.height());
+	fascent = QFixed::fromReal(_m.ascent());
+	fdescent = QFixed::fromReal(_m.descent());
+	fleading = QFixed::fromReal(_m.leading());
 	spacew = width(QLatin1Char(' '));
 	elidew = width(u"..."_q);
 }

@@ -41,6 +41,7 @@ TextStyle {
 	font: font;
 	linkUnderline: int;
 	lineHeight: pixels;
+	qtextEditLineMetrics: bool;
 	blockquote: QuoteStyle;
 	pre: QuoteStyle;
 }
@@ -84,6 +85,7 @@ defaultTextStyle: TextStyle {
 	font: normalFont;
 	linkUnderline: kLinkUnderlineActive;
 	lineHeight: 0px;
+	qtextEditLineMetrics: false;
 	blockquote: defaultQuoteStyle;
 	pre: defaultQuoteStyle;
 }
