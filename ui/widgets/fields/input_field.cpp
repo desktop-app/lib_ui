@@ -11,7 +11,6 @@
 #include "base/qt/qt_common_adapters.h"
 #include "base/invoke_queued.h"
 #include "base/qthelp_regex.h"
-#include "base/qthelp_url.h"
 #include "base/random.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "emoji_suggestions_helper.h"
@@ -190,37 +189,78 @@ QVariant InputDocument::loadResource(int type, const QUrl &name) {
 		|| StartingMention(QStringView(plainText)) == htmlMention;
 }
 
-// Sometimes browsers, like Firefox, for copying the address bar
-// put URL in text/plain and <a href=URL>PageTitle</a> in text/html
-// We want to ignore such text/html and paste plain URL in those cases.
-[[nodiscard]] bool HtmlIsSingleLinkOfPlainUrl(
-		const TextWithTags &parsed,
-		const QString &plainText) {
-	const auto plain = plainText.trimmed();
-	if (plain.isEmpty()
-		|| parsed.tags.size() != 1
-		|| parsed.tags.front().offset != 0
-		|| parsed.tags.front().length != int(parsed.text.size())) {
-		return false;
+// Drops every formatting tag-part whose occurrences across all tags together
+// cover the entire parsed text. Coverage is judged per formatting-part, not
+// per individual tag: a part is whole-spanning when the union of the ranges
+// of every tag containing it equals [0, text.size()) with no gaps, even when
+// inner formatting fragmented that part across several adjacent tags. Such a
+// part is removed from the id of every tag that contains it; tags whose id
+// becomes empty are erased and the remainder is re-simplified.
+void TrimFullCoverageTags(TextWithTags &parsed) {
+	const auto full = int(parsed.text.size());
+	if (!full || parsed.tags.isEmpty()) {
+		return;
 	}
-	auto href = QString();
-	const auto &tag = parsed.tags.front().id;
-	for (const auto &single : TextUtilities::SplitTags(tag)) {
-		if (InputField::IsValidMarkdownLink(single)
-				&& !TextUtilities::IsMentionLink(single)) {
-			href = single.toString();
+	auto parts = std::vector<QString>();
+	for (const auto &tag : parsed.tags) {
+		for (const auto &part : TextUtilities::SplitTags(tag.id)) {
+			auto already = false;
+			for (const auto &existing : parts) {
+				if (QStringView(existing) == part) {
+					already = true;
+					break;
+				}
+			}
+			if (!already) {
+				parts.push_back(part.toString());
+			}
 		}
 	}
-	if (href.isEmpty()) {
-		return false;
+	const auto coversFull = [&](const QString &part) {
+		auto spans = std::vector<std::pair<int, int>>();
+		for (const auto &tag : parsed.tags) {
+			if (TextUtilities::SplitTags(tag.id).contains(QStringView(part))) {
+				spans.emplace_back(tag.offset, tag.offset + tag.length);
+			}
+		}
+		if (spans.empty()) {
+			return false;
+		}
+		std::sort(spans.begin(), spans.end());
+		if (spans.front().first != 0) {
+			return false;
+		}
+		auto covered = 0;
+		for (const auto &[from, till] : spans) {
+			if (from > covered) {
+				return false;
+			}
+			covered = std::max(covered, till);
+		}
+		return (covered >= full);
+	};
+	auto wholeSpan = std::vector<QString>();
+	for (const auto &part : parts) {
+		if (coversFull(part)) {
+			wholeSpan.push_back(part);
+		}
 	}
-	const auto protocolMatch = qthelp::RegExpProtocol().match(plain);
-	if (protocolMatch.hasMatch()
-			&& qthelp::IsGoodProtocol(protocolMatch.captured(1))) {
-		return true;
+	if (wholeSpan.empty()) {
+		return;
 	}
-	const auto domainMatch = qthelp::RegExpDomainExplicit().match(plain);
-	return domainMatch.hasMatch() && domainMatch.capturedStart() == 0;
+	for (auto i = parsed.tags.begin(); i != parsed.tags.end();) {
+		auto id = i->id;
+		for (const auto &part : wholeSpan) {
+			id = TextUtilities::TagWithRemoved(id, part);
+		}
+		if (id.isEmpty()) {
+			i = parsed.tags.erase(i);
+		} else {
+			i->id = id;
+			++i;
+		}
+	}
+	parsed.tags = TextUtilities::SimplifyTags(std::move(parsed.tags));
 }
 
 // Detects Ctrl+Shift+V (or any "Paste shortcut with extra Shift") in a way
@@ -5450,10 +5490,11 @@ void InputField::insertFromMimeDataInner(const QMimeData *source) {
 					source->html())) {
 				if (!HtmlTextMatchesPlainTextStart(
 						parsed->text,
-						source->text())
-					|| HtmlIsSingleLinkOfPlainUrl(
-						*parsed,
 						source->text())) {
+					return plainText();
+				}
+				TrimFullCoverageTags(*parsed);
+				if (parsed->tags.isEmpty()) {
 					return plainText();
 				}
 				_insertedTags = std::move(parsed->tags);
