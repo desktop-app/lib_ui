@@ -112,6 +112,9 @@ public:
 			Qt::TextElideMode mode = Qt::ElideRight) const {
 		return _m.elidedText(str, mode, width);
 	}
+	[[nodiscard]] const QFontMetricsF &metrics() const {
+		return _m;
+	}
 
 	[[nodiscard]] Font bold(bool set = true) const;
 	[[nodiscard]] Font italic(bool set = true) const;

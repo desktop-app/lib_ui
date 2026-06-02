@@ -296,6 +296,7 @@ InputField {
 	textBg: color;
 	textBgActive: color; // Used only with borderRadius.
 	textFg: color;
+	textMarkBg: color;
 	textMargins: margins;
 	textAlign: align;
 
@@ -1039,6 +1040,7 @@ defaultInputField: InputField {
 	textBg: windowBg;
 	textBgActive: windowBg;
 	textFg: windowFg;
+	textMarkBg: windowBgOver;
 	textMargins: margins(0px, 28px, 0px, 4px);
 	textAlign: align(topleft);
 

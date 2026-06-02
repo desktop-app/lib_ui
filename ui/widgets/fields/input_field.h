@@ -153,6 +153,10 @@ public:
 	static const QString kTagSpoiler;
 	static const QString kTagBlockquote;
 	static const QString kTagBlockquoteCollapsed;
+	static const QString kTagIvMarked;
+	static const QString kTagIvSubscript;
+	static const QString kTagIvSuperscript;
+	static const QString kTagIvMath;
 	static const QString kCustomEmojiTagStart;
 	static const QString kCustomDateTagStart;
 	static const int kCollapsedQuoteFormat; // QTextFormat::ObjectTypes
@@ -264,6 +268,7 @@ public:
 		rpl::producer<bool> systemTextReplacesEnabled = {});
 	void setMarkdownReplacesEnabled(bool enabled);
 	void setMarkdownReplacesEnabled(rpl::producer<MarkdownEnabledState> enabled);
+	void setInstantViewEditorTagsEnabled(bool enabled);
 	void setExtendedContextMenu(rpl::producer<ExtendedContextMenu> value);
 	void commitInstantReplacement(
 		int from,
@@ -279,6 +284,8 @@ public:
 	[[nodiscard]] static QString CustomEmojiLink(QStringView entityData);
 	[[nodiscard]] static QString CustomEmojiEntityData(QStringView link);
 	[[nodiscard]] static bool IsCustomDateLink(QStringView link);
+	[[nodiscard]] static bool IsInstantViewEditorTag(QStringView tag);
+	[[nodiscard]] static bool IsInstantViewAnchorLink(QStringView link);
 
 	[[nodiscard]] const QString &getLastText() const {
 		return _lastTextWithTags.text;
@@ -613,6 +620,7 @@ private:
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
 	MarkdownSet _markdownSet = MarkdownSet::All;
+	bool _instantViewEditorTagsEnabled = false;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;
 	bool _insertedTagsDelayClear = false;

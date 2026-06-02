@@ -1653,13 +1653,22 @@ const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 		: quote->language;
 }
 
-int String::blockBaselineShift(const AbstractBlock *block) const {
+QFixed String::blockBaselineShift(const AbstractBlock *block) const {
 	const auto flags = block->flags();
-	return (flags & TextBlockFlag::Subscript)
-		? int(base::SafeRound(_st->font->size() / 4.))
-		: (flags & TextBlockFlag::Superscript)
-		? -int(base::SafeRound(_st->font->size() / 3.))
-		: 0;
+	const auto subscript = (flags & TextBlockFlag::Subscript);
+	const auto superscript = (flags & TextBlockFlag::Superscript);
+	if (!subscript && !superscript) {
+		return QFixed();
+	} else if (_st->qtextEditLineMetrics) {
+		const auto font = WithFlags(_st->font, flags);
+		const auto &metrics = font->metrics();
+		const auto height = QFixed::fromReal(
+			metrics.ascent() + metrics.descent());
+		return subscript ? (height / 6) : -(height / 2);
+	}
+	return subscript
+		? QFixed(int(base::SafeRound(_st->font->size() / 4.)))
+		: -QFixed(int(base::SafeRound(_st->font->size() / 3.)));
 }
 
 String::LineMetrics String::defaultLineMetrics() const {
@@ -1701,6 +1710,7 @@ String::LineMetrics String::resolveLineMetrics(
 		const auto raw = i->get();
 		const auto flags = raw->flags();
 		if (_hasSubscriptsOrSuperscripts
+			&& !_st->qtextEditLineMetrics
 			&& (raw->type() == TextBlockType::Text)
 			&& (flags
 				& (TextBlockFlag::Subscript | TextBlockFlag::Superscript))) {

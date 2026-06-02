@@ -483,7 +483,7 @@ private:
 	[[nodiscard]] QMargins quotePadding(QuoteDetails *quote) const;
 	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
 	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
-	[[nodiscard]] int blockBaselineShift(const AbstractBlock *block) const;
+	[[nodiscard]] QFixed blockBaselineShift(const AbstractBlock *block) const;
 	[[nodiscard]] LineMetrics defaultLineMetrics() const;
 	[[nodiscard]] LineMetrics resolveLineMetrics(
 		int lineStart,
