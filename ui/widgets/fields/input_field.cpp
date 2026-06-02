@@ -2132,8 +2132,11 @@ void InputField::setExtendedContextMenu(
 	std::move(
 		value
 	) | rpl::on_next([=](auto pair) {
-		auto &[menu, e] = pair;
-		contextMenuEventInner(e.get(), std::move(menu));
+		auto &[menu, e, setupPopupMenu] = pair;
+		contextMenuEventInner(
+			e.get(),
+			std::move(menu),
+			std::move(setupPopupMenu));
 	}, lifetime());
 }
 
@@ -5452,10 +5455,16 @@ bool InputField::jumpOutOfBlockByBackspace() {
 	return true;
 }
 
-void InputField::contextMenuEventInner(QContextMenuEvent *e, QMenu *m) {
+void InputField::contextMenuEventInner(
+		QContextMenuEvent *e,
+		QMenu *m,
+		Fn<void(not_null<PopupMenu*>)> setupPopupMenu) {
 	if (const auto menu = m ? m : _inner->createStandardContextMenu()) {
 		addMarkdownActions(menu, e);
 		_contextMenu = base::make_unique_q<PopupMenu>(this, menu, _st.menu);
+		if (setupPopupMenu) {
+			setupPopupMenu(_contextMenu.get());
+		}
 		QObject::connect(_contextMenu.get(), &QObject::destroyed, [=] {
 			_menuShownChanges.fire(false);
 		});

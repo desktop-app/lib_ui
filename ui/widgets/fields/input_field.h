@@ -254,6 +254,7 @@ public:
 	struct ExtendedContextMenu {
 		QMenu *menu = nullptr;
 		std::shared_ptr<QContextMenuEvent> event;
+		Fn<void(not_null<PopupMenu*>)> setupPopupMenu;
 	};
 
 	void setPlaceholderColorOverride(const style::color &color);
@@ -431,7 +432,10 @@ private:
 	void focusOutEventInner(QFocusEvent *e);
 	void setFocused(bool focused);
 	void keyPressEventInner(QKeyEvent *e);
-	void contextMenuEventInner(QContextMenuEvent *e, QMenu *m = nullptr);
+	void contextMenuEventInner(
+		QContextMenuEvent *e,
+		QMenu *m = nullptr,
+		Fn<void(not_null<PopupMenu*>)> setupPopupMenu = nullptr);
 	void dropEventInner(QDropEvent *e);
 	void inputMethodEventInner(QInputMethodEvent *e);
 	void paintEventInner(QPaintEvent *e);
