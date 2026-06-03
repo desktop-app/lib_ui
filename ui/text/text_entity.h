@@ -402,6 +402,11 @@ inline const auto kMentionTagStart = qstr("mention://");
 [[nodiscard]] bool IsMentionLink(QStringView link);
 [[nodiscard]] QString MentionEntityData(QStringView link);
 [[nodiscard]] bool IsSeparateTag(QStringView tag);
+[[nodiscard]] QString FormattedDateMetaTag(const QString &data);
+[[nodiscard]] bool IsFormattedDateMetaTag(QStringView tag);
+[[nodiscard]] QString FormattedDateMetaTagData(QStringView tag);
+[[nodiscard]] bool IsRichFormattingTag(QStringView tag);
+[[nodiscard]] bool IsRichLinkTag(QStringView tag);
 [[nodiscard]] QString JoinTag(const QList<QStringView> &list);
 [[nodiscard]] QList<QStringView> SplitTags(QStringView tag);
 [[nodiscard]] QString TagWithRemoved(

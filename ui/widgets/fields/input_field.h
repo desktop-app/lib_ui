@@ -270,6 +270,9 @@ public:
 	void setMarkdownReplacesEnabled(bool enabled);
 	void setMarkdownReplacesEnabled(rpl::producer<MarkdownEnabledState> enabled);
 	void setInstantViewEditorTagsEnabled(bool enabled);
+	[[nodiscard]] bool instantViewEditorTagsEnabled() const {
+		return _instantViewEditorTagsEnabled;
+	}
 	void setExtendedContextMenu(rpl::producer<ExtendedContextMenu> value);
 	void commitInstantReplacement(
 		int from,
