@@ -1175,6 +1175,17 @@ QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
 		: st.style.font->height;
 }
 
+[[nodiscard]] float64 QTextEditLineAscent(
+		const style::font &font,
+		int lineHeight) {
+	const auto fixedLineHeight = float64(std::max(lineHeight, font->height));
+	const auto leading = std::max(font->fleading.toReal(), 0.);
+	return std::clamp(
+		(fixedLineHeight * 4 / 5) - leading,
+		0.,
+		fixedLineHeight);
+}
+
 [[nodiscard]] Qt::Alignment HorizontalTextAlign(style::align align) {
 	const auto horizontal = align
 		& (Qt::AlignLeft
@@ -2717,9 +2728,7 @@ void InputField::paintEvent(QPaintEvent *e) {
 	const auto focusedDegree = _a_focused.value(_focused ? 1. : 0.);
 	paintSurrounding(p, r, errorDegree, focusedDegree);
 
-	const auto margins = fullTextMargins()
-		+ QMargins(0, _placeholderCustomFontSkip, 0, 0)
-		+ _st.placeholderMargins;
+	const auto margins = placeholderPaintMargins();
 
 	if (_st.placeholderScale > 0. && !_placeholderPath.isEmpty()) {
 		auto placeholderShiftDegree = _a_placeholderShifted.value(_placeholderShifted ? 1. : 0.);
@@ -2760,17 +2769,25 @@ void InputField::paintEvent(QPaintEvent *e) {
 			const auto &phFg2 = _placeholderFgOverride.value_or(_st.placeholderFg);
 			const auto &phFgActive2 = _placeholderFgOverride.value_or(_st.placeholderFgActive);
 			p.setPen(anim::pen(phFg2, phFgActive2, focusedDegree));
+			const auto baseline = nonScaledPlaceholderBaseline();
 			if (_st.placeholderAlign == style::al_topleft && _placeholderAfterSymbols > 0) {
 				const auto skipWidth = placeholderSkipWidth();
 				p.drawText(
-					margins.left() + skipWidth,
-					margins.top() + _st.placeholderFont->ascent,
+					QPointF(margins.left() + skipWidth, baseline),
 					_placeholder);
 			} else {
 				auto r = rect().marginsRemoved(margins);
 				r.moveLeft(r.left() + placeholderLeft);
 				if (style::RightToLeft()) r.moveLeft(width() - r.left() - r.width());
-				p.drawText(r, _placeholder, _st.placeholderAlign);
+				const auto align = HorizontalTextAlign(_st.placeholderAlign);
+				const auto textWidth = _st.placeholderFont->width(_placeholder);
+				const auto textLeft = r.left()
+					+ ((align & Qt::AlignHCenter)
+						? (r.width() - textWidth) / 2.
+						: (align & Qt::AlignRight)
+						? (r.width() - textWidth) * 1.
+						: 0.);
+				p.drawText(QPointF(textLeft, baseline), _placeholder);
 			}
 
 			p.restore();
@@ -3904,6 +3921,17 @@ QMargins InputField::fullTextMargins() const {
 		+ QMargins(skip, skip, skip, 0)
 		+ _additionalMargins
 		+ _customFontMargins;
+}
+
+QMargins InputField::placeholderPaintMargins() const {
+	return fullTextMargins()
+		+ QMargins(0, _placeholderCustomFontSkip, 0, 0)
+		+ _st.placeholderMargins;
+}
+
+float64 InputField::nonScaledPlaceholderBaseline() const {
+	return placeholderPaintMargins().top()
+		+ QTextEditLineAscent(_st.placeholderFont, BlockLineHeight(_st));
 }
 
 void InputField::setDisplayFocused(bool focused) {

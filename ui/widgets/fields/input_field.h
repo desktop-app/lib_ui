@@ -418,6 +418,8 @@ private:
 	void updatePalette();
 	void refreshPlaceholder(const QString &text);
 	int placeholderSkipWidth() const;
+	[[nodiscard]] QMargins placeholderPaintMargins() const;
+	[[nodiscard]] float64 nonScaledPlaceholderBaseline() const;
 
 	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActions();
 	[[nodiscard]] static std::vector<MarkdownAction> MarkdownActionsNotes();
