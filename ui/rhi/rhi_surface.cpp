@@ -141,6 +141,7 @@ bool WindowUsesRhi(not_null<QWidget*> widget) {
 }
 
 void LogWindowRhi(const char *tag, not_null<QWidget*> widget) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 	const auto window = widget->window();
 	const auto handle = window->windowHandle();
 	if (!handle) {
@@ -162,6 +163,7 @@ void LogWindowRhi(const char *tag, not_null<QWidget*> widget) {
 		).arg(tag
 		).arg(surface
 		).arg(WindowUsesRhi(widget) ? u"YES"_q : u"no"_q));
+#endif // Qt >= 6.7
 }
 
 } // namespace Ui::GL
