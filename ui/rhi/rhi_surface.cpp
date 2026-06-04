@@ -8,6 +8,7 @@
 
 #include "ui/rhi/rhi_renderer.h"
 #include "ui/rp_widget.h"
+#include "ui/qt_object_factory.h"
 #include "ui/painter.h"
 #include "base/debug_log.h"
 #include "base/platform/base_platform_info.h"
@@ -15,7 +16,6 @@
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #include <QRhiWidget>
 #include <QBackingStore>
-#include <rhi/qrhi.h>
 #include <QtGui/QWindow>
 #include <qpa/qplatformbackingstore.h>
 #endif // Qt >= 6.7
@@ -41,31 +41,24 @@ protected:
 	void initialize(QRhiCommandBuffer *cb) override;
 	void render(QRhiCommandBuffer *cb) override;
 	void releaseResources() override;
-	bool eventHook(QEvent *e) override;
 
 private:
 	[[nodiscard]] Rhi::Renderer *rhiRenderer() const;
-	void ensureBackingStoreRhi();
 
 	const std::unique_ptr<Renderer> _renderer;
-	bool _backingStoreConfigured = false;
 
 };
 
 SurfaceRhi::SurfaceRhi(
 	QWidget *parent,
 	std::unique_ptr<Renderer> renderer)
-: RpWidgetBase<QRhiWidget, SurfaceRhiTraits>(parent)
-, _renderer(std::move(renderer)) {
+: _renderer(std::move(renderer)) {
 #ifdef Q_OS_MAC
-	setApi(::Platform::MetalSupported()
-		? QRhiWidget::Api::Metal
-		: QRhiWidget::Api::OpenGL);
-#elif defined(Q_OS_WIN)
-	setApi(QRhiWidget::Api::Direct3D11);
-#else
-	setApi(QRhiWidget::Api::OpenGL);
+	if (!::Platform::MetalSupported()) {
+		setApi(QRhiWidget::Api::OpenGL);
+	}
 #endif
+	setParent(parent);
 	LOG(("QRhi: SurfaceRhi created"));
 }
 
@@ -76,57 +69,6 @@ SurfaceRhi::~SurfaceRhi() {
 	// deletion is safe. This handles the deleteChildren() teardown
 	// path where Qt doesn't call releaseResources() automatically.
 	releaseResources();
-}
-
-void SurfaceRhi::ensureBackingStoreRhi() {
-	if (_backingStoreConfigured) {
-		return;
-	}
-	_backingStoreConfigured = true;
-
-	const auto tlw = window();
-	if (!tlw) {
-		return;
-	}
-	const auto wh = tlw->windowHandle();
-	if (!wh) {
-		return;
-	}
-	auto *bs = tlw->backingStore();
-	if (!bs) {
-		return;
-	}
-	auto *handle = bs->handle();
-	if (!handle) {
-		return;
-	}
-	QPlatformBackingStoreRhiConfig config;
-	config.setEnabled(true);
-#ifdef Q_OS_MAC
-	if (::Platform::MetalSupported()) {
-		config.setApi(QPlatformBackingStoreRhiConfig::Metal);
-		if (wh->surfaceType() != QSurface::MetalSurface) {
-			wh->setSurfaceType(QSurface::MetalSurface);
-		}
-	} else {
-		config.setApi(QPlatformBackingStoreRhiConfig::OpenGL);
-	}
-#elif defined(Q_OS_WIN)
-	config.setApi(QPlatformBackingStoreRhiConfig::D3D11);
-#else
-	config.setApi(QPlatformBackingStoreRhiConfig::OpenGL);
-#endif
-	LOG(("QRhi: Configuring backing store RHI for window"));
-	handle->createRhi(wh, config);
-}
-
-bool SurfaceRhi::eventHook(QEvent *e) {
-	if (e->type() == QEvent::Show
-		|| e->type() == QEvent::Paint
-		|| e->type() == QEvent::Resize) {
-		ensureBackingStoreRhi();
-	}
-	return RpWidgetBase<QRhiWidget, SurfaceRhiTraits>::eventHook(e);
 }
 
 void SurfaceRhi::initialize(QRhiCommandBuffer *cb) {
@@ -166,6 +108,60 @@ std::unique_ptr<RpWidgetWrap> CreateSurfaceRhi(
 	LOG(("QRhi: Not available (Qt < 6.7), falling back to raster."));
 	return nullptr;
 #endif // Qt >= 6.7
+}
+
+void EnsureWindowRhi(not_null<QWidget*> window) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	if (!WidgetsRhiEnabled()) {
+		return;
+	}
+	const auto primer = Ui::CreateChild<QRhiWidget>(window.get());
+#ifdef Q_OS_MAC
+	if (!::Platform::MetalSupported()) {
+		primer->setApi(QRhiWidget::Api::OpenGL);
+	}
+#endif
+	primer->setAttribute(Qt::WA_TransparentForMouseEvents);
+	primer->setGeometry(0, 0, 1, 1);
+	primer->hide();
+	LOG(("QRhi: backing store primed for window"));
+#endif // Qt >= 6.7
+}
+
+bool WindowUsesRhi(not_null<QWidget*> widget) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	const auto window = widget->window();
+	const auto handle = window->windowHandle();
+	const auto store = window->backingStore();
+	const auto platform = store ? store->handle() : nullptr;
+	return handle && platform && (platform->rhi(handle) != nullptr);
+#else // Qt >= 6.7
+	return false;
+#endif // Qt >= 6.7
+}
+
+void LogWindowRhi(const char *tag, not_null<QWidget*> widget) {
+	const auto window = widget->window();
+	const auto handle = window->windowHandle();
+	if (!handle) {
+		LOG(("QRhi-Check [%1]: window not realized yet.").arg(tag));
+		return;
+	}
+	const auto surface = [&]() -> QString {
+		switch (handle->surfaceType()) {
+		case QSurface::RasterSurface: return u"Raster"_q;
+		case QSurface::OpenGLSurface: return u"OpenGL"_q;
+		case QSurface::RasterGLSurface: return u"RasterGL"_q;
+		case QSurface::VulkanSurface: return u"Vulkan"_q;
+		case QSurface::MetalSurface: return u"Metal"_q;
+		case QSurface::Direct3DSurface: return u"Direct3D"_q;
+		}
+		return QString::number(int(handle->surfaceType()));
+	}();
+	LOG(("QRhi-Check [%1]: surface=%2, usesRhi=%3."
+		).arg(tag
+		).arg(surface
+		).arg(WindowUsesRhi(widget) ? u"YES"_q : u"no"_q));
 }
 
 } // namespace Ui::GL

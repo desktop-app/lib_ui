@@ -28,6 +28,8 @@ struct Capabilities {
 	bool transparency = false;
 };
 
+extern const char kOptionUseQtRhi[];
+
 [[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
 [[nodiscard]] Backend ChooseBackendDefault(Capabilities capabilities);
 

@@ -9,10 +9,12 @@
 #include "ui/gl/gl_shader.h"
 #include "ui/integration.h"
 #include "base/debug_log.h"
+#include "base/options.h"
 #include "base/platform/base_platform_info.h"
 
 #include <QtCore/QSet>
 #include <QtCore/QFile>
+#include <QtCore/QLibraryInfo>
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
@@ -31,6 +33,17 @@ namespace {
 
 bool ForceDisabled/* = false*/;
 bool LastCheckCrashed/* = false*/;
+
+base::options::toggle OptionUseQtRhi({
+	.id = kOptionUseQtRhi,
+	.name = "Use Qt RHI renderer",
+	.defaultValue = true,
+	.scope = [] {
+		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
+			&& QLibraryInfo::version() >= QVersionNumber(6, 7);
+	},
+	.restartRequired = true,
+});
 
 #ifdef DESKTOP_APP_USE_ANGLE
 ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
@@ -58,6 +71,8 @@ void CrashCheckStart() {
 }
 
 } // namespace
+
+const char kOptionUseQtRhi[] = "use-qt-rhi";
 
 Capabilities CheckCapabilities(QWidget *widget) {
 	if (WidgetsRhiEnabled()) {
@@ -219,7 +234,7 @@ Backend ChooseBackendDefault(Capabilities capabilities) {
 
 bool WidgetsRhiEnabled() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	return qEnvironmentVariableIsSet("QT_WIDGETS_RHI");
+	return OptionUseQtRhi.value();
 #else
 	return false;
 #endif
