@@ -1371,6 +1371,9 @@ historySendActionChooseStickerEyeWidth: 7px;
 historySendActionChooseStickerEyeHeight: 11px;
 historySendActionChooseStickerEyeStep: 2px;
 
+historySendActionRoundPosition: point(3px, -4px);
+historySendActionRoundRadius: 4px;
+
 PeerListItem {
 	left: pixels;
 	bottom: pixels;
