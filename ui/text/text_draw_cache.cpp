@@ -10,10 +10,11 @@ namespace Ui::Text {
 
 void DrawCache::clear() {
 	_lines.clear();
+	_paragraphs.clear();
 }
 
 bool DrawCache::empty() const {
-	return _lines.empty();
+	return _lines.empty() && _paragraphs.empty();
 }
 
 auto DrawCache::line(int index) -> Line & {
@@ -30,6 +31,65 @@ const DrawCache::Line *DrawCache::line(int index) const {
 		return nullptr;
 	}
 	return &_lines[index];
+}
+
+auto DrawCache::paragraph(
+		int start,
+		int length,
+		int startBlock,
+		Qt::LayoutDirection direction) -> Paragraph & {
+	for (auto &paragraph : _paragraphs) {
+		if (paragraph.start == start
+			&& paragraph.length == length
+			&& paragraph.startBlock == startBlock
+			&& paragraph.direction == direction) {
+			return paragraph;
+		}
+	}
+	auto &result = _paragraphs.emplace_back();
+	result.start = start;
+	result.length = length;
+	result.startBlock = startBlock;
+	result.direction = direction;
+	return result;
+}
+
+const DrawCache::Paragraph *DrawCache::paragraph(
+		int start,
+		int length,
+		int startBlock,
+		Qt::LayoutDirection direction) const {
+	for (const auto &paragraph : _paragraphs) {
+		if (paragraph.start == start
+			&& paragraph.length == length
+			&& paragraph.startBlock == startBlock
+			&& paragraph.direction == direction) {
+			return &paragraph;
+		}
+	}
+	return nullptr;
+}
+
+void SimpleTextCache::clear() {
+	data.clear();
+	forAvailableWidth = 0;
+}
+
+bool SimpleTextCache::empty() const {
+	return data.empty();
+}
+
+void DrawCached(
+		QPainter &p,
+		const String &string,
+		PaintContext &&context,
+		SimpleTextCache &cache) {
+	if (cache.forAvailableWidth != context.availableWidth) {
+		cache.clear();
+		cache.forAvailableWidth = context.availableWidth;
+	}
+	context.drawCache = &cache.data;
+	string.draw(p, context);
 }
 
 } // namespace Ui::Text

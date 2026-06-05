@@ -13,6 +13,9 @@
 #include "ui/text/text_stack_engine.h"
 #include "ui/text/text_word.h"
 #include "ui/style/style_core.h"
+
+#include <algorithm>
+
 #include "styles/style_basic.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -646,6 +649,34 @@ void Renderer::initParagraphBidi() {
 		return;
 	}
 
+	const auto paragraphStartBlock = int(
+		_paragraphStartBlock - _t->_blocks.cbegin());
+	if (_drawCache) {
+		auto &cached = _drawCache->paragraph(
+			_paragraphStart,
+			_paragraphLength,
+			paragraphStartBlock,
+			_paragraphDirection);
+		if (cached.analysis.empty()) {
+			cached.analysis.resize(_paragraphLength);
+			BidiAlgorithm bidi(
+				_str + _paragraphStart,
+				cached.analysis.data(),
+				_paragraphLength,
+				(_paragraphDirection == Qt::RightToLeft),
+				_paragraphStartBlock,
+				_t->_blocks.cend(),
+				_paragraphStart);
+			bidi.process();
+		}
+		_paragraphAnalysis.resize(_paragraphLength);
+		std::copy(
+			cached.analysis.begin(),
+			cached.analysis.end(),
+			_paragraphAnalysis.data());
+		return;
+	}
+
 	_paragraphAnalysis.resize(_paragraphLength);
 	BidiAlgorithm bidi(
 		_str + _paragraphStart,
@@ -881,10 +912,6 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	}
 	if (trimmedLineEnd == _lineStart && !_elidedLine) {
 		return true;
-	}
-
-	if (!_elidedLine) {
-		initParagraphBidi(); // if was not inited
 	}
 
 	_f = _t->_st->font;
@@ -1528,6 +1555,33 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		&& !_elidedLine
 		&& !_elisionMiddle;
 	if (useCachedShape) {
+		const auto cachedLine = static_cast<const DrawCache*>(
+			_drawCache)->line(cacheLineIndex);
+		if (cachedLine && cachedLine->shape) {
+			const auto shape = cachedLine->shape.get();
+			if (!shape->nItems) {
+				return true;
+			}
+			auto &e = shape->engine->wrapped();
+			return paintItems(
+				e,
+				shape->firstItem,
+				shape->nItems,
+				[&](int visualIndex) {
+					return shape->visualOrder[visualIndex];
+				},
+				[&](int item) {
+					return begin(_t->_blocks)
+						+ shape->blockIndices[item - shape->firstItem];
+				});
+		}
+	}
+
+	if (!_elidedLine) {
+		initParagraphBidi(); // if was not inited
+	}
+
+	if (useCachedShape) {
 		const auto shape = PrepareCachedLineShape(
 			_drawCache,
 			cacheLineIndex,
@@ -1543,7 +1597,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			lineStart,
 			lineLength);
 		if (!shape->nItems) {
-			return !_elidedLine;
+			return true;
 		}
 		auto &e = shape->engine->wrapped();
 		return paintItems(

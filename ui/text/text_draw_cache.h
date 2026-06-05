@@ -47,14 +47,47 @@ public:
 		std::unique_ptr<Shape> shape;
 	};
 
+	struct Paragraph final {
+		int start = 0;
+		int length = 0;
+		int startBlock = 0;
+		Qt::LayoutDirection direction = Qt::LayoutDirectionAuto;
+		std::vector<QScriptAnalysis> analysis;
+	};
+
 	void clear();
 	[[nodiscard]] bool empty() const;
 	Line &line(int index);
 	[[nodiscard]] const Line *line(int index) const;
+	Paragraph &paragraph(
+		int start,
+		int length,
+		int startBlock,
+		Qt::LayoutDirection direction);
+	[[nodiscard]] const Paragraph *paragraph(
+		int start,
+		int length,
+		int startBlock,
+		Qt::LayoutDirection direction) const;
 
 private:
 	std::vector<Line> _lines;
+	std::vector<Paragraph> _paragraphs;
 
 };
+
+struct SimpleTextCache final {
+	DrawCache data;
+	int forAvailableWidth = 0;
+
+	void clear();
+	[[nodiscard]] bool empty() const;
+};
+
+void DrawCached(
+	QPainter &p,
+	const String &string,
+	PaintContext &&context,
+	SimpleTextCache &cache);
 
 } // namespace Ui::Text
