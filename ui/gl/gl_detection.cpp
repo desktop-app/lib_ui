@@ -26,6 +26,14 @@
 #include <EGL/egl.h>
 #endif // DESKTOP_APP_USE_ANGLE
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#include <rhi/qrhi.h>
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
+#include <QtGui/QOffscreenSurface>
+#include <QtGui/QSurfaceFormat>
+#endif // !Q_OS_MAC && !Q_OS_WIN
+#endif // Qt >= 6.7
+
 #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
 
 namespace Ui::GL {
@@ -69,6 +77,58 @@ void CrashCheckStart() {
 		f.close();
 	}
 }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+[[nodiscard]] RhiCapabilities ProbeRhiCapabilities() {
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
+	auto offscreen = std::unique_ptr<QOffscreenSurface>();
+#endif // !Q_OS_MAC && !Q_OS_WIN
+	auto rhi = std::unique_ptr<QRhi>();
+#ifdef Q_OS_MAC
+	if (Platform::MetalSupported()) {
+		auto params = QRhiMetalInitParams();
+		rhi.reset(QRhi::create(QRhi::Metal, &params));
+	}
+#elif defined(Q_OS_WIN) // Q_OS_MAC
+	auto params = QRhiD3D11InitParams();
+	rhi.reset(QRhi::create(QRhi::D3D11, &params));
+#else // Q_OS_MAC || Q_OS_WIN
+	const auto tryCreate = [&](QSurfaceFormat format) {
+		offscreen.reset(QRhiGles2InitParams::newFallbackSurface(format));
+		if (!offscreen) {
+			return;
+		}
+		auto params = QRhiGles2InitParams();
+		params.format = format;
+		params.fallbackSurface = offscreen.get();
+		rhi.reset(QRhi::create(QRhi::OpenGLES2, &params));
+	};
+	// Compute needs a 4.3 core context, plain 3D rendering does not. Probe
+	// the richer format first to detect compute, then fall back so a
+	// render-only GPU still counts as supported.
+	auto format = QSurfaceFormat::defaultFormat();
+	format.setVersion(4, 3);
+	format.setProfile(QSurfaceFormat::CoreProfile);
+	tryCreate(format);
+	if (!rhi) {
+		tryCreate(QSurfaceFormat::defaultFormat());
+	}
+#endif // Q_OS_MAC || Q_OS_WIN
+	if (!rhi) {
+		LOG(("RHI: Probe failed, no device."));
+		return {};
+	}
+	const auto compute = rhi->isFeatureSupported(QRhi::Compute);
+	LOG(("RHI: Probe backend=%1 device=%2 compute=%3."
+		).arg(rhi->backendName()
+		).arg(rhi->driverInfo().deviceName
+		).arg(compute ? "yes" : "no"));
+	return {
+		.supported = true,
+		.compute = compute,
+	};
+}
+#endif // Qt >= 6.7
 
 } // namespace
 
@@ -237,6 +297,15 @@ bool WidgetsRhiEnabled() {
 	return OptionUseQtRhi.value();
 #else
 	return false;
+#endif
+}
+
+RhiCapabilities CheckRhiCapabilities() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	static const auto result = ProbeRhiCapabilities();
+	return result;
+#else
+	return {};
 #endif
 }
 

@@ -28,12 +28,18 @@ struct Capabilities {
 	bool transparency = false;
 };
 
+struct RhiCapabilities {
+	bool supported = false;
+	bool compute = false;
+};
+
 extern const char kOptionUseQtRhi[];
 
 [[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
 [[nodiscard]] Backend ChooseBackendDefault(Capabilities capabilities);
 
 [[nodiscard]] bool WidgetsRhiEnabled();
+[[nodiscard]] RhiCapabilities CheckRhiCapabilities();
 
 void ForceDisable(bool disable);
 

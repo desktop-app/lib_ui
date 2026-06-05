@@ -29,6 +29,14 @@ struct SurfaceRhiTraits : RpWidgetDefaultTraits {
 	static constexpr bool kSetZeroGeometry = false;
 };
 
+void ApplyRhiApi(QRhiWidget *widget) {
+#ifdef Q_OS_MAC
+	if (!::Platform::MetalSupported()) {
+		widget->setApi(QRhiWidget::Api::OpenGL);
+	}
+#endif
+}
+
 } // namespace
 
 class SurfaceRhi final
@@ -53,11 +61,7 @@ SurfaceRhi::SurfaceRhi(
 	QWidget *parent,
 	std::unique_ptr<Renderer> renderer)
 : _renderer(std::move(renderer)) {
-#ifdef Q_OS_MAC
-	if (!::Platform::MetalSupported()) {
-		setApi(QRhiWidget::Api::OpenGL);
-	}
-#endif
+	ApplyRhiApi(this);
 	setParent(parent);
 	LOG(("QRhi: SurfaceRhi created"));
 }
@@ -116,11 +120,7 @@ void EnsureWindowRhi(not_null<QWidget*> window) {
 		return;
 	}
 	const auto primer = Ui::CreateChild<QRhiWidget>(window.get());
-#ifdef Q_OS_MAC
-	if (!::Platform::MetalSupported()) {
-		primer->setApi(QRhiWidget::Api::OpenGL);
-	}
-#endif
+	ApplyRhiApi(primer);
 	primer->setAttribute(Qt::WA_TransparentForMouseEvents);
 	primer->setGeometry(0, 0, 1, 1);
 	primer->hide();
