@@ -8,6 +8,7 @@
 
 #include "ui/text/text_bidi_algorithm.h"
 #include "ui/text/text_block.h"
+#include "ui/text/text_draw_cache.h"
 #include "ui/text/text_extended_data.h"
 #include "ui/text/text_stack_engine.h"
 #include "ui/text/text_word.h"
@@ -72,6 +73,116 @@ void AppendRange(
 		}
 	}
 	ranges.push_back(range);
+}
+
+void RememberCachedLineLayout(
+		not_null<DrawCache*> cache,
+		int lineIndex,
+		int lineStart,
+		int lineEnd,
+		int lineStartBlock,
+		int blocksEnd,
+		int y,
+		int height,
+		int ascent,
+		int startLineWidth,
+		QFixed lineWidth,
+		QFixed widthLeft,
+		bool elided) {
+	auto &line = cache->line(lineIndex);
+	if (line.shape
+		&& (line.lineStart != lineStart
+			|| line.lineEnd != lineEnd
+			|| line.lineStartBlock != lineStartBlock
+			|| line.blocksEnd != blocksEnd
+			|| line.elided != elided)) {
+		line.shape.reset();
+	}
+	line.lineStart = lineStart;
+	line.lineEnd = lineEnd;
+	line.lineStartBlock = lineStartBlock;
+	line.blocksEnd = blocksEnd;
+	line.y = y;
+	line.height = height;
+	line.ascent = ascent;
+	line.startLineWidth = startLineWidth;
+	line.lineWidth = lineWidth;
+	line.widthLeft = widthLeft;
+	line.elided = elided;
+	line.metadataReady = true;
+}
+
+auto PrepareCachedLineShape(
+		not_null<DrawCache*> cache,
+		int lineIndex,
+		not_null<const String*> text,
+		const std::vector<Block> &blocks,
+		int localFrom,
+		const QString &lineText,
+		gsl::span<const QScriptAnalysis> analysis,
+		int lineStartBlock,
+		int blocksSize,
+		int lineStart,
+		int lineLength) -> DrawCache::Shape * {
+	auto &line = cache->line(lineIndex);
+	if (line.shape) {
+		return line.shape.get();
+	}
+
+	line.shape = std::make_unique<DrawCache::Shape>();
+	const auto shape = line.shape.get();
+	shape->text = QString(lineText.constData(), lineText.size());
+	shape->analysis.assign(analysis.begin(), analysis.end());
+	shape->localFrom = localFrom;
+	shape->lineStart = lineStart;
+	shape->lineLength = lineLength;
+	shape->engine = std::make_unique<StackEngine>(
+		text,
+		localFrom,
+		shape->text,
+		gsl::span(shape->analysis),
+		lineStartBlock,
+		blocksSize);
+
+	auto &e = shape->engine->wrapped();
+	const auto firstItem = e.findItem(lineStart);
+	const auto lastItem = e.findItem(lineStart + lineLength - 1);
+	const auto nItems = (firstItem >= 0 && lastItem >= firstItem)
+		? (lastItem - firstItem + 1)
+		: 0;
+	shape->firstItem = firstItem;
+	shape->nItems = nItems;
+	if (!nItems) {
+		return shape;
+	}
+
+	auto skipIndex = -1;
+	auto levels = QVarLengthArray<uchar>(nItems);
+	shape->visualOrder.resize(nItems);
+	shape->blockIndices.resize(nItems);
+	for (auto i = 0; i < nItems; ++i) {
+		const auto blockIt = shape->engine->shapeGetBlock(firstItem + i);
+		shape->blockIndices[i] = int(blockIt - begin(blocks));
+		auto &si = e.layoutData->items[firstItem + i];
+		if ((*blockIt)->type() == TextBlockType::Skip) {
+			levels[i] = si.analysis.bidiLevel = 0;
+			skipIndex = i;
+		} else {
+			levels[i] = si.analysis.bidiLevel;
+		}
+	}
+	QTextEngine::bidiReorder(
+		nItems,
+		levels.data(),
+		shape->visualOrder.data());
+	if (style::RightToLeft() && skipIndex == nItems - 1) {
+		for (auto i = nItems; i > 1;) {
+			--i;
+			shape->visualOrder[i] = shape->visualOrder[i - 1];
+		}
+		shape->visualOrder[0] = skipIndex;
+	}
+	return shape;
 }
 
 } // namespace
@@ -161,6 +272,7 @@ void Renderer::draw(QPainter &p, const PaintContext &context) {
 	_quoteBlockquoteCache = context.blockquote;
 	_elisionMiddle = context.elisionMiddle && (context.elisionLines == 1);
 	_linePostprocess = context.linePostprocess;
+	_drawCache = context.drawCache;
 	enumerate();
 }
 
@@ -602,7 +714,30 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	if (_yTo >= 0 && _y >= _yTo) {
 		return false;
 	}
+	const auto cacheLineIndex = _lineIndex - 1;
+	const auto rememberCacheMetadata = [&] {
+		if (!_drawCache) {
+			return;
+		}
+		RememberCachedLineLayout(
+			_drawCache,
+			cacheLineIndex,
+			_lineStart,
+			lineEnd,
+			_lineStartBlock,
+			(blocksEnd == end(_t->_blocks))
+				? _blocksSize
+				: int(blocksEnd - begin(_t->_blocks)),
+			_y,
+			_lineHeight,
+			_lineAscent,
+			_startLineWidth,
+			_lineWidth,
+			_wLeft,
+			_elidedLine);
+	};
 	if (_y + _lineHeight <= _yFrom) {
+		rememberCacheMetadata();
 		if (_lookupSymbol) {
 			_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
 			_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
@@ -664,6 +799,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	auto lineStart = extendLeft;
 	auto lineLength = trimmedLineEnd - _lineStart;
 
+	rememberCacheMetadata();
 	if (_elidedLine) {
 		if (_elisionMiddle) {
 			_paragraphLength = lineLength;
@@ -756,6 +892,673 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		? (_lineWidth.toReal() - _f->elidew) / 2.
 		: -1;
 	auto rightLineLengthLeft = leftLineLengthLeft;
+
+	const auto paintItems = [&](
+			QTextEngine &e,
+			int firstItem,
+			int nItems,
+			const auto &visualOrderAt,
+			const auto &blockItForItem) -> bool {
+		auto textY = _y + _lineAscent;
+		auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
+		const auto customObjectRect = [&](
+				CustomEmoji *custom,
+				QFixed x,
+				const std::optional<CustomEmojiVerticalMetrics> &vertical) {
+			return QRect(
+				x.toInt(),
+				_y + (vertical
+					? (_lineAscent - vertical->ascent)
+					: (_yDelta + emojiY)),
+				custom->width(),
+				vertical ? vertical->height() : st::emojiSize);
+		};
+		const auto fillBackground = [&](
+				FixedRange range,
+				int top,
+				int height,
+				const QBrush &brush) {
+			if (range.empty() || brush.style() == Qt::NoBrush) {
+				return;
+			}
+			const auto left = range.from.toInt();
+			const auto width = range.till.toInt() - left;
+			_p->fillRect(left, top, width, height, brush);
+		};
+		const auto fillMarked = [&](FixedRange range, int top, int height) {
+			if (!_palette || !_palette->markBg->c.alpha()) {
+				return;
+			}
+			fillBackground(range, top, height, _palette->markBg->b);
+		};
+		const auto fillColorizedBackground = [&](
+				FixedRange range,
+				FixedRange selected,
+				int top,
+				int height) {
+			if (!_background.brush) {
+				return;
+			}
+			if (selected.empty()) {
+				fillBackground(range, top, height, *_background.brush);
+				return;
+			}
+			if (range.from < selected.from) {
+				fillBackground(
+					{ range.from, selected.from },
+					top,
+					height,
+					*_background.brush);
+			}
+			if (const auto selectedBrush = _background.brushSelected) {
+				fillBackground(selected, top, height, *selectedBrush);
+			} else if (_palette && _palette->selectBg->c.alpha()) {
+				fillBackground(selected, top, height, _palette->selectBg->b);
+			}
+			if (selected.till < range.till) {
+				fillBackground(
+					{ selected.till, range.till },
+					top,
+					height,
+					*_background.brush);
+			}
+		};
+
+		auto lastLeftToMiddleX = x;
+		const auto lastItem = firstItem + nItems - 1;
+
+		_f = style::font();
+		for (int i = 0; i < nItems; ++i) {
+			const auto paintRightToMiddleElision = (leftLineLengthLeft == 0);
+			const auto item = firstItem + visualOrderAt(paintRightToMiddleElision
+				? (nItems - 1 - i)
+				: i);
+			const auto blockIt = blockItForItem(item);
+			const auto block = blockIt->get();
+			const auto isLastItem = (item == lastItem);
+			const auto &si = e.layoutData->items.at(item);
+			const auto rtl = (si.analysis.bidiLevel % 2);
+
+			applyBlockProperties(e, block);
+			const auto marked = (block->flags() & TextBlockFlag::Marked);
+			const auto baselineShift = _t->blockBaselineShift(block);
+			const auto textTop = textY + baselineShift - _f->ascent;
+			const auto textHeight = _f->height;
+			if (si.analysis.flags >= QScriptAnalysis::TabOrObject) {
+				const auto _type = block->type();
+				if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
+					if (_elisionMiddle) {
+						return false;
+					}
+					if (_lookupLink) {
+						if (_lookupY >= _y && _lookupY < _y + _lineHeight) {
+							if (const auto link = lookupLink(block)) {
+								_lookupResult.link = link;
+							}
+						}
+					}
+					if (_type != TextBlockType::Skip) {
+						_lookupResult.uponSymbol = true;
+					}
+					if (_lookupSymbol) {
+						if (_type == TextBlockType::Skip) {
+							if (_paragraphDirection == Qt::RightToLeft) {
+								_lookupResult.symbol = _lineStart;
+								_lookupResult.afterSymbol = false;
+							} else {
+								_lookupResult.symbol = (trimmedLineEnd > _lineStart) ? (trimmedLineEnd - 1) : _lineStart;
+								_lookupResult.afterSymbol = (trimmedLineEnd > _lineStart) ? true : false;
+							}
+							return false;
+						}
+
+						// Emoji with spaces after symbol lookup
+						auto chFrom = _str + _t->blockPosition(blockIt);
+						auto chTo = _str + _t->blockEnd(blockIt);
+						while (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space) {
+							--chTo;
+						}
+						if (_lookupX < x + (block->objectWidth() / 2)) {
+							_lookupResult.symbol = ((rtl && chTo > chFrom) ? (chTo - 1) : chFrom) - _str;
+							_lookupResult.afterSymbol = (rtl && chTo > chFrom) ? true : false;
+						} else {
+							_lookupResult.symbol = ((rtl || chTo <= chFrom) ? chFrom : (chTo - 1)) - _str;
+							_lookupResult.afterSymbol = (rtl || chTo <= chFrom) ? false : true;
+						}
+					}
+					return false;
+				} else if (_p
+					&& (_type == TextBlockType::Emoji
+						|| _type == TextBlockType::CustomEmoji)) {
+					if (_elisionMiddle && !paintRightToMiddleElision) {
+						if (leftLineLengthLeft - si.width.toReal() < 0) {
+							leftLineLengthLeft = 0;
+							i = -1;
+							lastLeftToMiddleX = (x + si.width);
+							_p->setPen(*_currentPen);
+							rightLineLengthLeft = std::ceil((x).toReal()) - _x.toReal() - _f->elidew;
+						} else {
+							leftLineLengthLeft -= si.width.toReal();
+							leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
+						}
+					} else if (_elisionMiddle && paintRightToMiddleElision && rightLineLengthLeft) {
+						if (i == 0) {
+							x = _x + _lineWidth;
+						}
+						if (rightLineLengthLeft - si.width.toReal() < 0) {
+							rightLineLengthLeft = 0;
+							i = nItems;
+							{
+								_p->setPen(*_currentPen);
+								const auto bigWidth = x - lastLeftToMiddleX;
+								const auto smallWidth = _f->elidew;
+								const auto left = lastLeftToMiddleX;
+								_p->setFont(WithFlags(
+									_t->_st->font,
+									(block->flags()
+										& ~(TextBlockFlag::Subscript
+											| TextBlockFlag::Superscript))));
+								_p->drawText(
+									(left + (bigWidth - smallWidth) / 2).toReal(),
+									textY,
+									kQEllipsis);
+							}
+							continue;
+						} else {
+							rightLineLengthLeft -= si.width.toReal();
+							rightLineLengthLeft = std::max(0.01, rightLineLengthLeft);
+						}
+						x -= si.width;
+					}
+					const auto fillSelect = _background.selectActiveBlock
+						? FixedRange{ x, x + si.width }
+						: findSelectObjectRange(
+							si,
+							blockIt,
+							x,
+							_selection);
+					CustomEmoji *custom = nullptr;
+					if (_type == TextBlockType::CustomEmoji) {
+						custom = static_cast<const CustomEmojiBlock*>(block)->custom();
+					}
+					const auto vertical = custom
+						? custom->vertical(*_t->_st)
+						: std::nullopt;
+					const auto box = custom
+						? customObjectRect(
+							custom,
+							x,
+							vertical)
+						: QRect();
+					if (custom) {
+						if (marked) {
+							fillMarked(
+								{ x, x + si.width },
+								box.top(),
+								box.height());
+						}
+						if (_background.brush) {
+							fillColorizedBackground(
+								{ x, x + si.width },
+								fillSelect,
+								box.top(),
+								box.height());
+						} else {
+							fillSelectRange(
+								fillSelect,
+								box.top(),
+								box.height());
+						}
+					} else {
+						if (_background.brush) {
+							fillColorizedBackground(
+								{ x, x + si.width },
+								fillSelect,
+								_y + _yDelta,
+								_fontHeight);
+						} else {
+							fillSelectRange(fillSelect);
+						}
+					}
+					if (_highlight) {
+						pushHighlightRange(findSelectObjectRange(
+							si,
+							blockIt,
+							x,
+							_highlight->range));
+					}
+
+					const auto hasSpoiler = _background.spoiler
+						&& (_spoilerOpacity > 0.);
+					const auto fillSpoiler = hasSpoiler
+						? FixedRange{ x, x + si.width }
+						: FixedRange();
+					const auto opacity = _p->opacity();
+					if (!hasSpoiler || _spoilerOpacity < 1.) {
+						if (hasSpoiler) {
+							_p->setOpacity(opacity * (1. - _spoilerOpacity));
+						}
+						const auto ex = (x + st::emojiPadding).toInt();
+						const auto ey = _y + _yDelta + emojiY;
+						if (_type == TextBlockType::Emoji) {
+							Emoji::Draw(
+								*_p,
+								static_cast<const EmojiBlock*>(block)->emoji(),
+								Emoji::GetSizeNormal(),
+								ex,
+								ey);
+						} else if (_type == TextBlockType::CustomEmoji) {
+							const auto custom = static_cast<const CustomEmojiBlock*>(block)->custom();
+							const auto selected = (fillSelect.from <= x)
+								&& (fillSelect.till > x);
+							const auto color = (selected
+								? _currentPenSelected
+								: _currentPen)->color();
+							if (!_customEmojiContext) {
+								_customEmojiContext = CustomEmoji::Context{
+									.textColor = color,
+									.now = now(),
+									.paused = _pausedEmoji,
+								};
+								_customEmojiSkip = (st::emojiSize
+									- AdjustCustomEmojiSize(st::emojiSize)) / 2;
+							} else {
+								_customEmojiContext->textColor = color;
+							}
+							const auto replacementText = custom->replacementText();
+							const auto semantics = custom->semantics();
+							const auto showFallbackText = !semantics.isRealCustomEmoji
+								&& !replacementText.isEmpty()
+								&& !custom->ready()
+								&& !custom->readyInDefaultState();
+							if (!showFallbackText) {
+								_customEmojiContext->position = vertical
+									? box.topLeft()
+									: QPoint(
+										ex + _customEmojiSkip,
+										ey + _customEmojiSkip);
+								custom->paint(*_p, *_customEmojiContext);
+							}
+							if (showFallbackText) {
+								_p->save();
+								_p->setClipRect(box, Qt::IntersectClip);
+								_p->setPen(((fillSelect.from <= x)
+									&& (fillSelect.till > x))
+									? *_currentPenSelected
+									: *_currentPen);
+								_p->drawText(
+									box,
+									Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+									replacementText);
+								_p->restore();
+							}
+						}
+						if (hasSpoiler) {
+							_p->setOpacity(opacity);
+						}
+					}
+					if (hasSpoiler) {
+						// Elided item should be a text item
+						// with '...' at the end, so this should not be it.
+						const auto isElidedItem = false;
+						pushSpoilerRange(
+							fillSpoiler,
+							fillSelect,
+							isElidedItem,
+							rtl);
+					}
+				//} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
+				//	_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
+				}
+				x += si.width;
+				if (paintRightToMiddleElision) {
+					x -= si.width;
+				}
+				continue;
+			}
+
+			unsigned short *logClusters = e.logClusters(&si);
+			QGlyphLayout glyphs = e.shapedGlyphs(&si);
+
+			int itemStart = qMax(lineStart, si.position), itemEnd;
+			int itemLength = e.length(item);
+			int glyphsStart = logClusters[itemStart - si.position], glyphsEnd;
+			if (lineStart + lineLength < si.position + itemLength) {
+				itemEnd = lineStart + lineLength;
+				glyphsEnd = logClusters[itemEnd - si.position];
+			} else {
+				itemEnd = si.position + itemLength;
+				glyphsEnd = si.num_glyphs;
+			}
+
+			const auto isSpaceGlyph = [&](int g) {
+				if (!glyphs.attributes[g].dontPrint) {
+					return false;
+				}
+				for (auto p = itemStart; p < itemEnd; ++p) {
+					if (logClusters[p - si.position] == g) {
+						return lineText.at(p).isSpace();
+					}
+				}
+				return false;
+			};
+
+			QFixed itemWidth = 0;
+			for (int g = glyphsStart; g < glyphsEnd; ++g)
+				itemWidth += glyphs.effectiveAdvance(g);
+
+			if (_elisionMiddle && !paintRightToMiddleElision) {
+				itemWidth = 0;
+				for (int g = glyphsStart; g < glyphsEnd; ++g) {
+					const auto adv = glyphs.effectiveAdvance(g);
+					if (leftLineLengthLeft - adv.toReal() < 0) {
+						leftLineLengthLeft = 0;
+						if (isSpaceGlyph(g)) {
+							rightLineLengthLeft += _f->spacew;
+						}
+						glyphsEnd = g;
+						i = -1;
+						lastLeftToMiddleX = (x + itemWidth);
+						break;
+					} else {
+						leftLineLengthLeft -= adv.toReal();
+						leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
+						itemWidth += adv;
+					}
+				}
+			}
+			if (_elisionMiddle && paintRightToMiddleElision && rightLineLengthLeft) {
+				itemWidth = 0;
+				if (i == 0) {
+					x = _x + _lineWidth;
+				}
+				for (int g = glyphsEnd - 1; g >= glyphsStart; --g) {
+					const auto adv = glyphs.effectiveAdvance(g);
+					if (rightLineLengthLeft - adv.toReal() < 0) {
+						rightLineLengthLeft = 0;
+						glyphsStart = std::min(g + 1, glyphsEnd - 1);
+						i = nItems;
+						if (isSpaceGlyph(glyphsStart)) {
+							x -= _f->spacew;
+						}
+						{
+							_p->setPen(*_currentPen);
+							const auto bigWidth = x - itemWidth - lastLeftToMiddleX;
+							const auto smallWidth = _f->elidew;
+							const auto left = lastLeftToMiddleX;
+							_p->setFont(WithFlags(
+								_t->_st->font,
+								(block->flags()
+									& ~(TextBlockFlag::Subscript
+										| TextBlockFlag::Superscript))));
+							_p->drawText(
+								(left + (bigWidth - smallWidth) / 2).toReal(),
+								textY,
+								kQEllipsis);
+						}
+						break;
+					} else {
+						rightLineLengthLeft -= adv.toReal();
+						rightLineLengthLeft = std::max(0.01, rightLineLengthLeft);
+						itemWidth += adv;
+					}
+				}
+				x -= itemWidth;
+			}
+
+			if (!_p && _lookupX >= x && _lookupX < x + itemWidth) { // _lookupRequest
+				if (_elisionMiddle) {
+					return false;
+				}
+				if (_lookupLink) {
+					if (_lookupY >= textTop && _lookupY < textTop + textHeight) {
+						if (const auto link = lookupLink(block)) {
+							_lookupResult.link = link;
+						}
+					}
+				}
+				_lookupResult.uponSymbol = true;
+				if (_lookupSymbol) {
+					QFixed tmpx = rtl ? (x + itemWidth) : x;
+					for (int ch = 0, g, itemL = itemEnd - itemStart; ch < itemL;) {
+						g = logClusters[itemStart - si.position + ch];
+						QFixed gwidth = glyphs.effectiveAdvance(g);
+						// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
+						int ch2 = ch + 1;
+						while ((ch2 < itemL) && (g == logClusters[itemStart - si.position + ch2])) {
+							++ch2;
+						}
+						for (int charsCount = (ch2 - ch); ch < ch2; ++ch) {
+							QFixed shift1 = QFixed(2 * (charsCount - (ch2 - ch)) + 2) * gwidth / QFixed(2 * charsCount),
+								shift2 = QFixed(2 * (charsCount - (ch2 - ch)) + 1) * gwidth / QFixed(2 * charsCount);
+							if ((rtl && _lookupX >= tmpx - shift1) ||
+								(!rtl && _lookupX < tmpx + shift1)) {
+								_lookupResult.symbol = _localFrom + itemStart + ch;
+								if ((rtl && _lookupX >= tmpx - shift2) ||
+									(!rtl && _lookupX < tmpx + shift2)) {
+									_lookupResult.afterSymbol = false;
+								} else {
+									_lookupResult.afterSymbol = true;
+								}
+								return false;
+							}
+						}
+						if (rtl) {
+							tmpx -= gwidth;
+						} else {
+							tmpx += gwidth;
+						}
+					}
+					if (itemEnd > itemStart) {
+						_lookupResult.symbol = _localFrom + itemEnd - 1;
+						_lookupResult.afterSymbol = true;
+					} else {
+						_lookupResult.symbol = _localFrom + itemStart;
+						_lookupResult.afterSymbol = false;
+					}
+				}
+				return false;
+			} else if (_p) {
+				QTextItemInt gf;
+				gf.glyphs = glyphs.mid(glyphsStart, glyphsEnd - glyphsStart);
+				gf.f = &e.fnt;
+				gf.chars = e.layoutData->string.unicode() + itemStart;
+				gf.num_chars = itemEnd - itemStart;
+				gf.fontEngine = e.fontEngine(si);
+				gf.logClusters = logClusters + itemStart - si.position;
+				gf.width = itemWidth;
+				gf.justified = false;
+				InitTextItemWithScriptItem(gf, si);
+
+				const auto itemRange = FixedRange{ x, x + itemWidth };
+				auto selectedRect = QRect();
+				auto fillSelect = itemRange;
+				if (!_background.selectActiveBlock) {
+					fillSelect = findSelectTextRange(
+						si,
+						itemStart,
+						itemEnd,
+						x,
+						itemWidth,
+						gf,
+						_selection);
+					const auto from = fillSelect.from.toInt();
+					selectedRect = QRect(
+						from,
+						textTop,
+						fillSelect.till.toInt() - from,
+						textHeight);
+				}
+				const auto hasSelected = !fillSelect.empty();
+				const auto hasNotSelected = (fillSelect.from != itemRange.from)
+					|| (fillSelect.till != itemRange.till);
+				if (marked) {
+					fillMarked(itemRange, textTop, textHeight);
+				}
+				if (_background.brush) {
+					fillColorizedBackground(
+						itemRange,
+						fillSelect,
+						textTop,
+						textHeight);
+				} else {
+					fillSelectRange(fillSelect, textTop, textHeight);
+				}
+
+				if (_highlight) {
+					pushHighlightRange(findSelectTextRange(
+						si,
+						itemStart,
+						itemEnd,
+						x,
+						itemWidth,
+						gf,
+						_highlight->range));
+				}
+				const auto hasSpoiler = _background.spoiler
+					&& (_spoilerOpacity > 0.);
+				const auto opacity = _p->opacity();
+				const auto isElidedBlock = _indexOfElidedBlock
+					== int(blockIt - begin(_t->_blocks));
+				const auto isElidedItem = isElidedBlock && isLastItem;
+				const auto complexClipping = hasSpoiler
+					&& isElidedItem
+					&& (_spoilerOpacity == 1.);
+				if (!hasSpoiler || (_spoilerOpacity < 1.) || isElidedItem) {
+					const auto complexClippingEnabled = complexClipping
+						&& _p->hasClipping();
+					const auto complexClippingRegion = complexClipping
+						? _p->clipRegion()
+						: QRegion();
+					if (complexClipping) {
+						const auto elided = isElidedBlock ? _f->elidew : 0;
+						_p->setClipRect(
+							QRect(
+								(rtl
+									? x.toInt()
+									: (x + itemWidth).toInt() - elided),
+								_y - _lineHeight,
+								elided,
+								_y + 2 * _lineHeight),
+							Qt::IntersectClip);
+					} else if (hasSpoiler && !isElidedItem) {
+						_p->setOpacity(opacity * (1. - _spoilerOpacity));
+					}
+					if (Q_UNLIKELY(hasSelected)) {
+						if (Q_UNLIKELY(hasNotSelected)) {
+							// There is a bug in retina QPainter clipping stack.
+							// You can see glitches in rendering in such text:
+							// aA
+							// Aa
+							// Where selection is both 'A'-s.
+							// I can't debug it right now, this is a workaround.
+#ifdef Q_OS_MAC
+							_p->save();
+#endif // Q_OS_MAC
+							const auto clippingEnabled = _p->hasClipping();
+							const auto clippingRegion = _p->clipRegion();
+							_p->setClipRect(selectedRect, Qt::IntersectClip);
+							_p->setPen(*_currentPenSelected);
+							_p->drawTextItem(
+								QPointF(x.toReal(), textY + baselineShift),
+								gf);
+							const auto externalClipping = clippingEnabled
+								? clippingRegion
+								: QRegion(QRect(
+									(_x - _lineWidth).toInt(),
+									_y - _lineHeight,
+									(_x + 2 * _lineWidth).toInt(),
+									_y + 2 * _lineHeight));
+							_p->setClipRegion(externalClipping - selectedRect);
+							_p->setPen(*_currentPen);
+							_p->drawTextItem(
+								QPointF(x.toReal(), textY + baselineShift),
+								gf);
+#ifdef Q_OS_MAC
+							_p->restore();
+#else // Q_OS_MAC
+							if (clippingEnabled) {
+								_p->setClipRegion(clippingRegion);
+							} else {
+								_p->setClipping(false);
+							}
+#endif // Q_OS_MAC
+						} else {
+							_p->setPen(*_currentPenSelected);
+							_p->drawTextItem(
+								QPointF(x.toReal(), textY + baselineShift),
+								gf);
+						}
+					} else {
+						_p->setPen(*_currentPen);
+						_p->drawTextItem(
+							QPointF(x.toReal(), textY + baselineShift),
+							gf);
+					}
+					if (complexClipping) {
+						if (complexClippingEnabled) {
+							_p->setClipRegion(complexClippingRegion);
+						} else {
+							_p->setClipping(false);
+						}
+					} else if (hasSpoiler && !isElidedItem) {
+						_p->setOpacity(opacity);
+					}
+				}
+
+				if (hasSpoiler) {
+					pushSpoilerRange(
+						itemRange,
+						fillSelect,
+						isElidedItem,
+						rtl);
+				}
+			}
+
+			x += itemWidth;
+			if (paintRightToMiddleElision) {
+				x -= itemWidth;
+			}
+		}
+		fillRectsFromRanges();
+		return !_elidedLine;
+	};
+	const auto useCachedShape = _drawCache
+		&& _p
+		&& !_elidedLine
+		&& !_elisionMiddle;
+	if (useCachedShape) {
+		const auto shape = PrepareCachedLineShape(
+			_drawCache,
+			cacheLineIndex,
+			_t,
+			_t->_blocks,
+			_localFrom,
+			lineText,
+			gsl::span(_paragraphAnalysis).subspan(
+				_localFrom - _paragraphStart,
+				lineText.size()),
+			_lineStartBlock,
+			_blocksSize,
+			lineStart,
+			lineLength);
+		if (!shape->nItems) {
+			return !_elidedLine;
+		}
+		auto &e = shape->engine->wrapped();
+		return paintItems(
+			e,
+			shape->firstItem,
+			shape->nItems,
+			[&](int visualIndex) {
+				return shape->visualOrder[visualIndex];
+			},
+			[&](int item) {
+				return begin(_t->_blocks)
+					+ shape->blockIndices[item - shape->firstItem];
+			});
+	}
+
 	auto engine = StackEngine(
 		_t,
 		_localFrom,
@@ -793,629 +1596,16 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		}
 		visualOrder[0] = skipIndex;
 	}
-
-	auto textY = _y + _lineAscent;
-	auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
-	const auto customObjectRect = [&](
-			CustomEmoji *custom,
-			QFixed x,
-			const std::optional<CustomEmojiVerticalMetrics> &vertical) {
-		return QRect(
-			x.toInt(),
-			_y + (vertical
-				? (_lineAscent - vertical->ascent)
-				: (_yDelta + emojiY)),
-			custom->width(),
-			vertical ? vertical->height() : st::emojiSize);
-	};
-	const auto fillBackground = [&](
-			FixedRange range,
-			int top,
-			int height,
-			const QBrush &brush) {
-		if (range.empty() || brush.style() == Qt::NoBrush) {
-			return;
-		}
-		const auto left = range.from.toInt();
-		const auto width = range.till.toInt() - left;
-		_p->fillRect(left, top, width, height, brush);
-	};
-	const auto fillMarked = [&](FixedRange range, int top, int height) {
-		if (!_palette || !_palette->markBg->c.alpha()) {
-			return;
-		}
-		fillBackground(range, top, height, _palette->markBg->b);
-	};
-	const auto fillColorizedBackground = [&](
-			FixedRange range,
-			FixedRange selected,
-			int top,
-			int height) {
-		if (!_background.brush) {
-			return;
-		}
-		if (selected.empty()) {
-			fillBackground(range, top, height, *_background.brush);
-			return;
-		}
-		if (range.from < selected.from) {
-			fillBackground(
-				{ range.from, selected.from },
-				top,
-				height,
-				*_background.brush);
-		}
-		if (const auto selectedBrush = _background.brushSelected) {
-			fillBackground(selected, top, height, *selectedBrush);
-		} else if (_palette && _palette->selectBg->c.alpha()) {
-			fillBackground(selected, top, height, _palette->selectBg->b);
-		}
-		if (selected.till < range.till) {
-			fillBackground(
-				{ selected.till, range.till },
-				top,
-				height,
-				*_background.brush);
-		}
-	};
-
-	auto lastLeftToMiddleX = x;
-
-	_f = style::font();
-	for (int i = 0; i < nItems; ++i) {
-		const auto paintRightToMiddleElision = (leftLineLengthLeft == 0);
-		const auto item = firstItem + visualOrder[paintRightToMiddleElision
-			? (nItems - 1 - i)
-			: i];
-		const auto blockIt = blocks[item - firstItem];
-		const auto block = blockIt->get();
-		const auto isLastItem = (item == lastItem);
-		const auto &si = e.layoutData->items.at(item);
-		const auto rtl = (si.analysis.bidiLevel % 2);
-
-		applyBlockProperties(e, block);
-		const auto marked = (block->flags() & TextBlockFlag::Marked);
-		const auto baselineShift = _t->blockBaselineShift(block);
-		const auto textTop = textY + baselineShift - _f->ascent;
-		const auto textHeight = _f->height;
-		if (si.analysis.flags >= QScriptAnalysis::TabOrObject) {
-			const auto _type = block->type();
-			if (!_p && _lookupX >= x && _lookupX < x + si.width) { // _lookupRequest
-				if (_elisionMiddle) {
-					return false;
-				}
-				if (_lookupLink) {
-					if (_lookupY >= _y && _lookupY < _y + _lineHeight) {
-						if (const auto link = lookupLink(block)) {
-							_lookupResult.link = link;
-						}
-					}
-				}
-				if (_type != TextBlockType::Skip) {
-					_lookupResult.uponSymbol = true;
-				}
-				if (_lookupSymbol) {
-					if (_type == TextBlockType::Skip) {
-						if (_paragraphDirection == Qt::RightToLeft) {
-							_lookupResult.symbol = _lineStart;
-							_lookupResult.afterSymbol = false;
-						} else {
-							_lookupResult.symbol = (trimmedLineEnd > _lineStart) ? (trimmedLineEnd - 1) : _lineStart;
-							_lookupResult.afterSymbol = (trimmedLineEnd > _lineStart) ? true : false;
-						}
-						return false;
-					}
-
-					// Emoji with spaces after symbol lookup
-					auto chFrom = _str + _t->blockPosition(blockIt);
-					auto chTo = _str + _t->blockEnd(blockIt);
-					while (chTo > chFrom && (chTo - 1)->unicode() == QChar::Space) {
-						--chTo;
-					}
-					if (_lookupX < x + (block->objectWidth() / 2)) {
-						_lookupResult.symbol = ((rtl && chTo > chFrom) ? (chTo - 1) : chFrom) - _str;
-						_lookupResult.afterSymbol = (rtl && chTo > chFrom) ? true : false;
-					} else {
-						_lookupResult.symbol = ((rtl || chTo <= chFrom) ? chFrom : (chTo - 1)) - _str;
-						_lookupResult.afterSymbol = (rtl || chTo <= chFrom) ? false : true;
-					}
-				}
-				return false;
-			} else if (_p
-				&& (_type == TextBlockType::Emoji
-					|| _type == TextBlockType::CustomEmoji)) {
-				if (_elisionMiddle && !paintRightToMiddleElision) {
-					if (leftLineLengthLeft - si.width.toReal() < 0) {
-						leftLineLengthLeft = 0;
-						i = -1;
-						lastLeftToMiddleX = (x + si.width);
-						_p->setPen(*_currentPen);
-						rightLineLengthLeft = std::ceil((x).toReal()) - _x.toReal() - _f->elidew;
-					} else {
-						leftLineLengthLeft -= si.width.toReal();
-						leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
-					}
-				} else if (_elisionMiddle && paintRightToMiddleElision && rightLineLengthLeft) {
-					if (i == 0) {
-						x = _x + _lineWidth;
-					}
-					if (rightLineLengthLeft - si.width.toReal() < 0) {
-						rightLineLengthLeft = 0;
-						i = nItems;
-						{
-							_p->setPen(*_currentPen);
-							const auto bigWidth = x - lastLeftToMiddleX;
-							const auto smallWidth = _f->elidew;
-							const auto left = lastLeftToMiddleX;
-							_p->setFont(WithFlags(
-								_t->_st->font,
-								(block->flags()
-									& ~(TextBlockFlag::Subscript
-										| TextBlockFlag::Superscript))));
-							_p->drawText(
-								(left + (bigWidth - smallWidth) / 2).toReal(),
-								textY,
-								kQEllipsis);
-						}
-						continue;
-					} else {
-						rightLineLengthLeft -= si.width.toReal();
-						rightLineLengthLeft = std::max(0.01, rightLineLengthLeft);
-					}
-					x -= si.width;
-				}
-				const auto fillSelect = _background.selectActiveBlock
-					? FixedRange{ x, x + si.width }
-					: findSelectObjectRange(
-						si,
-						blockIt,
-						x,
-						_selection);
-				CustomEmoji *custom = nullptr;
-				if (_type == TextBlockType::CustomEmoji) {
-					custom = static_cast<const CustomEmojiBlock*>(block)->custom();
-				}
-				const auto vertical = custom
-					? custom->vertical(*_t->_st)
-					: std::nullopt;
-				const auto box = custom
-					? customObjectRect(
-						custom,
-						x,
-						vertical)
-					: QRect();
-				if (custom) {
-					if (marked) {
-						fillMarked(
-							{ x, x + si.width },
-							box.top(),
-							box.height());
-					}
-					if (_background.brush) {
-						fillColorizedBackground(
-							{ x, x + si.width },
-							fillSelect,
-							box.top(),
-							box.height());
-					} else {
-						fillSelectRange(
-							fillSelect,
-							box.top(),
-							box.height());
-					}
-				} else {
-					if (_background.brush) {
-						fillColorizedBackground(
-							{ x, x + si.width },
-							fillSelect,
-							_y + _yDelta,
-							_fontHeight);
-					} else {
-						fillSelectRange(fillSelect);
-					}
-				}
-				if (_highlight) {
-					pushHighlightRange(findSelectObjectRange(
-						si,
-						blockIt,
-						x,
-						_highlight->range));
-				}
-
-				const auto hasSpoiler = _background.spoiler
-					&& (_spoilerOpacity > 0.);
-				const auto fillSpoiler = hasSpoiler
-					? FixedRange{ x, x + si.width }
-					: FixedRange();
-				const auto opacity = _p->opacity();
-				if (!hasSpoiler || _spoilerOpacity < 1.) {
-					if (hasSpoiler) {
-						_p->setOpacity(opacity * (1. - _spoilerOpacity));
-					}
-					const auto ex = (x + st::emojiPadding).toInt();
-					const auto ey = _y + _yDelta + emojiY;
-					if (_type == TextBlockType::Emoji) {
-						Emoji::Draw(
-							*_p,
-							static_cast<const EmojiBlock*>(block)->emoji(),
-							Emoji::GetSizeNormal(),
-							ex,
-							ey);
-					} else if (_type == TextBlockType::CustomEmoji) {
-						const auto custom = static_cast<const CustomEmojiBlock*>(block)->custom();
-						const auto selected = (fillSelect.from <= x)
-							&& (fillSelect.till > x);
-						const auto color = (selected
-							? _currentPenSelected
-							: _currentPen)->color();
-						if (!_customEmojiContext) {
-							_customEmojiContext = CustomEmoji::Context{
-								.textColor = color,
-								.now = now(),
-								.paused = _pausedEmoji,
-							};
-							_customEmojiSkip = (st::emojiSize
-								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-						} else {
-							_customEmojiContext->textColor = color;
-						}
-						const auto replacementText = custom->replacementText();
-						const auto semantics = custom->semantics();
-						const auto showFallbackText = !semantics.isRealCustomEmoji
-							&& !replacementText.isEmpty()
-							&& !custom->ready()
-							&& !custom->readyInDefaultState();
-						if (!showFallbackText) {
-							_customEmojiContext->position = vertical
-								? box.topLeft()
-								: QPoint(
-									ex + _customEmojiSkip,
-									ey + _customEmojiSkip);
-							custom->paint(*_p, *_customEmojiContext);
-						}
-						if (showFallbackText) {
-							_p->save();
-							_p->setClipRect(box, Qt::IntersectClip);
-							_p->setPen(((fillSelect.from <= x)
-								&& (fillSelect.till > x))
-								? *_currentPenSelected
-								: *_currentPen);
-							_p->drawText(
-								box,
-								Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
-								replacementText);
-							_p->restore();
-						}
-					}
-					if (hasSpoiler) {
-						_p->setOpacity(opacity);
-					}
-				}
-				if (hasSpoiler) {
-					// Elided item should be a text item
-					// with '...' at the end, so this should not be it.
-					const auto isElidedItem = false;
-					pushSpoilerRange(
-						fillSpoiler,
-						fillSelect,
-						isElidedItem,
-						rtl);
-				}
-			//} else if (_p && currentBlock->type() == TextBlockSkip) { // debug
-			//	_p->fillRect(QRect(x.toInt(), _y, currentBlock->width(), static_cast<SkipBlock*>(currentBlock)->height()), QColor(0, 0, 0, 32));
-			}
-			x += si.width;
-			if (paintRightToMiddleElision) {
-				x -= si.width;
-			}
-			continue;
-		}
-
-		unsigned short *logClusters = e.logClusters(&si);
-		QGlyphLayout glyphs = e.shapedGlyphs(&si);
-
-		int itemStart = qMax(lineStart, si.position), itemEnd;
-		int itemLength = e.length(item);
-		int glyphsStart = logClusters[itemStart - si.position], glyphsEnd;
-		if (lineStart + lineLength < si.position + itemLength) {
-			itemEnd = lineStart + lineLength;
-			glyphsEnd = logClusters[itemEnd - si.position];
-		} else {
-			itemEnd = si.position + itemLength;
-			glyphsEnd = si.num_glyphs;
-		}
-
-		const auto isSpaceGlyph = [&](int g) {
-			if (!glyphs.attributes[g].dontPrint) {
-				return false;
-			}
-			for (auto p = itemStart; p < itemEnd; ++p) {
-				if (logClusters[p - si.position] == g) {
-					return lineText.at(p).isSpace();
-				}
-			}
-			return false;
-		};
-
-		QFixed itemWidth = 0;
-		for (int g = glyphsStart; g < glyphsEnd; ++g)
-			itemWidth += glyphs.effectiveAdvance(g);
-
-		if (_elisionMiddle && !paintRightToMiddleElision) {
-			itemWidth = 0;
-			for (int g = glyphsStart; g < glyphsEnd; ++g) {
-				const auto adv = glyphs.effectiveAdvance(g);
-				if (leftLineLengthLeft - adv.toReal() < 0) {
-					leftLineLengthLeft = 0;
-					if (isSpaceGlyph(g)) {
-						rightLineLengthLeft += _f->spacew;
-					}
-					glyphsEnd = g;
-					i = -1;
-					lastLeftToMiddleX = (x + itemWidth);
-					break;
-				} else {
-					leftLineLengthLeft -= adv.toReal();
-					leftLineLengthLeft = std::max(0.01, leftLineLengthLeft);
-					itemWidth += adv;
-				}
-			}
-		}
-		if (_elisionMiddle && paintRightToMiddleElision && rightLineLengthLeft) {
-			itemWidth = 0;
-			if (i == 0) {
-				x = _x + _lineWidth;
-			}
-			for (int g = glyphsEnd - 1; g >= glyphsStart; --g) {
-				const auto adv = glyphs.effectiveAdvance(g);
-				if (rightLineLengthLeft - adv.toReal() < 0) {
-					rightLineLengthLeft = 0;
-					glyphsStart = std::min(g + 1, glyphsEnd - 1);
-					i = nItems;
-					if (isSpaceGlyph(glyphsStart)) {
-						x -= _f->spacew;
-					}
-					{
-						_p->setPen(*_currentPen);
-						const auto bigWidth = x - itemWidth - lastLeftToMiddleX;
-						const auto smallWidth = _f->elidew;
-						const auto left = lastLeftToMiddleX;
-						_p->setFont(WithFlags(
-							_t->_st->font,
-							(block->flags()
-								& ~(TextBlockFlag::Subscript
-									| TextBlockFlag::Superscript))));
-						_p->drawText(
-							(left + (bigWidth - smallWidth) / 2).toReal(),
-							textY,
-							kQEllipsis);
-					}
-					break;
-				} else {
-					rightLineLengthLeft -= adv.toReal();
-					rightLineLengthLeft = std::max(0.01, rightLineLengthLeft);
-					itemWidth += adv;
-				}
-			}
-			x -= itemWidth;
-		}
-
-		if (!_p && _lookupX >= x && _lookupX < x + itemWidth) { // _lookupRequest
-			if (_elisionMiddle) {
-				return false;
-			}
-			if (_lookupLink) {
-				if (_lookupY >= textTop && _lookupY < textTop + textHeight) {
-					if (const auto link = lookupLink(block)) {
-						_lookupResult.link = link;
-					}
-				}
-			}
-			_lookupResult.uponSymbol = true;
-			if (_lookupSymbol) {
-				QFixed tmpx = rtl ? (x + itemWidth) : x;
-				for (int ch = 0, g, itemL = itemEnd - itemStart; ch < itemL;) {
-					g = logClusters[itemStart - si.position + ch];
-					QFixed gwidth = glyphs.effectiveAdvance(g);
-					// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
-					int ch2 = ch + 1;
-					while ((ch2 < itemL) && (g == logClusters[itemStart - si.position + ch2])) {
-						++ch2;
-					}
-					for (int charsCount = (ch2 - ch); ch < ch2; ++ch) {
-						QFixed shift1 = QFixed(2 * (charsCount - (ch2 - ch)) + 2) * gwidth / QFixed(2 * charsCount),
-							shift2 = QFixed(2 * (charsCount - (ch2 - ch)) + 1) * gwidth / QFixed(2 * charsCount);
-						if ((rtl && _lookupX >= tmpx - shift1) ||
-							(!rtl && _lookupX < tmpx + shift1)) {
-							_lookupResult.symbol = _localFrom + itemStart + ch;
-							if ((rtl && _lookupX >= tmpx - shift2) ||
-								(!rtl && _lookupX < tmpx + shift2)) {
-								_lookupResult.afterSymbol = false;
-							} else {
-								_lookupResult.afterSymbol = true;
-							}
-							return false;
-						}
-					}
-					if (rtl) {
-						tmpx -= gwidth;
-					} else {
-						tmpx += gwidth;
-					}
-				}
-				if (itemEnd > itemStart) {
-					_lookupResult.symbol = _localFrom + itemEnd - 1;
-					_lookupResult.afterSymbol = true;
-				} else {
-					_lookupResult.symbol = _localFrom + itemStart;
-					_lookupResult.afterSymbol = false;
-				}
-			}
-			return false;
-		} else if (_p) {
-			QTextItemInt gf;
-			gf.glyphs = glyphs.mid(glyphsStart, glyphsEnd - glyphsStart);
-			gf.f = &e.fnt;
-			gf.chars = e.layoutData->string.unicode() + itemStart;
-			gf.num_chars = itemEnd - itemStart;
-			gf.fontEngine = e.fontEngine(si);
-			gf.logClusters = logClusters + itemStart - si.position;
-			gf.width = itemWidth;
-			gf.justified = false;
-			InitTextItemWithScriptItem(gf, si);
-
-			const auto itemRange = FixedRange{ x, x + itemWidth };
-			auto selectedRect = QRect();
-			auto fillSelect = itemRange;
-			if (!_background.selectActiveBlock) {
-				fillSelect = findSelectTextRange(
-					si,
-					itemStart,
-					itemEnd,
-					x,
-					itemWidth,
-					gf,
-					_selection);
-				const auto from = fillSelect.from.toInt();
-				selectedRect = QRect(
-					from,
-					textTop,
-					fillSelect.till.toInt() - from,
-					textHeight);
-			}
-			const auto hasSelected = !fillSelect.empty();
-			const auto hasNotSelected = (fillSelect.from != itemRange.from)
-				|| (fillSelect.till != itemRange.till);
-			if (marked) {
-				fillMarked(itemRange, textTop, textHeight);
-			}
-			if (_background.brush) {
-				fillColorizedBackground(
-					itemRange,
-					fillSelect,
-					textTop,
-					textHeight);
-			} else {
-				fillSelectRange(fillSelect, textTop, textHeight);
-			}
-
-			if (_highlight) {
-				pushHighlightRange(findSelectTextRange(
-					si,
-					itemStart,
-					itemEnd,
-					x,
-					itemWidth,
-					gf,
-					_highlight->range));
-			}
-			const auto hasSpoiler = _background.spoiler
-				&& (_spoilerOpacity > 0.);
-			const auto opacity = _p->opacity();
-			const auto isElidedBlock = _indexOfElidedBlock
-				== int(blockIt - begin(_t->_blocks));
-			const auto isElidedItem = isElidedBlock && isLastItem;
-			const auto complexClipping = hasSpoiler
-				&& isElidedItem
-				&& (_spoilerOpacity == 1.);
-			if (!hasSpoiler || (_spoilerOpacity < 1.) || isElidedItem) {
-				const auto complexClippingEnabled = complexClipping
-					&& _p->hasClipping();
-				const auto complexClippingRegion = complexClipping
-					? _p->clipRegion()
-					: QRegion();
-				if (complexClipping) {
-					const auto elided = isElidedBlock ? _f->elidew : 0;
-					_p->setClipRect(
-						QRect(
-							(rtl
-								? x.toInt()
-								: (x + itemWidth).toInt() - elided),
-							_y - _lineHeight,
-							elided,
-							_y + 2 * _lineHeight),
-						Qt::IntersectClip);
-				} else if (hasSpoiler && !isElidedItem) {
-					_p->setOpacity(opacity * (1. - _spoilerOpacity));
-				}
-				if (Q_UNLIKELY(hasSelected)) {
-					if (Q_UNLIKELY(hasNotSelected)) {
-						// There is a bug in retina QPainter clipping stack.
-						// You can see glitches in rendering in such text:
-						// aA
-						// Aa
-						// Where selection is both 'A'-s.
-						// I can't debug it right now, this is a workaround.
-#ifdef Q_OS_MAC
-						_p->save();
-#endif // Q_OS_MAC
-						const auto clippingEnabled = _p->hasClipping();
-						const auto clippingRegion = _p->clipRegion();
-						_p->setClipRect(selectedRect, Qt::IntersectClip);
-						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(
-							QPointF(x.toReal(), textY + baselineShift),
-							gf);
-						const auto externalClipping = clippingEnabled
-							? clippingRegion
-							: QRegion(QRect(
-								(_x - _lineWidth).toInt(),
-								_y - _lineHeight,
-								(_x + 2 * _lineWidth).toInt(),
-								_y + 2 * _lineHeight));
-						_p->setClipRegion(externalClipping - selectedRect);
-						_p->setPen(*_currentPen);
-						_p->drawTextItem(
-							QPointF(x.toReal(), textY + baselineShift),
-							gf);
-#ifdef Q_OS_MAC
-						_p->restore();
-#else // Q_OS_MAC
-						if (clippingEnabled) {
-							_p->setClipRegion(clippingRegion);
-						} else {
-							_p->setClipping(false);
-						}
-#endif // Q_OS_MAC
-					} else {
-						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(
-							QPointF(x.toReal(), textY + baselineShift),
-							gf);
-					}
-				} else {
-					_p->setPen(*_currentPen);
-					_p->drawTextItem(
-						QPointF(x.toReal(), textY + baselineShift),
-						gf);
-				}
-				if (complexClipping) {
-					if (complexClippingEnabled) {
-						_p->setClipRegion(complexClippingRegion);
-					} else {
-						_p->setClipping(false);
-					}
-				} else if (hasSpoiler && !isElidedItem) {
-					_p->setOpacity(opacity);
-				}
-			}
-
-			if (hasSpoiler) {
-				pushSpoilerRange(
-					itemRange,
-					fillSelect,
-					isElidedItem,
-					rtl);
-			}
-		}
-
-		x += itemWidth;
-		if (paintRightToMiddleElision) {
-			x -= itemWidth;
-		}
-	}
-	fillRectsFromRanges();
-	return !_elidedLine;
+	return paintItems(
+		e,
+		firstItem,
+		nItems,
+		[&](int visualIndex) {
+			return visualOrder[visualIndex];
+		},
+		[&](int item) {
+			return blocks[item - firstItem];
+		});
 }
 
 FixedRange Renderer::findSelectObjectRange(

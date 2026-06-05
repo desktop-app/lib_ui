@@ -80,6 +80,7 @@ namespace Ui::Text {
 class CustomEmoji;
 class AbstractBlock;
 class Block;
+class DrawCache;
 class Word;
 struct IsolatedEmoji;
 struct OnlyCustomEmoji;
@@ -276,6 +277,7 @@ struct PaintContext {
 	bool elisionMiddle = false;
 	bool useFullWidth = false; // !(width = min(availableWidth, maxWidth()))
 	const LinePostprocess *linePostprocess = nullptr;
+	DrawCache *drawCache = nullptr;
 };
 
 class String {

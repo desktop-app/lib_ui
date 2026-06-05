@@ -175,6 +175,8 @@ PRIVATE
     ui/text/custom_emoji_text_badge.cpp
     ui/text/custom_emoji_text_badge.h
     ui/text/text.cpp
+    ui/text/text_draw_cache.cpp
+    ui/text/text_draw_cache.h
     ui/text/text.h
     ui/text/text_bidi_algorithm.h
     ui/text/text_block.cpp
