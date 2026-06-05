@@ -127,6 +127,40 @@ QAccessibleInterface *Item::parent() const {
 	return QAccessible::queryAccessibleInterface(_parent.get());
 }
 
+void *Item::interface_cast(QAccessible::InterfaceType type) {
+	if (type == QAccessible::ActionInterface) {
+		return static_cast<QAccessibleActionInterface*>(this);
+	}
+	return nullptr;
+}
+
+QStringList Item::actionNames() const {
+	const auto parent = _parent.get();
+	if (!parent || _index < 0) {
+		return {};
+	}
+	// Only advertise focusing when the row claims to be focusable,
+	// matching the state() we report to the screen reader.
+	if (parent->accessibilityChildState(_index).focusable) {
+		return { QAccessibleActionInterface::setFocusAction() };
+	}
+	return {};
+}
+
+void Item::doAction(const QString &actionName) {
+	const auto parent = _parent.get();
+	if (!parent || _index < 0) {
+		return;
+	}
+	if (actionName == QAccessibleActionInterface::setFocusAction()) {
+		parent->accessibilityChildSetFocus(_index);
+	}
+}
+
+QStringList Item::keyBindingsForAction(const QString &actionName) const {
+	return {};
+}
+
 SubItem::SubItem(not_null<RpWidget*> parent, int row, int column)
 : _parent(parent)
 , _row(row)

@@ -455,6 +455,9 @@ void RpWidget::accessibilityChildFocused(int index) {
 	QAccessible::updateAccessibility(&event);
 }
 
+void RpWidget::accessibilityChildSetFocus(int index) {
+}
+
 QString RpWidget::accessibilityName() {
 	return QWidget::accessibleName();
 }
