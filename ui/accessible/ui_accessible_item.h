@@ -76,7 +76,9 @@ struct SubItems {
 	std::vector<UniqueId> list;
 };
 
-class Item final : public QAccessibleInterface {
+class Item final
+	: public QAccessibleInterface
+	, public QAccessibleActionInterface {
 public:
 	Item(not_null<RpWidget*> parent, int index);
 
@@ -101,6 +103,15 @@ public:
 	QAccessibleInterface *childAt(int x, int y) const override;
 
 	QAccessibleInterface *parent() const override;
+
+	// QAccessibleInterface.
+	void *interface_cast(QAccessible::InterfaceType type) override;
+
+	// QAccessibleActionInterface.
+	QStringList actionNames() const override;
+	void doAction(const QString &actionName) override;
+	QStringList keyBindingsForAction(
+		const QString &actionName) const override;
 
 private:
 	base::weak_qptr<RpWidget> _parent;

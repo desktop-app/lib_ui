@@ -451,6 +451,7 @@ public:
 	[[nodiscard]] virtual QString accessibilityChildSubItemName(int row, int column) const;
 	[[nodiscard]] virtual QString accessibilityChildSubItemValue(int row, int column) const;
 	void accessibilityChildFocused(int index);
+	virtual void accessibilityChildSetFocus(int index);
 
 protected:
 	// e - from enterEvent() of child RpWidget
