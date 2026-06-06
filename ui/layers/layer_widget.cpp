@@ -498,6 +498,18 @@ bool LayerStackWidget::layerShown() const {
 	return _specialLayer || currentLayer() || _mainMenu;
 }
 
+bool LayerStackWidget::boxShown() const {
+	return currentLayer() != nullptr;
+}
+
+rpl::producer<bool> LayerStackWidget::boxShownValue() const {
+	return _boxShown.value();
+}
+
+void LayerStackWidget::updateBoxShown() {
+	_boxShown = (currentLayer() != nullptr);
+}
+
 const LayerWidget *LayerStackWidget::topShownLayer() const {
 	if (const auto result = currentLayer()) {
 		return result;
@@ -871,6 +883,7 @@ LayerWidget *LayerStackWidget::pushLayer(
 		}, Action::ShowLayer, animated);
 	}
 
+	updateBoxShown();
 	return raw;
 }
 
@@ -923,6 +936,7 @@ void LayerStackWidget::clearLayers() {
 		std::make_move_iterator(begin(_layers)),
 		std::make_move_iterator(end(_layers)));
 	_layers.clear();
+	updateBoxShown();
 	clearClosingLayers();
 }
 
