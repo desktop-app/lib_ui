@@ -85,6 +85,14 @@ public:
 	[[nodiscard]] int index() const {
 		return _index;
 	}
+	[[nodiscard]] quintptr identity() const {
+		return _identity;
+	}
+
+	// The row this provider currently maps to: resolved from the stable
+	// identity when one is set (so the provider follows a reordered row or
+	// becomes invalid when it is gone), otherwise the construction-time index.
+	[[nodiscard]] int currentIndex() const;
 
 	bool isValid() const override;
 	QObject *object() const override;
@@ -116,7 +124,9 @@ public:
 private:
 	base::weak_qptr<RpWidget> _parent;
 	mutable std::unique_ptr<SubItems> _subitems;
+	mutable int _subitemsIndex = -1;
 	int _index = 0;
+	quintptr _identity = 0;
 
 };
 

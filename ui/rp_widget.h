@@ -451,7 +451,31 @@ public:
 	[[nodiscard]] virtual QString accessibilityChildSubItemName(int row, int column) const;
 	[[nodiscard]] virtual QString accessibilityChildSubItemValue(int row, int column) const;
 	void accessibilityChildFocused(int index);
-	virtual void accessibilityChildSetFocus(int index);
+
+	// Per-child opt-in for the accessibility action interface (SetFocus /
+	// Invoke / SelectionItem.Select). Returns false by default, so painted
+	// lists do not advertise actions they cannot perform. A widget that
+	// returns true must support all three meaningfully, because the Windows
+	// UIA bridge exposes SetFocus and SelectionItem regardless of
+	// actionNames() once an action interface is present.
+	[[nodiscard]] virtual bool accessibilityChildSupportsActions(
+		int index) const;
+
+	// Stable identity of a child, used to keep an action bound to the row the
+	// assistive technology actually referenced even if the model reorders or
+	// replaces the row at that index. Returns 0 ("no stable identity") by
+	// default; a widget opting into actions must provide a non-zero token and
+	// implement accessibilityChildIndexByIdentity().
+	[[nodiscard]] virtual quintptr accessibilityChildIdentity(
+		int index) const;
+	[[nodiscard]] virtual int accessibilityChildIndexByIdentity(
+		quintptr identity) const;
+
+	// Actions are dispatched by stable identity (resolved on the main thread
+	// by the owner) rather than by index, so a queued action never operates
+	// on a replacement row.
+	virtual void accessibilityChildSetFocus(quintptr identity);
+	virtual void accessibilityChildActivate(quintptr identity);
 
 protected:
 	// e - from enterEvent() of child RpWidget
