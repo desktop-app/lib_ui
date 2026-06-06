@@ -167,7 +167,7 @@ QAccessibleInterface* Widget::child(int index) const {
 
 int Widget::indexOfChild(const QAccessibleInterface* child) const {
 	if (const auto item = dynamic_cast<const Ui::Accessible::Item*>(child)) {
-		return item->index();
+		return item->currentIndex();
 	}
 	if (child) {
 		const auto widgets = rp()->accessibilityChildWidgets();

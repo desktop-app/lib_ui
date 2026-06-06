@@ -12,16 +12,31 @@ namespace Ui::Accessible {
 
 Item::Item(not_null<RpWidget*> parent, int index)
 : _parent(parent)
-, _index(index) {
+, _index(index)
+, _identity(parent->accessibilityChildIdentity(index)) {
+}
+
+int Item::currentIndex() const {
+	const auto parent = _parent.get();
+	if (!parent) {
+		return -1;
+	}
+	return _identity
+		? parent->accessibilityChildIndexByIdentity(_identity)
+		: _index;
 }
 
 bool Item::isValid() const {
 	const auto parent = _parent.get();
-	if (_index < 0 || !parent || !parent->isVisible()) {
+	if (!parent || !parent->isVisible()) {
+		return false;
+	}
+	const auto index = currentIndex();
+	if (index < 0) {
 		return false;
 	}
 	const auto count = parent->accessibilityChildCount();
-	return count < 0 || _index < count;
+	return count < 0 || index < count;
 }
 
 QObject *Item::object() const {
@@ -43,23 +58,25 @@ QAccessible::Role Item::role() const {
 
 QAccessible::State Item::state() const {
 	const auto parent = _parent.get();
-	return (parent && _index >= 0)
-		? parent->accessibilityChildState(_index)
+	const auto index = parent ? currentIndex() : -1;
+	return (index >= 0)
+		? parent->accessibilityChildState(index)
 		: QAccessible::State();
 }
 
 QString Item::text(QAccessible::Text t) const {
 	const auto parent = _parent.get();
-	if (_index < 0 || !parent) {
+	const auto index = parent ? currentIndex() : -1;
+	if (index < 0) {
 		return {};
 	}
 	switch (t) {
 	case QAccessible::Name:
-		return parent->accessibilityChildName(_index);
+		return parent->accessibilityChildName(index);
 	case QAccessible::Description:
-		return parent->accessibilityChildDescription(_index);
+		return parent->accessibilityChildDescription(index);
 	case QAccessible::Value:
-		return parent->accessibilityChildValue(_index);
+		return parent->accessibilityChildValue(index);
 	}
 	return QString();
 }
@@ -69,10 +86,11 @@ void Item::setText(QAccessible::Text t, const QString &text) {
 
 QRect Item::rect() const {
 	const auto parent = _parent.get();
-	if (_index < 0 || !parent) {
+	const auto index = parent ? currentIndex() : -1;
+	if (index < 0) {
 		return {};
 	}
-	const auto local = parent->accessibilityChildRect(_index);
+	const auto local = parent->accessibilityChildRect(index);
 	if (local.isEmpty()) {
 		return {};
 	}
@@ -81,16 +99,18 @@ QRect Item::rect() const {
 
 int Item::childCount() const {
 	const auto parent = _parent.get();
-	if (_index < 0 || !parent) {
+	const auto index = parent ? currentIndex() : -1;
+	if (index < 0) {
 		return 0;
 	}
-	return parent->accessibilityChildColumnCount(_index);
+	return parent->accessibilityChildColumnCount(index);
 }
 
 QAccessibleInterface *Item::child(int index) const {
 	const auto parent = _parent.get();
-	const auto columns = parent
-		? parent->accessibilityChildColumnCount(_index)
+	const auto current = parent ? currentIndex() : -1;
+	const auto columns = (current >= 0)
+		? parent->accessibilityChildColumnCount(current)
 		: 0;
 	if (index < 0 || index >= columns) {
 		return nullptr;
@@ -99,20 +119,26 @@ QAccessibleInterface *Item::child(int index) const {
 		_subitems = std::make_unique<SubItems>();
 	}
 	auto &ids = _subitems->list;
+	// Drop cached sub-items when the row moved, so they describe the row this
+	// provider currently maps to rather than its construction-time index.
+	if (_subitemsIndex != current) {
+		ids.clear();
+		_subitemsIndex = current;
+	}
 	if (int(ids.size()) != columns) {
 		ids.resize(columns); // UniqueId handles deregistration.
 	}
 	if (!ids[index]) {
 		ids[index] = UniqueId(
 			QAccessible::registerAccessibleInterface(
-				new SubItem(parent, _index, index)));
+				new SubItem(parent, current, index)));
 	}
 	return ids[index].get();
 }
 
 int Item::indexOfChild(const QAccessibleInterface *child) const {
 	if (const auto subItem = dynamic_cast<const SubItem*>(child)) {
-		if (subItem->row() == _index) {
+		if (subItem->row() == currentIndex()) {
 			return subItem->column();
 		}
 	}
@@ -129,31 +155,59 @@ QAccessibleInterface *Item::parent() const {
 
 void *Item::interface_cast(QAccessible::InterfaceType type) {
 	if (type == QAccessible::ActionInterface) {
-		return static_cast<QAccessibleActionInterface*>(this);
+		// Expose the action interface only when the owner opted in for this
+		// child. Otherwise the Windows UIA bridge would advertise Invoke /
+		// SetFocus / SelectionItem and report success while doing nothing.
+		const auto parent = _parent.get();
+		const auto index = parent ? currentIndex() : -1;
+		if (index >= 0
+			&& parent->accessibilityChildSupportsActions(index)) {
+			return static_cast<QAccessibleActionInterface*>(this);
+		}
 	}
 	return nullptr;
 }
 
 QStringList Item::actionNames() const {
 	const auto parent = _parent.get();
-	if (!parent || _index < 0) {
+	const auto index = parent ? currentIndex() : -1;
+	if (index < 0 || !parent->accessibilityChildSupportsActions(index)) {
 		return {};
 	}
+	const auto childState = parent->accessibilityChildState(index);
+	// Pressing invokes the item's default action (e.g. open the chat).
+	auto names = QStringList{ QAccessibleActionInterface::pressAction() };
 	// Only advertise focusing when the row claims to be focusable,
 	// matching the state() we report to the screen reader.
-	if (parent->accessibilityChildState(_index).focusable) {
-		return { QAccessibleActionInterface::setFocusAction() };
+	if (childState.focusable) {
+		names.append(QAccessibleActionInterface::setFocusAction());
 	}
-	return {};
+	// Selecting a list item maps to making it the current row. Advertise it
+	// (and, more importantly, handle it in doAction) so SelectionItem.Select
+	// does not silently report success: Qt routes ListItem selection through
+	// toggleAction() on the Qt 5 Windows bridge.
+	if (childState.selectable) {
+		names.append(QAccessibleActionInterface::toggleAction());
+	}
+	return names;
 }
 
 void Item::doAction(const QString &actionName) {
 	const auto parent = _parent.get();
-	if (!parent || _index < 0) {
+	if (!parent) {
 		return;
 	}
-	if (actionName == QAccessibleActionInterface::setFocusAction()) {
-		parent->accessibilityChildSetFocus(_index);
+	// Dispatch by stable identity, not index: the owner resolves it to the
+	// current row on the main thread, so a stale action either hits the right
+	// row (if it just moved) or fails safely (if it is gone). We forward the
+	// identity without touching widget state here, because the Windows UIA
+	// bridge invokes actions on a background thread.
+	const auto identity = _identity;
+	if (actionName == QAccessibleActionInterface::setFocusAction()
+		|| actionName == QAccessibleActionInterface::toggleAction()) {
+		parent->accessibilityChildSetFocus(identity);
+	} else if (actionName == QAccessibleActionInterface::pressAction()) {
+		parent->accessibilityChildActivate(identity);
 	}
 }
 
