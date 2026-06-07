@@ -52,7 +52,15 @@ void SideBarButton::setActive(bool active) {
 		return;
 	}
 	_active = active;
+	if (isPageTab()) {
+		accessibilityStateChanged({ .selected = active });
+	}
 	update();
+}
+
+AccessibilityState SideBarButton::accessibilityState() const {
+	// Expose the active page tab as selected (persistent, independent of focus).
+	return { .selected = isPageTab() && _active };
 }
 
 void SideBarButton::setBadge(const QString &badge, bool muted) {

@@ -44,6 +44,7 @@ public:
 			? u"%1 (%2)"_q.arg(_text.toString(), _badge.toString())
 			: _text.toString();
 	}
+	AccessibilityState accessibilityState() const override;
 
 private:
 	void paintEvent(QPaintEvent *e) override;
