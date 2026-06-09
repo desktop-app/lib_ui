@@ -47,6 +47,7 @@ using namespace Ui::Text;
 struct ParsedLinkTag {
 	EntityType type = EntityType::Invalid;
 	QString data;
+	QString identity;
 
 	[[nodiscard]] explicit operator bool() const {
 		return (type != EntityType::Invalid);
@@ -68,7 +69,7 @@ struct ParsedLinkTag {
 		const auto data = Ui::InputField::CustomEmojiEntityData(tag);
 		return data.isEmpty()
 			? ParsedLinkTag()
-			: ParsedLinkTag{ EntityType::CustomEmoji, data };
+			: ParsedLinkTag{ EntityType::CustomEmoji, data, tag.toString() };
 	} else if (Ui::InputField::IsCustomDateLink(tag)) {
 		return { EntityType::FormattedDate, tag.toString() };
 	} else if (Ui::InputField::IsValidMarkdownLink(tag)) {
