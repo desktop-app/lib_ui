@@ -53,8 +53,6 @@ struct ParsedLinkTag {
 		return (type != EntityType::Invalid);
 	}
 
-	friend inline auto operator<=>(const ParsedLinkTag &, const ParsedLinkTag &)
-		= default;
 	friend inline bool operator==(const ParsedLinkTag &, const ParsedLinkTag &)
 		= default;
 };
