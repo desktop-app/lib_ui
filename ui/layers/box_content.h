@@ -139,6 +139,9 @@ public:
 	void setCloseByEscape(bool close) {
 		_closeByEscape = close;
 	}
+	[[nodiscard]] bool closeByEscape() const {
+		return _closeByEscape;
+	}
 	void setCloseByOutsideClick(bool close) {
 		getDelegate()->setCloseByOutsideClick(close);
 	}

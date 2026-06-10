@@ -473,6 +473,13 @@ void BoxLayerWidget::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
+bool BoxLayerWidget::closeByBackButton() {
+	if (_content->closeByEscape()) {
+		closeBox();
+	}
+	return true;
+}
+
 void BoxLayerWidget::mousePressEvent(QMouseEvent *e) {
 	if (e->button() == Qt::LeftButton
 		&& _layer->dragByTitle()

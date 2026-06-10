@@ -126,6 +126,10 @@ public:
 	virtual bool closeByOutsideClick() const {
 		return true;
 	}
+	virtual bool closeByBackButton() {
+		closeLayer();
+		return true;
+	}
 	[[nodiscard]] virtual crl::time animationDuration() const {
 		return 0;
 	}
@@ -202,6 +206,7 @@ public:
 	void hideLayers(anim::type animated) override;
 	void hideAll(anim::type animated);
 	void hideTopLayer(anim::type animated);
+	bool closeCurrentByBackButton();
 	void setHideByBackgroundClick(bool hide);
 	void removeBodyCache();
 

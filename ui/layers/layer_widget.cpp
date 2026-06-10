@@ -489,6 +489,17 @@ void LayerStackWidget::hideTopLayer(anim::type animated) {
 	}
 }
 
+bool LayerStackWidget::closeCurrentByBackButton() {
+	if (const auto layer = currentLayer()) {
+		return layer->closeByBackButton();
+	} else if (const auto special = _specialLayer.data()) {
+		return special->closeByBackButton();
+	} else if (const auto menu = _mainMenu.data()) {
+		return menu->closeByBackButton();
+	}
+	return false;
+}
+
 void LayerStackWidget::removeBodyCache() {
 	_background->removeBodyCache();
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
