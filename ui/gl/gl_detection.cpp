@@ -135,7 +135,7 @@ void CrashCheckStart() {
 const char kOptionUseQtRhi[] = "use-qt-rhi";
 
 Capabilities CheckCapabilities(QWidget *widget) {
-	if (WidgetsRhiEnabled()) {
+	if (WidgetsRhiSupported()) {
 		return {};
 	}
 	if (!Platform::IsMac()) {
@@ -281,7 +281,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
 }
 
 Backend ChooseBackendDefault(Capabilities capabilities) {
-	if (WidgetsRhiEnabled()) {
+	if (WidgetsRhiSupported()) {
 		return Backend::QRhi;
 	}
 	const auto use = ::Platform::IsMac()
@@ -294,15 +294,38 @@ Backend ChooseBackendDefault(Capabilities capabilities) {
 
 bool WidgetsRhiEnabled() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	return OptionUseQtRhi.value();
+	if (!OptionUseQtRhi.value()) {
+		return false;
+	} else if (!Platform::IsMac()) {
+		if (ForceDisabled || LastCrashCheckFailed()) {
+			return false;
+		}
+	}
+	return true;
 #else
 	return false;
 #endif
 }
 
+bool WidgetsRhiSupported() {
+	return WidgetsRhiEnabled() && CheckRhiCapabilities().supported;
+}
+
 RhiCapabilities CheckRhiCapabilities() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	static const auto result = ProbeRhiCapabilities();
+	static const auto result = [] {
+		if (!Platform::IsMac()) {
+			if (ForceDisabled || LastCrashCheckFailed()) {
+				return RhiCapabilities();
+			}
+			CrashCheckStart();
+		}
+		const auto value = ProbeRhiCapabilities();
+		if (!Platform::IsMac()) {
+			CrashCheckFinish();
+		}
+		return value;
+	}();
 	return result;
 #else
 	return {};

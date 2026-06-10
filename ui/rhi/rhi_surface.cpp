@@ -116,7 +116,7 @@ std::unique_ptr<RpWidgetWrap> CreateSurfaceRhi(
 
 void EnsureWindowRhi(not_null<QWidget*> window) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	if (!WidgetsRhiEnabled()) {
+	if (!WidgetsRhiSupported()) {
 		return;
 	}
 	const auto primer = Ui::CreateChild<QRhiWidget>(window.get());
