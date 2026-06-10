@@ -12,6 +12,10 @@
 #include "base/options.h"
 #include "base/platform/base_platform_info.h"
 
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
+#include "base/platform/linux/base_linux_library.h"
+#endif // !Q_OS_MAC && !Q_OS_WIN
+
 #include <QtCore/QSet>
 #include <QtCore/QFile>
 #include <QtCore/QLibraryInfo>
@@ -76,6 +80,17 @@ void CrashCheckStart() {
 		f.write("1", 1);
 		f.close();
 	}
+}
+
+[[nodiscard]] bool OpenGLLibraryAvailable() {
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
+	static const auto available = base::Platform::LoadLibrary(
+		"libOpenGL.so.0",
+		RTLD_NODELETE) != nullptr;
+	return available;
+#else // !Q_OS_MAC && !Q_OS_WIN
+	return true;
+#endif // Q_OS_MAC || Q_OS_WIN
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
@@ -144,6 +159,9 @@ Capabilities CheckCapabilities(QWidget *widget) {
 			return {};
 		} else if (LastCheckCrashed) {
 			LOG_ONCE(("OpenGL: Last-crashed."));
+			return {};
+		} else if (!OpenGLLibraryAvailable()) {
+			LOG_ONCE(("OpenGL: Library not available."));
 			return {};
 		}
 	}
@@ -297,7 +315,9 @@ bool WidgetsRhiEnabled() {
 	if (!OptionUseQtRhi.value()) {
 		return false;
 	} else if (!Platform::IsMac()) {
-		if (ForceDisabled || LastCrashCheckFailed()) {
+		if (ForceDisabled
+			|| LastCrashCheckFailed()
+			|| !OpenGLLibraryAvailable()) {
 			return false;
 		}
 	}
@@ -315,7 +335,9 @@ RhiCapabilities CheckRhiCapabilities() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 	static const auto result = [] {
 		if (!Platform::IsMac()) {
-			if (ForceDisabled || LastCrashCheckFailed()) {
+			if (ForceDisabled
+				|| LastCrashCheckFailed()
+				|| !OpenGLLibraryAvailable()) {
 				return RhiCapabilities();
 			}
 			CrashCheckStart();
