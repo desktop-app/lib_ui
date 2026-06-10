@@ -807,7 +807,6 @@ void Instance::decrementUsage(not_null<Object*> object) {
 	}, [&](Cached &state) {
 		_state = state.unload();
 	});
-	_repaintLater(this, RepaintRequest());
 }
 
 Object::Object(not_null<Instance*> instance, Fn<void()> repaint)
