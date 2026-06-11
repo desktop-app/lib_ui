@@ -198,6 +198,9 @@ void BlockParser::createBlock(int skipBack) {
 		if (replacementLength > length) {
 			_t->insertReplacement(_blockStart, replacementLength, length);
 		}
+		_t->_minResizeWidth = std::max(
+			_t->_minResizeWidth,
+			custom->width());
 	}
 	const auto push = [&](auto &&factory, auto &&...args) {
 		_tBlocks.push_back(factory({

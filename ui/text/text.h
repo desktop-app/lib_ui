@@ -373,6 +373,9 @@ public:
 	[[nodiscard]] int minHeight() const {
 		return _minHeight;
 	}
+	[[nodiscard]] int minResizeWidth() const {
+		return _minResizeWidth;
+	}
 	[[nodiscard]] int countMaxMonospaceWidth() const;
 
 	void draw(QPainter &p, const PaintContext &context) const;
