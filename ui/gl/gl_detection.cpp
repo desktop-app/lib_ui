@@ -38,6 +38,14 @@
 #endif // !Q_OS_MAC && !Q_OS_WIN
 #endif // Qt >= 6.7
 
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
+extern "C" {
+void _libOpenGL_so_tramp_resolve_all(void) __attribute__((weak));
+void _libEGL_so_tramp_resolve_all(void) __attribute__((weak));
+void _libGLX_so_tramp_resolve_all(void) __attribute__((weak));
+} // extern "C"
+#endif // !Q_OS_MAC && !Q_OS_WIN
+
 #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
 
 namespace Ui::GL {
@@ -84,9 +92,21 @@ void CrashCheckStart() {
 
 [[nodiscard]] bool OpenGLLibraryAvailable() {
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
-	static const auto available = base::Platform::LoadLibrary(
-		"libOpenGL.so.0",
-		RTLD_NODELETE) != nullptr;
+	static const auto available = [] {
+		const auto check = [](void (*tramp)(), const char *name) {
+			return !tramp
+				|| (base::Platform::LoadLibrary(name, RTLD_NODELETE)
+					!= nullptr);
+		};
+		if (!check(_libOpenGL_so_tramp_resolve_all, "libOpenGL.so.0")) {
+			return false;
+		} else if (Platform::IsWayland()) {
+			return check(_libEGL_so_tramp_resolve_all, "libEGL.so.1");
+		} else if (Platform::IsX11()) {
+			return check(_libGLX_so_tramp_resolve_all, "libGLX.so.0");
+		}
+		return true;
+	}();
 	return available;
 #else // !Q_OS_MAC && !Q_OS_WIN
 	return true;
