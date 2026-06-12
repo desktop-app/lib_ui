@@ -3333,6 +3333,11 @@ void InputField::performUndoRedo(bool redo) {
 	} else {
 		_inner->undo();
 	}
+
+	// Our contentsChange handler skips corrections while undo/redo
+	// is performed, so the document layout was not yet updated when
+	// the height was checked from there. Now the layout is updated.
+	checkContentHeight();
 }
 
 void InputField::processFormatting(int insertPosition, int insertEnd) {
