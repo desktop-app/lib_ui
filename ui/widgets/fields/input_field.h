@@ -290,6 +290,11 @@ public:
 		EditLinkSelection selection,
 		const TextWithTags &textWithTags,
 		const QString &link);
+	[[nodiscard]] bool isMarkdownTagActive(const QString &tag) const;
+	void toggleCurrentMarkdownTag(const QString &tag);
+	void clearCurrentMarkdown();
+	[[nodiscard]] bool hasCurrentMarkdownLink() const;
+	void editCurrentMarkdownLink();
 	[[nodiscard]] static bool IsValidMarkdownLink(QStringView link);
 	[[nodiscard]] static bool IsCustomEmojiLink(QStringView link);
 	[[nodiscard]] static QString CustomEmojiLink(QStringView entityData);

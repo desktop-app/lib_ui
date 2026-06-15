@@ -1061,17 +1061,20 @@ QString AccumulateText(Iterator begin, Iterator end) {
 	return result;
 }
 
-QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int lineHeight) {
+QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int emojiHeight) {
 	const auto factor = style::DevicePixelRatio();
-	const auto size = Emoji::GetSizeNormal();
+	const auto size = std::max(emojiHeight * factor, Emoji::GetSizeNormal());
 	const auto width = size + st::emojiPadding * factor * 2;
-	const auto height = std::max(lineHeight * factor, size);
 	auto result = QTextImageFormat();
 	result.setWidth(width / factor);
-	result.setHeight(height / factor);
+	result.setHeight(size / factor);
 	result.setName(emoji->toUrl());
 	result.setVerticalAlignment(QTextCharFormat::AlignTop);
 	return result;
+}
+
+QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, style::font font) {
+	return PrepareEmojiFormat(emoji, font->height);
 }
 
 [[nodiscard]] QTextCharFormat PrepareTagFormat(
@@ -1668,11 +1671,7 @@ private:
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 	const auto currentFormat = cursor.charFormat();
-	const auto blockFormat = cursor.blockFormat();
-	const auto type = blockFormat.lineHeightType();
-	const auto height = (type == QTextBlockFormat::FixedHeight)
-		? blockFormat.lineHeight()
-		: QFontMetrics(cursor.charFormat().font()).height();
+	const auto height = QFontMetrics(currentFormat.font()).height();
 	auto format = PrepareEmojiFormat(emoji, height);
 	ApplyTagFormat(format, currentFormat);
 	format.setVerticalAlignment(QTextCharFormat::AlignTop);
@@ -5326,6 +5325,91 @@ void InputField::commitMarkdownLinkEdit(
 	cursor.endEditBlock();
 	_inner->setTextCursor(cursor);
 	_correcting = false;
+}
+
+bool InputField::isMarkdownTagActive(const QString &tag) const {
+	if (tag.isEmpty()) {
+		return false;
+	}
+	const auto cursor = textCursor();
+	if (cursor.hasSelection()) {
+		return HasFullTextTag(getTextWithTagsSelected(), tag);
+	}
+	return TextUtilities::SplitTags(TagWithoutCustomEmoji(
+		cursor.charFormat().property(kTagProperty).toString())).contains(tag);
+}
+
+void InputField::toggleCurrentMarkdownTag(const QString &tag) {
+	if (tag.isEmpty()) {
+		return;
+	}
+	_reverseMarkdownReplacement = false;
+	_insertedTagsAreFromMime = false;
+	const auto cursor = textCursor();
+	if (cursor.hasSelection()) {
+		toggleSelectionMarkdown(tag);
+		Integration::Instance().textActionsUpdated();
+		return;
+	}
+	const auto currentTag = TagWithoutCustomEmoji(
+		cursor.charFormat().property(kTagProperty).toString());
+	const auto updatedTag = isMarkdownTagActive(tag)
+		? TextUtilities::TagWithRemoved(currentTag, tag)
+		: TagWithAddedDroppingMath(
+			currentTag,
+			tag,
+			_instantViewEditorTagsEnabled);
+	auto format = _defaultCharFormat;
+	format.merge(PrepareTagFormat(
+		_st,
+		updatedTag,
+		_instantViewEditorTagsEnabled));
+	_defaultCharFormat = format;
+	auto updatedCursor = cursor;
+	updatedCursor.setCharFormat(format);
+	setTextCursor(updatedCursor);
+	Integration::Instance().textActionsUpdated();
+}
+
+void InputField::clearCurrentMarkdown() {
+	_reverseMarkdownReplacement = false;
+	_insertedTagsAreFromMime = false;
+	const auto cursor = textCursor();
+	if (cursor.hasSelection()) {
+		clearSelectionMarkdown();
+		Integration::Instance().textActionsUpdated();
+		return;
+	}
+	auto format = _defaultCharFormat;
+	format.merge(PrepareTagFormat(
+		_st,
+		QString(),
+		_instantViewEditorTagsEnabled));
+	_defaultCharFormat = format;
+	auto updatedCursor = cursor;
+	updatedCursor.setCharFormat(format);
+	setTextCursor(updatedCursor);
+	Integration::Instance().textActionsUpdated();
+}
+
+bool InputField::hasCurrentMarkdownLink() const {
+	if (!_editLinkCallback) {
+		return false;
+	}
+	const auto cursor = textCursor();
+	const auto selection = EditLinkSelection{
+		.from = cursor.selectionStart(),
+		.till = cursor.selectionEnd(),
+	};
+	return !selectionEditLinkData(selection).link.isEmpty();
+}
+
+void InputField::editCurrentMarkdownLink() {
+	const auto cursor = textCursor();
+	editMarkdownLink({
+		cursor.selectionStart(),
+		cursor.selectionEnd(),
+	});
 }
 
 void InputField::toggleSelectionMarkdown(const QString &tag) {
