@@ -2138,17 +2138,8 @@ void InputField::updatePalette() {
 	}
 }
 
-void InputField::setExtendedContextMenu(
-		rpl::producer<ExtendedContextMenu> value) {
-	std::move(
-		value
-	) | rpl::on_next([=](auto pair) {
-		auto &[menu, e, setupPopupMenu] = pair;
-		contextMenuEventInner(
-			e.get(),
-			std::move(menu),
-			std::move(setupPopupMenu));
-	}, lifetime());
+void InputField::addContextMenuHook(ContextMenuHook hook) {
+	_contextMenuHooks.push_back(std::move(hook));
 }
 
 void InputField::setInstantReplaces(const InstantReplaces &replaces) {
@@ -5519,21 +5510,53 @@ bool InputField::jumpOutOfBlockByBackspace() {
 	return true;
 }
 
-void InputField::contextMenuEventInner(
-		QContextMenuEvent *e,
-		QMenu *m,
-		Fn<void(not_null<PopupMenu*>)> setupPopupMenu) {
-	if (const auto menu = m ? m : _inner->createStandardContextMenu()) {
-		addMarkdownActions(menu, e);
+void InputField::contextMenuEventInner(QContextMenuEvent *e) {
+	const auto menu = _inner->createStandardContextMenu();
+	if (!menu) {
+		return;
+	}
+	addMarkdownActions(menu, e);
+
+	// The menu may be shown asynchronously: a hook (spell checking) can defer
+	// the show until its async work finishes. We keep a single shared barrier
+	// and show exactly one PopupMenu once every deferral has completed.
+	struct State {
+		int pending = 1;
+		std::vector<Fn<void(not_null<PopupMenu*>)>> setups;
+	};
+	const auto state = std::make_shared<State>();
+	const auto globalPos = e->globalPos();
+	const auto show = crl::guard(this, [=] {
 		_contextMenu = base::make_unique_q<PopupMenu>(this, menu, _st.menu);
-		if (setupPopupMenu) {
-			setupPopupMenu(_contextMenu.get());
+		for (const auto &setup : state->setups) {
+			setup(_contextMenu.get());
 		}
 		QObject::connect(_contextMenu.get(), &QObject::destroyed, [=] {
 			_menuShownChanges.fire(false);
 		});
 		_menuShownChanges.fire(true);
-		_contextMenu->popup(e->globalPos());
+		_contextMenu->popup(globalPos);
+	});
+	auto request = ContextMenuRequest{
+		.menu = menu,
+		.event = e,
+		.customizePopupMenu = [=](Fn<void(not_null<PopupMenu*>)> setup) {
+			state->setups.push_back(std::move(setup));
+		},
+		.awaitAsyncWork = [=]() -> Fn<void()> {
+			++state->pending;
+			return [=] {
+				if (!--state->pending) {
+					show();
+				}
+			};
+		},
+	};
+	for (const auto &hook : _contextMenuHooks) {
+		hook(request);
+	}
+	if (!--state->pending) {
+		show();
 	}
 }
 
