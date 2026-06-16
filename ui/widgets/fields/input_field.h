@@ -290,6 +290,13 @@ public:
 		EditLinkSelection selection,
 		const TextWithTags &textWithTags,
 		const QString &link);
+	[[nodiscard]] InputFieldTextRange selectionEditMarkdownTagRange(
+		InputFieldTextRange selection,
+		const QString &tag) const;
+	void commitMarkdownTagEdit(
+		InputFieldTextRange range,
+		const QString &tag,
+		const QString &text);
 	[[nodiscard]] bool isMarkdownTagActive(const QString &tag) const;
 	void toggleCurrentMarkdownTag(const QString &tag);
 	void clearCurrentMarkdown();

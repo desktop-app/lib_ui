@@ -4601,6 +4601,97 @@ auto InputField::editLinkSelection(QContextMenuEvent *e) const
 	};
 }
 
+InputFieldTextRange InputField::selectionEditMarkdownTagRange(
+		InputFieldTextRange selection,
+		const QString &tag) const {
+	if (tag.isEmpty() || !selection.empty()) {
+		return selection;
+	}
+	const auto position = (selection.from > 0)
+		? (selection.from - 1)
+		: selection.from;
+
+	struct State {
+		QTextBlock block;
+		QTextBlock::iterator i;
+	};
+	const auto document = _inner->document();
+	const auto skipInvalid = [&](State &state) {
+		if (state.block == document->end()) {
+			return false;
+		}
+		while (state.i.atEnd()) {
+			state.block = state.block.next();
+			if (state.block == document->end()) {
+				return false;
+			}
+			state.i = state.block.begin();
+		}
+		return true;
+	};
+	const auto moveToNext = [&](State &state) {
+		Expects(state.block != document->end());
+		Expects(!state.i.atEnd());
+
+		++state.i;
+	};
+	const auto moveToPrevious = [&](State &state) {
+		Expects(state.block != document->end());
+		Expects(!state.i.atEnd());
+
+		while (state.i == state.block.begin()) {
+			if (state.block == document->begin()) {
+				state.block = document->end();
+				return false;
+			}
+			state.block = state.block.previous();
+			state.i = state.block.end();
+		}
+		--state.i;
+		return true;
+	};
+	const auto stateTagHasMatch = [&](const State &state) {
+		const auto format = state.i.fragment().charFormat();
+		return TextUtilities::SplitTags(
+			format.property(kTagProperty).toString()).contains(tag);
+	};
+	const auto stateStart = [&](const State &state) {
+		return state.i.fragment().position();
+	};
+	const auto stateEnd = [&](const State &state) {
+		const auto fragment = state.i.fragment();
+		return fragment.position() + fragment.length();
+	};
+	auto state = State{ document->findBlock(position) };
+	if (state.block != document->end()) {
+		state.i = state.block.begin();
+	}
+	for (; skipInvalid(state); moveToNext(state)) {
+		const auto fragmentStart = stateStart(state);
+		const auto fragmentEnd = stateEnd(state);
+		if (fragmentEnd <= position) {
+			continue;
+		} else if (fragmentStart > position) {
+			break;
+		}
+		if (stateTagHasMatch(state)) {
+			auto from = fragmentStart;
+			auto till = fragmentEnd;
+			auto copy = state;
+			while (moveToPrevious(copy) && stateTagHasMatch(copy)) {
+				from = stateStart(copy);
+			}
+			while (skipInvalid(state) && stateTagHasMatch(state)) {
+				till = stateEnd(state);
+				moveToNext(state);
+			}
+			return { from, till };
+		}
+		break;
+	}
+	return selection;
+}
+
 TextWithTags InputField::prepareTextStrippingLinks(
 		EditLinkSelection selection,
 		EditLinkData *outData) {
@@ -5325,6 +5416,28 @@ void InputField::commitMarkdownLinkEdit(
 	cursor.endEditBlock();
 	_inner->setTextCursor(cursor);
 	_correcting = false;
+}
+
+void InputField::commitMarkdownTagEdit(
+		InputFieldTextRange range,
+		const QString &tag,
+		const QString &text) {
+	if (tag.isEmpty() || text.isEmpty()) {
+		return;
+	}
+	_reverseMarkdownReplacement = false;
+	_insertedTagsAreFromMime = false;
+	finishMarkdownTagChange(TextRange{
+		range.from,
+		range.till,
+	}, PrepareForInsert(TextWithTags{
+		.text = text,
+		.tags = { TextWithTags::Tag{
+			.offset = 0,
+			.length = int(text.size()),
+			.id = tag,
+		} },
+	}));
 }
 
 bool InputField::isMarkdownTagActive(const QString &tag) const {
