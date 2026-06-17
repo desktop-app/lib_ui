@@ -298,6 +298,8 @@ public:
 		const QString &tag,
 		const QString &text);
 	[[nodiscard]] bool isMarkdownTagActive(const QString &tag) const;
+	[[nodiscard]] QString selectionMarkdownTagForToggle(
+		const QString &tag) const;
 	void toggleCurrentMarkdownTag(const QString &tag);
 	void clearCurrentMarkdown();
 	[[nodiscard]] bool hasCurrentMarkdownLink() const;

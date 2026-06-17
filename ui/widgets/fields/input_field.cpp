@@ -509,9 +509,6 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 		}
 		auto found = false;
 		for (const auto &single : TextUtilities::SplitTags(existing.id)) {
-			const auto normalized = IsTagPre(single)
-				? QStringView(kTagCode)
-				: single;
 			if (checkingLink
 				&& IsEditableLinkTag(single, instantViewEditorTagsEnabled)) {
 				if (resultLink.isEmpty()) {
@@ -523,9 +520,20 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 					break;
 				}
 				return QString();
-			} else if (!checkingLink && QStringView(tag) == normalized) {
-				found = true;
-				break;
+			} else if (!checkingLink) {
+				const auto matches = [&] {
+					if (tag == kTagPre) {
+						return IsTagPre(single);
+					}
+					const auto normalized = IsTagPre(single)
+						? QStringView(kTagCode)
+						: single;
+					return QStringView(tag) == normalized;
+				}();
+				if (matches) {
+					found = true;
+					break;
+				}
 			}
 		}
 		if (!found) {
@@ -5462,6 +5470,54 @@ bool InputField::isMarkdownTagActive(const QString &tag) const {
 		cursor.charFormat().property(kTagProperty).toString())).contains(tag);
 }
 
+QString InputField::selectionMarkdownTagForToggle(const QString &tag) const {
+	const auto cursor = textCursor();
+	auto from = cursor.selectionStart();
+	auto till = cursor.selectionEnd();
+	if (from >= till) {
+		return QString();
+	}
+	if (document()->characterAt(from) == kHardLine) {
+		++from;
+	}
+	if (document()->characterAt(till - 1) == kHardLine) {
+		--till;
+	}
+	if (from >= till) {
+		return QString();
+	}
+	if (tag != kTagCode) {
+		return tag;
+	}
+	const auto leftForBlock = [&] {
+		if (from <= 0) {
+			return true;
+		}
+		const auto text = getTextWithTagsPart(
+			from - 1,
+			from + 1
+		).text;
+		return text.isEmpty()
+			|| IsNewline(text[0])
+			|| IsNewline(text[text.size() - 1]);
+	}();
+	const auto rightForBlock = [&] {
+		auto cursor = textCursor();
+		cursor.movePosition(QTextCursor::End);
+		if (till >= cursor.position()) {
+			return true;
+		}
+		const auto text = getTextWithTagsPart(
+			till - 1,
+			till + 1
+		).text;
+		return text.isEmpty()
+			|| IsNewline(text[0])
+			|| IsNewline(text[text.size() - 1]);
+	}();
+	return (leftForBlock && rightForBlock) ? kTagPre : kTagCode;
+}
+
 void InputField::toggleCurrentMarkdownTag(const QString &tag) {
 	if (tag.isEmpty()) {
 		return;
@@ -5554,42 +5610,15 @@ void InputField::toggleSelectionMarkdown(const QString &tag) {
 	auto range = TextRange{ from, till };
 	if (tag.isEmpty()) {
 		RemoveDocumentTags(_st, document(), from, till);
-	} else if (HasFullTextTag(getTextWithTagsSelected(), tag)) {
-		removeMarkdownTag(range, tag);
 	} else {
-		const auto leftForBlock = [&] {
-			if (from <= 0) {
-				return true;
-			}
-			const auto text = getTextWithTagsPart(
-				from - 1,
-				from + 1
-			).text;
-			return text.isEmpty()
-				|| IsNewline(text[0])
-				|| IsNewline(text[text.size() - 1]);
-		}();
-		const auto rightForBlock = [&] {
-			auto cursor = QTextCursor(document());
-			cursor.movePosition(QTextCursor::End);
-			if (till >= cursor.position()) {
-				return true;
-			}
-			const auto text = getTextWithTagsPart(
-				till - 1,
-				till + 1
-			).text;
-			return text.isEmpty()
-				|| IsNewline(text[0])
-				|| IsNewline(text[text.size() - 1]);
-		}();
-
-		const auto useTag = (tag != kTagCode)
-			? tag
-			: (leftForBlock && rightForBlock)
-			? kTagPre
-			: kTagCode;
-		range = addMarkdownTag(range, useTag);
+		const auto useTag = selectionMarkdownTagForToggle(tag);
+		if (useTag.isEmpty()) {
+			return;
+		} else if (HasFullTextTag(getTextWithTagsSelected(), useTag)) {
+			removeMarkdownTag(range, useTag);
+		} else {
+			range = addMarkdownTag(range, useTag);
+		}
 	}
 	auto restorePosition = textCursor();
 	restorePosition.setPosition(
