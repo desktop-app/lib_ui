@@ -4751,6 +4751,16 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 	}
 	if (!e->commitString().isEmpty()) {
 		if (Emoji::Find(e->commitString(), nullptr)) {
+			// Finalize the active IME composition in the underlying QTextEdit.
+			// See https://github.com/telegramdesktop/tdesktop/issues/29806
+			auto clear = QInputMethodEvent();
+			_inner->QTextEdit::inputMethodEvent(&clear);
+
+			if (!_lastPreEditText.isEmpty()) {
+				_lastPreEditText = QString();
+				startPlaceholderAnimation();
+			}
+
 			auto mimeData = QMimeData();
 			mimeData.setText(e->commitString());
 			InputField::insertFromMimeDataInner(&mimeData);
