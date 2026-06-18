@@ -1110,6 +1110,10 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
 			? style::ConvertScale(20)
 			: height();
 		tryScrollTo(_state.visibleFrom + (up ? -step : step));
+	} else {
+		// Let keys we don't handle (e.g. typed characters) propagate to
+		// the parent widget instead of being silently accepted here.
+		e->ignore();
 	}
 }
 
