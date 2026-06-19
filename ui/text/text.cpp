@@ -12,6 +12,7 @@
 #include "ui/text/text_isolated_emoji.h"
 #include "ui/text/text_renderer.h"
 #include "ui/text/text_word_parser.h"
+#include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/tooltip.h" // FindNiceTooltipWidth.
 #include "ui/basic_click_handlers.h"
 #include "ui/integration.h"
@@ -87,6 +88,10 @@ bool IsParagraphSeparator(QChar ch) {
 	const auto semantics = custom->semantics();
 	return !semantics.exportEntity
 		|| !custom->replacementText().isEmpty();
+}
+
+[[nodiscard]] bool IsIvFormulaCustomEmojiData(QStringView data) {
+	return data.startsWith(u"iv-markdown:inline-text-object;formula;"_q);
 }
 
 [[nodiscard]] bool IsTrailingSkipOnlyLine(
@@ -1877,6 +1882,7 @@ void String::enumerateText(
 				const auto semantics = custom->semantics();
 				if (!semantics.exportEntity) {
 					const auto replacement = custom->replacementText();
+					const auto data = custom->entityData();
 					appendPartCallback(
 						replacement.isEmpty()
 							? base::StringViewMid(
@@ -1884,7 +1890,8 @@ void String::enumerateText(
 								rangeFrom,
 								rangeTo - rangeFrom)
 							: QStringView(replacement),
-						QString());
+						data,
+						false);
 					continue;
 				}
 			}
@@ -1893,7 +1900,8 @@ void String::enumerateText(
 				: QString();
 			appendPartCallback(
 				base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom),
-				customEmojiData);
+				customEmojiData,
+				true);
 		}
 	}
 }
@@ -2109,15 +2117,27 @@ TextForMimeData String::toText(
 	};
 	const auto appendPartCallback = [&](
 			QStringView part,
-			const QString &customEmojiData) {
+			const QString &customEmojiData,
+			bool exportCustomEmojiEntity) {
+		const auto offset = int(result.rich.text.size());
 		result.rich.text += part;
 		if (composeExpanded) {
 			result.expanded += part;
 		}
-		if (composeEntities && !customEmojiData.isEmpty()) {
+		if (composeExpanded
+			&& IsIvFormulaCustomEmojiData(customEmojiData)
+			&& !part.isEmpty()) {
+			result.tags.push_back({
+				.offset = offset,
+				.length = int(part.size()),
+				.id = Ui::InputField::kTagIvMath,
+			});
+		}
+		if (composeEntities && exportCustomEmojiEntity
+			&& !customEmojiData.isEmpty()) {
 			insertEntity({
 				EntityType::CustomEmoji,
-				int(result.rich.text.size() - part.size()),
+				offset,
 				int(part.size()),
 				customEmojiData,
 			});

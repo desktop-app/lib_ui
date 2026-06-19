@@ -17,6 +17,7 @@
 #include "ui/integration.h"
 #include "base/qt/qt_common_adapters.h"
 
+#include <QtCore/QByteArray>
 #include <QtCore/QStack>
 #include <QtCore/QMimeData>
 #include <QtGui/QGuiApplication>
@@ -2505,8 +2506,17 @@ TextWithTags::Tags ConvertEntitiesToTextTags(
 
 std::unique_ptr<QMimeData> MimeDataFromText(const TextForMimeData &text) {
 	const auto html = TextUtilities::TextForMimeDataToHtml(text);
+	auto tags = ConvertEntitiesToTextTags(text.rich.entities);
+	tags.reserve(tags.size() + text.tags.size());
+	for (const auto &tag : text.tags) {
+		tags.push_back({
+			.offset = tag.offset,
+			.length = tag.length,
+			.id = tag.id,
+		});
+	}
 	return MimeDataFromText(
-		{ text.rich.text, ConvertEntitiesToTextTags(text.rich.entities) },
+		{ text.rich.text, SimplifyTags(std::move(tags)) },
 		text.expanded,
 		html);
 }
