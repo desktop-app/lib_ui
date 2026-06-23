@@ -29,6 +29,10 @@ public:
 
 	FadeWrap *setDuration(int duration);
 	FadeWrap *setOpacity(float64 opacity);
+	FadeWrap *setUpdatedCallback(Fn<void(float64)> callback) {
+		_animation.setUpdatedCallback(std::move(callback));
+		return this;
+	}
 	FadeWrap *toggle(bool shown, anim::type animated);
 	FadeWrap *show(anim::type animated) {
 		return toggle(true, animated);
@@ -44,6 +48,9 @@ public:
 	}
 	bool toggled() const {
 		return _animation.visible();
+	}
+	[[nodiscard]] float64 shownProgress() const {
+		return _animation.progress();
 	}
 	auto toggledValue() const {
 		return _toggledChanged.events_starting_with(
@@ -77,6 +84,9 @@ public:
 	}
 	FadeWrap *setOpacity(float64 opacity) {
 		return chain(Parent::setOpacity(opacity));
+	}
+	FadeWrap *setUpdatedCallback(Fn<void(float64)> callback) {
+		return chain(Parent::setUpdatedCallback(std::move(callback)));
 	}
 	FadeWrap *toggle(bool shown, anim::type animated) {
 		return chain(Parent::toggle(shown, animated));

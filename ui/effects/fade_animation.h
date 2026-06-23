@@ -46,6 +46,9 @@ public:
 	bool visible() const {
 		return _visible;
 	}
+	[[nodiscard]] float64 progress() const {
+		return _animation.value(_visible ? 1. : 0.);
+	}
 
 private:
 	void startAnimation(int duration);
