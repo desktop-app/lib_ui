@@ -422,6 +422,11 @@ public:
 	// use the default QWidget enumeration.
 	[[nodiscard]] virtual std::vector<not_null<QWidget*>> accessibilityChildWidgets() const;
 
+	// Orientation of a tab-control container (PageTabList), exposed to UIA so a
+	// screen reader can announce a horizontal/vertical tab list. nullopt (the
+	// default) means the widget reports no orientation.
+	[[nodiscard]] virtual std::optional<Qt::Orientation> accessibilityOrientation() const;
+
 	[[nodiscard]] virtual RpWidget *accessibilityParent() const;
 	[[nodiscard]] virtual QAccessibleInterface* accessibilityChildInterface(int index) const;
 	[[nodiscard]] virtual QString accessibilityChildName(int index) const;

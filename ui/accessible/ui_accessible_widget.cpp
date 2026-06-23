@@ -95,6 +95,10 @@ void *Widget::interface_cast(QAccessible::InterfaceType type) {
 		&& rp()->accessibilityRole() == QAccessible::PageTabList) {
 		return static_cast<QAccessibleSelectionInterface*>(this);
 	}
+	if (type == QAccessible::AttributesInterface
+		&& rp()->accessibilityOrientation().has_value()) {
+		return static_cast<QAccessibleAttributesInterface*>(this);
+	}
 	return QAccessibleWidget::interface_cast(type);
 }
 
@@ -318,6 +322,26 @@ bool Widget::selectAll() {
 
 bool Widget::clear() {
 	return false; // A tab control always keeps one current tab.
+}
+
+// Attributes. Reports the container's orientation (e.g. a vertical tab strip)
+// so UI Automation can describe a horizontal/vertical tab control.
+
+QList<QAccessible::Attribute> Widget::attributeKeys() const {
+	auto result = QList<QAccessible::Attribute>();
+	if (rp()->accessibilityOrientation().has_value()) {
+		result.append(QAccessible::Attribute::Orientation);
+	}
+	return result;
+}
+
+QVariant Widget::attributeValue(QAccessible::Attribute key) const {
+	if (key == QAccessible::Attribute::Orientation) {
+		if (const auto orientation = rp()->accessibilityOrientation()) {
+			return int(*orientation);
+		}
+	}
+	return QVariant();
 }
 
 } // namespace Ui::Accessible
