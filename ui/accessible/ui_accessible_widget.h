@@ -16,7 +16,8 @@ namespace Ui::Accessible {
 
 class Widget
 	: public QAccessibleWidget
-	, public QAccessibleSelectionInterface {
+	, public QAccessibleSelectionInterface
+	, public QAccessibleAttributesInterface {
 public:
 	explicit Widget(not_null<RpWidget*> widget);
 
@@ -57,6 +58,12 @@ public:
 	bool unselect(QAccessibleInterface *childItem) override;
 	bool selectAll() override;
 	bool clear() override;
+
+	// Attributes. Exposed (via interface_cast) only when the widget reports an
+	// accessibilityOrientation(), so UI Automation can announce a horizontal or
+	// vertical tab control.
+	QList<QAccessible::Attribute> attributeKeys() const override;
+	QVariant attributeValue(QAccessible::Attribute key) const override;
 
 };
 

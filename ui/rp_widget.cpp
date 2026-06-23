@@ -508,6 +508,10 @@ std::vector<not_null<QWidget*>> RpWidget::accessibilityChildWidgets() const {
 	return {};
 }
 
+std::optional<Qt::Orientation> RpWidget::accessibilityOrientation() const {
+	return std::nullopt;
+}
+
 RpWidget *RpWidget::accessibilityParent() const {
 	return nullptr;
 }
