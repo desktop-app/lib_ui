@@ -210,9 +210,14 @@ void AbstractButton::setDisabled(bool disabled) {
 	auto was = _state;
 	if (disabled && !(_state & StateFlag::Disabled)) {
 		_state |= StateFlag::Disabled;
+		// Keep the real widget state in sync so QAccessibleWidget reports the
+		// disabled state from QWidget::isEnabled() - no custom accessibility
+		// override needed.
+		setEnabled(false);
 		onStateChanged(was, StateChangeSource::ByUser);
 	} else if (!disabled && (_state & StateFlag::Disabled)) {
 		_state &= ~State(StateFlag::Disabled);
+		setEnabled(true);
 		onStateChanged(was, StateChangeSource::ByUser);
 	}
 }

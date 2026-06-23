@@ -374,6 +374,7 @@ struct AccessibilityState {
 	bool checked : 1 = false;
 	bool pressed : 1 = false;
 	bool readOnly : 1 = false;
+	bool selectable : 1 = false;
 	bool selected : 1 = false;
 
 	void writeTo(QAccessible::State &state);
@@ -415,6 +416,12 @@ public:
 	[[nodiscard]] virtual QStringList accessibilityActionNames();
 	virtual void accessibilityDoAction(const QString &name);
 	[[nodiscard]] virtual int accessibilityChildCount() const;
+
+	// Real child widgets in accessibility (visual) order, when it differs from
+	// the QObject child order (e.g. a reorderable VerticalLayout). Empty means
+	// use the default QWidget enumeration.
+	[[nodiscard]] virtual std::vector<not_null<QWidget*>> accessibilityChildWidgets() const;
+
 	[[nodiscard]] virtual RpWidget *accessibilityParent() const;
 	[[nodiscard]] virtual QAccessibleInterface* accessibilityChildInterface(int index) const;
 	[[nodiscard]] virtual QString accessibilityChildName(int index) const;
