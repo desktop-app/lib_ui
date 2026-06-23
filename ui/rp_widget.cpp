@@ -332,6 +332,7 @@ void AccessibilityState::writeTo(QAccessible::State &state) {
 	state.checked = checked ? 1 : 0;
 	state.pressed = pressed ? 1 : 0;
 	state.readOnly = readOnly ? 1 : 0;
+	state.selectable = selectable ? 1 : 0;
 	state.selected = selected ? 1 : 0;
 }
 
@@ -501,6 +502,10 @@ void RpWidget::accessibilityDoAction(const QString &name) {
 
 int RpWidget::accessibilityChildCount() const {
 	return -1;
+}
+
+std::vector<not_null<QWidget*>> RpWidget::accessibilityChildWidgets() const {
+	return {};
 }
 
 RpWidget *RpWidget::accessibilityParent() const {
