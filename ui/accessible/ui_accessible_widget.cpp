@@ -91,6 +91,10 @@ not_null<RpWidget*> Widget::rp() const {
 // Interface cast.
 
 void *Widget::interface_cast(QAccessible::InterfaceType type) {
+	if (type == QAccessible::SelectionInterface
+		&& rp()->accessibilityRole() == QAccessible::PageTabList) {
+		return static_cast<QAccessibleSelectionInterface*>(this);
+	}
 	return QAccessibleWidget::interface_cast(type);
 }
 
@@ -230,6 +234,57 @@ void Widget::doAction(const QString &actionName) {
 	base::Integration::Instance().enterFromEventLoop([&] {
 		rp()->accessibilityDoAction(actionName);
 	});
+}
+
+// Selection. The selected children are those reporting `selected` (a page tab
+// reports selected = active), so the active tab resolves independently of focus.
+
+int Widget::selectedItemCount() const {
+	return int(selectedItems().size());
+}
+
+QList<QAccessibleInterface*> Widget::selectedItems() const {
+	auto result = QList<QAccessibleInterface*>();
+	const auto count = childCount();
+	for (auto i = 0; i != count; ++i) {
+		if (const auto item = child(i)) {
+			if (item->state().selected) {
+				result.append(item);
+			}
+		}
+	}
+	return result;
+}
+
+QAccessibleInterface *Widget::selectedItem(int selectionIndex) const {
+	// Bounds-safe: an out-of-range index (including negative) yields nullptr.
+	return selectedItems().value(selectionIndex, nullptr);
+}
+
+bool Widget::isSelected(QAccessibleInterface *childItem) const {
+	return childItem && childItem->state().selected;
+}
+
+bool Widget::select(QAccessibleInterface *childItem) {
+	if (childItem) {
+		if (const auto actions = childItem->actionInterface()) {
+			actions->doAction(QAccessibleActionInterface::pressAction());
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Widget::unselect(QAccessibleInterface*) {
+	return false; // A tab control always keeps one current tab.
+}
+
+bool Widget::selectAll() {
+	return false; // Single-selection container.
+}
+
+bool Widget::clear() {
+	return false; // A tab control always keeps one current tab.
 }
 
 } // namespace Ui::Accessible

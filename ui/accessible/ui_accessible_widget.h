@@ -14,7 +14,9 @@ class RpWidget;
 
 namespace Ui::Accessible {
 
-class Widget : public QAccessibleWidget {
+class Widget
+	: public QAccessibleWidget
+	, public QAccessibleSelectionInterface {
 public:
 	explicit Widget(not_null<RpWidget*> widget);
 
@@ -43,6 +45,18 @@ public:
 	// Actions.
 	QStringList actionNames() const override;
 	void doAction(const QString &actionName) override;
+
+	// Selection. Exposed (via interface_cast) only for the PageTabList tab
+	// container, so UI Automation resolves the selected tab from
+	// state().selected - independent of keyboard focus.
+	int selectedItemCount() const override;
+	QList<QAccessibleInterface*> selectedItems() const override;
+	QAccessibleInterface *selectedItem(int selectionIndex) const override;
+	bool isSelected(QAccessibleInterface *childItem) const override;
+	bool select(QAccessibleInterface *childItem) override;
+	bool unselect(QAccessibleInterface *childItem) override;
+	bool selectAll() override;
+	bool clear() override;
 
 };
 
