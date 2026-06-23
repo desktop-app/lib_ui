@@ -12,6 +12,7 @@
 
 namespace TextUtilities {
 
+[[nodiscard]] QString EscapeForHtml(QStringView text);
 [[nodiscard]] QString TextWithTagsToHtml(const TextWithTags &text);
 [[nodiscard]] QString TextForMimeDataToHtml(const TextForMimeData &text);
 [[nodiscard]] std::optional<TextWithTags> TextWithTagsFromHtml(

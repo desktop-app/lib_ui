@@ -435,25 +435,6 @@ void AddLinkRunSegment(
 	return result;
 }
 
-[[nodiscard]] QString EscapeHtmlAttribute(QStringView value) {
-	auto result = QString();
-	result.reserve(value.size());
-	for (const auto ch : value) {
-		if (ch == '&') {
-			result.append(u"&amp;"_q);
-		} else if (ch == '"') {
-			result.append(u"&quot;"_q);
-		} else if (ch == '<') {
-			result.append(u"&lt;"_q);
-		} else if (ch == '>') {
-			result.append(u"&gt;"_q);
-		} else {
-			result.append(ch);
-		}
-	}
-	return result;
-}
-
 [[nodiscard]] QString SerializeLinkHref(QStringView link) {
 	if (link.indexOf(':') < 0) {
 		const auto value = link.toString();
@@ -477,7 +458,7 @@ void AppendOpenTag(QString &result, const HtmlTagDescriptor &descriptor) {
 	case HtmlTag::StrikeOut: result.append(u"<s>"_q); break;
 	case HtmlTag::Link:
 		result.append(u"<a href=\""_q);
-		result.append(EscapeHtmlAttribute(SerializeLinkHref(descriptor.data)));
+		result.append(EscapeForHtml(SerializeLinkHref(descriptor.data)));
 		result.append(u"\">"_q);
 		break;
 	}
@@ -519,6 +500,10 @@ void SwitchTags(
 }
 
 void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
+	// EscapeForHtml() instead of QString::toHtmlEscaped(): the latter goes
+	// through std::u16string_view::find_first_of(), which hangs in an infinite
+	// loop on Windows ARM64 builds because of a bug in the MSVC STL Neon
+	// implementation (_Impl_first_neon in vector_algorithms.cpp).
 	auto start = 0;
 	const auto size = text.size();
 	for (auto i = 0; i != size; ++i) {
@@ -526,7 +511,7 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		if (ch != '\r' && ch != '\n') {
 			continue;
 		}
-		result.append(text.mid(start, i - start).toString().toHtmlEscaped());
+		result.append(EscapeForHtml(text.mid(start, i - start)));
 		if (preserveNewlines) {
 			result.append('\n');
 		} else {
@@ -537,7 +522,7 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		}
 		start = i + 1;
 	}
-	result.append(text.mid(start).toString().toHtmlEscaped());
+	result.append(EscapeForHtml(text.mid(start)));
 }
 
 [[nodiscard]] bool IsTagNameStartChar(QChar ch) {
@@ -1365,6 +1350,30 @@ void TrimTrailingStructuralNewlines(ParseState &state) {
 }
 
 } // namespace
+
+QString EscapeForHtml(QStringView text) {
+	// Mirrors QString::toHtmlEscaped(), escaping & " < > as HTML entities.
+	// We do it by hand because toHtmlEscaped() goes through
+	// std::u16string_view::find_first_of(), which hangs in an infinite loop on
+	// Windows ARM64 builds (a bug in the MSVC STL Neon implementation,
+	// _Impl_first_neon in vector_algorithms.cpp).
+	auto result = QString();
+	result.reserve(text.size());
+	for (const auto ch : text) {
+		if (ch == '&') {
+			result.append(u"&amp;"_q);
+		} else if (ch == '"') {
+			result.append(u"&quot;"_q);
+		} else if (ch == '<') {
+			result.append(u"&lt;"_q);
+		} else if (ch == '>') {
+			result.append(u"&gt;"_q);
+		} else {
+			result.append(ch);
+		}
+	}
+	return result;
+}
 
 QString TextWithTagsToHtml(const TextWithTags &text) {
 	if (text.text.isEmpty()) {
