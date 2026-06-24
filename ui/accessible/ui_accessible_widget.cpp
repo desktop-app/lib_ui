@@ -303,11 +303,18 @@ bool Widget::isSelected(QAccessibleInterface *childItem) const {
 }
 
 bool Widget::select(QAccessibleInterface *childItem) {
-	if (childItem) {
-		if (const auto actions = childItem->actionInterface()) {
-			actions->doAction(QAccessibleActionInterface::pressAction());
-			return true;
-		}
+	// Only report success for an item that belongs to this container and can
+	// actually become selected - otherwise (e.g. a locked tab whose press just
+	// opens an upsell) we must not claim the selection succeeded.
+	if (!childItem
+		|| indexOfChild(childItem) < 0
+		|| childItem->state().disabled
+		|| !childItem->state().selectable) {
+		return false;
+	}
+	if (const auto actions = childItem->actionInterface()) {
+		actions->doAction(QAccessibleActionInterface::pressAction());
+		return true;
 	}
 	return false;
 }
