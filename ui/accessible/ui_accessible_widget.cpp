@@ -267,6 +267,19 @@ QStringList Widget::actionNames() const {
 }
 
 void Widget::doAction(const QString &actionName) {
+	// On Qt 5 the Windows UIA bridge redirects a container's SetFocus to
+	// focusChild() only for an element exposing a table interface, not for a
+	// PageTabList - so focus would land on the container. Forward SetFocus to
+	// the selected tab's widget directly instead (no extra Qt patch needed).
+	if (actionName == QAccessibleActionInterface::setFocusAction()
+		&& rp()->accessibilityRole() == QAccessible::PageTabList) {
+		if (const auto selected = selectedItem(0)) {
+			if (const auto widget = qobject_cast<QWidget*>(selected->object())) {
+				widget->setFocus(Qt::OtherFocusReason);
+				return;
+			}
+		}
+	}
 	QAccessibleWidget::doAction(actionName);
 	base::Integration::Instance().enterFromEventLoop([&] {
 		rp()->accessibilityDoAction(actionName);
