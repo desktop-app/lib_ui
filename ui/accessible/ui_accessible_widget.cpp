@@ -286,8 +286,10 @@ void Widget::doAction(const QString &actionName) {
 	});
 }
 
-// Selection. The selected children are those reporting `selected` (a page tab
-// reports selected = active), so the active tab resolves independently of focus.
+// Selection. Only actual page-tab children participate: a selection item is a
+// child with the PageTab role, and the selected one reports selected = active,
+// so the active tab resolves independently of focus. Plain buttons among the
+// children (e.g. a locked, premium-gated folder) are deliberately excluded.
 
 int Widget::selectedItemCount() const {
 	return int(selectedItems().size());
@@ -297,10 +299,11 @@ QList<QAccessibleInterface*> Widget::selectedItems() const {
 	auto result = QList<QAccessibleInterface*>();
 	const auto count = childCount();
 	for (auto i = 0; i != count; ++i) {
-		if (const auto item = child(i)) {
-			if (item->state().selected) {
-				result.append(item);
-			}
+		const auto item = child(i);
+		if (item
+			&& item->role() == QAccessible::PageTab
+			&& item->state().selected) {
+			result.append(item);
 		}
 	}
 	return result;
@@ -312,15 +315,19 @@ QAccessibleInterface *Widget::selectedItem(int selectionIndex) const {
 }
 
 bool Widget::isSelected(QAccessibleInterface *childItem) const {
-	return childItem && childItem->state().selected;
+	return childItem
+		&& indexOfChild(childItem) >= 0
+		&& childItem->role() == QAccessible::PageTab
+		&& childItem->state().selected;
 }
 
 bool Widget::select(QAccessibleInterface *childItem) {
-	// Only report success for an item that belongs to this container and can
-	// actually become selected - otherwise (e.g. a locked tab whose press just
-	// opens an upsell) we must not claim the selection succeeded.
+	// Only report success for a page tab that belongs to this container and can
+	// actually become selected - otherwise (e.g. a locked folder whose press
+	// just opens an upsell) we must not claim the selection succeeded.
 	if (!childItem
 		|| indexOfChild(childItem) < 0
+		|| childItem->role() != QAccessible::PageTab
 		|| childItem->state().disabled
 		|| !childItem->state().selectable) {
 		return false;
@@ -358,6 +365,9 @@ QList<QAccessible::Attribute> Widget::attributeKeys() const {
 QVariant Widget::attributeValue(QAccessible::Attribute key) const {
 	if (key == QAccessible::Attribute::Orientation) {
 		if (const auto orientation = rp()->accessibilityOrientation()) {
+			// Plain int by design: the UIA bridge reads this back with
+			// QVariant::toInt(), and Qt::Orientation isn't a registered
+			// metatype here - QVariant::fromValue() of it wouldn't round-trip.
 			return int(*orientation);
 		}
 	}

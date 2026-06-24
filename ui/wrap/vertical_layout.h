@@ -75,7 +75,6 @@ public:
 	}
 
 	QMargins getMargins() const override;
-	std::vector<not_null<QWidget*>> accessibilityChildWidgets() const override;
 
 	void setVerticalShift(int index, int shift);
 	void reorderRows(int oldIndex, int newIndex);

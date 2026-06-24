@@ -55,18 +55,12 @@ void VerticalLayout::reorderRows(int oldIndex, int newIndex) {
 	base::reorder(_rows, oldIndex, newIndex);
 	resizeToWidth(width());
 
-	// The accessible (visual) child order changed - tell screen readers.
+	// The accessible (visual) child order changed - tell screen readers. A
+	// subclass that exposes an accessibility role (so a custom accessible
+	// interface is built for it) reports children in visual order via
+	// accessibilityChildWidgets(); see Window::TabListLayout.
 	auto event = QAccessibleEvent(this, QAccessible::ObjectReorder);
 	QAccessible::updateAccessibility(&event);
-}
-
-std::vector<not_null<QWidget*>> VerticalLayout::accessibilityChildWidgets() const {
-	auto result = std::vector<not_null<QWidget*>>();
-	result.reserve(_rows.size());
-	for (const auto &row : _rows) {
-		result.push_back(row.widget.data());
-	}
-	return result;
 }
 
 int VerticalLayout::resizeGetHeight(int newWidth) {
