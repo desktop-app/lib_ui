@@ -92,7 +92,7 @@ not_null<RpWidget*> Widget::rp() const {
 
 void *Widget::interface_cast(QAccessible::InterfaceType type) {
 	if (type == QAccessible::SelectionInterface
-		&& rp()->accessibilityRole() == QAccessible::PageTabList) {
+		&& rp()->accessibilitySelectionList()) {
 		return static_cast<QAccessibleSelectionInterface*>(this);
 	}
 	if (type == QAccessible::AttributesInterface
@@ -211,11 +211,13 @@ QAccessibleInterface* Widget::focusChild() const {
 	++ReentrancyDepth;
 	struct Guard { ~Guard() { --ReentrancyDepth; } } guard;
 
-	// A tab control forwards accessible focus to its current (selected) tab, so
-	// focusing the container lands the screen reader on the active tab. Only do
-	// this while the container itself holds focus - if a specific tab has
-	// keyboard focus, fall through so that focused tab is reported instead.
-	if (rp()->accessibilityRole() == QAccessible::PageTabList
+	// A selection list forwards accessible focus to its current (selected) item,
+	// so focusing the container lands the screen reader on a navigable item
+	// rather than the inert container. Only while the container itself holds
+	// focus - if a specific item has keyboard focus, fall through so it is
+	// reported. Opt-in, so plain lists (e.g. message history, which tracks a
+	// separate focused item) are not affected.
+	if (rp()->accessibilitySelectionList()
 		&& widget()->hasFocus()) {
 		if (const auto selected = selectedItem(0)) {
 			return selected;
@@ -269,10 +271,11 @@ QStringList Widget::actionNames() const {
 void Widget::doAction(const QString &actionName) {
 	// On Qt 5 the Windows UIA bridge redirects a container's SetFocus to
 	// focusChild() only for an element exposing a table interface, not for a
-	// PageTabList - so focus would land on the container. Forward SetFocus to
-	// the selected tab's widget directly instead (no extra Qt patch needed).
+	// List - so focus would land on the inert container. Forward SetFocus to
+	// the selected item's widget directly instead (no extra Qt patch needed).
+	// Opt-in, so only a selection list (the folder strip) is affected.
 	if (actionName == QAccessibleActionInterface::setFocusAction()
-		&& rp()->accessibilityRole() == QAccessible::PageTabList) {
+		&& rp()->accessibilitySelectionList()) {
 		if (const auto selected = selectedItem(0)) {
 			if (const auto widget = qobject_cast<QWidget*>(selected->object())) {
 				widget->setFocus(Qt::OtherFocusReason);
@@ -286,10 +289,10 @@ void Widget::doAction(const QString &actionName) {
 	});
 }
 
-// Selection. Only actual page-tab children participate: a selection item is a
-// child with the PageTab role, and the selected one reports selected = active,
-// so the active tab resolves independently of focus. Plain buttons among the
-// children (e.g. a locked, premium-gated folder) are deliberately excluded.
+// Selection. A selection item is a child with the ListItem role reporting
+// selected = active; the selected one resolves independently of focus. Plain
+// buttons among the children are excluded, and a locked folder reports
+// selectable = false, so it is never claimed as a successful selection.
 
 int Widget::selectedItemCount() const {
 	return int(selectedItems().size());
@@ -301,7 +304,7 @@ QList<QAccessibleInterface*> Widget::selectedItems() const {
 	for (auto i = 0; i != count; ++i) {
 		const auto item = child(i);
 		if (item
-			&& item->role() == QAccessible::PageTab
+			&& item->role() == QAccessible::ListItem
 			&& item->state().selected) {
 			result.append(item);
 		}
@@ -317,17 +320,18 @@ QAccessibleInterface *Widget::selectedItem(int selectionIndex) const {
 bool Widget::isSelected(QAccessibleInterface *childItem) const {
 	return childItem
 		&& indexOfChild(childItem) >= 0
-		&& childItem->role() == QAccessible::PageTab
+		&& childItem->role() == QAccessible::ListItem
 		&& childItem->state().selected;
 }
 
 bool Widget::select(QAccessibleInterface *childItem) {
-	// Only report success for a page tab that belongs to this container and can
+	// Only report success for a list item that belongs to this container and can
 	// actually become selected - otherwise (e.g. a locked folder whose press
-	// just opens an upsell) we must not claim the selection succeeded.
+	// just opens an upsell) we must not claim the selection succeeded. A list
+	// item only implements pressAction, so invoke that rather than toggleAction.
 	if (!childItem
 		|| indexOfChild(childItem) < 0
-		|| childItem->role() != QAccessible::PageTab
+		|| childItem->role() != QAccessible::ListItem
 		|| childItem->state().disabled
 		|| !childItem->state().selectable) {
 		return false;
@@ -340,7 +344,7 @@ bool Widget::select(QAccessibleInterface *childItem) {
 }
 
 bool Widget::unselect(QAccessibleInterface*) {
-	return false; // A tab control always keeps one current tab.
+	return false; // A single-selection list always keeps one current item.
 }
 
 bool Widget::selectAll() {
@@ -348,11 +352,11 @@ bool Widget::selectAll() {
 }
 
 bool Widget::clear() {
-	return false; // A tab control always keeps one current tab.
+	return false; // A single-selection list always keeps one current item.
 }
 
-// Attributes. Reports the container's orientation (e.g. a vertical tab strip)
-// so UI Automation can describe a horizontal/vertical tab control.
+// Attributes. Reports the container's orientation (e.g. a vertical list) so UI
+// Automation can describe a horizontal/vertical orientation.
 
 QList<QAccessible::Attribute> Widget::attributeKeys() const {
 	auto result = QList<QAccessible::Attribute>();

@@ -422,10 +422,17 @@ public:
 	// use the default QWidget enumeration.
 	[[nodiscard]] virtual std::vector<not_null<QWidget*>> accessibilityChildWidgets() const;
 
-	// Orientation of a tab-control container (PageTabList), exposed to UIA so a
-	// screen reader can announce a horizontal/vertical tab list. nullopt (the
+	// Orientation of an ordered container (e.g. a list), exposed to UIA so a
+	// screen reader can announce a horizontal/vertical arrangement. nullopt (the
 	// default) means the widget reports no orientation.
 	[[nodiscard]] virtual std::optional<Qt::Orientation> accessibilityOrientation() const;
+
+	// Opt-in for a single-selection list whose accessible focus tracks its
+	// selected item: the accessible wrapper exposes QAccessibleSelectionInterface
+	// and forwards container SetFocus/focusChild to the selected child. Default
+	// false - a plain list (e.g. message history, which keeps focus and selection
+	// separate) must not get this behaviour just from reporting the List role.
+	[[nodiscard]] virtual bool accessibilitySelectionList() const;
 
 	[[nodiscard]] virtual RpWidget *accessibilityParent() const;
 	[[nodiscard]] virtual QAccessibleInterface* accessibilityChildInterface(int index) const;

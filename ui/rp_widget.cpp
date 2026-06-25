@@ -512,6 +512,10 @@ std::optional<Qt::Orientation> RpWidget::accessibilityOrientation() const {
 	return std::nullopt;
 }
 
+bool RpWidget::accessibilitySelectionList() const {
+	return false;
+}
+
 RpWidget *RpWidget::accessibilityParent() const {
 	return nullptr;
 }

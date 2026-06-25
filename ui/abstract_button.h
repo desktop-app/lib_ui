@@ -63,16 +63,16 @@ public:
 	void setIsMenuButton(bool value) {
 		_menuButton = value;
 	}
-	void setIsPageTab(bool value) {
-		_pageTab = value;
+	void setIsListItem(bool value) {
+		_listItem = value;
 	}
-	[[nodiscard]] bool isPageTab() const {
-		return _pageTab;
+	[[nodiscard]] bool isListItem() const {
+		return _listItem;
 	}
 
 	QAccessible::Role accessibilityRole() override {
-		return _pageTab
-			? QAccessible::PageTab
+		return _listItem
+			? QAccessible::ListItem
 			: _menuButton
 			? QAccessible::ButtonMenu
 			: QAccessible::Button;
@@ -131,7 +131,7 @@ private:
 	bool _acceptBoth : 1 = false;
 	bool _triggerOnPress : 1 = false;
 	bool _menuButton : 1 = false;
-	bool _pageTab : 1 = false;
+	bool _listItem : 1 = false;
 
 	Fn<void()> _clickedCallback;
 
