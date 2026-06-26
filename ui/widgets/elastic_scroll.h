@@ -200,6 +200,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> touchMaybePressing() const;
 
 	void setBarTopInset(int inset);
+	void setBarBottomInset(int inset);
 
 private:
 	bool eventHook(QEvent *e) override;
@@ -253,6 +254,7 @@ private:
 	const style::ScrollArea &_st;
 	std::unique_ptr<ElasticScrollBar> _bar;
 	int _barTopInset = 0;
+	int _barBottomInset = 0;
 	ScrollState _state;
 
 	QPointer<QScroller> _scroller;
