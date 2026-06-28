@@ -450,9 +450,12 @@ inline void Simple::stop() {
 }
 
 inline bool Simple::animating() const {
-	if (!_data) {
+	// Snapshot the mutable _data: it can be reset re-entrantly between the
+	// null check and the dereference below.
+	const auto data = _data.get();
+	if (!data) {
 		return false;
-	} else if (!_data->animation.animating()) {
+	} else if (!data->animation.animating()) {
 		_data = nullptr;
 		return false;
 	}
@@ -461,8 +464,11 @@ inline bool Simple::animating() const {
 
 TG_FORCE_INLINE float64 Simple::value(float64 final) const {
 	if (animating()) {
-		Assert(!std::isnan(_data->value));
-		return _data->value;
+		// _data may have been reset re-entrantly inside animating().
+		if (const auto data = _data.get()) {
+			Assert(!std::isnan(data->value));
+			return data->value;
+		}
 	}
 	Assert(!std::isnan(final));
 	return final;
