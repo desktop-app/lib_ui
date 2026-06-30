@@ -376,6 +376,7 @@ ElasticScroll::ElasticScroll(
 	) | rpl::on_next([=] {
 		if (OptionQScroller.value()) {
 			_scroller = QScroller::scroller(this);
+			SetupScrollerPhysics(_scroller, false);
 		} else if (_scroller) {
 			QObject deleter;
 			_scroller->setParent(&deleter);

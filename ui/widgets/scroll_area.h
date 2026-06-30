@@ -50,6 +50,12 @@ struct ScrollToRequest {
 
 extern const char kOptionQScroller[];
 
+// Tune a QScroller to approximate macOS native momentum + ElasticScroll
+// overscroll. Set ownsOvershoot to true for the raw QScroller overshoot path
+// (ScrollArea); pass false where the consumer re-shapes overshootDistance()
+// itself (ElasticScroll), so its own rubber-band feel is left intact.
+void SetupScrollerPhysics(not_null<QScroller*> scroller, bool ownsOvershoot);
+
 class ScrollerStopper final : public QObject {
 public:
 	static ScrollerStopper &Instance();
@@ -207,6 +213,16 @@ public:
 		_customTouchProcess = std::move(process);
 	}
 
+	// Lazily decides, at the start of scrolling in each direction, whether
+	// QScroller overscroll (bounce) is allowed for the edge we're heading
+	// toward. QScroller has no per-edge policy, but momentum only travels in
+	// the gesture direction, so switching the whole (vertical) axis policy by
+	// direction behaves per-edge. Predicates return true when that edge is a
+	// genuine boundary (fully loaded) and the bounce is wanted; a null
+	// predicate means always allowed. The applied policy is cached and only
+	// re-applied to the scroller when it actually changes.
+	void setOverscrollEdges(Fn<bool()> allowTop, Fn<bool()> allowBottom);
+
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
@@ -240,6 +256,9 @@ private:
 	void touchUpdateSpeed();
 	void touchDeaccelerate(int32 elapsed);
 
+	void updateOverscrollByDirection(int wheelDeltaY);
+	void applyOverscrollAllowed(bool allowed);
+
 	bool _disabled = false;
 	bool _movingByScrollBar = false;
 
@@ -250,6 +269,11 @@ private:
 
 	QPointer<QScroller> _scroller;
 	QPoint _wheelPos;
+
+	Fn<bool()> _overscrollAllowTop;
+	Fn<bool()> _overscrollAllowBottom;
+	int _overscrollDirection = 0; // -1 toward top, +1 toward bottom, 0 none.
+	int _overscrollAllowedApplied = -1; // -1 unknown, 0 disabled, 1 enabled.
 
 	bool _touchEnabled = false;
 	base::Timer _touchTimer;
