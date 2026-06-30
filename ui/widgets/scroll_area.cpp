@@ -136,18 +136,7 @@ bool ScrollerStopper::eventFilter(QObject *obj, QEvent *e) {
 	if (!_active.scroller) {
 		return false;
 	}
-	const auto scroller = _active.scroller;
-	for (const auto &input : {
-		QScroller::InputPress,
-		QScroller::InputRelease,
-	}) {
-		scroller->handleInput(
-			input,
-			static_cast<QWidget*>(
-				scroller->target()
-			)->mapFromGlobal(ev->globalPos()),
-			crl::now());
-	}
+	_active.scroller->stop();
 	return true;
 }
 
