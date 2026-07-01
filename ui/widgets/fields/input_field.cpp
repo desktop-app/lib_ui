@@ -4054,6 +4054,7 @@ void InputField::setTextWithTags(
 	auto prepared = PrepareForInsert(textWithTags);
 	_insertedTags = prepared.tags;
 	_insertedTagsAreFromMime = false;
+	_insertedTagsReplace = true;
 	_realInsertPosition = 0;
 	_realCharsAdded = prepared.text.size();
 	const auto document = _inner->document();
@@ -4078,6 +4079,7 @@ void InputField::setTextWithTags(
 		document->setUndoRedoEnabled(true);
 	}
 	_insertedTags.clear();
+	_insertedTagsReplace = false;
 	_realInsertPosition = -1;
 	finishAnimating();
 }
