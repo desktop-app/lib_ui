@@ -243,6 +243,7 @@ private:
 
 	bool _useTransparency = true;
 	bool _hiding = false;
+	crl::time _shownAt = 0;
 	QPixmap _cache;
 	Animations::Simple _a_opacity;
 

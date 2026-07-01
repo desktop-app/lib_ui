@@ -29,6 +29,11 @@
 #include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
+namespace {
+
+constexpr auto kIgnorePressTimeout = crl::time(30);
+
+} // namespace
 
 PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 : RpWidget(parent)
@@ -462,6 +467,9 @@ void PopupMenu::handleMousePress(QPoint globalPosition) {
 	if (_parent) {
 		_parent->forwardMousePress(globalPosition);
 	} else {
+		if (crl::now() - _shownAt < kIgnorePressTimeout) {
+			return;
+		}
 		hideMenu();
 	}
 }
@@ -997,6 +1005,7 @@ bool PopupMenu::prepareGeometryFor(
 }
 
 void PopupMenu::showPrepared(TriggeredSource source) {
+	_shownAt = crl::now();
 	startShowAnimation();
 
 	if (::Platform::IsWindows()) {
