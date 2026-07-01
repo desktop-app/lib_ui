@@ -101,7 +101,8 @@ void SetupScrollerPhysics(not_null<QScroller*> scroller, bool ownsOvershoot) {
 	scroller->setScrollerProperties(props);
 }
 
-ScrollerStopper::ScrollerStopper() {
+ScrollerStopper::ScrollerStopper()
+: _mousePos(QCursor::pos()) {
 	qApp->installEventFilter(this);
 }
 
