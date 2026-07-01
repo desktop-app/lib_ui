@@ -102,6 +102,7 @@ public:
 
 	void recountSize();
 	void updateBar(bool force = false);
+	void setTopSkip(int skip);
 
 	void hideTimeout(crl::time dt);
 
@@ -136,6 +137,7 @@ private:
 	bool _moving = false;
 	bool _topSh = false;
 	bool _bottomSh = false;
+	int _topSkip = 0;
 
 	QPoint _dragStart;
 	QScrollBar *_connected;
@@ -181,6 +183,7 @@ public:
 	void rangeChanged(int oldMax, int newMax, bool vertical);
 
 	void updateBars();
+	void setVerticalBarTopSkip(int skip);
 
 	bool focusNextPrevChild(bool next) override;
 	void setMovingByScrollBar(bool movingByScrollBar);

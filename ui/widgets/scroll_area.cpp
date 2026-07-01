@@ -190,14 +190,24 @@ void ScrollBar::recountSize() {
 	setGeometry(_vertical
 		? QRect(
 			style::RightToLeft() ? 0 : (area()->width() - _st->width),
-			_st->deltat,
+			_st->deltat + _topSkip,
 			_st->width,
-			area()->height() - _st->deltat - _st->deltab)
+			std::max(
+				area()->height() - _st->deltat - _st->deltab - _topSkip,
+				0))
 		: QRect(
 			_st->deltat,
 			area()->height() - _st->width,
 			area()->width() - _st->deltat - _st->deltab,
 			_st->width));
+}
+
+void ScrollBar::setTopSkip(int skip) {
+	if (_topSkip != skip) {
+		_topSkip = skip;
+		recountSize();
+		updateBar(true);
+	}
 }
 
 void ScrollBar::updateBar(bool force) {
@@ -1068,6 +1078,10 @@ void ScrollArea::rangeChanged(int oldMax, int newMax, bool vertical) {
 void ScrollArea::updateBars() {
 	_horizontalBar->updateBar(true);
 	_verticalBar->updateBar(true);
+}
+
+void ScrollArea::setVerticalBarTopSkip(int skip) {
+	_verticalBar->setTopSkip(skip);
 }
 
 bool ScrollArea::focusNextPrevChild(bool next) {
