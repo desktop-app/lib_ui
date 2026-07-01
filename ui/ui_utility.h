@@ -12,6 +12,8 @@
 #include <QtCore/QEvent>
 #include <QtWidgets/QWidget>
 
+#include <optional>
+
 class QPixmap;
 class QImage;
 class QWheelEvent;
@@ -139,6 +141,19 @@ void SetGeometryAndScreen(
 [[nodiscard]] QPoint ScrollDelta(
 	not_null<QWheelEvent*> e,
 	bool touch = false);
+
+class ScrollDirectionLock final {
+public:
+	[[nodiscard]] std::optional<Qt::Orientation> update(
+		Qt::ScrollPhase phase,
+		QPointF delta);
+
+	void reset();
+
+private:
+	std::optional<Qt::Orientation> _locked;
+
+};
 
 [[nodiscard]] QColor BlendColors(QColor color1, QColor color2, float64 ratio);
 

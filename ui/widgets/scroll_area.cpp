@@ -750,11 +750,30 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 	if (filterOutTouchEvent(e)) {
 		return true;
 	} else if (e->type() == QEvent::Wheel) {
-		if (_customWheelProcess
-			&& _customWheelProcess(static_cast<QWheelEvent*>(e))) {
+		const auto ev = static_cast<QWheelEvent*>(e);
+		if (_customWheelProcess && _customWheelProcess(ev)) {
 			return true;
-		} else if (_scroller) {
-			const auto ev = static_cast<QWheelEvent*>(e);
+		}
+		if (_wheelDirectionLocked || _crossAxisWheelProcess) {
+			const auto phase = ev->phase();
+			const auto delta = ScrollDeltaF(ev);
+			const auto locked = _wheelDirectionLocked
+				? _wheelDirectionLock.update(phase, delta)
+				: std::nullopt;
+			if (!_wheelDirectionLocked || phase == Qt::NoScrollPhase) {
+				if (std::abs(delta.x()) > std::abs(delta.y())
+					&& _crossAxisWheelProcess
+					&& _crossAxisWheelProcess(delta.toPoint())) {
+					return true;
+				}
+			} else if (locked == Qt::Horizontal) {
+				if (_crossAxisWheelProcess) {
+					_crossAxisWheelProcess({ qRound(delta.x()), 0 });
+				}
+				return true;
+			}
+		}
+		if (_scroller) {
 			switch (ev->phase()) {
 			case Qt::ScrollBegin:
 			case Qt::ScrollUpdate: {
@@ -763,7 +782,10 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 				if (wasNull) {
 					_wheelPos = QPoint(width(), height()) / 2;
 				} else {
-					const auto unmultiplied = ScrollDelta(ev);
+					auto unmultiplied = ScrollDelta(ev);
+					if (_wheelDirectionLocked) {
+						unmultiplied.setX(0);
+					}
 					const auto multiply = ev->modifiers()
 						& (Qt::ControlModifier | Qt::ShiftModifier);
 					_wheelPos += multiply

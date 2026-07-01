@@ -303,6 +303,38 @@ QPoint ScrollDelta(not_null<QWheelEvent*> e, bool touch) {
 	return ScrollDeltaF(e, touch).toPoint();
 }
 
+std::optional<Qt::Orientation> ScrollDirectionLock::update(
+		Qt::ScrollPhase phase,
+		QPointF delta) {
+	const auto axis = [&] {
+		return (std::abs(delta.x()) > std::abs(delta.y()))
+			? Qt::Horizontal
+			: Qt::Vertical;
+	};
+	switch (phase) {
+	case Qt::NoScrollPhase:
+		reset();
+		return std::nullopt;
+	case Qt::ScrollBegin:
+		reset();
+		if (!delta.isNull()) {
+			_locked = axis();
+		}
+		return _locked;
+	case Qt::ScrollEnd:
+		return base::take(_locked);
+	default:
+		if (!_locked && !delta.isNull()) {
+			_locked = axis();
+		}
+		return _locked;
+	}
+}
+
+void ScrollDirectionLock::reset() {
+	_locked = std::nullopt;
+}
+
 QColor BlendColors(QColor color1, QColor color2, float64 ratio) {
 	const auto clampedRatio = std::clamp(ratio, 0.0, 1.0);
 	const auto invRatio = 1.0 - clampedRatio;

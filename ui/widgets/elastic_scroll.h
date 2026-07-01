@@ -176,6 +176,21 @@ public:
 		_customTouchProcess = std::move(process);
 	}
 
+	// Receives wheel input on the axis this scroll doesn't handle:
+	// without lockWheelDirection() every event where that axis dominates,
+	// with it whole gestures locked to that axis.
+	void setCrossAxisWheelProcess(Fn<bool(QPoint)> process) {
+		_crossAxisWheelProcess = std::move(process);
+	}
+
+	// Locks each phased wheel gesture to the axis chosen at its start:
+	// cross-axis gestures go whole to the cross-axis process (or are
+	// discarded) and never scroll this area; NoScrollPhase (classic
+	// wheel) events keep per-event routing.
+	void lockWheelDirection() {
+		_wheelDirectionLocked = true;
+	}
+
 	enum class OverscrollType : uchar {
 		None,
 		Virtual,
@@ -285,9 +300,12 @@ private:
 	bool _disabled : 1 = false;
 	bool _dirtyState : 1 = false;
 	bool _overscrollReturning : 1 = false;
+	bool _wheelDirectionLocked : 1 = false;
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
+	Fn<bool(QPoint)> _crossAxisWheelProcess;
+	ScrollDirectionLock _wheelDirectionLock;
 	int _overscroll = 0;
 	int _overscrollDefaultFrom = 0;
 	int _overscrollDefaultTill = 0;

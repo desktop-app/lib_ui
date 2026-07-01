@@ -731,11 +731,44 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 		return true;
 	}
 	const auto phase = e->phase();
+	auto ownAxisLocked = false;
+	if (_wheelDirectionLocked || _crossAxisWheelProcess) {
+		const auto lockDelta = ScrollDeltaF(e, touch);
+		const auto locked = _wheelDirectionLocked
+			? _wheelDirectionLock.update(phase, lockDelta)
+			: std::nullopt;
+		if (!_wheelDirectionLocked || phase == Qt::NoScrollPhase) {
+			const auto own = _vertical ? lockDelta.y() : lockDelta.x();
+			const auto cross = _vertical ? lockDelta.x() : lockDelta.y();
+			if (std::abs(cross) > std::abs(own)
+				&& _crossAxisWheelProcess
+				&& _crossAxisWheelProcess(lockDelta.toPoint())) {
+				return true;
+			}
+		} else if (locked
+			&& ((*locked == Qt::Horizontal) == _vertical)) {
+			if (_crossAxisWheelProcess) {
+				_crossAxisWheelProcess(_vertical
+					? QPoint(qRound(lockDelta.x()), 0)
+					: QPoint(0, qRound(lockDelta.y())));
+			}
+			return true;
+		} else {
+			ownAxisLocked = locked.has_value();
+		}
+	}
 	const auto now = crl::now();
 	const auto guard = gsl::finally([&] {
 		_lastScroll = now;
 	});
-	const auto unmultiplied = ScrollDelta(e, touch);
+	auto unmultiplied = ScrollDelta(e, touch);
+	if (ownAxisLocked) {
+		if (_vertical) {
+			unmultiplied.setX(0);
+		} else {
+			unmultiplied.setY(0);
+		}
+	}
 	const auto multiply = e->modifiers()
 		& (Qt::ControlModifier | Qt::ShiftModifier);
 	const auto pixels = multiply
@@ -745,7 +778,8 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 		: unmultiplied;
 	auto ignore = false;
 	auto delta = _vertical ? -pixels.y() : -pixels.x();
-	if (std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
+	if (!ownAxisLocked
+		&& std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
 		ignore = true;
 		delta = 0;
 	}

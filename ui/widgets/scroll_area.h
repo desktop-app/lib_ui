@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/rp_widget.h"
+#include "ui/ui_utility.h"
 #include "ui/effects/animations.h"
 #include "base/object_ptr.h"
 #include "base/qt_connection.h"
@@ -216,6 +217,21 @@ public:
 		_customTouchProcess = std::move(process);
 	}
 
+	// Receives wheel input on the axis this scroll doesn't handle
+	// (horizontal): without lockWheelDirection() every event where that
+	// axis dominates, with it whole gestures locked to that axis.
+	void setCrossAxisWheelProcess(Fn<bool(QPoint)> process) {
+		_crossAxisWheelProcess = std::move(process);
+	}
+
+	// Locks each phased wheel gesture to the axis chosen at its start:
+	// cross-axis gestures go whole to the cross-axis process (or are
+	// discarded) and never scroll this area; NoScrollPhase (classic
+	// wheel) events keep per-event routing.
+	void lockWheelDirection() {
+		_wheelDirectionLocked = true;
+	}
+
 	// Lazily decides, at the start of scrolling in each direction, whether
 	// QScroller overscroll (bounce) is allowed for the edge we're heading
 	// toward. QScroller has no per-edge policy, but momentum only travels in
@@ -297,6 +313,9 @@ private:
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
+	Fn<bool(QPoint)> _crossAxisWheelProcess;
+	ScrollDirectionLock _wheelDirectionLock;
+	bool _wheelDirectionLocked = false;
 	bool _widgetAcceptsTouch = false;
 
 	object_ptr<QWidget> _widget = { nullptr };
