@@ -88,6 +88,14 @@ namespace {
 
 static const auto kXCBFrameExtentsAtomName = u"_GTK_FRAME_EXTENTS"_q;
 
+const auto kX11ForeignParentObjectName = u"_td_x11_foreign_parent"_q;
+
+[[nodiscard]] QWindow *X11ForeignParentWindow(not_null<QWindow*> window) {
+	return window->findChild<QWindow*>(
+		kX11ForeignParentObjectName,
+		Qt::FindDirectChildrenOnly);
+}
+
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 std::optional<bool> XCBWindowMapped(xcb_window_t window) {
 	const base::Platform::XCB::Connection connection;
@@ -962,16 +970,6 @@ void IgnoreAllActivation(not_null<QWidget*> widget) {
 }
 
 void ClearTransientParent(not_null<QWidget*> widget) {
-#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
-	if (const auto window = widget->windowHandle()) {
-		if (const auto existing = window->findChild<QObject*>(
-				kWaylandImportedObjectName,
-				Qt::FindDirectChildrenOnly)) {
-			delete static_cast<WaylandImportedParent*>(existing);
-		}
-	}
-#endif // wayland
-
 #ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
 		const base::Platform::XCB::Connection connection;
@@ -1041,36 +1039,40 @@ void SetForeignTransientParent(
 	}
 #endif // wayland
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-	if (::Platform::IsX11()
-		&& (parent.type == ForeignParent::Type::X11)
-		&& parent.x11) {
-		const base::Platform::XCB::Connection connection;
-		if (!connection || xcb_connection_has_error(connection)) {
+	if (::Platform::IsX11()) {
+		const auto window = widget->windowHandle();
+		if (!window) {
+			return;
+		}
+		const auto id = (parent.type == ForeignParent::Type::X11)
+			? WId(parent.x11)
+			: WId(0);
+		if (const auto existing = X11ForeignParentWindow(window)) {
+			if (id && (existing->winId() == id)) {
+				window->setTransientParent(existing);
+				return;
+			}
+			if (window->transientParent() == existing) {
+				window->setTransientParent(nullptr);
+			}
+			delete existing;
+		}
+		if (!id) {
 			return;
 		}
 
-		const auto window = widget->winId();
-		if (window == XCB_NONE) {
+		// Let Qt know about the transient parent, so that it writes
+		// the right WM_TRANSIENT_FOR itself: QXcbWindow::show() rewrites
+		// the property on each show (to the client leader by default),
+		// clobbering any value we could set by hand.
+		const auto foreign = QWindow::fromWinId(id);
+		if (!foreign) {
 			return;
 		}
-
-		const auto transientFor = static_cast<xcb_window_t>(parent.x11);
-
-		free(
-			xcb_request_check(
-				connection,
-				xcb_change_property_checked(
-					connection,
-					XCB_PROP_MODE_REPLACE,
-					window,
-					XCB_ATOM_WM_TRANSIENT_FOR,
-					XCB_ATOM_WINDOW,
-					32,
-					1,
-					&transientFor)));
+		foreign->setObjectName(kX11ForeignParentObjectName);
+		static_cast<QObject*>(foreign)->setParent(window);
+		window->setTransientParent(foreign);
 	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
 std::optional<bool> IsOverlapped(

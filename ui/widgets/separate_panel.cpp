@@ -1006,7 +1006,7 @@ void SeparatePanel::setAnchorData(
 		_transientParent = std::move(transientParent);
 		_foreignTransientParentApplied = false;
 		if (!_transientParent && windowHandle()) {
-			Platform::ClearTransientParent(this);
+			Platform::SetForeignTransientParent(this, _transientParent);
 		}
 	}
 }
