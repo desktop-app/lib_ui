@@ -52,8 +52,6 @@ struct ForeignParent {
 			|| ((type == Type::Wayland) && !wayland.isEmpty());
 	}
 };
-[[nodiscard]] std::optional<QRect> ForeignWindowGeometry(
-	const ForeignParent &parent);
 void SetForeignTransientParent(
 	not_null<QWidget*> widget,
 	const ForeignParent &parent);
