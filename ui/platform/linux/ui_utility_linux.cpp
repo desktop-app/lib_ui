@@ -22,7 +22,6 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
-#include <private/qhighdpiscaling_p.h>
 #include <qpa/qplatformwindow.h>
 #include <qpa/qplatformwindow_p.h>
 
@@ -186,79 +185,6 @@ QRect XCBWindowGeometry(xcb_window_t window) {
 	}
 
 	return QRect(reply->x, reply->y, reply->width, reply->height);
-}
-
-[[nodiscard]] std::optional<QRect> XCBWindowGeometryOnRoot(
-		xcb_window_t window) {
-	const base::Platform::XCB::Connection connection;
-	if (!connection || xcb_connection_has_error(connection)) {
-		return std::nullopt;
-	}
-
-	const auto geometryCookie = xcb_get_geometry(connection, window);
-	const auto geometry = base::Platform::XCB::MakeReplyPointer(
-		xcb_get_geometry_reply(
-			connection,
-			geometryCookie,
-			nullptr));
-
-	if (!geometry || !geometry->root) {
-		return std::nullopt;
-	}
-
-	const auto translateCookie = xcb_translate_coordinates(
-		connection,
-		window,
-		geometry->root,
-		0,
-		0);
-	const auto translated = base::Platform::XCB::MakeReplyPointer(
-		xcb_translate_coordinates_reply(
-			connection,
-			translateCookie,
-			nullptr));
-
-	if (!translated || !translated->same_screen) {
-		return std::nullopt;
-	}
-
-	return QRect(
-		translated->dst_x,
-		translated->dst_y,
-		geometry->width,
-		geometry->height);
-}
-
-[[nodiscard]] QRect NativeScreenGeometry(not_null<QScreen*> screen) {
-	return QHighDpi::toNativePixels(screen->geometry(), screen.get());
-}
-
-[[nodiscard]] QScreen *ScreenForNativeGeometry(const QRect &geometry) {
-	const auto center = geometry.center();
-	for (const auto screen : QGuiApplication::screens()) {
-		if (NativeScreenGeometry(screen).contains(center)) {
-			return screen;
-		}
-	}
-	for (const auto screen : QGuiApplication::screens()) {
-		if (NativeScreenGeometry(screen).intersects(geometry)) {
-			return screen;
-		}
-	}
-	return nullptr;
-}
-
-[[nodiscard]] std::optional<QRect> XCBForeignWindowGeometry(
-		xcb_window_t window) {
-	const auto geometry = XCBWindowGeometryOnRoot(window);
-	if (!geometry || geometry->isNull()) {
-		return std::nullopt;
-	}
-	const auto screen = ScreenForNativeGeometry(*geometry);
-	if (!screen) {
-		return std::nullopt;
-	}
-	return QHighDpi::fromNativePixels(*geometry, screen);
 }
 
 std::optional<uint> XCBCurrentWorkspace() {
@@ -988,24 +914,6 @@ void ClearTransientParent(not_null<QWidget*> widget) {
 		return;
 	}
 #endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-}
-
-std::optional<QRect> ForeignWindowGeometry(const ForeignParent &parent) {
-	switch (parent.type) {
-	case ForeignParent::Type::None:
-	case ForeignParent::Type::Wayland:
-		return std::nullopt;
-	case ForeignParent::Type::X11:
-		break;
-	}
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
-	if (::Platform::IsX11() && parent.x11) {
-		return XCBForeignWindowGeometry(
-			static_cast<xcb_window_t>(parent.x11));
-	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
-
-	return std::nullopt;
 }
 
 void SetForeignTransientParent(
