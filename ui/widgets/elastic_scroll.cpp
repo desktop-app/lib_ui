@@ -795,6 +795,19 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 		switch (phase) {
 		case Qt::ScrollBegin:
 		case Qt::ScrollUpdate: {
+			if (phase == Qt::ScrollBegin
+				&& !pixels.isNull()
+				&& _scroller->state() == QScroller::Scrolling) {
+				// On macOS, when Qt loses the race detecting that a
+				// momentum phase follows the finger lift, the OS momentum
+				// stream leaks through as ScrollBegin + ScrollMomentum.
+				// A real begin (fingers resting on the pad) carries a
+				// zero delta, so a delta-carrying begin while our fling
+				// runs is that leak - pressing would catch and kill the
+				// fling. If this ever swallows a real begin, the next
+				// ScrollUpdate finds _wheelPos null and presses instead.
+				break;
+			}
 			const auto wasNull = _wheelPos.isNull();
 			if (wasNull) {
 				_wheelPos = QPoint(width(), height()) / 2;
