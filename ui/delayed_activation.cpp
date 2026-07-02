@@ -11,9 +11,9 @@
 #include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+#if !defined Q_OS_WIN && !defined Q_OS_MAC
 #include "base/platform/linux/base_linux_xcb_utilities.h"
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+#endif // !Q_OS_WIN && !Q_OS_MAC
 
 #include <QtCore/QPointer>
 #include <QtWidgets/QApplication>
@@ -53,7 +53,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	} else if (std::exchange(Window, widget.get())) {
 		return;
 	}
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+#if !defined Q_OS_WIN && !defined Q_OS_MAC
 	const auto focusAncestor = [&] {
 		const auto focusWidget = QApplication::focusWidget();
 		if (!focusWidget || !widget->window()) {
@@ -61,7 +61,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		}
 		return widget->window()->isAncestorOf(focusWidget);
 	}();
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+#endif // !Q_OS_WIN && !Q_OS_MAC
 	crl::on_main(Window, [=] {
 		const auto widget = base::take(Window);
 		if (!widget) {
@@ -73,8 +73,15 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		}
 		window->raise();
 		window->activateWindow();
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+#if !defined Q_OS_WIN && !defined Q_OS_MAC
 		if (::Platform::IsX11() && focusAncestor) {
+			using namespace base::Platform::XCB::Library;
+			static const auto xcb_set_input_focus_checked = LoadSymbol<
+				xcb_void_cookie_t(
+						xcb_connection_t*,
+						uint8_t,
+						xcb_window_t,
+						xcb_timestamp_t)>("xcb_set_input_focus_checked");
 			const base::Platform::XCB::Connection connection;
 			if (connection && !xcb_connection_has_error(connection)) {
 				free(
@@ -87,7 +94,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 							XCB_CURRENT_TIME)));
 			}
 		}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+#endif // !Q_OS_WIN && !Q_OS_MAC
 	});
 }
 
