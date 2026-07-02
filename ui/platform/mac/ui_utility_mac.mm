@@ -125,58 +125,6 @@ void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio) {
 	}
 }
 
-std::optional<bool> IsOverlapped(
-		not_null<QWidget*> widget,
-		const QRect &rect) {
-	NSWindow *window = [reinterpret_cast<NSView*>(widget->winId()) window];
-	Assert(window != nullptr);
-
-	if (![window isOnActiveSpace]) {
-		return true;
-	}
-
-	const auto nativeRect = QRect(
-		widget->mapToGlobal(rect.topLeft()),
-		rect.size()).toCGRect();
-
-	CGWindowID windowId = (CGWindowID)[window windowNumber];
-	const CGWindowListOption options = kCGWindowListExcludeDesktopElements
-		| kCGWindowListOptionOnScreenAboveWindow;
-	CFArrayRef windows = CGWindowListCopyWindowInfo(options, windowId);
-	if (!windows) {
-		return std::nullopt;
-	}
-	const auto guard = gsl::finally([&] {
-		CFRelease(windows);
-	});
-	NSMutableArray *list = (__bridge NSMutableArray*)windows;
-	for (NSDictionary *window in list) {
-		NSNumber *alphaValue = [window objectForKey:@"kCGWindowAlpha"];
-		const auto alpha = alphaValue ? [alphaValue doubleValue] : 1.;
-		if (alpha == 0.) {
-			continue;
-		}
-		NSString *owner = [window objectForKey:@"kCGWindowOwnerName"];
-		NSNumber *layerValue = [window objectForKey:@"kCGWindowLayer"];
-		const auto layer = layerValue ? [layerValue intValue] : 0;
-		if (owner && [owner isEqualToString:@"Dock"] && layer == 20) {
-			// It is always full screen.
-			continue;
-		}
-		CFDictionaryRef bounds = (__bridge CFDictionaryRef)[window objectForKey:@"kCGWindowBounds"];
-		if (!bounds) {
-			continue;
-		}
-		CGRect rect;
-		if (!CGRectMakeWithDictionaryRepresentation(bounds, &rect)) {
-			continue;
-		} else if (CGRectIntersectsRect(rect, nativeRect)) {
-			return true;
-		}
-	}
-	return false;
-}
-
 SystemTextReplaceResult FindSystemTextReplace(const QString &text) {
 	if (text.isEmpty()) {
 		return {};
