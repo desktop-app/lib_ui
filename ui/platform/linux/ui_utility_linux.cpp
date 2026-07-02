@@ -8,10 +8,7 @@
 
 #include "base/platform/base_platform_info.h"
 #include "base/platform/linux/base_linux_library.h"
-
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 #include "base/platform/linux/base_linux_xcb_utilities.h"
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #include <algorithm>
 #include <array>
@@ -95,8 +92,13 @@ const auto kX11ForeignParentObjectName = u"_td_x11_foreign_parent"_q;
 		Qt::FindDirectChildrenOnly);
 }
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+using namespace base::Platform::XCB::Library;
+
 void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
+	static const auto xcb_delete_property_checked = LoadSymbol<
+		xcb_void_cookie_t(xcb_connection_t*, xcb_window_t, xcb_atom_t)>(
+		"xcb_delete_property_checked");
+
 	const base::Platform::XCB::Connection connection;
 	if (!connection || xcb_connection_has_error(connection)) {
 		return;
@@ -146,6 +148,10 @@ void SetXCBFrameExtents(not_null<QWidget*> widget, const QMargins &extents) {
 }
 
 void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
+	static const auto xcb_ungrab_pointer_checked = LoadSymbol<
+		xcb_void_cookie_t(xcb_connection_t*, xcb_timestamp_t)>(
+		"xcb_ungrab_pointer_checked");
+
 	const base::Platform::XCB::Connection connection;
 	if (!connection || xcb_connection_has_error(connection)) {
 		return;
@@ -196,7 +202,6 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 					| XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY,
 				reinterpret_cast<const char*>(&xev))));
 }
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 #if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 constexpr auto kWaylandMarshalFlagDestroy = uint32_t(1);
@@ -593,7 +598,6 @@ bool TranslucentWindowsSupported() {
 		return true;
 	}
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
 		const base::Platform::XCB::Connection connection;
 		if (!connection || xcb_connection_has_error(connection)) {
@@ -622,7 +626,6 @@ bool TranslucentWindowsSupported() {
 
 		return result->owner;
 	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 	return false;
 }
@@ -631,8 +634,11 @@ void IgnoreAllActivation(not_null<QWidget*> widget) {
 }
 
 void ClearTransientParent(not_null<QWidget*> widget) {
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
+		static const auto xcb_delete_property_checked = LoadSymbol<
+			xcb_void_cookie_t(xcb_connection_t*, xcb_window_t, xcb_atom_t)>(
+			"xcb_delete_property_checked");
+
 		const base::Platform::XCB::Connection connection;
 		if (!connection || xcb_connection_has_error(connection)) {
 			return;
@@ -648,7 +654,6 @@ void ClearTransientParent(not_null<QWidget*> widget) {
 
 		return;
 	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
 void SetForeignTransientParent(
@@ -732,7 +737,6 @@ bool WindowMarginsSupported() {
 	}
 #endif // wayland
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	namespace XCB = base::Platform::XCB;
 	if (::Platform::IsX11()
 		&& XCB::IsSupportedByWM(
@@ -740,7 +744,6 @@ bool WindowMarginsSupported() {
 			kXCBFrameExtentsAtomName)) {
 		return true;
 	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 
 	return false;
 }
@@ -759,12 +762,10 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 	}
 #endif // wayland
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
 		SetXCBFrameExtents(widget, margins);
 		return;
 	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
 void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
@@ -775,12 +776,10 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	}
 #endif // wayland
 
-#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
 	if (::Platform::IsX11()) {
 		ShowXCBWindowMenu(widget, point);
 		return;
 	}
-#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
 }
 
 } // namespace Platform
