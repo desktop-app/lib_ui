@@ -200,6 +200,15 @@ public:
 	void setOverscrollDefaults(int from, int till, bool shift = false);
 	void setOverscrollBg(QColor bg);
 
+	// Decides, while scrolling heads toward an edge, whether the elastic
+	// overscroll (bounce) is allowed for that edge. Predicates return true
+	// when that edge is a genuine boundary (fully loaded) and the bounce
+	// is wanted; a null predicate means always allowed. Predicates are
+	// cheap, so they are re-evaluated on each event that would grow the
+	// overscroll; a disallowed edge just drops the accumulated overscroll,
+	// the same way an edge with OverscrollType::None does.
+	void setOverscrollEdges(Fn<bool()> allowTop, Fn<bool()> allowBottom);
+
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
@@ -311,6 +320,8 @@ private:
 	int _overscrollDefaultTill = 0;
 	OverscrollType _overscrollTypeFrom = OverscrollType::Real;
 	OverscrollType _overscrollTypeTill = OverscrollType::Real;
+	Fn<bool()> _overscrollAllowFrom;
+	Fn<bool()> _overscrollAllowTill;
 	std::optional<QColor> _overscrollBg;
 	Ui::Animations::Simple _overscrollReturnAnimation;
 	rpl::variable<Position> _position;

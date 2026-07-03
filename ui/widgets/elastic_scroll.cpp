@@ -876,7 +876,11 @@ bool ElasticScroll::handleScrollEvent(
 		: (accumulated > 0)
 		? _overscrollTypeTill
 		: OverscrollType::None;
+	const auto &allowed = (accumulated < 0)
+		? _overscrollAllowFrom
+		: _overscrollAllowTill;
 	if (type == OverscrollType::None
+		|| (allowed && !allowed())
 		|| base::OppositeSigns(_overscrollAccumulated, accumulated)) {
 		_overscrollAccumulated = 0;
 	} else {
@@ -1455,6 +1459,13 @@ void ElasticScroll::setOverscrollDefaults(int from, int till, bool shift) {
 void ElasticScroll::setOverscrollBg(QColor bg) {
 	_overscrollBg = bg;
 	update();
+}
+
+void ElasticScroll::setOverscrollEdges(
+		Fn<bool()> allowTop,
+		Fn<bool()> allowBottom) {
+	_overscrollAllowFrom = std::move(allowTop);
+	_overscrollAllowTill = std::move(allowBottom);
 }
 
 rpl::producer<> ElasticScroll::scrolls() const {
