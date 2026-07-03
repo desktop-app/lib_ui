@@ -403,6 +403,14 @@ ElasticScroll::~ElasticScroll() {
 	// _bar destructor may send LeaveEvent to ElasticScroll,
 	// which will try to toggle(false) the _bar in leaveEventHook.
 	base::take(_bar);
+
+	// Stop watching _widget: its teardown may resize / move it (for
+	// example VerticalLayout rows remove themselves from the layout),
+	// and we shouldn't fire _position / _movement updates into subscribers
+	// while our owner is already being destroyed.
+	if (_widget) {
+		_widget->removeEventFilter(this);
+	}
 }
 
 void ElasticScroll::setHandleTouch(bool handle) {
