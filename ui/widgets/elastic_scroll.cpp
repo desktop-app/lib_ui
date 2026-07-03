@@ -1170,7 +1170,7 @@ void ElasticScroll::setState(ScrollState state) {
 }
 
 void ElasticScroll::applyScrollTo(int position, bool synthMouseMove) {
-	if (_disabled) {
+	if (_disabled || !_widget) {
 		return;
 	}
 	const auto weak = base::make_weak(this);
