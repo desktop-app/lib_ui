@@ -785,6 +785,11 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	}
 	if (phase == Qt::NoScrollPhase) {
 		if (_overscroll == currentOverscrollDefault()) {
+			const auto weak = base::make_weak(this);
+			requestBottomContent(delta);
+			if (!weak) {
+				return true;
+			}
 			tryScrollTo(_state.visibleFrom + delta);
 			_movement = Movement::None;
 		} else if (!_overscrollReturnAnimation.animating()) {
@@ -834,6 +839,27 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	return handleScrollEvent(phase, delta, ignore, touch);
 }
 
+bool ElasticScroll::requestBottomContent(int delta) {
+	if (!_bottomContentRequest
+		|| _insideBottomContentRequest
+		|| _overscroll
+		|| delta <= 0) {
+		return false;
+	}
+	const auto target = _state.visibleFrom + delta;
+	if (willScrollTo(target) >= target) {
+		return false;
+	}
+	const auto request = _bottomContentRequest;
+	const auto weak = base::make_weak(this);
+	_insideBottomContentRequest = true;
+	const auto result = request();
+	if (weak) {
+		_insideBottomContentRequest = false;
+	}
+	return result;
+}
+
 bool ElasticScroll::handleScrollEvent(
 		Qt::ScrollPhase phase,
 		int delta,
@@ -863,6 +889,20 @@ bool ElasticScroll::handleScrollEvent(
 		const auto normalTo = willScrollTo(_state.visibleFrom + delta);
 		delta -= normalTo - _state.visibleFrom;
 		applyScrollTo(normalTo);
+		if (delta > 0) {
+			const auto weak = base::make_weak(this);
+			const auto added = requestBottomContent(delta);
+			if (!weak) {
+				return true;
+			} else if (added) {
+				const auto retryTo = willScrollTo(_state.visibleFrom + delta);
+				delta -= retryTo - _state.visibleFrom;
+				applyScrollTo(retryTo);
+				if (!weak) {
+					return true;
+				}
+			}
+		}
 	}
 	if (!delta) {
 		return !ignore;
@@ -1266,6 +1306,13 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
 		const auto step = (key == Qt::Key_Up || key == Qt::Key_Down)
 			? style::ConvertScale(20)
 			: height();
+		if (!up) {
+			const auto weak = base::make_weak(this);
+			requestBottomContent(step);
+			if (!weak) {
+				return;
+			}
+		}
 		tryScrollTo(_state.visibleFrom + (up ? -step : step));
 	} else {
 		// Let keys we don't handle (e.g. typed characters) propagate to
@@ -1310,35 +1357,41 @@ void ElasticScroll::scrollToY(int toTop, int toBottom) {
 	}
 }
 
-void ElasticScroll::scrollTo(int toFrom, int toTill) {
+int ElasticScroll::computeScrollToY(int toTop, int toBottom) {
 	if (const auto inner = _widget.data()) {
 		SendPendingMoveResizeEvents(inner);
 	}
 	SendPendingMoveResizeEvents(this);
 
-	int toMin = std::min(_state.visibleFrom, 0);
-	int toMax = std::max(
+	const auto toMin = std::min(_state.visibleFrom, 0);
+	const auto toMax = std::max(
 		_state.visibleFrom,
 		_state.visibleFrom + _state.fullSize - _state.visibleTill);
-	if (toFrom < toMin) {
-		toFrom = toMin;
-	} else if (toFrom > toMax) {
-		toFrom = toMax;
+	if (toTop < toMin) {
+		toTop = toMin;
+	} else if (toTop > toMax) {
+		toTop = toMax;
 	}
-	bool exact = (toTill < 0);
-
-	int curFrom = _state.visibleFrom, curRange = _state.visibleTill - _state.visibleFrom, curTill = curFrom + curRange, scTo = toFrom;
-	if (!exact && toFrom >= curFrom) {
-		if (toTill < toFrom) toTill = toFrom;
-		if (toTill <= curTill) return;
-
-		scTo = toTill - curRange;
-		if (scTo > toFrom) scTo = toFrom;
-		if (scTo == curFrom) return;
-	} else {
-		scTo = toFrom;
+	const auto curFrom = _state.visibleFrom;
+	const auto curRange = _state.visibleTill - _state.visibleFrom;
+	const auto exact = (toBottom < 0);
+	if (exact || toTop < curFrom) {
+		return toTop;
 	}
-	applyScrollTo(scTo);
+	if (toBottom < toTop) {
+		toBottom = toTop;
+	}
+	if (toBottom <= curFrom + curRange) {
+		return curFrom;
+	}
+	return std::min(toBottom - curRange, toTop);
+}
+
+void ElasticScroll::scrollTo(int toFrom, int toTill) {
+	const auto to = computeScrollToY(toFrom, toTill);
+	if (to != _state.visibleFrom || toTill < 0) {
+		applyScrollTo(to);
+	}
 }
 
 void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {
@@ -1466,6 +1519,10 @@ void ElasticScroll::setOverscrollEdges(
 		Fn<bool()> allowBottom) {
 	_overscrollAllowFrom = std::move(allowTop);
 	_overscrollAllowTill = std::move(allowBottom);
+}
+
+void ElasticScroll::setBottomContentRequest(Fn<bool()> request) {
+	_bottomContentRequest = std::move(request);
 }
 
 rpl::producer<> ElasticScroll::scrolls() const {

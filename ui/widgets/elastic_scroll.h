@@ -166,6 +166,7 @@ public:
 	void scrollToWidget(not_null<QWidget*> widget);
 	void scrollToY(int toTop, int toBottom = -1);
 	void scrollTo(int toFrom, int toTill = -1);
+	[[nodiscard]] int computeScrollToY(int toTop, int toBottom);
 	void disableScroll(bool dis);
 	void innerResized();
 
@@ -209,6 +210,16 @@ public:
 	// the same way an edge with OverscrollType::None does.
 	void setOverscrollEdges(Fn<bool()> allowTop, Fn<bool()> allowBottom);
 
+	// Called synchronously when a user scroll gesture (wheel, trackpad,
+	// touch or Down/PageDown key) pushes past the bottom edge, before
+	// any overscroll accumulates. The callback may synchronously append
+	// content below, growing the inner widget at once, and return true;
+	// the remaining delta of the same gesture then continues into the
+	// new content instead of bouncing. Returning false (or a null
+	// callback) keeps the normal edge behavior. Scrollbar drags and
+	// programmatic scrolls never fire it.
+	void setBottomContentRequest(Fn<bool()> request);
+
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
 	[[nodiscard]] rpl::producer<> geometryChanged() const;
@@ -241,6 +252,7 @@ private:
 		int delta,
 		bool ignore = false,
 		bool touch = false);
+	bool requestBottomContent(int delta);
 	void handleTouchEvent(QTouchEvent *e);
 
 	void updateState();
@@ -310,6 +322,7 @@ private:
 	bool _dirtyState : 1 = false;
 	bool _overscrollReturning : 1 = false;
 	bool _wheelDirectionLocked : 1 = false;
+	bool _insideBottomContentRequest : 1 = false;
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
@@ -322,6 +335,7 @@ private:
 	OverscrollType _overscrollTypeTill = OverscrollType::Real;
 	Fn<bool()> _overscrollAllowFrom;
 	Fn<bool()> _overscrollAllowTill;
+	Fn<bool()> _bottomContentRequest;
 	std::optional<QColor> _overscrollBg;
 	Ui::Animations::Simple _overscrollReturnAnimation;
 	rpl::variable<Position> _position;
