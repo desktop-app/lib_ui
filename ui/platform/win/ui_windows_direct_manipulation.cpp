@@ -367,6 +367,21 @@ void DirectManipulation::sizeUpdated(QSize nativeSize) {
 		if (const auto viewport = _viewport.get()) {
 			const auto rect = RECT{ r.x(), r.y(), r.right(), r.bottom() };
 			viewport->SetViewportRect(&rect);
+
+			// Scroll room so a pull isn't instant over-scroll that DM swallows.
+			auto content = winrt::com_ptr<IDirectManipulationContent>();
+			if (SUCCEEDED(viewport->GetPrimaryContent(
+					IID_PPV_ARGS(content.put())))
+				&& content) {
+				constexpr auto kRange = LONG(30'000);
+				const auto contentRect = RECT{
+					r.x(),
+					r.y() - kRange,
+					r.right(),
+					r.bottom() + kRange,
+				};
+				content->SetContentRect(&contentRect);
+			}
 		}
 	}
 }
