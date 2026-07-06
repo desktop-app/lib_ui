@@ -1412,6 +1412,7 @@ void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {
 			_widget->setParent(this);
 			_widget->show();
 		}
+		_widget->lower();
 		_bar->raise();
 		_widget->installEventFilter(this);
 		if (!_touchDisabled) {
