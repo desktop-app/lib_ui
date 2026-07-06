@@ -746,7 +746,7 @@ void ElasticScroll::paintEvent(QPaintEvent *e) {
 		? (_vertical ? _widget->height() : _widget->width())
 		: 0;
 	const auto fillTill = content
-		? std::max(_state.visibleTill - content, 0)
+		? (std::max(_state.visibleTill - content, 0) + _contentBottomInset)
 		: (_vertical ? height() : width());
 	if (!fillFrom && !fillTill) {
 		return;
@@ -1111,7 +1111,8 @@ void ElasticScroll::updateState() {
 		setState({});
 		return;
 	}
-	auto from = _vertical ? -_widget->y() : -_widget->x();
+	auto from = (_vertical ? -_widget->y() : -_widget->x())
+		- _contentBottomInset;
 	auto till = from + (_vertical ? height() : width());
 	const auto wasFullSize = _state.fullSize;
 	const auto nowFullSize = _vertical ? scrollHeight() : scrollWidth();
@@ -1178,8 +1179,8 @@ void ElasticScroll::applyScrollTo(int position, bool synthMouseMove) {
 	_dirtyState = true;
 	const auto was = _widget->geometry();
 	_widget->move(
-		_vertical ? _widget->x() : -position,
-		_vertical ? -position : _widget->y());
+		_vertical ? _widget->x() : (-position - _contentBottomInset),
+		_vertical ? (-position - _contentBottomInset) : _widget->y());
 	if (weak) {
 		const auto now = _widget->geometry();
 		const auto wasFrom = _vertical ? was.y() : was.x();
@@ -1269,6 +1270,20 @@ void ElasticScroll::setBarBottomInset(int inset) {
 	_barBottomInset = inset;
 	auto event = QResizeEvent(size(), size());
 	resizeEvent(&event);
+}
+
+void ElasticScroll::setContentBottomInset(int inset) {
+	if (_contentBottomInset == inset) {
+		return;
+	}
+	_contentBottomInset = inset;
+	if (_widget) {
+		const auto position = _state.visibleFrom;
+		_widget->move(
+			_vertical ? _widget->x() : (-position - _contentBottomInset),
+			_vertical ? (-position - _contentBottomInset) : _widget->y());
+	}
+	update();
 }
 
 void ElasticScroll::resizeEvent(QResizeEvent *e) {

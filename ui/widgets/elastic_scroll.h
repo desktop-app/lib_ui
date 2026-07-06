@@ -200,6 +200,7 @@ public:
 	void setOverscrollTypes(OverscrollType from, OverscrollType till);
 	void setOverscrollDefaults(int from, int till, bool shift = false);
 	void setOverscrollBg(QColor bg);
+	void setContentBottomInset(int inset);
 
 	[[nodiscard]] rpl::producer<> scrolls() const;
 	[[nodiscard]] rpl::producer<> innerResizes() const;
@@ -271,6 +272,7 @@ private:
 	std::unique_ptr<ElasticScrollBar> _bar;
 	int _barTopInset = 0;
 	int _barBottomInset = 0;
+	int _contentBottomInset = 0;
 	ScrollState _state;
 
 	QPointer<QScroller> _scroller;
