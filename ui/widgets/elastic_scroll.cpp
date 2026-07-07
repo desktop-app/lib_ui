@@ -1308,6 +1308,8 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
 			? style::ConvertScale(20)
 			: height();
 		tryScrollTo(_state.visibleFrom + (up ? -step : step));
+	} else if (key == Qt::Key_Home || key == Qt::Key_End) {
+		tryScrollTo((key == Qt::Key_Home) ? 0 : scrollTopMax());
 	} else {
 		// Let keys we don't handle (e.g. typed characters) propagate to
 		// the parent widget instead of being silently accepted here.
