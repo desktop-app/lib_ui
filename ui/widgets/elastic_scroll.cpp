@@ -830,6 +830,11 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	}
 	if (phase == Qt::NoScrollPhase) {
 		if (_overscroll == currentOverscrollDefault()) {
+			const auto weak = base::make_weak(this);
+			requestBottomContent(delta);
+			if (!weak) {
+				return true;
+			}
 			tryScrollTo(_state.visibleFrom + delta);
 			_movement = Movement::None;
 		} else if (!_overscrollReturnAnimation.animating()) {
@@ -879,6 +884,27 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	return handleScrollEvent(phase, delta, ignore, touch);
 }
 
+bool ElasticScroll::requestBottomContent(int delta) {
+	if (!_bottomContentRequest
+		|| _insideBottomContentRequest
+		|| _overscroll
+		|| delta <= 0) {
+		return false;
+	}
+	const auto target = _state.visibleFrom + delta;
+	if (willScrollTo(target) >= target) {
+		return false;
+	}
+	const auto request = _bottomContentRequest;
+	const auto weak = base::make_weak(this);
+	_insideBottomContentRequest = true;
+	const auto result = request();
+	if (weak) {
+		_insideBottomContentRequest = false;
+	}
+	return result;
+}
+
 bool ElasticScroll::handleScrollEvent(
 		Qt::ScrollPhase phase,
 		int delta,
@@ -908,6 +934,20 @@ bool ElasticScroll::handleScrollEvent(
 		const auto normalTo = willScrollTo(_state.visibleFrom + delta);
 		delta -= normalTo - _state.visibleFrom;
 		applyScrollTo(normalTo);
+		if (delta > 0) {
+			const auto weak = base::make_weak(this);
+			const auto added = requestBottomContent(delta);
+			if (!weak) {
+				return true;
+			} else if (added) {
+				const auto retryTo = willScrollTo(_state.visibleFrom + delta);
+				delta -= retryTo - _state.visibleFrom;
+				applyScrollTo(retryTo);
+				if (!weak) {
+					return true;
+				}
+			}
+		}
 	}
 	if (!delta) {
 		return !ignore;
@@ -921,7 +961,11 @@ bool ElasticScroll::handleScrollEvent(
 		: (accumulated > 0)
 		? _overscrollTypeTill
 		: OverscrollType::None;
+	const auto &allowed = (accumulated < 0)
+		? _overscrollAllowFrom
+		: _overscrollAllowTill;
 	if (type == OverscrollType::None
+		|| (allowed && !allowed())
 		|| base::OppositeSigns(_overscrollAccumulated, accumulated)) {
 		_overscrollAccumulated = 0;
 	} else {
@@ -1322,6 +1366,13 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
 		const auto step = (key == Qt::Key_Up || key == Qt::Key_Down)
 			? style::ConvertScale(20)
 			: height();
+		if (!up) {
+			const auto weak = base::make_weak(this);
+			requestBottomContent(step);
+			if (!weak) {
+				return;
+			}
+		}
 		tryScrollTo(_state.visibleFrom + (up ? -step : step));
 	} else if (key == Qt::Key_Home || key == Qt::Key_End) {
 		tryScrollTo((key == Qt::Key_Home) ? 0 : scrollTopMax());
@@ -1532,6 +1583,17 @@ void ElasticScroll::setOverscrollDefaults(int from, int till, bool shift) {
 void ElasticScroll::setOverscrollBg(QColor bg) {
 	_overscrollBg = bg;
 	update();
+}
+
+void ElasticScroll::setOverscrollEdges(
+		Fn<bool()> allowTop,
+		Fn<bool()> allowBottom) {
+	_overscrollAllowFrom = std::move(allowTop);
+	_overscrollAllowTill = std::move(allowBottom);
+}
+
+void ElasticScroll::setBottomContentRequest(Fn<bool()> request) {
+	_bottomContentRequest = std::move(request);
 }
 
 rpl::producer<> ElasticScroll::scrolls() const {
