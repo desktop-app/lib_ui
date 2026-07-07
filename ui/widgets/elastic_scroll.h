@@ -166,6 +166,7 @@ public:
 	void scrollToWidget(not_null<QWidget*> widget);
 	void scrollToY(int toTop, int toBottom = -1);
 	void scrollTo(int toFrom, int toTill = -1);
+	[[nodiscard]] int computeScrollToY(int toTop, int toBottom = -1);
 	void disableScroll(bool dis);
 	void innerResized();
 

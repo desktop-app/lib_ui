@@ -20,6 +20,43 @@
 namespace Ui {
 namespace {
 
+[[nodiscard]] int ComputeScrollTo(
+		int toFrom,
+		int toTill,
+		int toMin,
+		int toMax,
+		int current,
+		int size) {
+	if (toFrom < toMin) {
+		toFrom = toMin;
+	} else if (toFrom > toMax) {
+		toFrom = toMax;
+	}
+	const auto exact = (toTill < 0);
+
+	const auto curBottom = current + size;
+	auto scToFrom = toFrom;
+	if (!exact && toFrom >= current) {
+		if (toTill < toFrom) {
+			toTill = toFrom;
+		}
+		if (toTill <= curBottom) {
+			return current;
+		}
+
+		scToFrom = toTill - size;
+		if (scToFrom > toFrom) {
+			scToFrom = toFrom;
+		}
+		if (scToFrom == current) {
+			return current;
+		}
+	} else {
+		scToFrom = toFrom;
+	}
+	return scToFrom;
+}
+
 constexpr auto kOverscrollReturnDuration = crl::time(250);
 //constexpr auto kOverscrollPower = 0.6;
 constexpr auto kOverscrollFromThreshold = -(1 << 30);
@@ -1312,6 +1349,20 @@ void ElasticScroll::scrollToY(int toTop, int toBottom) {
 	if (_vertical) {
 		scrollTo(toTop, toBottom);
 	}
+}
+
+int ElasticScroll::computeScrollToY(int toTop, int toBottom) {
+	if (const auto inner = _widget.data()) {
+		SendPendingMoveResizeEvents(inner);
+	}
+	SendPendingMoveResizeEvents(this);
+	return ComputeScrollTo(
+		toTop,
+		toBottom,
+		0,
+		scrollTopMax(),
+		scrollTop(),
+		height());
 }
 
 void ElasticScroll::scrollTo(int toFrom, int toTill) {
