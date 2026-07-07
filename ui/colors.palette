@@ -237,6 +237,10 @@ dialogsRippleBgActive: activeButtonBgRipple; // chat list background ripple effe
 
 searchedBarBg: windowBgOver; // search results bar background (in chats list, contacts box..)
 searchedBarFg: windowSubTextFgOver; // search results bar text (in chats list, contacts box..)
+searchedTextMatchBg: #fffc67; // in-page search results highlight background (Instant View, markdown editor)
+searchedTextMatchFg: #000000; // in-page search results highlight text (Instant View, markdown editor)
+searchedTextCurrentMatchBg: #f5ab5c; // in-page search current result highlight background (Instant View, markdown editor)
+searchedTextCurrentMatchFg: #000000; // in-page search current result highlight text (Instant View, markdown editor)
 
 // history
 topBarBg: windowBg; // top bar background (in chat view, media overview..)
