@@ -105,7 +105,7 @@ enum class ElasticScrollMovement {
 	Returning,
 };
 
-class ElasticScroll final : public RpWidget {
+class ElasticScroll : public RpWidget {
 public:
 	ElasticScroll(
 		QWidget *parent,
