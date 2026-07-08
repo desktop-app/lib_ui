@@ -1072,7 +1072,7 @@ QString AccumulateText(Iterator begin, Iterator end) {
 QTextImageFormat PrepareEmojiFormat(EmojiPtr emoji, int emojiHeight) {
 	const auto factor = style::DevicePixelRatio();
 	const auto size = std::max(emojiHeight * factor, Emoji::GetSizeNormal());
-	const auto width = size + st::emojiPadding * factor * 2;
+	const auto width = Emoji::GetSizeNormal() + st::emojiPadding * factor * 2;
 	auto result = QTextImageFormat();
 	result.setWidth(width / factor);
 	result.setHeight(size / factor);
