@@ -80,6 +80,7 @@ public:
 	void reorderRows(int oldIndex, int newIndex);
 
 	void clear();
+	void detachRows();
 
 protected:
 	int resizeGetHeight(int newWidth) override;
