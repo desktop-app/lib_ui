@@ -290,20 +290,18 @@ void VerticalLayout::removeChild(RpWidget *child) {
 }
 
 void VerticalLayout::clear() {
-	while (!_rows.empty()) {
-		const auto widget = _rows.front().widget.data();
-		removeChild(widget);
-		widget->hide();
-		widget->deleteLater();
+	for (auto &row : base::take(_rows)) {
+		delete row.widget.data();
 	}
+	resize(width(), 0);
 }
 
 void VerticalLayout::detachRows() {
-	while (!_rows.empty()) {
-		const auto widget = _rows.front().widget.data();
-		removeChild(widget);
+	for (auto &row : base::take(_rows)) {
+		const auto widget = row.widget.release();
 		widget->hide();
 	}
+	resize(width(), 0);
 }
 
 } // namespace Ui
