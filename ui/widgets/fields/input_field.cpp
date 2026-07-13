@@ -5515,7 +5515,17 @@ QString InputField::selectionMarkdownTagForToggle(const QString &tag) const {
 			|| IsNewline(text[0])
 			|| IsNewline(text[text.size() - 1]);
 	}();
-	return (leftForBlock && rightForBlock) ? kTagPre : kTagCode;
+	const auto singleLine = [&] {
+		for (auto position = from; position != till; ++position) {
+			if (IsNewline(document()->characterAt(position))) {
+				return false;
+			}
+		}
+		return true;
+	};
+	return (leftForBlock && rightForBlock && !singleLine())
+		? kTagPre
+		: kTagCode;
 }
 
 void InputField::toggleCurrentMarkdownTag(const QString &tag) {
