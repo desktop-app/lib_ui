@@ -80,6 +80,37 @@ constexpr auto kRubberBandMaxReturnDuration = crl::time(1000);
 constexpr auto kVelocityZeroingTimeout = crl::time(100);
 constexpr auto kMinimumOverscrollBeforeStretch = 10;
 
+// Pull-to-action sides need to follow the finger much closer than the
+// plain bounce: this approximates the initial slope (~0.55) of the
+// native iOS UIScrollView rubber band, which hosts the same pull
+// affordances in Telegram for iOS, stiffened for a trackpad. Past the
+// pull distance the stretch continues with the plain bounce stiffness,
+// so the content stays contained.
+constexpr auto kPullBandStiffness = 2.5;
+
+// The stretch mapping of a pull side is a single curve anchored at
+// zero stretch, soft over the pull distance and stiff beyond it. The
+// overscroll default only positions the resting point on that curve,
+// so collapsing from an expanded default re-traverses the soft range
+// while pulling deeper than the distance stays stiff.
+[[nodiscard]] float64 PullAccumulatedFromOverscroll(
+		float64 value,
+		float64 distance) {
+	return (value <= distance)
+		? value * kPullBandStiffness
+		: distance * kPullBandStiffness
+			+ (value - distance) * kRubberBandStiffness;
+}
+
+[[nodiscard]] float64 PullOverscrollFromAccumulated(
+		float64 value,
+		float64 distance) {
+	const auto softAccumulated = distance * kPullBandStiffness;
+	return (value <= softAccumulated)
+		? value / kPullBandStiffness
+		: distance + (value - softAccumulated) / kRubberBandStiffness;
+}
+
 // Real macOS trackpad flings top out well below this, so anything
 // higher is an artifact of the per-event-pair velocity estimation.
 constexpr auto kMaxTrackedVelocity = 6000.;
@@ -542,7 +573,38 @@ void ElasticScroll::overscrollReturn() {
 #ifdef Q_OS_MAC
 bool ElasticScroll::overscrollSpringSide(int side) const {
 	const auto type = (side < 0) ? _overscrollTypeFrom : _overscrollTypeTill;
-	return !side ? false : (type == OverscrollType::Real);
+	return !side ? false : (type != OverscrollType::None);
+}
+
+bool ElasticScroll::overscrollPullSide(int side) const {
+	// Virtual and pull-flagged sides host pull-to-action controls (the
+	// stories strip in the chat list, the pull to the next channel in
+	// the chat history), which follow the finger with a much softer
+	// stiffness over the pull distance and stretch without a
+	// minimum-delta threshold. They share the linear mapping and
+	// spring return dynamics with the plain bounce sides.
+	if (!side) {
+		return false;
+	}
+	const auto type = (side < 0) ? _overscrollTypeFrom : _overscrollTypeTill;
+	return (type == OverscrollType::Virtual)
+		|| (type == OverscrollType::Real
+			&& ((side < 0) ? _overscrollPullFrom : _overscrollPullTill) > 0);
+}
+
+float64 ElasticScroll::overscrollPullDistance(int side) const {
+	if (!overscrollPullSide(side)) {
+		return 0.;
+	}
+	const auto distance = (side < 0)
+		? _overscrollPullFrom
+		: _overscrollPullTill;
+	return distance ? float64(distance) : 1e9;
+}
+
+bool ElasticScroll::overscrollCollapsing() const {
+	const auto stretch = _overscroll - currentOverscrollDefault();
+	return (stretch != 0) && base::OppositeSigns(stretch, _overscroll);
 }
 
 void ElasticScroll::trackWheelVelocity(
@@ -1111,8 +1173,22 @@ bool ElasticScroll::handleScrollEvent(
 	}
 #endif // Q_OS_MAC
 	if (momentum) {
-		if (_overscroll != currentOverscrollDefault()
-			&& !_overscrollReturnAnimation.animating()) {
+		auto returning = (_overscroll != currentOverscrollDefault())
+			&& !_overscrollReturnAnimation.animating();
+#ifdef Q_OS_MAC
+		// A momentum fling that retracts a pull (the stretch points
+		// back toward the content, which only happens around an
+		// expanded overscroll default) keeps feeding the collapse
+		// instead of bouncing back to the default, otherwise the
+		// return spring outruns the decaying fling between events and
+		// the pull never collapses. ScrollEnd still starts the return.
+		if (returning
+			&& (phase == Qt::ScrollMomentum)
+			&& overscrollCollapsing()) {
+			returning = false;
+		}
+#endif // Q_OS_MAC
+		if (returning) {
 			overscrollReturn();
 		} else if (!_overscrollReturnAnimation.animating()) {
 			_movement = (phase == Qt::ScrollEnd)
@@ -1149,7 +1225,9 @@ bool ElasticScroll::handleScrollEvent(
 		delta *= kTouchOverscrollMultiplier;
 	}
 #ifdef Q_OS_MAC
-	if (!_overscrollAccumulated && overscrollSpringSide(delta)) {
+	if (!_overscrollAccumulated
+		&& overscrollSpringSide(delta)
+		&& !overscrollPullSide(delta)) {
 		if (base::OppositeSigns(_pendingOverscrollDelta, delta)) {
 			_pendingOverscrollDelta = 0;
 		}
@@ -1185,7 +1263,8 @@ bool ElasticScroll::handleScrollEvent(
 	if (momentum
 		&& !_overscrollReturnAnimation.animating()
 		&& _overscroll != currentOverscrollDefault()
-		&& overscrollSpringSide(_overscroll)) {
+		&& overscrollSpringSide(_overscroll)
+		&& !overscrollCollapsing()) {
 		overscrollReturn();
 	}
 #endif // Q_OS_MAC
@@ -1209,7 +1288,19 @@ int ElasticScroll::overscrollFromAccumulated(
 		int accumulated) const {
 #ifdef Q_OS_MAC
 	if (overscrollSpringSide(side)) {
-		return int(base::SafeRound(accumulated / kRubberBandStiffness));
+		const auto sign = (side < 0) ? -1 : 1;
+		const auto distance = overscrollPullDistance(side);
+		const auto base = std::abs(float64((side < 0)
+			? _overscrollDefaultFrom
+			: _overscrollDefaultTill));
+		const auto baseAccumulated = PullAccumulatedFromOverscroll(
+			base,
+			distance);
+		const auto total = baseAccumulated + sign * accumulated;
+		const auto visual = (total < 0)
+			? -PullOverscrollFromAccumulated(-total, distance)
+			: PullOverscrollFromAccumulated(total, distance);
+		return int(base::SafeRound(sign * (visual - base)));
 	}
 #endif // Q_OS_MAC
 	return OverscrollFromAccumulated(accumulated);
@@ -1218,7 +1309,19 @@ int ElasticScroll::overscrollFromAccumulated(
 int ElasticScroll::overscrollToAccumulated(int side, int overscroll) const {
 #ifdef Q_OS_MAC
 	if (overscrollSpringSide(side)) {
-		return int(base::SafeRound(overscroll * kRubberBandStiffness));
+		const auto sign = (side < 0) ? -1 : 1;
+		const auto distance = overscrollPullDistance(side);
+		const auto base = std::abs(float64((side < 0)
+			? _overscrollDefaultFrom
+			: _overscrollDefaultTill));
+		const auto baseAccumulated = PullAccumulatedFromOverscroll(
+			base,
+			distance);
+		const auto visual = base + sign * overscroll;
+		const auto total = (visual < 0)
+			? -PullAccumulatedFromOverscroll(-visual, distance)
+			: PullAccumulatedFromOverscroll(visual, distance);
+		return int(base::SafeRound(sign * (total - baseAccumulated)));
 	}
 #endif // Q_OS_MAC
 	return OverscrollToAccumulated(overscroll);
@@ -1440,7 +1543,11 @@ void ElasticScroll::setState(ScrollState state) {
 	const auto weak = base::make_weak(this);
 	const auto old = _state.visibleFrom;
 	_state = state;
+#ifdef Q_OS_MAC
+	updateBarState();
+#else // Q_OS_MAC
 	_bar->updateState(state);
+#endif // Q_OS_MAC
 	if (weak) {
 		_position = Position{ _state.visibleFrom, _overscroll };
 	}
@@ -1505,7 +1612,28 @@ void ElasticScroll::applyOverscroll(int overscroll) {
 	} else {
 		applyScrollTo(std::clamp(_state.visibleFrom, 0, max));
 	}
+#ifdef Q_OS_MAC
+	updateBarState();
+#endif // Q_OS_MAC
 }
+
+#ifdef Q_OS_MAC
+void ElasticScroll::updateBarState() {
+	// Virtual overscroll never moves the inner widget, so it never
+	// reaches the state the bar squishes its thumb from - fold it in,
+	// making the thumb behave the same as with Real overscroll.
+	auto state = _state;
+	const auto shift = ((_overscroll < 0
+		&& _overscrollTypeFrom == OverscrollType::Virtual)
+		|| (_overscroll > 0
+			&& _overscrollTypeTill == OverscrollType::Virtual))
+		? _overscroll
+		: 0;
+	state.visibleFrom += shift;
+	state.visibleTill += shift;
+	_bar->updateState(state);
+}
+#endif // Q_OS_MAC
 
 int ElasticScroll::willScrollTo(int position) const {
 	return std::clamp(
@@ -1789,6 +1917,22 @@ void ElasticScroll::setOverscrollTypes(
 			break;
 		}
 	}
+}
+
+void ElasticScroll::setOverscrollPullDistances(int from, int till) {
+	if (_overscrollPullFrom == from && _overscrollPullTill == till) {
+		return;
+	}
+	_overscrollPullFrom = from;
+	_overscrollPullTill = till;
+#ifdef Q_OS_MAC
+	if (_overscroll) {
+		_overscrollAccumulated = currentOverscrollDefaultAccumulated()
+			+ overscrollToAccumulated(
+				_overscroll,
+				_overscroll - currentOverscrollDefault());
+	}
+#endif // Q_OS_MAC
 }
 
 void ElasticScroll::setOverscrollDefaults(int from, int till, bool shift) {
