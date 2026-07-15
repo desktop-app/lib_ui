@@ -252,7 +252,8 @@ private:
 		Qt::ScrollPhase phase,
 		int delta,
 		bool ignore = false,
-		bool touch = false);
+		bool touch = false,
+		crl::time timestamp = 0);
 	bool requestBottomContent(int delta);
 	void handleTouchEvent(QTouchEvent *e);
 
@@ -282,11 +283,26 @@ private:
 	[[nodiscard]] AccumulatedParts computeAccumulatedParts() const;
 	[[nodiscard]] int currentOverscrollDefault() const;
 	[[nodiscard]] int currentOverscrollDefaultAccumulated() const;
+	[[nodiscard]] int overscrollFromAccumulated(
+		int side,
+		int accumulated) const;
+	[[nodiscard]] int overscrollToAccumulated(int side, int overscroll) const;
 	void overscrollReturn();
 	void overscrollReturnCancel();
 	void overscrollCheckReturnFinish();
 	bool overscrollFinish();
 	void applyAccumulatedScroll();
+
+#ifdef Q_OS_MAC
+	[[nodiscard]] bool overscrollSpringSide(int side) const;
+	void trackWheelVelocity(
+		Qt::ScrollPhase phase,
+		int delta,
+		crl::time timestamp);
+	void overscrollSpringStart();
+	void overscrollSpringUpdate();
+	void overscrollSpringFinish();
+#endif // Q_OS_MAC
 
 	const style::ScrollArea &_st;
 	std::unique_ptr<ElasticScrollBar> _bar;
@@ -342,6 +358,19 @@ private:
 	Ui::Animations::Simple _overscrollReturnAnimation;
 	rpl::variable<Position> _position;
 	rpl::variable<Movement> _movement;
+
+#ifdef Q_OS_MAC
+	float64 _wheelVelocity = 0.;
+	crl::time _wheelVelocityTime = 0;
+	crl::time _lastWheelEventTime = 0;
+	bool _lastWheelPhaseMomentum = false;
+	int _pendingOverscrollDelta = 0;
+	int _springSide = 0;
+	int _springTarget = 0;
+	float64 _springX0 = 0.;
+	float64 _springV0 = 0.;
+	float64 _springPeakTime = 0.;
+#endif // Q_OS_MAC
 
 	object_ptr<QWidget> _widget = { nullptr };
 
