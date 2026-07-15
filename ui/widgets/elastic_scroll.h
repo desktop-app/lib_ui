@@ -211,6 +211,19 @@ public:
 	// the same way an edge with OverscrollType::None does.
 	void setOverscrollEdges(Fn<bool()> allowTop, Fn<bool()> allowBottom);
 
+	// Marks a Real edge as hosting a pull-to-action control (like the
+	// pull to the next channel in the chat history) reachable within
+	// the given distance of visual stretch, 0 - a plain bounce edge.
+	// On macOS pull edges stretch with a much softer linear stiffness
+	// while the stretch is within that distance and without the
+	// minimum-delta threshold, so the affordance follows the finger
+	// closely from the first pixel; past the distance the stiff bounce
+	// mapping takes over, in both directions - an edge resting at an
+	// expanded overscroll default collapses through the soft range
+	// again. Virtual edges are pull edges implicitly, 0 meaning an
+	// uncapped soft range for them. No-op on other platforms.
+	void setOverscrollPullDistances(int from, int till);
+
 	// Called synchronously when a user scroll gesture (wheel, trackpad,
 	// touch or Down/PageDown key) pushes past the bottom edge, before
 	// any overscroll accumulates. The callback may synchronously append
@@ -295,12 +308,16 @@ private:
 
 #ifdef Q_OS_MAC
 	[[nodiscard]] bool overscrollSpringSide(int side) const;
+	[[nodiscard]] bool overscrollPullSide(int side) const;
+	[[nodiscard]] float64 overscrollPullDistance(int side) const;
+	[[nodiscard]] bool overscrollCollapsing() const;
 	void trackWheelVelocity(
 		Qt::ScrollPhase phase,
 		int delta,
 		crl::time timestamp);
 	void overscrollSpringStart();
 	void overscrollSpringUpdate();
+	void updateBarState();
 	void overscrollSpringFinish();
 #endif // Q_OS_MAC
 
@@ -351,6 +368,8 @@ private:
 	int _overscrollDefaultTill = 0;
 	OverscrollType _overscrollTypeFrom = OverscrollType::Real;
 	OverscrollType _overscrollTypeTill = OverscrollType::Real;
+	int _overscrollPullFrom = 0;
+	int _overscrollPullTill = 0;
 	Fn<bool()> _overscrollAllowFrom;
 	Fn<bool()> _overscrollAllowTill;
 	Fn<bool()> _bottomContentRequest;
