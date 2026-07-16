@@ -946,6 +946,9 @@ bool ElasticScroll::handleScrollEvent(
 				if (!weak) {
 					return true;
 				}
+				if (_scroller) {
+					_scroller->resendPrepareEvent();
+				}
 			}
 		}
 	}
@@ -1462,6 +1465,9 @@ void ElasticScroll::scrollTo(int toFrom, int toTill) {
 		scTo = toFrom;
 	}
 	applyScrollTo(scTo);
+	if (_scroller) {
+		_scroller->resendPrepareEvent();
+	}
 }
 
 void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {

@@ -1092,6 +1092,9 @@ void ScrollArea::scrollToX(int toLeft, int toRight) {
 
 void ScrollArea::scrollToY(int toTop, int toBottom) {
 	verticalScrollBar()->setValue(computeScrollToY(toTop, toBottom));
+	if (_scroller) {
+		_scroller->resendPrepareEvent();
+	}
 }
 
 void ScrollArea::doSetOwnedWidget(object_ptr<QWidget> w) {
