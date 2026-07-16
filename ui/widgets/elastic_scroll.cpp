@@ -1009,12 +1009,16 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			}
 		} else if (locked
 			&& ((*locked == Qt::Horizontal) == _vertical)) {
-			if (_crossAxisWheelProcess) {
-				_crossAxisWheelProcess(_vertical
+			// Accept the event only if the cross-axis process consumed
+			// it: accepting a phased wheel event locks the rest of the
+			// gesture onto this widget (QApplicationPrivate::wheel_widget
+			// delivers all the following events straight here), starving
+			// the widgets under the cursor - like the swipe-to-reply
+			// handler on the history list - of the ScrollUpdate stream.
+			return _crossAxisWheelProcess
+				&& _crossAxisWheelProcess(_vertical
 					? QPoint(qRound(lockDelta.x()), 0)
 					: QPoint(0, qRound(lockDelta.y())));
-			}
-			return true;
 		} else {
 			ownAxisLocked = locked.has_value();
 		}

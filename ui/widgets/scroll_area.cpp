@@ -734,10 +734,12 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 					return true;
 				}
 			} else if (locked == Qt::Horizontal) {
-				if (_crossAxisWheelProcess) {
-					_crossAxisWheelProcess({ qRound(delta.x()), 0 });
-				}
-				return true;
+				// Accept the event only if the cross-axis process consumed
+				// it: accepting a phased wheel event locks the rest of the
+				// gesture onto this widget, starving the widgets under the
+				// cursor (like swipe handlers) of the ScrollUpdate stream.
+				return _crossAxisWheelProcess
+					&& _crossAxisWheelProcess({ qRound(delta.x()), 0 });
 			}
 		}
 		if (_scroller) {
