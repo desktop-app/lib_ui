@@ -214,14 +214,14 @@ public:
 	// Marks a Real edge as hosting a pull-to-action control (like the
 	// pull to the next channel in the chat history) reachable within
 	// the given distance of visual stretch, 0 - a plain bounce edge.
-	// On macOS pull edges stretch with a much softer linear stiffness
-	// while the stretch is within that distance and without the
-	// minimum-delta threshold, so the affordance follows the finger
-	// closely from the first pixel; past the distance the stiff bounce
-	// mapping takes over, in both directions - an edge resting at an
-	// expanded overscroll default collapses through the soft range
-	// again. Virtual edges are pull edges implicitly, 0 meaning an
-	// uncapped soft range for them. No-op on other platforms.
+	// Pull edges stretch with a much softer linear stiffness while the
+	// stretch is within that distance and without the minimum-delta
+	// threshold, so the affordance follows the finger closely from the
+	// first pixel; past the distance the stiff bounce mapping takes
+	// over, in both directions - an edge resting at an expanded
+	// overscroll default collapses through the soft range again.
+	// Virtual edges are pull edges implicitly, 0 meaning an uncapped
+	// soft range for them.
 	void setOverscrollPullDistances(int from, int till);
 
 	// Called synchronously when a user scroll gesture (wheel, trackpad,
@@ -306,7 +306,6 @@ private:
 	bool overscrollFinish();
 	void applyAccumulatedScroll();
 
-#ifdef Q_OS_MAC
 	[[nodiscard]] bool overscrollSpringSide(int side) const;
 	[[nodiscard]] bool overscrollPullSide(int side) const;
 	[[nodiscard]] float64 overscrollPullDistance(int side) const;
@@ -315,11 +314,11 @@ private:
 		Qt::ScrollPhase phase,
 		int delta,
 		crl::time timestamp);
-	void overscrollSpringStart();
+	void overscrollSpringStart(int side);
+	void overscrollBounce(int side, float64 velocity);
 	void overscrollSpringUpdate();
 	void updateBarState();
 	void overscrollSpringFinish();
-#endif // Q_OS_MAC
 
 	const style::ScrollArea &_st;
 	std::unique_ptr<ElasticScrollBar> _bar;
@@ -378,7 +377,6 @@ private:
 	rpl::variable<Position> _position;
 	rpl::variable<Movement> _movement;
 
-#ifdef Q_OS_MAC
 	float64 _wheelVelocity = 0.;
 	crl::time _wheelVelocityTime = 0;
 	crl::time _lastWheelEventTime = 0;
@@ -389,7 +387,6 @@ private:
 	float64 _springX0 = 0.;
 	float64 _springV0 = 0.;
 	float64 _springPeakTime = 0.;
-#endif // Q_OS_MAC
 
 	object_ptr<QWidget> _widget = { nullptr };
 
@@ -399,8 +396,5 @@ private:
 	rpl::event_stream<> _geometryChanged;
 
 };
-
-[[nodiscard]] int OverscrollFromAccumulated(int accumulated);
-[[nodiscard]] int OverscrollToAccumulated(int overscroll);
 
 } // namespace Ui

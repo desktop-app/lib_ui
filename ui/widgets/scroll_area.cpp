@@ -26,7 +26,7 @@ namespace {
 base::options::toggle OptionQScroller({
 	.id = kOptionQScroller,
 	.name = "Use QScroller for touchpad scrolling",
-	.description = "Provides kinetic scrolling and overscroll",
+	.description = "Provides kinetic scrolling",
 	.defaultValue = Platform::IsLinux(),
 });
 
@@ -71,32 +71,32 @@ base::options::toggle OptionQScroller({
 
 const char kOptionQScroller[] = "qscroller";
 
-void SetupScrollerPhysics(not_null<QScroller*> scroller, bool ownsOvershoot) {
+void SetupScrollerPhysics(not_null<QScroller*> scroller) {
 	auto props = scroller->scrollerProperties();
 	using P = QScrollerProperties;
 	const auto set = [&](P::ScrollMetric metric, qreal value) {
 		props.setScrollMetric(metric, QVariant::fromValue(value));
 	};
 
-	// Momentum (both consumers). The Qt default 0.125 gives a ~4s, slippery,
-	// constant-deceleration glide that "never slows down". With the default
-	// OutQuad curve coast time ~= |v| / DecelerationFactor, so 0.6 brings a
-	// hard flick down to ~1-1.6s, close to macOS native momentum.
+	// The Qt default 0.125 gives a ~4s, slippery, constant-deceleration
+	// glide that "never slows down". With the default OutQuad curve coast
+	// time ~= |v| / DecelerationFactor, so 0.6 brings a hard flick down
+	// to ~1-1.6s, close to macOS native momentum.
 	set(P::DecelerationFactor, 0.6);
 	// The default cap 0.5 m/s (~2165 px/s at ~110dpi) clips hard flicks below
 	// the legacy 2500-4000 px/s feel. NB: this metric is m/s, converted to
 	// pixels via pixelPerMeter = physicalDPI / 0.0254.
 	set(P::MaximumVelocity, 0.95);
 
-	if (ownsOvershoot) {
-		// Raw QScroller overshoot path (ScrollArea). ElasticScroll instead
-		// re-shapes overshootDistance() through its own logarithmic
-		// rubber-band, so there we leave the QScroller overshoot at default.
-		set(P::OvershootDragResistanceFactor, 0.30); // lower = stiffer
-		set(P::OvershootDragDistanceFactor, 0.20); // <= 20% viewport (was 1.0)
-		set(P::OvershootScrollDistanceFactor, 0.16); // <= 16% viewport (was 0.5)
-		set(P::OvershootScrollTime, 0.36); // bounce-back ~250ms (was ~490ms)
-	}
+	// QScroller never does the overscroll itself: ScrollArea has none at
+	// all, and ElasticScroll implements its own rubber-band physics fed
+	// from the raw events, taking over at the edges.
+	props.setScrollMetric(
+		P::VerticalOvershootPolicy,
+		QVariant::fromValue(P::OvershootAlwaysOff));
+	props.setScrollMetric(
+		P::HorizontalOvershootPolicy,
+		QVariant::fromValue(P::OvershootAlwaysOff));
 
 	scroller->setScrollerProperties(props);
 }
@@ -534,9 +534,7 @@ ScrollArea::ScrollArea(
 	) | rpl::on_next([=] {
 		if (OptionQScroller.value()) {
 			_scroller = QScroller::scroller(this);
-			SetupScrollerPhysics(_scroller, true);
-			_overscrollAllowedApplied = -1;
-			_overscrollDirection = 0;
+			SetupScrollerPhysics(_scroller);
 		} else if (_scroller) {
 			QObject deleter;
 			_scroller->setParent(&deleter);
@@ -562,45 +560,6 @@ void ScrollArea::touchDeaccelerate(int32 elapsed) {
 	int32 y = _touchSpeed.y();
 	_touchSpeed.setX((x == 0) ? x : (x > 0) ? qMax(0, x - elapsed) : qMin(0, x + elapsed));
 	_touchSpeed.setY((y == 0) ? y : (y > 0) ? qMax(0, y - elapsed) : qMin(0, y + elapsed));
-}
-
-void ScrollArea::setOverscrollEdges(
-		Fn<bool()> allowTop,
-		Fn<bool()> allowBottom) {
-	_overscrollAllowTop = std::move(allowTop);
-	_overscrollAllowBottom = std::move(allowBottom);
-	// Re-evaluate against the new predicates at the next scroll start.
-	_overscrollDirection = 0;
-}
-
-void ScrollArea::updateOverscrollByDirection(int wheelDeltaY) {
-	if (!_scroller || !wheelDeltaY) {
-		return;
-	}
-	// ScrollDelta().y() > 0 means we're heading toward the top edge.
-	const auto direction = (wheelDeltaY > 0) ? -1 : 1;
-	if (_overscrollDirection == direction) {
-		return;
-	}
-	_overscrollDirection = direction;
-	const auto &predicate = (direction < 0)
-		? _overscrollAllowTop
-		: _overscrollAllowBottom;
-	applyOverscrollAllowed(!predicate || predicate());
-}
-
-void ScrollArea::applyOverscrollAllowed(bool allowed) {
-	if (!_scroller || (_overscrollAllowedApplied == (allowed ? 1 : 0))) {
-		return;
-	}
-	_overscrollAllowedApplied = allowed ? 1 : 0;
-	auto props = _scroller->scrollerProperties();
-	props.setScrollMetric(
-		QScrollerProperties::VerticalOvershootPolicy,
-		QVariant::fromValue(allowed
-			? QScrollerProperties::OvershootWhenScrollable
-			: QScrollerProperties::OvershootAlwaysOff));
-	_scroller->setScrollerProperties(props);
 }
 
 void ScrollArea::scrolled() {
@@ -799,7 +758,6 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 					// _wheelPos null and presses instead.
 					return true;
 				}
-				updateOverscrollByDirection(ScrollDelta(ev).y());
 				const auto wasNull = _wheelPos.isNull();
 				if (wasNull) {
 					_wheelPos = QPoint(width(), height()) / 2;
@@ -829,9 +787,6 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 						crl::now());
 					_wheelPos = {};
 				}
-				// Re-evaluate the edge policy at the start of the next gesture;
-				// the policy applied for this gesture stays for the fling.
-				_overscrollDirection = 0;
 			} return true;
 			}
 		}
