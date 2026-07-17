@@ -800,6 +800,11 @@ void Checkbox::paintEvent(QPaintEvent *e) {
 
 void Checkbox::mousePressEvent(QMouseEvent *e) {
 	RippleButton::mousePressEvent(e);
+	const auto state = getTextState(e->pos());
+	if (state.link != ClickHandler::getActive()) {
+		ClickHandler::setActive(state.link, this);
+		update();
+	}
 	ClickHandler::pressed();
 }
 
