@@ -276,6 +276,8 @@ private:
 	void tryScrollTo(int position, bool synthMouseMove = true);
 	void applyScrollTo(int position, bool synthMouseMove = true);
 	void applyOverscroll(int overscroll);
+	[[nodiscard]] std::optional<int> lookupOverscrollPinnedEdge() const;
+	void reanchorOverscroll();
 
 	void doSetOwnedWidget(object_ptr<QWidget> widget);
 	object_ptr<QWidget> doTakeWidget();
