@@ -800,6 +800,7 @@ void Checkbox::paintEvent(QPaintEvent *e) {
 
 void Checkbox::mousePressEvent(QMouseEvent *e) {
 	RippleButton::mousePressEvent(e);
+	mouseMoveEvent(e);
 	ClickHandler::pressed();
 }
 
