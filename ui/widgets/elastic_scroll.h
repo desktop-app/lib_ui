@@ -161,6 +161,9 @@ public:
 			? (rpl::never<int>() | rpl::type_erased)
 			: _scrollValueUpdated.events();
 	}
+	auto subpixelScrollValue() const {
+		return _subpixelScroll.value();
+	}
 
 	void scrollTo(ScrollToRequest request);
 	void scrollToWidget(not_null<QWidget*> widget);
@@ -275,6 +278,11 @@ private:
 	[[nodiscard]] int willScrollTo(int position) const;
 	void tryScrollTo(int position, bool synthMouseMove = true);
 	void applyScrollTo(int position, bool synthMouseMove = true);
+	void setSubpixelScroll(
+		float64 value,
+		int position,
+		bool animated = false);
+	void updateSubpixelScrollAnimation();
 	void applyOverscroll(int overscroll);
 	[[nodiscard]] std::optional<int> lookupOverscrollPinnedEdge() const;
 	void reanchorOverscroll();
@@ -330,7 +338,7 @@ private:
 	ScrollState _state;
 
 	QPointer<QScroller> _scroller;
-	QPoint _wheelPos;
+	QPointF _wheelPos;
 
 	base::Timer _touchTimer;
 	base::Timer _touchScrollTimer;
@@ -359,6 +367,7 @@ private:
 	bool _overscrollReturning : 1 = false;
 	bool _wheelDirectionLocked : 1 = false;
 	bool _insideBottomContentRequest : 1 = false;
+	bool _processingWheelEvent : 1 = false;
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
@@ -376,9 +385,13 @@ private:
 	Fn<bool()> _bottomContentRequest;
 	std::optional<QColor> _overscrollBg;
 	Ui::Animations::Simple _overscrollReturnAnimation;
+	Ui::Animations::Simple _subpixelScrollAnimation;
 	rpl::variable<Position> _position;
 	rpl::variable<Movement> _movement;
+	rpl::variable<float64> _subpixelScroll;
 
+	float64 _wheelDeltaRemainder = 0.;
+	float64 _subpixelScrollTarget = 0.;
 	float64 _wheelVelocity = 0.;
 	crl::time _wheelVelocityTime = 0;
 	crl::time _lastWheelEventTime = 0;

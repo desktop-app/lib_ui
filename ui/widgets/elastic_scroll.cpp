@@ -73,6 +73,8 @@ constexpr auto kRubberBandPeriod = 1.6;
 constexpr auto kRubberBandMaxReturnDuration = crl::time(1000);
 constexpr auto kVelocityZeroingTimeout = crl::time(100);
 constexpr auto kMinimumOverscrollBeforeStretch = 10;
+constexpr auto kSubpixelScrollDuration = crl::time(17);
+constexpr auto kSubpixelScrollMaxLag = 1.;
 
 // Pull-to-action sides need to follow the finger much closer than the
 // plain bounce: this approximates the initial slope (~0.55) of the
@@ -1027,27 +1029,65 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	const auto guard = gsl::finally([&] {
 		_lastScroll = now;
 	});
-	auto unmultiplied = ScrollDelta(e, touch);
+	const auto wasProcessingWheelEvent = _processingWheelEvent;
+	_processingWheelEvent = true;
+	const auto processingGuard = gsl::finally([&] {
+		_processingWheelEvent = wasProcessingWheelEvent;
+	});
+	auto unmultiplied = ScrollDeltaF(e, touch);
 	if (ownAxisLocked) {
 		if (_vertical) {
-			unmultiplied.setX(0);
+			unmultiplied.setX(0.);
 		} else {
-			unmultiplied.setY(0);
+			unmultiplied.setY(0.);
 		}
 	}
 	const auto multiply = e->modifiers()
 		& (Qt::ControlModifier | Qt::ShiftModifier);
 	const auto pixels = multiply
-		? QPoint(
-			(unmultiplied.x() * std::max(width(), 120) / 120.),
-			(unmultiplied.y() * std::max(height(), 120) / 120.))
+		? QPointF(
+			unmultiplied.x() * std::max(width(), 120) / 120.,
+			unmultiplied.y() * std::max(height(), 120) / 120.)
 		: unmultiplied;
 	auto ignore = false;
-	auto delta = _vertical ? -pixels.y() : -pixels.x();
+	const auto deltaExact = _vertical ? -pixels.y() : -pixels.x();
+	auto delta = 0;
 	if (!ownAxisLocked
-		&& std::abs(_vertical ? pixels.x() : pixels.y()) >= std::abs(delta)) {
+		&& std::abs(_vertical ? pixels.x() : pixels.y())
+			>= std::abs(deltaExact)) {
 		ignore = true;
-		delta = 0;
+	} else {
+		// Positions are whole pixels, but event deltas are fractional
+		// (angleDelta mapping, non-100% scale, fractional OS deltas), so
+		// carry the sub-pixel remainder across the events of a gesture
+		// instead of dropping it at every event: the emitted whole-pixel
+		// steps then follow the real motion with evenly-paced rounding.
+		if (touch && phase == Qt::ScrollBegin) {
+			setSubpixelScroll(0., _state.visibleFrom);
+		}
+		const auto total = deltaExact + _wheelDeltaRemainder;
+		delta = int(base::SafeRound(total));
+		const auto preciseTarget = _state.visibleFrom + total;
+		const auto maximum = _state.fullSize
+			- (_state.visibleTill - _state.visibleFrom);
+		const auto remainder = (_overscroll
+			|| preciseTarget < 0.
+			|| preciseTarget > maximum)
+			? 0.
+			: (total - delta);
+#ifdef Q_OS_MAC
+		const auto interpolate = !touch
+			&& (phase != Qt::NoScrollPhase)
+			&& !_overscroll
+			&& (preciseTarget >= 0.)
+			&& (preciseTarget <= maximum);
+#else // Q_OS_MAC
+		const auto interpolate = false;
+#endif // Q_OS_MAC
+		setSubpixelScroll(
+			remainder,
+			_state.visibleFrom + delta,
+			interpolate);
 	}
 	if (phase == Qt::NoScrollPhase) {
 		if (_overscroll == currentOverscrollDefault()) {
@@ -1063,6 +1103,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 		}
 		return true;
 	} else if (_scroller && !touch) {
+		setSubpixelScroll(0., _state.visibleFrom);
 		// QScroller only provides in-range kinetics (its overshoot is
 		// disabled), so while any overscroll state is active - a stretch,
 		// an accumulated default (like the expanded stories strip), a
@@ -1104,7 +1145,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			}
 			const auto wasNull = _wheelPos.isNull();
 			if (wasNull) {
-				_wheelPos = QPoint(width(), height()) / 2;
+				_wheelPos = QPointF(width(), height()) / 2.;
 			} else {
 				_wheelPos += pixels;
 			}
@@ -1586,6 +1627,9 @@ void ElasticScroll::applyScrollTo(int position, bool synthMouseMove) {
 	if (_disabled || !_widget) {
 		return;
 	}
+	if (!_processingWheelEvent) {
+		setSubpixelScroll(0., position);
+	}
 	const auto weak = base::make_weak(this);
 	_dirtyState = true;
 	const auto was = _widget->geometry();
@@ -1614,6 +1658,48 @@ void ElasticScroll::applyScrollTo(int position, bool synthMouseMove) {
 			SendSynteticMouseEvent(this, QEvent::MouseMove, Qt::NoButton);
 		}
 	}
+}
+
+void ElasticScroll::setSubpixelScroll(
+		float64 value,
+		int position,
+		bool animated) {
+	_wheelDeltaRemainder = value;
+	const auto ratio = devicePixelRatioF();
+	const auto target = ratio
+		? (base::SafeRound((position + value) * ratio) / ratio)
+		: float64(position);
+	_subpixelScrollTarget = target;
+	if (!animated) {
+		_subpixelScrollAnimation.stop();
+		_subpixelScroll = target - position;
+		return;
+	}
+	const auto current = _state.visibleFrom + _subpixelScroll.current();
+	const auto from = std::clamp(
+		current,
+		target - kSubpixelScrollMaxLag,
+		target + kSubpixelScrollMaxLag);
+	_subpixelScrollAnimation.stop();
+	_subpixelScroll = from - position;
+	if (from == target) {
+		return;
+	}
+	_subpixelScrollAnimation.start(
+		[=] { updateSubpixelScrollAnimation(); },
+		from,
+		target,
+		kSubpixelScrollDuration);
+}
+
+void ElasticScroll::updateSubpixelScrollAnimation() {
+	const auto visual = _subpixelScrollAnimation.value(
+		_subpixelScrollTarget);
+	const auto ratio = devicePixelRatioF();
+	const auto snapped = ratio
+		? (base::SafeRound(visual * ratio) / ratio)
+		: visual;
+	_subpixelScroll = snapped - _state.visibleFrom;
 }
 
 void ElasticScroll::applyOverscroll(int overscroll) {
