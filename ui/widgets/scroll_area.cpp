@@ -10,6 +10,7 @@
 #include "ui/ui_utility.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt/qt_common_adapters.h"
+#include "base/qt_signal_producer.h"
 #include "base/debug_log.h"
 #include "base/options.h"
 
@@ -19,6 +20,7 @@
 #include <QtWidgets/QApplication>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QWindow>
+#include <private/qabstractanimation_p.h>
 
 namespace Ui {
 namespace {
@@ -72,6 +74,30 @@ base::options::toggle OptionQScroller({
 const char kOptionQScroller[] = "qscroller";
 
 void SetupScrollerPhysics(not_null<QScroller*> scroller) {
+	// Qt animates QScroller kinetic scrolling at fixed 16 ms / ~60 fps,
+	// so the inertia feels laggy on high refresh rate displays. Override
+	// the interval to match the highest refresh rate.
+	[[maybe_unused]] static const auto TimingIntervalUpdater = rpl::single(
+		rpl::empty
+	) | rpl::then(rpl::merge(
+		base::qt_signal_producer(qApp, &QGuiApplication::screenAdded),
+		base::qt_signal_producer(qApp, &QGuiApplication::screenRemoved)
+	) | rpl::to_empty) | rpl::map([] {
+		const auto screens = QGuiApplication::screens();
+		return rpl::combine(screens | ranges::views::transform([](
+				QScreen *screen) {
+			return rpl::single(
+				screen->refreshRate()
+			) | rpl::then(
+				base::qt_signal_producer(screen, &QScreen::refreshRateChanged)
+			) | rpl::type_erased;
+		}) | ranges::to_vector);
+	}) | rpl::flatten_latest(
+	) | rpl::on_next([](const auto &rates) {
+		QUnifiedTimer::instance()->setTimingInterval(
+			std::clamp(int(std::floor(1000. / ranges::max(rates))), 2, 16));
+	});
+
 	auto props = scroller->scrollerProperties();
 	using P = QScrollerProperties;
 	const auto set = [&](P::ScrollMetric metric, qreal value) {
