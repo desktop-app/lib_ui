@@ -23,16 +23,28 @@ public:
 		static_assert(N > 0, "invalid image data");
 	}
 
+	template <int N>
+	IconMask(const uchar (&data)[N], QSize rendered)
+	: _data(data)
+	, _size(N)
+	, _rendered(rendered) {
+		static_assert(N > 0, "invalid image data");
+	}
+
 	const uchar *data() const {
 		return _data;
 	}
 	int size() const {
 		return _size;
 	}
+	QSize rendered() const {
+		return _rendered;
+	}
 
 private:
 	const uchar *_data;
 	const int _size;
+	const QSize _rendered;
 
 };
 
