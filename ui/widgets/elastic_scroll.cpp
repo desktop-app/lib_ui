@@ -1075,15 +1075,12 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			|| preciseTarget > maximum)
 			? 0.
 			: (total - delta);
-#ifdef Q_OS_MAC
-		const auto interpolate = !touch
+		const auto interpolate = Platform::IsMac()
+			&& !touch
 			&& (phase != Qt::NoScrollPhase)
 			&& !_overscroll
 			&& (preciseTarget >= 0.)
 			&& (preciseTarget <= maximum);
-#else // Q_OS_MAC
-		const auto interpolate = false;
-#endif // Q_OS_MAC
 		setSubpixelScroll(
 			remainder,
 			_state.visibleFrom + delta,
