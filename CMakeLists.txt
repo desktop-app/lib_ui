@@ -131,8 +131,6 @@ PRIVATE
     ui/platform/mac/ui_window_mac.mm
     ui/platform/mac/ui_window_title_mac.h
     ui/platform/mac/ui_window_title_mac.mm
-    ui/platform/mac/ui_native_scroll_mac.h
-    ui/platform/mac/ui_native_scroll_mac.mm
     ui/platform/mac/ui_utility_mac.h
     ui/platform/mac/ui_utility_mac.mm
     ui/platform/win/ui_window_shadow_win.cpp

@@ -10,10 +10,6 @@
 #include "ui/integration.h"
 #include "ui/style/style_core.h"
 
-#ifdef Q_OS_MAC
-#include "ui/platform/mac/ui_native_scroll_mac.h"
-#endif
-
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
@@ -260,12 +256,17 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 			style::ConvertScaleExact(point.y()));
 	};
 	if (!e->pixelDelta().isNull()) {
-#ifdef Q_OS_MAC
-		if (const auto exact = Platform::LookupNativeScrollDelta(e)) {
-			return convert(*exact);
-		}
-#endif
-		return convert(e->pixelDelta())
+		// pixelDeltaF() exists only in our patched Qt (see
+		// desktop-app/patches, qtbase pass-fractional-pixel-deltas), with
+		// stock Qt we fall back to the whole-pixel rounded delta.
+		const auto exact = [](auto event) {
+			if constexpr (requires { event->pixelDeltaF(); }) {
+				return QPointF(event->pixelDeltaF());
+			} else {
+				return QPointF(event->pixelDelta());
+			}
+		}(e.get());
+		return convert(exact)
 			* ((::Platform::IsWayland() && !touch)
 				? kMagicScrollMultiplier
 				: 1.);
