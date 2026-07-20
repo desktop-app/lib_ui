@@ -10,6 +10,10 @@
 #include "ui/integration.h"
 #include "ui/style/style_core.h"
 
+#ifdef Q_OS_MAC
+#include "ui/platform/mac/ui_native_scroll_mac.h"
+#endif
+
 #include <QtWidgets/QApplication>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
@@ -256,6 +260,11 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 			style::ConvertScaleExact(point.y()));
 	};
 	if (!e->pixelDelta().isNull()) {
+#ifdef Q_OS_MAC
+		if (const auto exact = Platform::LookupNativeScrollDelta(e)) {
+			return convert(*exact);
+		}
+#endif
 		return convert(e->pixelDelta())
 			* ((::Platform::IsWayland() && !touch)
 				? kMagicScrollMultiplier
