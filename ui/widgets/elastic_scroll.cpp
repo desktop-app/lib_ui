@@ -9,6 +9,7 @@
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "base/options.h"
+#include "base/platform/base_platform_info.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_widgets.h"
 
@@ -1075,7 +1076,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			|| preciseTarget > maximum)
 			? 0.
 			: (total - delta);
-		const auto interpolate = Platform::IsMac()
+		const auto interpolate = ::Platform::IsMac()
 			&& !touch
 			&& (phase != Qt::NoScrollPhase)
 			&& !_overscroll
