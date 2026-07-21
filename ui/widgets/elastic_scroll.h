@@ -332,7 +332,7 @@ private:
 	int _contentBottomInset = 0;
 	ScrollState _state;
 
-	QPointer<QScroller> _scroller;
+	std::unique_ptr<KineticScroller> _scroller;
 	QPoint _wheelPos;
 
 	base::Timer _touchTimer;
