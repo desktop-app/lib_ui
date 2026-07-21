@@ -87,6 +87,14 @@ void SetupScrollerPhysics(not_null<QScroller*> scroller) {
 	// the legacy 2500-4000 px/s feel. NB: this metric is m/s, converted to
 	// pixels via pixelPerMeter = physicalDPI / 0.0254.
 	set(P::MaximumVelocity, 0.95);
+	// A touchpad feeds a continuous gesture stream, not discrete flicks, so
+	// re-pressing over a live fling makes accelerating-flick triple the
+	// release velocity each gesture until it saturates - 0 disables it.
+	set(P::AcceleratingFlickMaximumTime, 0.);
+	// A press onto a slow fling is taken for a click-through: the scroller
+	// goes Inactive, drops the press and eats the following moves.
+	// A touchpad has no clicks, so a press should just take over the fling.
+	set(P::MaximumClickThroughVelocity, 0.);
 
 	// QScroller never does the overscroll itself: ScrollArea has none at
 	// all, and ElasticScroll implements its own rubber-band physics fed
