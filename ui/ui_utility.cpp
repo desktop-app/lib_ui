@@ -21,7 +21,6 @@ namespace Ui {
 namespace {
 
 constexpr auto kDefaultWheelScrollLines = 3;
-constexpr auto kMagicScrollMultiplier = 2.5;
 
 class WidgetCreator : public QWidget {
 public:

@@ -255,6 +255,8 @@ PRIVATE
     ui/widgets/menu/menu_toggle.h
     ui/widgets/elastic_scroll.cpp
     ui/widgets/elastic_scroll.h
+    ui/widgets/kinetic_scroller.cpp
+    ui/widgets/kinetic_scroller.h
     ui/widgets/pill_tabs.cpp
     ui/widgets/pill_tabs.h
     ui/widgets/popup_menu.cpp
@@ -335,6 +337,12 @@ PRIVATE
     emoji_suggestions/emoji_suggestions.h
     emoji_suggestions/emoji_suggestions_helper.h
 )
+
+if (QT_VERSION_MAJOR LESS 6)
+    remove_target_sources(lib_ui ${src_loc}
+        ui/widgets/kinetic_scroller.cpp
+    )
+endif()
 
 if (DESKTOP_APP_USE_PACKAGED_FONTS)
     target_compile_definitions(lib_ui PRIVATE LIB_UI_USE_PACKAGED_FONTS)
