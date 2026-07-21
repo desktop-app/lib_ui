@@ -10,25 +10,21 @@
 #include "ui/ui_utility.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt/qt_common_adapters.h"
-#include "base/qt_signal_producer.h"
 #include "base/debug_log.h"
 #include "base/options.h"
 
 #include <QtWidgets/QScrollBar>
-#include <QtWidgets/QScroller>
-#include <QtWidgets/QScrollerProperties>
 #include <QtWidgets/QApplication>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
-#include <private/qabstractanimation_p.h>
 
 namespace Ui {
 namespace {
 
-base::options::toggle OptionQScroller({
-	.id = kOptionQScroller,
-	.name = "Use QScroller for touchpad scrolling",
+base::options::toggle OptionKineticScroller({
+	.id = kOptionKineticScroller,
+	.name = "Use KineticScroller for touchpad scrolling",
 	.description = "Provides kinetic scrolling",
 	.defaultValue = Platform::IsLinux(),
 });
@@ -72,69 +68,7 @@ base::options::toggle OptionQScroller({
 
 } // namespace
 
-const char kOptionQScroller[] = "qscroller";
-
-void SetupScrollerPhysics(not_null<QScroller*> scroller) {
-	// Qt animates QScroller kinetic scrolling at fixed 16 ms / ~60 fps,
-	// so the inertia feels laggy on high refresh rate displays. Override
-	// the interval to match the highest refresh rate.
-	[[maybe_unused]] static const auto TimingIntervalUpdater = rpl::single(
-		rpl::empty
-	) | rpl::then(rpl::merge(
-		base::qt_signal_producer(qApp, &QGuiApplication::screenAdded),
-		base::qt_signal_producer(qApp, &QGuiApplication::screenRemoved)
-	) | rpl::to_empty) | rpl::map([] {
-		const auto screens = QGuiApplication::screens();
-		return rpl::combine(screens | ranges::views::transform([](
-				QScreen *screen) {
-			return rpl::single(
-				screen->refreshRate()
-			) | rpl::then(
-				base::qt_signal_producer(screen, &QScreen::refreshRateChanged)
-			) | rpl::type_erased;
-		}) | ranges::to_vector);
-	}) | rpl::flatten_latest(
-	) | rpl::on_next([](const auto &rates) {
-		QUnifiedTimer::instance()->setTimingInterval(
-			std::clamp(int(std::floor(1000. / ranges::max(rates))), 2, 16));
-	});
-
-	auto props = scroller->scrollerProperties();
-	using P = QScrollerProperties;
-	const auto set = [&](P::ScrollMetric metric, qreal value) {
-		props.setScrollMetric(metric, QVariant::fromValue(value));
-	};
-
-	// The Qt default 0.125 gives a ~4s, slippery, constant-deceleration
-	// glide that "never slows down". With the default OutQuad curve coast
-	// time ~= |v| / DecelerationFactor, so 0.6 brings a hard flick down
-	// to ~1-1.6s, close to macOS native momentum.
-	set(P::DecelerationFactor, 0.6);
-	// The default cap 0.5 m/s (~2165 px/s at ~110dpi) clips hard flicks below
-	// the legacy 2500-4000 px/s feel. NB: this metric is m/s, converted to
-	// pixels via pixelPerMeter = physicalDPI / 0.0254.
-	set(P::MaximumVelocity, 0.95);
-	// A touchpad feeds a continuous gesture stream, not discrete flicks, so
-	// re-pressing over a live fling makes accelerating-flick triple the
-	// release velocity each gesture until it saturates - 0 disables it.
-	set(P::AcceleratingFlickMaximumTime, 0.);
-	// A press onto a slow fling is taken for a click-through: the scroller
-	// goes Inactive, drops the press and eats the following moves.
-	// A touchpad has no clicks, so a press should just take over the fling.
-	set(P::MaximumClickThroughVelocity, 0.);
-
-	// QScroller never does the overscroll itself: ScrollArea has none at
-	// all, and ElasticScroll implements its own rubber-band physics fed
-	// from the raw events, taking over at the edges.
-	props.setScrollMetric(
-		P::VerticalOvershootPolicy,
-		QVariant::fromValue(P::OvershootAlwaysOff));
-	props.setScrollMetric(
-		P::HorizontalOvershootPolicy,
-		QVariant::fromValue(P::OvershootAlwaysOff));
-
-	scroller->setScrollerProperties(props);
-}
+const char kOptionKineticScroller[] = "kinetic-scroller";
 
 ScrollerStopper::ScrollerStopper()
 : _mousePos(QCursor::pos()) {
@@ -146,13 +80,13 @@ ScrollerStopper &ScrollerStopper::Instance() {
 	return instance;
 }
 
-void ScrollerStopper::activate(not_null<QScroller*> scroller) {
-	Expects(scroller->state() == QScroller::Scrolling);
+void ScrollerStopper::activate(not_null<KineticScroller*> scroller) {
+	Expects(scroller->state() == KineticScroller::Scrolling);
 	_active = {
 		scroller.get(),
 		connect(
 			scroller,
-			&QScroller::stateChanged,
+			&KineticScroller::stateChanged,
 			[=] { _active = {}; }),
 	};
 }
@@ -565,26 +499,22 @@ ScrollArea::ScrollArea(
 	rpl::single(
 		rpl::empty
 	) | rpl::then(
-		OptionQScroller.changes()
+		OptionKineticScroller.changes()
 	) | rpl::on_next([=] {
-		if (OptionQScroller.value()) {
-			_scroller = QScroller::scroller(this);
-			SetupScrollerPhysics(_scroller);
-		} else if (_scroller) {
-			QObject deleter;
-			_scroller->setParent(&deleter);
-		}
+		_scroller = OptionKineticScroller.value()
+			? std::make_unique<KineticScroller>(this)
+			: nullptr;
 
 		if (!_scroller) {
 			return;
 		}
 
 		connect(
-			_scroller,
-			&QScroller::stateChanged,
-			[=](QScroller::State state) {
-				if (state == QScroller::Scrolling) {
-					ScrollerStopper::Instance().activate(_scroller);
+			_scroller.get(),
+			&KineticScroller::stateChanged,
+			[=](KineticScroller::State state) {
+				if (state == KineticScroller::Scrolling) {
+					ScrollerStopper::Instance().activate(_scroller.get());
 				}
 			});
 	}, lifetime());
@@ -785,7 +715,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 			case Qt::ScrollUpdate: {
 				if (ev->phase() == Qt::ScrollBegin
 					&& !ScrollDelta(ev).isNull()
-					&& _scroller->state() == QScroller::Scrolling) {
+					&& _scroller->state() == KineticScroller::Scrolling) {
 					// On macOS, when Qt loses the race detecting that a
 					// momentum phase follows the finger lift, the OS
 					// momentum stream leaks through as ScrollBegin
@@ -814,14 +744,14 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 						: unmultiplied;
 				}
 				_scroller->handleInput(wasNull
-					? QScroller::InputPress
-					: QScroller::InputMove, _wheelPos, crl::now());
+					? KineticScroller::InputPress
+					: KineticScroller::InputMove, _wheelPos, crl::now());
 			} return true;
 			case Qt::ScrollEnd:
 			case Qt::ScrollMomentum: {
 				if (!_wheelPos.isNull()) {
 					_scroller->handleInput(
-						QScroller::InputRelease,
+						KineticScroller::InputRelease,
 						_wheelPos,
 						crl::now());
 					_wheelPos = {};

@@ -9,6 +9,7 @@
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "ui/effects/animations.h"
+#include "ui/widgets/kinetic_scroller.h"
 #include "base/object_ptr.h"
 #include "base/qt_connection.h"
 #include "base/timer.h"
@@ -16,8 +17,6 @@
 
 #include <QtWidgets/QScrollArea>
 #include <QtGui/QtEvents>
-
-class QScroller;
 
 namespace Ui {
 
@@ -49,19 +48,13 @@ struct ScrollToRequest {
 
 };
 
-extern const char kOptionQScroller[];
-
-// Tune a QScroller to approximate macOS native momentum. QScroller only
-// provides in-range kinetics: its overshoot is always disabled - ScrollArea
-// has no overscroll at all, and ElasticScroll implements its own rubber-band
-// overscroll physics fed from the raw events.
-void SetupScrollerPhysics(not_null<QScroller*> scroller);
+extern const char kOptionKineticScroller[];
 
 class ScrollerStopper final : public QObject {
 public:
 	static ScrollerStopper &Instance();
 
-	void activate(not_null<QScroller*> scroller);
+	void activate(not_null<KineticScroller*> scroller);
 
 private:
 	ScrollerStopper();
@@ -69,7 +62,7 @@ private:
 	bool eventFilter(QObject *obj, QEvent *e) override;
 
 	struct {
-		QPointer<QScroller> scroller;
+		QPointer<KineticScroller> scroller;
 		base::qt_connection connection;
 	} _active;
 
@@ -277,7 +270,7 @@ private:
 	object_ptr<ScrollShadow> _topShadow, _bottomShadow;
 	int _horizontalValue, _verticalValue;
 
-	QPointer<QScroller> _scroller;
+	std::unique_ptr<KineticScroller> _scroller;
 	QPoint _wheelPos;
 
 	bool _touchEnabled = false;
