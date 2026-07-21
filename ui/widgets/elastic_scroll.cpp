@@ -1004,7 +1004,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			const auto cross = _vertical ? lockDelta.x() : lockDelta.y();
 			if (std::abs(cross) > std::abs(own)
 				&& _crossAxisWheelProcess
-				&& _crossAxisWheelProcess(lockDelta.toPoint())) {
+				&& _crossAxisWheelProcess(lockDelta.toPoint(), phase)) {
 				return true;
 			}
 		} else if (locked
@@ -1016,9 +1016,11 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			// the widgets under the cursor - like the swipe-to-reply
 			// handler on the history list - of the ScrollUpdate stream.
 			return _crossAxisWheelProcess
-				&& _crossAxisWheelProcess(_vertical
-					? QPoint(qRound(lockDelta.x()), 0)
-					: QPoint(0, qRound(lockDelta.y())));
+				&& _crossAxisWheelProcess(
+					(_vertical
+						? QPoint(qRound(lockDelta.x()), 0)
+						: QPoint(0, qRound(lockDelta.y()))),
+					phase);
 		} else {
 			ownAxisLocked = locked.has_value();
 		}

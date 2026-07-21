@@ -764,7 +764,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 			if (!_wheelDirectionLocked || phase == Qt::NoScrollPhase) {
 				if (std::abs(delta.x()) > std::abs(delta.y())
 					&& _crossAxisWheelProcess
-					&& _crossAxisWheelProcess(delta.toPoint())) {
+					&& _crossAxisWheelProcess(delta.toPoint(), phase)) {
 					return true;
 				}
 			} else if (locked == Qt::Horizontal) {
@@ -773,7 +773,9 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 				// gesture onto this widget, starving the widgets under the
 				// cursor (like swipe handlers) of the ScrollUpdate stream.
 				return _crossAxisWheelProcess
-					&& _crossAxisWheelProcess({ qRound(delta.x()), 0 });
+					&& _crossAxisWheelProcess(
+						{ qRound(delta.x()), 0 },
+						phase);
 			}
 		}
 		if (_scroller) {

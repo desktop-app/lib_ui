@@ -223,7 +223,8 @@ public:
 	// Receives wheel input on the axis this scroll doesn't handle
 	// (horizontal): without lockWheelDirection() every event where that
 	// axis dominates, with it whole gestures locked to that axis.
-	void setCrossAxisWheelProcess(Fn<bool(QPoint)> process) {
+	void setCrossAxisWheelProcess(
+			Fn<bool(QPoint, Qt::ScrollPhase)> process) {
 		_crossAxisWheelProcess = std::move(process);
 	}
 
@@ -298,7 +299,7 @@ private:
 
 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
-	Fn<bool(QPoint)> _crossAxisWheelProcess;
+	Fn<bool(QPoint, Qt::ScrollPhase)> _crossAxisWheelProcess;
 	ScrollDirectionLock _wheelDirectionLock;
 	bool _wheelDirectionLocked = false;
 	bool _widgetAcceptsTouch = false;
