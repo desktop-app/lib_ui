@@ -57,6 +57,7 @@ public:
 	[[nodiscard]] State state() const {
 		return _state;
 	}
+	[[nodiscard]] QPointF velocity() const;
 	bool handleInput(Input input, QPointF position, crl::time timestamp);
 	void stop();
 	void resendPrepareEvent();

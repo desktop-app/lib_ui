@@ -888,12 +888,19 @@ bool ElasticScroll::eventHook(QEvent *e) {
 			= (se->contentPos() + se->overshootDistance()).toPoint();
 		const auto delta
 			= -(_state.visibleFrom - (_vertical ? pixels.y() : pixels.x()));
-		// Capture the fling velocity before this event is tracked: at the
-		// boundary the scroller clamps the delta, so the sample it produces
-		// underestimates the speed the fling actually hit the edge with.
-		const auto velocity = (_wheelVelocityTime
-			&& (crl::now() - _wheelVelocityTime <= kVelocityZeroingTimeout))
-			? _wheelVelocity
+		// Capture the fling velocity before this event is handled: the
+		// scroller's closed-form velocity is exact, unlike the tracked
+		// per-tick deltas, which round to zero pixels in the slow tail
+		// of the fling and would suppress the edge bounce.
+		const auto limit = kMaxTrackedVelocity * style::Scale() / 100.;
+		const auto velocity = (_scroller
+			&& _scroller->state() == KineticScroller::Scrolling)
+			? std::clamp(
+				(_vertical
+					? _scroller->velocity().y()
+					: _scroller->velocity().x()),
+				-limit,
+				limit)
 			: 0.;
 		const auto weak = base::make_weak(this);
 		const auto result = handleScrollEvent(phase, delta);

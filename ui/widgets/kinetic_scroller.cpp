@@ -35,6 +35,14 @@ KineticScroller::KineticScroller(not_null<QWidget*> target)
 , _target(target) {
 }
 
+QPointF KineticScroller::velocity() const {
+	if (_state != Scrolling) {
+		return QPointF();
+	}
+	const auto time = (crl::now() - _flickStarted) / 1000.;
+	return _flickVelocity * std::exp(-kFriction * time);
+}
+
 bool KineticScroller::handleInput(
 		Input input,
 		QPointF position,
