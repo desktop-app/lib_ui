@@ -120,9 +120,13 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	create();
 	if (const auto native
 			= windowHandle()->nativeInterface<QWaylandWindow>()) {
+		// Tooltip::performShow ensures our window is active
+		const auto w = not_null(QApplication::activeWindow())->pos();
 		native->setParentControlGeometry(
 			QRect(
-				QPoint(m.x() + _st->shift.x(), m.y() - _st->skip),
+				QPoint(
+					m.x() - w.x() + _st->shift.x(),
+					m.y() - w.y() - _st->skip),
 				QSize(-_st->shift.x() * 2, _st->shift.y() + _st->skip)));
 		// even though Qt has tooltip type, our tooltip behaves like a menu
 		// (bottom left origin, no flip_x)
