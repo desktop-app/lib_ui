@@ -1112,9 +1112,16 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			} else {
 				_wheelPos += pixels;
 			}
-			_scroller->handleInput(wasNull
-				? KineticScroller::InputPress
-				: KineticScroller::InputMove, _wheelPos, now);
+			// Estimate the velocity by the events' own timestamps:
+			// some transports (e.g. bluetooth) may sometimes deliver several
+			// events at once, and their identical processing times would break
+			// the estimation.
+			_scroller->handleInput(
+				(wasNull
+					? KineticScroller::InputPress
+					: KineticScroller::InputMove),
+				_wheelPos,
+				crl::time(e->timestamp()));
 		} break;
 		case Qt::ScrollEnd:
 		case Qt::ScrollMomentum: {
@@ -1122,7 +1129,7 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 				_scroller->handleInput(
 					KineticScroller::InputRelease,
 					_wheelPos,
-					now);
+					crl::time(e->timestamp()));
 				_wheelPos = {};
 			}
 		} break;

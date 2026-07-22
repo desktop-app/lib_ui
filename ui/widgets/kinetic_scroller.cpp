@@ -139,7 +139,9 @@ void KineticScroller::flick(crl::time timestamp) {
 	}
 	_flickFrom = _contentPosition;
 	_flickVelocity = velocity;
-	_flickStarted = timestamp;
+	// The fling is animated against crl::now() (see flickTick), but the
+	// drag deltas history uses the events' own timestamps.
+	_flickStarted = crl::now();
 	setState(Scrolling);
 }
 

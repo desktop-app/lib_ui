@@ -743,9 +743,16 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 							unmultiplied.y() * std::max(height(), 120) / 120.)
 						: unmultiplied;
 				}
-				_scroller->handleInput(wasNull
-					? KineticScroller::InputPress
-					: KineticScroller::InputMove, _wheelPos, crl::now());
+				// Estimate the velocity by the events' own timestamps:
+				// some transports (e.g. bluetooth) may sometimes deliver
+				// several events at once, and their identical processing times
+				// would break the estimation.
+				_scroller->handleInput(
+					(wasNull
+						? KineticScroller::InputPress
+						: KineticScroller::InputMove),
+					_wheelPos,
+					crl::time(ev->timestamp()));
 			} return true;
 			case Qt::ScrollEnd:
 			case Qt::ScrollMomentum: {
@@ -753,7 +760,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 					_scroller->handleInput(
 						KineticScroller::InputRelease,
 						_wheelPos,
-						crl::now());
+						crl::time(ev->timestamp()));
 					_wheelPos = {};
 				}
 			} return true;
