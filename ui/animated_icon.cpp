@@ -262,6 +262,9 @@ AnimatedIcon::ResizedFrame AnimatedIcon::notColorizedFrame(
 	preloadNextFrame(crl::now(), &frame, desiredSize);
 	const auto desired = size() * style::DevicePixelRatio();
 	if (frame.generated.image.isNull()) {
+		if (updateWithPerfect) {
+			_repaint = std::move(updateWithPerfect);
+		}
 		return { frame.generated.image };
 	} else if (frame.generated.image.size() == desired) {
 		return { frame.generated.image };
