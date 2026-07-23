@@ -265,12 +265,6 @@ private:
 	void leaveEventHook(QEvent *e) override;
 	bool handleWheelEvent(not_null<QWheelEvent*> e, bool touch = false);
 	QPointF applyScrollerDelta(QPointF delta);
-	bool handleScrollEvent(
-		Qt::ScrollPhase phase,
-		int delta,
-		bool ignore = false,
-		bool touch = false,
-		crl::time timestamp = 0);
 	bool requestBottomContent(int delta);
 	void handleTouchEvent(QTouchEvent *e);
 
