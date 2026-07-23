@@ -199,6 +199,8 @@ public:
 	};
 	void setOverscrollTypes(OverscrollType from, OverscrollType till);
 	void setOverscrollDefaults(int from, int till, bool shift = false);
+	void clearOverscroll();
+	void returnToOverscrollDefaults();
 	void setOverscrollBg(QColor bg);
 	void setContentBottomInset(int inset);
 
