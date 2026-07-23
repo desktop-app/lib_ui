@@ -2328,7 +2328,18 @@ bool IsSpace(QChar ch) {
 		|| (ch == QChar::LineSeparator)
 		|| (ch == QChar::ObjectReplacementCharacter)
 		|| (ch == QChar::CarriageReturn)
-		|| (ch == QChar::Tabulation);
+		|| (ch == QChar::Tabulation)
+		|| (ch == QChar::ByteOrderMark)
+		|| (ch == QChar(8203)) // zero width space
+		|| (ch == QChar(0x200C)) // zero width non-joiner
+		|| (ch == QChar(0x200D)) // zero width joiner
+		|| (ch == QChar(0x2060)) // word joiner
+		|| (ch == QChar(0x1160)) // hangul jungseong filler
+		|| (ch == QChar(0x3164)) // hangul filler
+		|| (ch == QChar(0xFFA0)) // halfwidth hangul filler
+		|| (ch == QChar(0x17B4)) // khmer vowel inherent aq
+		|| (ch == QChar(0x17B5)) // khmer vowel inherent aa
+		|| (ch == QChar(0x2800));// braille pattern blank
 }
 
 bool IsDiacritic(QChar ch) { // diacritic and variation selectors
@@ -2357,8 +2368,7 @@ bool IsReplacedBySpace(QChar ch) {
 
 bool IsTrimmed(QChar ch) {
 	return ((ch != QChar::ObjectReplacementCharacter) && IsSpace(ch))
-		|| IsBad(ch)
-		|| (ch == QChar(8203)); // zero width space
+		|| IsBad(ch);
 }
 
 QSize CountOptimalTextSize(
