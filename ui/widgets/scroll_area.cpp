@@ -19,6 +19,7 @@
 #include <QtWidgets/QScrollerProperties>
 #include <QtWidgets/QApplication>
 #include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <private/qabstractanimation_p.h>
 
