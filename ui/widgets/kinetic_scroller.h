@@ -38,8 +38,6 @@ namespace Ui {
 // consumed part: a shortfall means the content edge was hit, finishing the
 // fling on that axis.
 class KineticScroller final : public QObject {
-	Q_OBJECT
-
 public:
 	enum State {
 		Inactive,
@@ -64,9 +62,6 @@ public:
 	void handleInput(Input input, QPointF delta, crl::time timestamp);
 	void stop();
 
-Q_SIGNALS:
-	void stateChanged(State state);
-
 protected:
 	bool eventFilter(QObject *object, QEvent *event) override;
 
@@ -89,6 +84,7 @@ private:
 	const not_null<QWidget*> _target;
 	const Fn<QPointF(QPointF)> _apply;
 	QPointer<QWindow> _frameWindow;
+	QPoint _stopMousePos;
 	State _state = Inactive;
 	std::vector<DragSample> _history;
 	bool _applied = false;

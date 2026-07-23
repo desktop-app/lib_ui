@@ -439,19 +439,6 @@ ElasticScroll::ElasticScroll(
 				return applyScrollerDelta(delta);
 			})
 			: nullptr;
-
-		if (!_scroller) {
-			return;
-		}
-
-		connect(
-			_scroller.get(),
-			&KineticScroller::stateChanged,
-			[=](KineticScroller::State state) {
-				if (state == KineticScroller::Scrolling) {
-					ScrollerStopper::Instance().activate(_scroller.get());
-				}
-			});
 	}, lifetime());
 }
 

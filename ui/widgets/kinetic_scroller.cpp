@@ -6,8 +6,10 @@
 //
 #include "ui/widgets/kinetic_scroller.h"
 
+#include <QtGui/QCursor>
 #include <QtGui/QtEvents>
 #include <QtGui/QWindow>
+#include <QtWidgets/QApplication>
 #include <QtWidgets/QWidget>
 
 #include <cmath>
@@ -191,8 +193,9 @@ void KineticScroller::disarmFrameClock() {
 }
 
 bool KineticScroller::eventFilter(QObject *object, QEvent *event) {
+	const auto type = event->type();
 	if (object == _frameWindow
-		&& event->type() == QEvent::UpdateRequest
+		&& type == QEvent::UpdateRequest
 		&& _state == Scrolling) {
 		const auto weak = QPointer<KineticScroller>(this);
 		flickTick(crl::now());
@@ -204,6 +207,20 @@ bool KineticScroller::eventFilter(QObject *object, QEvent *event) {
 		// already invalidates exactly what it dirtied, and the widget
 		// repaint pipeline delivers its update requests to the widgets
 		// themselves, never through the window, so nothing is starved.
+		return true;
+	} else if (_state == Scrolling
+		&& (type == QEvent::MouseMove
+			|| type == QEvent::MouseButtonPress)) {
+		// Real pointer activity catches the fling, consuming the event so
+		// a press doesn't click into the still-moving content.
+		const auto mouse = static_cast<QMouseEvent*>(event);
+		if (type == QEvent::MouseMove) {
+			if (_stopMousePos == mouse->globalPos()) {
+				return false;
+			}
+			_stopMousePos = mouse->globalPos();
+		}
+		stop();
 		return true;
 	}
 	return QObject::eventFilter(object, event);
@@ -242,22 +259,20 @@ void KineticScroller::setState(State state) {
 	}
 	if (state == Inactive || state == Pressed) {
 		disarmFrameClock();
+		qApp->removeEventFilter(this);
 	}
 	_state = state;
 	if (state == Scrolling) {
 		armFrameClock();
+		_stopMousePos = QCursor::pos();
+		qApp->installEventFilter(this);
 	}
-	const auto weak = QPointer<KineticScroller>(this);
 	if (state == Inactive && _applied) {
 		// Mirroring QScroller: the final notification goes out after the
 		// state is already Inactive and only if any scroll happened at all.
 		_applied = false;
 		_apply(QPointF());
-		if (!weak) {
-			return;
-		}
 	}
-	Q_EMIT stateChanged(_state);
 }
 
 } // namespace Ui

@@ -11,7 +11,6 @@
 #include "ui/effects/animations.h"
 #include "ui/widgets/kinetic_scroller.h"
 #include "base/object_ptr.h"
-#include "base/qt_connection.h"
 #include "base/timer.h"
 #include "styles/style_widgets.h"
 
@@ -49,26 +48,6 @@ struct ScrollToRequest {
 };
 
 extern const char kOptionKineticScroller[];
-
-class ScrollerStopper final : public QObject {
-public:
-	static ScrollerStopper &Instance();
-
-	void activate(not_null<KineticScroller*> scroller);
-
-private:
-	ScrollerStopper();
-
-	bool eventFilter(QObject *obj, QEvent *e) override;
-
-	struct {
-		QPointer<KineticScroller> scroller;
-		base::qt_connection connection;
-	} _active;
-
-	QPoint _mousePos;
-
-};
 
 class ScrollShadow final : public QWidget {
 public:
