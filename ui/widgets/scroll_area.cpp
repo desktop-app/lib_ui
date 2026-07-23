@@ -70,45 +70,6 @@ base::options::toggle OptionKineticScroller({
 
 const char kOptionKineticScroller[] = "kinetic-scroller";
 
-ScrollerStopper::ScrollerStopper()
-: _mousePos(QCursor::pos()) {
-	qApp->installEventFilter(this);
-}
-
-ScrollerStopper &ScrollerStopper::Instance() {
-	static ScrollerStopper instance;
-	return instance;
-}
-
-void ScrollerStopper::activate(not_null<KineticScroller*> scroller) {
-	Expects(scroller->state() == KineticScroller::Scrolling);
-	_active = {};
-	_active.scroller = scroller.get();
-	scroller->stateChanges(
-	) | rpl::on_next([=] {
-		_active = {};
-	}, _active.subscription);
-}
-
-bool ScrollerStopper::eventFilter(QObject *obj, QEvent *e) {
-	const auto type = e->type();
-	if (type != QEvent::MouseMove && type != QEvent::MouseButtonPress) {
-		return false;
-	}
-	const auto ev = static_cast<QMouseEvent*>(e);
-	if (type == QEvent::MouseMove) {
-		if (_mousePos == ev->globalPos()) {
-			return false;
-		}
-		_mousePos = ev->globalPos();
-	}
-	if (!_active.scroller) {
-		return false;
-	}
-	_active.scroller->stop();
-	return true;
-}
-
 // flick scroll taken from http://qt-project.org/doc/qt-4.8/demos-embedded-anomaly-src-flickcharm-cpp.html
 
 ScrollShadow::ScrollShadow(ScrollArea *parent, const style::ScrollArea *st)
@@ -503,17 +464,6 @@ ScrollArea::ScrollArea(
 		_scroller = OptionKineticScroller.value()
 			? std::make_unique<KineticScroller>(this)
 			: nullptr;
-
-		if (!_scroller) {
-			return;
-		}
-
-		_scroller->stateChanges(
-		) | rpl::on_next([=](KineticScroller::State state) {
-			if (state == KineticScroller::Scrolling) {
-				ScrollerStopper::Instance().activate(_scroller.get());
-			}
-		}, lifetime());
 	}, lifetime());
 }
 

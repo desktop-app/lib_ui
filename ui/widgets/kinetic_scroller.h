@@ -9,7 +9,6 @@
 #include "base/basic_types.h"
 
 #include <crl/crl_time.h>
-#include <rpl/event_stream.h>
 #include <QtCore/QObject>
 #include <QtCore/QPointer>
 #include <QtCore/QPointF>
@@ -60,10 +59,6 @@ public:
 	void stop();
 	void resendPrepareEvent();
 
-	[[nodiscard]] rpl::producer<State> stateChanges() const {
-		return _stateChanges.events();
-	}
-
 protected:
 	bool eventFilter(QObject *object, QEvent *event) override;
 
@@ -88,6 +83,7 @@ private:
 
 	const not_null<QWidget*> _target;
 	QPointer<QWindow> _frameWindow;
+	QPoint _stopMousePos;
 	State _state = Inactive;
 	QRectF _range;
 	QPointF _contentPosition;
@@ -99,8 +95,6 @@ private:
 	QPointF _flickFrom;
 	QPointF _flickVelocity;
 	crl::time _flickStarted = 0;
-
-	rpl::event_stream<State> _stateChanges;
 
 };
 

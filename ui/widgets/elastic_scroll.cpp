@@ -436,17 +436,6 @@ ElasticScroll::ElasticScroll(
 		_scroller = OptionKineticScroller.value()
 			? std::make_unique<KineticScroller>(this)
 			: nullptr;
-
-		if (!_scroller) {
-			return;
-		}
-
-		_scroller->stateChanges(
-		) | rpl::on_next([=](KineticScroller::State state) {
-			if (state == KineticScroller::Scrolling) {
-				ScrollerStopper::Instance().activate(_scroller.get());
-			}
-		}, lifetime());
 	}, lifetime());
 }
 

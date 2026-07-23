@@ -7,6 +7,7 @@
 #include "ui/widgets/kinetic_scroller.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtGui/QCursor>
 #include <QtGui/QtEvents>
 #include <QtGui/QWindow>
 #include <QtWidgets/QWidget>
@@ -189,9 +190,11 @@ void KineticScroller::disarmFrameClock() {
 }
 
 bool KineticScroller::eventFilter(QObject *object, QEvent *event) {
-	if (object == _frameWindow
-		&& event->type() == QEvent::UpdateRequest
-		&& _state == Scrolling) {
+	if (object != _frameWindow || _state != Scrolling) {
+		return QObject::eventFilter(object, event);
+	}
+	const auto type = event->type();
+	if (type == QEvent::UpdateRequest) {
 		const auto weak = QPointer<KineticScroller>(this);
 		flickTick(crl::now());
 		if (weak && _state == Scrolling) {
@@ -202,6 +205,20 @@ bool KineticScroller::eventFilter(QObject *object, QEvent *event) {
 		// already invalidates exactly what it dirtied, and the widget
 		// repaint pipeline delivers its update requests to the widgets
 		// themselves, never through the window, so nothing is starved.
+		return true;
+	} else if (type == QEvent::MouseMove
+		|| type == QEvent::MouseButtonPress) {
+		// Real pointer activity catches the fling. Mouse events reach
+		// widgets through the window, so consuming here still keeps the
+		// press from clicking into the still-moving content.
+		const auto mouse = static_cast<QMouseEvent*>(event);
+		if (type == QEvent::MouseMove) {
+			if (_stopMousePos == mouse->globalPos()) {
+				return false;
+			}
+			_stopMousePos = mouse->globalPos();
+		}
+		stop();
 		return true;
 	}
 	return QObject::eventFilter(object, event);
@@ -290,9 +307,9 @@ void KineticScroller::setState(State state) {
 	}
 	_state = state;
 	if (state == Scrolling) {
+		_stopMousePos = QCursor::pos();
 		armFrameClock();
 	}
-	const auto weak = QPointer<KineticScroller>(this);
 	if (state == Inactive && _scrollSent) {
 		// Mirroring QScroller: the final event goes out after the state
 		// is already Inactive and only if any scroll happened at all.
@@ -302,11 +319,7 @@ void KineticScroller::setState(State state) {
 			QPointF(),
 			QScrollEvent::ScrollFinished);
 		QCoreApplication::sendEvent(_target, &event);
-		if (!weak) {
-			return;
-		}
 	}
-	_stateChanges.fire_copy(_state);
 }
 
 } // namespace Ui

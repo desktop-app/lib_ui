@@ -49,26 +49,6 @@ struct ScrollToRequest {
 
 extern const char kOptionKineticScroller[];
 
-class ScrollerStopper final : public QObject {
-public:
-	static ScrollerStopper &Instance();
-
-	void activate(not_null<KineticScroller*> scroller);
-
-private:
-	ScrollerStopper();
-
-	bool eventFilter(QObject *obj, QEvent *e) override;
-
-	struct {
-		QPointer<KineticScroller> scroller;
-		rpl::lifetime subscription;
-	} _active;
-
-	QPoint _mousePos;
-
-};
-
 class ScrollShadow final : public QWidget {
 public:
 	enum class Type {
