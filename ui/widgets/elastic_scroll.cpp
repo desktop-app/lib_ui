@@ -2009,6 +2009,24 @@ void ElasticScroll::setOverscrollDefaults(int from, int till, bool shift) {
 	}
 }
 
+void ElasticScroll::clearOverscroll() {
+	const auto from = _overscrollTypeFrom;
+	const auto till = _overscrollTypeTill;
+	setOverscrollDefaults(0, 0);
+	if (_overscroll < 0) {
+		setOverscrollTypes(OverscrollType::None, till);
+	} else if (_overscroll > 0) {
+		setOverscrollTypes(from, OverscrollType::None);
+	} else {
+		return;
+	}
+	setOverscrollTypes(from, till);
+}
+
+void ElasticScroll::returnToOverscrollDefaults() {
+	overscrollReturn();
+}
+
 void ElasticScroll::setOverscrollBg(QColor bg) {
 	_overscrollBg = bg;
 	update();
