@@ -919,8 +919,8 @@ bool ElasticScroll::eventHook(QEvent *e) {
 				if (side > 0 && requestBottomContent(1)) {
 					// The boundary wasn't a real edge: more content was
 					// appended below, let the fling continue into it.
-					if (weak && _scroller) {
-						_scroller->resendPrepareEvent();
+					if (weak) {
+						ResendScrollerPrepare(_scroller);
 					}
 					return true;
 				}
@@ -1246,9 +1246,7 @@ bool ElasticScroll::handleScrollEvent(
 				if (!weak) {
 					return true;
 				}
-				if (_scroller) {
-					_scroller->resendPrepareEvent();
-				}
+				ResendScrollerPrepare(_scroller);
 			}
 		}
 	}
@@ -1872,9 +1870,7 @@ void ElasticScroll::scrollTo(int toFrom, int toTill) {
 		scTo += _overscroll;
 	}
 	applyScrollTo(scTo);
-	if (_scroller) {
-		_scroller->resendPrepareEvent();
-	}
+	ResendScrollerPrepare(_scroller);
 }
 
 void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {
