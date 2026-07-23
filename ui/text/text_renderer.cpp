@@ -1262,6 +1262,10 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			gf.width = itemWidth;
 			gf.justified = false;
 			InitTextItemWithScriptItem(gf, si);
+			if (!itemWidth) {
+				gf.flags &= ~QTextItem::Underline;
+				gf.underlineStyle = QTextCharFormat::NoUnderline;
+			}
 
 			const auto itemRange = FixedRange{ x, x + itemWidth };
 			auto selectedRect = QRect();
