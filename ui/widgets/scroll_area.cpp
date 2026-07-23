@@ -109,6 +109,30 @@ void SetupScrollerPhysics(not_null<QScroller*> scroller) {
 	scroller->setScrollerProperties(props);
 }
 
+void ResendScrollerPrepare(QScroller *scroller) {
+	if (!scroller) {
+		return;
+	}
+	scroller->resendPrepareEvent();
+	if (scroller->state() != QScroller::Scrolling) {
+		return;
+	}
+	// setScrollerProperties() calls recalcScrollingSegments(true), rebuilding
+	// the in-flight segment from the current velocity - but only when the
+	// properties actually change. velocity() is derived from the segment's
+	// timing, not its start/stop positions, so this stays correct even on an
+	// unpatched QScroller. Perturb an input-only metric and restore it.
+	using P = QScrollerProperties;
+	constexpr auto metric = P::MousePressEventDelay;
+	const auto props = scroller->scrollerProperties();
+	auto tweaked = props;
+	tweaked.setScrollMetric(
+		metric,
+		QVariant::fromValue<qreal>(props.scrollMetric(metric).toReal() + 1.));
+	scroller->setScrollerProperties(tweaked);
+	scroller->setScrollerProperties(props);
+}
+
 ScrollerStopper::ScrollerStopper()
 : _mousePos(QCursor::pos()) {
 	qApp->installEventFilter(this);
@@ -1057,9 +1081,7 @@ void ScrollArea::scrollToX(int toLeft, int toRight) {
 
 void ScrollArea::scrollToY(int toTop, int toBottom) {
 	verticalScrollBar()->setValue(computeScrollToY(toTop, toBottom));
-	if (_scroller) {
-		_scroller->resendPrepareEvent();
-	}
+	ResendScrollerPrepare(_scroller);
 }
 
 void ScrollArea::doSetOwnedWidget(object_ptr<QWidget> w) {
