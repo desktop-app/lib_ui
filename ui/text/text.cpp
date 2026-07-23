@@ -2373,10 +2373,33 @@ bool IsReplacedBySpace(QChar ch) {
 		|| (ch.unicode() >= 8232 && ch.unicode() <= 8237);
 }
 
+namespace {
+
+[[nodiscard]] bool IsBlankLike(QChar ch) {
+	// Hand-picked: neither Default_Ignorable nor Cf is a safe criterion,
+	// both admit characters that shape or render. These are only the ones
+	// that are zero-width and Joining_Type=Transparent.
+	switch (ch.unicode()) {
+	case 0x200B: // zero width space
+	case 0x2060: // word joiner
+	case 0x2061: // function application
+	case 0x2062: // invisible times
+	case 0x2063: // invisible separator
+	case 0x2064: // invisible plus
+	case QChar::ByteOrderMark: // zero width no-break space
+		return true;
+	default:
+		break;
+	}
+	return false;
+}
+
+} // namespace
+
 bool IsTrimmed(QChar ch) {
 	return ((ch != QChar::ObjectReplacementCharacter) && IsSpace(ch))
 		|| IsBad(ch)
-		|| (ch == QChar(8203)); // zero width space
+		|| IsBlankLike(ch);
 }
 
 QSize CountOptimalTextSize(
