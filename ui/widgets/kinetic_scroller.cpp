@@ -6,7 +6,6 @@
 //
 #include "ui/widgets/kinetic_scroller.h"
 
-#include <QtCore/QCoreApplication>
 #include <QtGui/QtEvents>
 #include <QtGui/QWindow>
 #include <QtWidgets/QWidget>
@@ -30,9 +29,12 @@ constexpr auto kFlickRemainingThreshold = 0.5;
 
 } // namespace
 
-KineticScroller::KineticScroller(not_null<QWidget*> target)
+KineticScroller::KineticScroller(
+	not_null<QWidget*> target,
+	Fn<QPointF(QPointF)> apply)
 : QObject(target)
-, _target(target) {
+, _target(target)
+, _apply(std::move(apply)) {
 }
 
 QPointF KineticScroller::velocity() const {
@@ -43,41 +45,39 @@ QPointF KineticScroller::velocity() const {
 	return _flickVelocity * std::exp(-kFriction * time);
 }
 
-bool KineticScroller::handleInput(
+void KineticScroller::handleInput(
 		Input input,
-		QPointF position,
+		QPointF delta,
 		crl::time timestamp) {
 	switch (_state) {
 	case Inactive:
-		return (input == InputPress) && press(position);
+		if (input == InputPress) {
+			press();
+		}
+		return;
 	case Pressed:
 		if (input == InputMove) {
-			drag(position, timestamp);
-			return true;
+			drag(delta, timestamp);
 		} else if (input == InputRelease) {
 			setState(Inactive);
 		}
-		return false;
+		return;
 	case Dragging:
 		if (input == InputMove) {
-			drag(position, timestamp);
-			return true;
+			drag(delta, timestamp);
 		} else if (input == InputRelease) {
 			flick(timestamp);
-			return true;
 		}
-		return false;
+		return;
 	case Scrolling:
 		if (input == InputPress) {
 			// No click-through: our input is a synthesized touchpad
 			// gesture stream, a press should just catch the fling.
-			_pressPosition = _lastPosition = position;
 			_history.clear();
 			setState(Pressed);
 			setState(Dragging);
-			return true;
 		}
-		return false;
+		return;
 	}
 	Unexpected("State in KineticScroller::handleInput.");
 }
@@ -86,27 +86,15 @@ void KineticScroller::stop() {
 	if (_state == Inactive) {
 		return;
 	}
-	_contentPosition = clamped(_contentPosition);
 	setState(Inactive);
 }
 
-void KineticScroller::resendPrepareEvent() {
-	sendPrepare(_pressPosition);
-}
-
-bool KineticScroller::press(QPointF position) {
-	if (!sendPrepare(position)) {
-		return false;
-	}
-	_pressPosition = _lastPosition = position;
+void KineticScroller::press() {
 	_history.clear();
 	setState(Pressed);
-	return true;
 }
 
-void KineticScroller::drag(QPointF position, crl::time timestamp) {
-	const auto delta = position - _lastPosition;
-	_lastPosition = position;
+void KineticScroller::drag(QPointF delta, crl::time timestamp) {
 	while (!_history.empty()
 		&& _history.front().time < timestamp - kVelocityWindow) {
 		_history.erase(begin(_history));
@@ -117,8 +105,8 @@ void KineticScroller::drag(QPointF position, crl::time timestamp) {
 		// already intentional, so no drag-start distance slop is needed.
 		setState(Dragging);
 	}
-	_contentPosition = clamped(_contentPosition - delta);
-	sendScroll();
+	_applied = true;
+	_apply(-delta);
 }
 
 void KineticScroller::flick(crl::time timestamp) {
@@ -137,8 +125,9 @@ void KineticScroller::flick(crl::time timestamp) {
 		setState(Inactive);
 		return;
 	}
-	_flickFrom = _contentPosition;
+	_flickEmitted = QPointF();
 	_flickVelocity = velocity;
+	_flickDoneX = _flickDoneY = false;
 	// The fling is animated against crl::now() (see flickTick), but the
 	// drag deltas history uses the events' own timestamps.
 	_flickStarted = crl::now();
@@ -146,33 +135,38 @@ void KineticScroller::flick(crl::time timestamp) {
 }
 
 void KineticScroller::flickTick(crl::time now) {
-	_contentPosition = clamped(
-		flickPosition((now - _flickStarted) / 1000.));
+	const auto time = (now - _flickStarted) / 1000.;
+	// Truncation carries the sub-pixel remainder with the correct sign, so
+	// the slow tail of the fling still progresses.
+	const auto wanted = flickPosition(time) - _flickEmitted;
+	const auto delta = QPointF(
+		_flickDoneX ? 0. : std::trunc(wanted.x()),
+		_flickDoneY ? 0. : std::trunc(wanted.y()));
+	_flickEmitted += delta;
+	_applied = true;
 	const auto weak = QPointer<KineticScroller>(this);
-	sendScroll();
+	const auto consumed = _apply(delta);
 	if (!weak || _state != Scrolling) {
 		return;
 	}
-	// The widget could have handled the event by extending the range
-	// through resendPrepareEvent (which rebases the fling), so evaluate
-	// the trajectory only now, against the possibly updated state.
-	const auto time = (now - _flickStarted) / 1000.;
-	const auto position = flickPosition(time);
+	// A consumed shortfall means the fling hit the content edge on that
+	// axis, finishing it there.
+	if (consumed.x() != delta.x()) {
+		_flickDoneX = true;
+		_flickVelocity.setX(0.);
+	}
+	if (consumed.y() != delta.y()) {
+		_flickDoneY = true;
+		_flickVelocity.setY(0.);
+	}
 	const auto remaining = std::exp(-kFriction * time) / kFriction;
-	const auto doneX = (std::abs(_flickVelocity.x()) * remaining
-			< kFlickRemainingThreshold)
-		|| (position.x() != std::clamp(
-			position.x(),
-			_range.left(),
-			_range.right()));
-	const auto doneY = (std::abs(_flickVelocity.y()) * remaining
-			< kFlickRemainingThreshold)
-		|| (position.y() != std::clamp(
-			position.y(),
-			_range.top(),
-			_range.bottom()));
+	const auto doneX = _flickDoneX
+		|| (std::abs(_flickVelocity.x()) * remaining
+			< kFlickRemainingThreshold);
+	const auto doneY = _flickDoneY
+		|| (std::abs(_flickVelocity.y()) * remaining
+			< kFlickRemainingThreshold);
 	if (doneX && doneY) {
-		_contentPosition = clamped(position);
 		setState(Inactive);
 	}
 }
@@ -216,8 +210,8 @@ bool KineticScroller::eventFilter(QObject *object, QEvent *event) {
 }
 
 QPointF KineticScroller::flickPosition(float64 time) const {
-	return _flickFrom
-		+ _flickVelocity * ((1. - std::exp(-kFriction * time)) / kFriction);
+	return _flickVelocity
+		* ((1. - std::exp(-kFriction * time)) / kFriction);
 }
 
 QPointF KineticScroller::dragVelocity(crl::time now) const {
@@ -242,53 +236,6 @@ QPointF KineticScroller::dragVelocity(crl::time now) const {
 		: QPointF();
 }
 
-QPointF KineticScroller::clamped(QPointF position) const {
-	return QPointF(
-		std::clamp(position.x(), _range.left(), _range.right()),
-		std::clamp(position.y(), _range.top(), _range.bottom()));
-}
-
-bool KineticScroller::sendPrepare(QPointF position) {
-	auto prepare = QScrollPrepareEvent(position);
-	prepare.ignore();
-	const auto weak = QPointer<KineticScroller>(this);
-	QCoreApplication::sendEvent(_target, &prepare);
-	if (!weak || !prepare.isAccepted()) {
-		return false;
-	}
-	auto range = prepare.contentPosRange();
-	if (range.width() < 0.) {
-		range.setWidth(0.);
-	}
-	if (range.height() < 0.) {
-		range.setHeight(0.);
-	}
-	_range = range;
-	const auto reported = clamped(prepare.contentPos());
-	if (_state == Scrolling) {
-		// Continue the fling from the freshly reported position with
-		// the velocity it has decayed to by now.
-		const auto now = crl::now();
-		_flickVelocity *= std::exp(
-			-kFriction * (now - _flickStarted) / 1000.);
-		_flickFrom = reported;
-		_flickStarted = now;
-	}
-	_contentPosition = reported;
-	return true;
-}
-
-void KineticScroller::sendScroll() {
-	auto event = QScrollEvent(
-		_contentPosition,
-		QPointF(),
-		(_scrollSent
-			? QScrollEvent::ScrollUpdated
-			: QScrollEvent::ScrollStarted));
-	_scrollSent = true;
-	QCoreApplication::sendEvent(_target, &event);
-}
-
 void KineticScroller::setState(State state) {
 	if (_state == state) {
 		return;
@@ -301,15 +248,11 @@ void KineticScroller::setState(State state) {
 		armFrameClock();
 	}
 	const auto weak = QPointer<KineticScroller>(this);
-	if (state == Inactive && _scrollSent) {
-		// Mirroring QScroller: the final event goes out after the state
-		// is already Inactive and only if any scroll happened at all.
-		_scrollSent = false;
-		auto event = QScrollEvent(
-			_contentPosition,
-			QPointF(),
-			QScrollEvent::ScrollFinished);
-		QCoreApplication::sendEvent(_target, &event);
+	if (state == Inactive && _applied) {
+		// Mirroring QScroller: the final notification goes out after the
+		// state is already Inactive and only if any scroll happened at all.
+		_applied = false;
+		_apply(QPointF());
 		if (!weak) {
 			return;
 		}

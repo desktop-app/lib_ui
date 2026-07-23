@@ -501,8 +501,26 @@ ScrollArea::ScrollArea(
 	) | rpl::then(
 		OptionKineticScroller.changes()
 	) | rpl::on_next([=] {
+		_wheelActive = false;
 		_scroller = OptionKineticScroller.value()
-			? std::make_unique<KineticScroller>(this)
+			? std::make_unique<KineticScroller>(this, [=](QPointF delta) {
+				const auto horizontal = horizontalScrollBar();
+				const auto vertical = verticalScrollBar();
+				const auto wasX = horizontal->value();
+				const auto wasY = vertical->value();
+				const auto weak = base::make_weak(this);
+				horizontal->setValue(wasX + qRound(delta.x()));
+				if (!weak) {
+					return delta;
+				}
+				vertical->setValue(wasY + qRound(delta.y()));
+				if (!weak) {
+					return delta;
+				}
+				return QPointF(
+					horizontal->value() - wasX,
+					vertical->value() - wasY);
+			})
 			: nullptr;
 
 		if (!_scroller) {
@@ -724,12 +742,19 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 					// begin while our fling runs is that leak - pressing
 					// would catch and kill the fling. If this ever
 					// swallows a real begin, the next ScrollUpdate finds
-					// _wheelPos null and presses instead.
+					// _wheelActive false and presses instead.
 					return true;
 				}
-				const auto wasNull = _wheelPos.isNull();
-				if (wasNull) {
-					_wheelPos = QPoint(width(), height()) / 2;
+				// Estimate the velocity by the events' own timestamps:
+				// some transports (e.g. bluetooth) may sometimes deliver
+				// several events at once, and their identical processing times
+				// would break the estimation.
+				if (!_wheelActive) {
+					_wheelActive = true;
+					_scroller->handleInput(
+						KineticScroller::InputPress,
+						{},
+						crl::time(ev->timestamp()));
 				} else {
 					auto unmultiplied = ScrollDelta(ev);
 					if (_wheelDirectionLocked) {
@@ -737,31 +762,25 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 					}
 					const auto multiply = ev->modifiers()
 						& (Qt::ControlModifier | Qt::ShiftModifier);
-					_wheelPos += multiply
+					const auto delta = multiply
 						? QPoint(
 							unmultiplied.x() * std::max(width(), 120) / 120.,
 							unmultiplied.y() * std::max(height(), 120) / 120.)
 						: unmultiplied;
+					_scroller->handleInput(
+						KineticScroller::InputMove,
+						QPointF(delta),
+						crl::time(ev->timestamp()));
 				}
-				// Estimate the velocity by the events' own timestamps:
-				// some transports (e.g. bluetooth) may sometimes deliver
-				// several events at once, and their identical processing times
-				// would break the estimation.
-				_scroller->handleInput(
-					(wasNull
-						? KineticScroller::InputPress
-						: KineticScroller::InputMove),
-					_wheelPos,
-					crl::time(ev->timestamp()));
 			} return true;
 			case Qt::ScrollEnd:
 			case Qt::ScrollMomentum: {
-				if (!_wheelPos.isNull()) {
+				if (_wheelActive) {
+					_wheelActive = false;
 					_scroller->handleInput(
 						KineticScroller::InputRelease,
-						_wheelPos,
+						{},
 						crl::time(ev->timestamp()));
-					_wheelPos = {};
 				}
 			} return true;
 			}
@@ -1023,9 +1042,6 @@ void ScrollArea::scrollToX(int toLeft, int toRight) {
 
 void ScrollArea::scrollToY(int toTop, int toBottom) {
 	verticalScrollBar()->setValue(computeScrollToY(toTop, toBottom));
-	if (_scroller) {
-		_scroller->resendPrepareEvent();
-	}
 }
 
 void ScrollArea::doSetOwnedWidget(object_ptr<QWidget> w) {

@@ -12,7 +12,6 @@
 #include <QtCore/QObject>
 #include <QtCore/QPointer>
 #include <QtCore/QPointF>
-#include <QtCore/QRectF>
 
 #include <vector>
 
@@ -21,9 +20,9 @@ class QWindow;
 
 namespace Ui {
 
-// Reimplementation of QScroller: receives InputPress/InputMove/InputRelease
-// and scrolls the target widget with QScrollPrepareEvent and QScrollEvent,
-// but with the proper exponential inertia curve similar to what everyone else
+// Replacement for QScroller: receives InputPress/InputMove/InputRelease with
+// wheel deltas and scrolls the target widget through the apply callback,
+// with the proper exponential inertia curve similar to what everyone else
 // uses (GTK, Chromium, Firefox).
 //
 // QScroller not only has bad inertia curve, but also initializes the fling
@@ -34,8 +33,10 @@ namespace Ui {
 //
 // Here the release velocity is averaged over the last 150 ms of drag deltas
 // and the fling decays it exponentially.
-// 
-// Never produces overshoot: ScrollArea has none, ElasticScroll does its own.
+//
+// The apply callback receives integral content-space deltas and returns the
+// consumed part: a shortfall means the content edge was hit, finishing the
+// fling on that axis.
 class KineticScroller final : public QObject {
 	Q_OBJECT
 
@@ -52,15 +53,16 @@ public:
 		InputRelease,
 	};
 
-	explicit KineticScroller(not_null<QWidget*> target);
+	KineticScroller(not_null<QWidget*> target, Fn<QPointF(QPointF)> apply);
 
 	[[nodiscard]] State state() const {
 		return _state;
 	}
 	[[nodiscard]] QPointF velocity() const;
-	bool handleInput(Input input, QPointF position, crl::time timestamp);
+	// Wheel-space delta, ignored for press/release. The timestamp must be
+	// the event's own.
+	void handleInput(Input input, QPointF delta, crl::time timestamp);
 	void stop();
-	void resendPrepareEvent();
 
 Q_SIGNALS:
 	void stateChanged(State state);
@@ -77,29 +79,25 @@ private:
 	void setState(State state);
 	void armFrameClock();
 	void disarmFrameClock();
-	bool sendPrepare(QPointF position);
-	void sendScroll();
-	bool press(QPointF position);
-	void drag(QPointF position, crl::time timestamp);
+	void press();
+	void drag(QPointF delta, crl::time timestamp);
 	void flick(crl::time timestamp);
 	void flickTick(crl::time now);
 	[[nodiscard]] QPointF flickPosition(float64 time) const;
 	[[nodiscard]] QPointF dragVelocity(crl::time now) const;
-	[[nodiscard]] QPointF clamped(QPointF position) const;
 
 	const not_null<QWidget*> _target;
+	const Fn<QPointF(QPointF)> _apply;
 	QPointer<QWindow> _frameWindow;
 	State _state = Inactive;
-	QRectF _range;
-	QPointF _contentPosition;
-	QPointF _pressPosition;
-	QPointF _lastPosition;
 	std::vector<DragSample> _history;
-	bool _scrollSent = false;
+	bool _applied = false;
 
-	QPointF _flickFrom;
+	QPointF _flickEmitted;
 	QPointF _flickVelocity;
 	crl::time _flickStarted = 0;
+	bool _flickDoneX = false;
+	bool _flickDoneY = false;
 
 };
 

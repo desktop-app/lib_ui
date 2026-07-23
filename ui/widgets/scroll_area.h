@@ -271,7 +271,7 @@ private:
 	int _horizontalValue, _verticalValue;
 
 	std::unique_ptr<KineticScroller> _scroller;
-	QPoint _wheelPos;
+	bool _wheelActive = false;
 
 	bool _touchEnabled = false;
 	base::Timer _touchTimer;
