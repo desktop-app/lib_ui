@@ -108,6 +108,7 @@ void SideBarButton::setLocked(bool locked) {
 		return;
 	}
 	_lock.locked = locked;
+	_iconCache = _iconCacheActive = QImage();
 	const auto charFiller = QChar('l');
 	const auto count = std::ceil(st::sideBarButtonLockSize.width()
 		/ float(_st.style.font->width(charFiller)));
@@ -129,8 +130,31 @@ bool SideBarButton::locked() const {
 	return _lock.locked;
 }
 
+void SideBarButton::setShowIcon(bool shown) {
+	if (_showIcon == shown) {
+		return;
+	}
+	_showIcon = shown;
+	update();
+}
+
+void SideBarButton::setShowText(bool shown) {
+	if (_showText == shown) {
+		return;
+	}
+	_showText = shown;
+	_iconCache = _iconCacheActive = QImage();
+	if (const auto current = width()) {
+		resizeToWidth(current);
+	}
+	update();
+}
+
 int SideBarButton::resizeGetHeight(int newWidth) {
 	auto result = _st.minHeight;
+	if (!_showText) {
+		return result;
+	}
 	const auto text = std::min(
 		_text.countHeight(newWidth - _st.textSkip * 2),
 		_st.style.font->height * kMaxLabelLines);
@@ -151,27 +175,27 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 		p.setOpacity(kPremiumLockedOpacity);
 	}
 
-	const auto &icon = computeIcon();
-	const auto x = (_st.iconPosition.x() < 0)
-		? (width() - icon.width()) / 2
-		: _st.iconPosition.x();
-	const auto y = (_st.iconPosition.y() < 0)
-		? (height() - icon.height()) / 2
-		: _st.iconPosition.y();
-	if (_iconCacheBadgeWidth) {
-		validateIconCache();
-		p.drawImage(x, y, _active ? _iconCacheActive : _iconCache);
-	} else {
-		icon.paint(p, x, y, width());
+	if (_showIcon) {
+		const auto &icon = computeIcon();
+		const auto x = iconLeft();
+		const auto y = iconTop();
+		if (_iconCacheBadgeWidth || (_lock.locked && !_showText)) {
+			validateIconCache();
+			p.drawImage(x, y, _active ? _iconCacheActive : _iconCache);
+		} else {
+			icon.paint(p, x, y, width());
+		}
 	}
-	p.setPen(_active ? _st.textFgActive : _st.textFg);
-	_text.draw(p, {
-		.position = { _st.textSkip, _st.textTop },
-		.availableWidth = (width() - 2 * _st.textSkip),
-		.align = style::al_top,
-		.pausedEmoji = _paused && _paused(),
-		.elisionLines = kMaxLabelLines,
-	});
+	if (_showText) {
+		p.setPen(_active ? _st.textFgActive : _st.textFg);
+		_text.draw(p, {
+			.position = { _st.textSkip, _st.textTop },
+			.availableWidth = (width() - 2 * _st.textSkip),
+			.align = style::al_top,
+			.pausedEmoji = _paused && _paused(),
+			.elisionLines = kMaxLabelLines,
+		});
+	}
 
 	if (_iconCacheBadgeWidth) {
 		const auto desiredLeft = width() / 2 + _st.badgePosition.x();
@@ -197,24 +221,31 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
 	}
 
 	if (_lock.locked) {
-		const auto lineWidths = _text.countLineWidths(
-			width() - 2 * _st.textSkip,
-			{ .reserve = kMaxLabelLines });
-		if (lineWidths.empty()) {
-			return;
-		}
 		validateLockIconCache();
 
 		const auto &icon = _active ? _lock.iconCacheActive : _lock.iconCache;
 		const auto size = icon.size() / style::DevicePixelRatio();
-		p.translate(
-			(width() - lineWidths.front()) / 2.,
-			_st.textTop + (_st.style.font->height - size.height()) / 2.);
-		p.setOpacity(1.);
-		p.fillRect(QRect(QPoint(), size), bg);
-		p.setOpacity(kPremiumLockedOpacity);
-		p.translate(-_st.style.font->spacew / 2., 0);
-
+		if (_showText) {
+			const auto lineWidths = _text.countLineWidths(
+				width() - 2 * _st.textSkip,
+				{ .reserve = kMaxLabelLines });
+			if (lineWidths.empty()) {
+				return;
+			}
+			p.translate(
+				(width() - lineWidths.front()) / 2.,
+				_st.textTop + (_st.style.font->height - size.height()) / 2.);
+			p.setOpacity(1.);
+			p.fillRect(QRect(QPoint(), size), bg);
+			p.setOpacity(kPremiumLockedOpacity);
+			p.translate(-_st.style.font->spacew / 2., 0);
+		} else {
+			const auto &folder = computeIcon();
+			const auto shift = st::sideBarButtonLockCornerShift;
+			p.translate(
+				iconLeft() + folder.width() - shift - size.width() / 2,
+				iconTop() + folder.height() - shift - size.height() / 2);
+		}
 		p.drawImage(0, 0, icon);
 	}
 }
@@ -233,6 +264,18 @@ const style::icon &SideBarButton::computeIcon() const {
 		: _st.icon;
 }
 
+int SideBarButton::iconLeft() const {
+	return (_st.iconPosition.x() < 0)
+		? (width() - computeIcon().width()) / 2
+		: _st.iconPosition.x();
+}
+
+int SideBarButton::iconTop() const {
+	return (_st.iconPosition.y() < 0)
+		? (height() - computeIcon().height()) / 2
+		: _st.iconPosition.y();
+}
+
 void SideBarButton::validateIconCache() {
 	Expects(_st.iconPosition.x() < 0);
 
@@ -249,25 +292,38 @@ void SideBarButton::validateIconCache() {
 		auto p = QPainter(&image);
 		icon.paint(p, 0, 0, icon.width());
 		p.setCompositionMode(QPainter::CompositionMode_Source);
-		p.setBrush(Qt::transparent);
-		auto pen = QPen(Qt::transparent);
-		pen.setWidth(2 * _st.badgeStroke);
-		p.setPen(pen);
 		auto hq = PainterHighQualityEnabler(p);
-		const auto desiredLeft = (icon.width() / 2) + _st.badgePosition.x();
-		const auto x = std::min(
-			desiredLeft,
-			(width()
-				- _iconCacheBadgeWidth
-				- st::defaultScrollArea.width
-				- (width() / 2)
-				+ (icon.width() / 2)));
-		const auto top = (_st.iconPosition.y() >= 0)
-			? _st.iconPosition.y()
-			: (height() - icon.height()) / 2;
-		const auto y = _st.badgePosition.y() - top;
-		const auto r = _st.badgeHeight / 2.;
-		p.drawRoundedRect(x, y, _iconCacheBadgeWidth, _st.badgeHeight, r, r);
+		if (_iconCacheBadgeWidth) {
+			p.setBrush(Qt::transparent);
+			auto pen = QPen(Qt::transparent);
+			pen.setWidth(2 * _st.badgeStroke);
+			p.setPen(pen);
+			const auto desiredLeft = (width() / 2) + _st.badgePosition.x();
+			const auto pillLeft = std::min(
+				desiredLeft,
+				width() - _iconCacheBadgeWidth - st::defaultScrollArea.width);
+			const auto x = pillLeft - iconLeft();
+			const auto y = _st.badgePosition.y() - iconTop();
+			const auto r = _st.badgeHeight / 2.;
+			p.drawRoundedRect(
+				x,
+				y,
+				_iconCacheBadgeWidth,
+				_st.badgeHeight,
+				r,
+				r);
+		}
+		if (_lock.locked && !_showText) {
+			p.setPen(Qt::NoPen);
+			p.setBrush(Qt::transparent);
+			const auto shift = st::sideBarButtonLockCornerShift;
+			const auto radius = (st::sideBarButtonLockSize.height() / 2)
+				+ _st.badgeStroke;
+			p.drawEllipse(
+				QPoint(icon.width() - shift, icon.height() - shift),
+				radius,
+				radius);
+		}
 	}
 	(_active ? _iconCacheActive : _iconCache) = std::move(image);
 }

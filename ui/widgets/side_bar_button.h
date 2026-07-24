@@ -34,6 +34,8 @@ public:
 		const style::icon *iconOverride,
 		const style::icon *iconOverrideActive = nullptr);
 	void setLocked(bool locked);
+	void setShowIcon(bool shown);
+	void setShowText(bool shown);
 
 	int resizeGetHeight(int newWidth) override;
 
@@ -50,6 +52,8 @@ private:
 	void paintEvent(QPaintEvent *e) override;
 
 	[[nodiscard]] const style::icon &computeIcon() const;
+	[[nodiscard]] int iconLeft() const;
+	[[nodiscard]] int iconTop() const;
 	void validateIconCache();
 	void validateLockIconCache();
 
@@ -63,6 +67,8 @@ private:
 	int _iconCacheBadgeWidth = 0;
 	bool _active = false;
 	bool _badgeMuted = false;
+	bool _showIcon = true;
+	bool _showText = true;
 
 	Fn<bool()> _paused;
 	Text::MarkedContext _context;
