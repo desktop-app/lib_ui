@@ -264,12 +264,7 @@ private:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	bool handleWheelEvent(not_null<QWheelEvent*> e, bool touch = false);
-	bool handleScrollEvent(
-		Qt::ScrollPhase phase,
-		int delta,
-		bool ignore = false,
-		bool touch = false,
-		crl::time timestamp = 0);
+	QPointF applyScrollerDelta(QPointF delta);
 	bool requestBottomContent(int delta);
 	void handleTouchEvent(QTouchEvent *e);
 
@@ -332,8 +327,8 @@ private:
 	int _contentBottomInset = 0;
 	ScrollState _state;
 
-	QPointer<QScroller> _scroller;
-	QPoint _wheelPos;
+	std::unique_ptr<KineticScroller> _scroller;
+	bool _wheelActive = false;
 
 	base::Timer _touchTimer;
 	base::Timer _touchScrollTimer;

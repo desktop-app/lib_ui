@@ -9,15 +9,13 @@
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "ui/effects/animations.h"
+#include "ui/widgets/kinetic_scroller.h"
 #include "base/object_ptr.h"
-#include "base/qt_connection.h"
 #include "base/timer.h"
 #include "styles/style_widgets.h"
 
 #include <QtWidgets/QScrollArea>
 #include <QtGui/QtEvents>
-
-class QScroller;
 
 namespace Ui {
 
@@ -49,41 +47,7 @@ struct ScrollToRequest {
 
 };
 
-extern const char kOptionQScroller[];
-
-// Tune a QScroller to approximate macOS native momentum. QScroller only
-// provides in-range kinetics: its overshoot is always disabled - ScrollArea
-// has no overscroll at all, and ElasticScroll implements its own rubber-band
-// overscroll physics fed from the raw events.
-void SetupScrollerPhysics(not_null<QScroller*> scroller);
-
-// Resends the scroll-prepare event and, while a fling is in progress, forces
-// the momentum segment to be rebuilt from the current velocity. QScroller bakes
-// the whole trajectory (including edge clamps) at gesture end and
-// resendPrepareEvent() only shifts it, so without the rebuild a fling stops at
-// the old (shifted) edge; with it, the fling flows into content inserted
-// mid-fling. Null- and state-safe.
-void ResendScrollerPrepare(QScroller *scroller);
-
-class ScrollerStopper final : public QObject {
-public:
-	static ScrollerStopper &Instance();
-
-	void activate(not_null<QScroller*> scroller);
-
-private:
-	ScrollerStopper();
-
-	bool eventFilter(QObject *obj, QEvent *e) override;
-
-	struct {
-		QPointer<QScroller> scroller;
-		base::qt_connection connection;
-	} _active;
-
-	QPoint _mousePos;
-
-};
+extern const char kOptionKineticScroller[];
 
 class ScrollShadow final : public QWidget {
 public:
@@ -285,8 +249,8 @@ private:
 	object_ptr<ScrollShadow> _topShadow, _bottomShadow;
 	int _horizontalValue, _verticalValue;
 
-	QPointer<QScroller> _scroller;
-	QPoint _wheelPos;
+	std::unique_ptr<KineticScroller> _scroller;
+	bool _wheelActive = false;
 
 	bool _touchEnabled = false;
 	base::Timer _touchTimer;
