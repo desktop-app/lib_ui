@@ -184,8 +184,19 @@ void StackEngine::itemize() {
 				// which fall in the same block, but have different flags.
 			} else if ((*startBlock)->type() != TextBlockType::Text
 				&& m_analysis[i].flags == m_analysis[start].flags) {
-				// Otherwise, only text blocks may have arbitrary items.
-				Assert(i - start < kMaxItemLength);
+				// A non-text block always maps to a single item and can't
+				// be split into kMaxItemLength chunks like text is: each
+				// Object item paints its block and advances by objectWidth,
+				// so an additional item would draw and count it twice.
+				//
+				// Unlimited length is fine here: Object items are never
+				// really shaped (QTextEngine::shape() just reserves a
+				// single glyph for them), and the space tail of an emoji
+				// block shapes to one glyph per character, so the 16-bit
+				// per-item glyph counts can't overflow with the 32k text
+				// length limit. A several-thousand-characters Object item
+				// is real, e.g. a formula custom emoji covers the whole
+				// formula source in a rich message summary text.
 				continue;
 			} else if (m_analysis[i].bidiLevel == m_analysis[start].bidiLevel
 				&& m_analysis[i].flags == m_analysis[start].flags
