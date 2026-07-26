@@ -264,12 +264,6 @@ private:
 	void enterEventHook(QEnterEvent *e) override;
 	void leaveEventHook(QEvent *e) override;
 	bool handleWheelEvent(not_null<QWheelEvent*> e, bool touch = false);
-	bool handleScrollEvent(
-		Qt::ScrollPhase phase,
-		int delta,
-		bool ignore = false,
-		bool touch = false,
-		crl::time timestamp = 0);
 	bool requestBottomContent(int delta);
 	void handleTouchEvent(QTouchEvent *e);
 
@@ -320,7 +314,6 @@ private:
 		int delta,
 		crl::time timestamp);
 	void overscrollSpringStart(int side);
-	void overscrollBounce(int side, float64 velocity);
 	void overscrollSpringUpdate();
 	void updateBarState();
 	void overscrollSpringFinish();
@@ -333,7 +326,6 @@ private:
 	ScrollState _state;
 
 	std::unique_ptr<KineticScroller> _scroller;
-	QPoint _wheelPos;
 
 	base::Timer _touchTimer;
 	base::Timer _touchScrollTimer;

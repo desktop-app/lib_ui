@@ -6,6 +6,9 @@
 //
 #include "ui/widgets/kinetic_scroller.h"
 
+#include "base/platform/base_platform_info.h"
+#include "ui/ui_utility.h"
+
 #include <QtCore/QCoreApplication>
 #include <QtGui/QCursor>
 #include <QtGui/QtEvents>
@@ -36,90 +39,85 @@ KineticScroller::KineticScroller(not_null<QWidget*> target)
 , _target(target) {
 }
 
-bool KineticScroller::handleInput(
-		Input input,
-		QPointF position,
-		crl::time timestamp) {
-	switch (_state) {
-	case Inactive:
-		return (input == InputPress) && press(position);
-	case Pressed:
-		if (input == InputMove) {
-			drag(position, timestamp);
-			return true;
-		} else if (input == InputRelease) {
+void KineticScroller::handleWheelEvent(not_null<QWheelEvent*> e) {
+	if (e->source() == Qt::MouseEventSynthesizedByApplication) {
+		// Our own echo, or the host's touchscreen emulation.
+		return;
+	}
+	// Kept for the synthesized events, so a Ctrl/Shift fast-scrolled
+	// gesture flings fast-scrolled too.
+	_modifiers = e->modifiers();
+	_inverted = e->inverted();
+	const auto timestamp = crl::time(e->timestamp());
+	switch (e->phase()) {
+	case Qt::ScrollBegin:
+		press();
+		break;
+	case Qt::ScrollUpdate:
+		if (_state == Inactive || _state == Scrolling) {
+			// Momentum-race leaks and bare momentum gesture streams may
+			// miss the ScrollBegin.
+			press();
+		}
+		drag(e, timestamp);
+		break;
+	case Qt::ScrollEnd:
+		if (_state == Dragging) {
+			flick(timestamp);
+		} else if (_state == Pressed) {
 			setState(Inactive);
 		}
-		return false;
-	case Dragging:
-		if (input == InputMove) {
-			drag(position, timestamp);
-			return true;
-		} else if (input == InputRelease) {
-			flick(timestamp);
-			return true;
+		break;
+	case Qt::ScrollMomentum:
+		// The platform provides its own momentum stream and the host
+		// applies it like any wheel input, so our kinetics aren't needed.
+		if (_state != Inactive) {
+			_emitted = false;
+			setState(Inactive);
 		}
-		return false;
-	case Scrolling:
-		if (input == InputPress) {
-			// No click-through: our input is a synthesized touchpad
-			// gesture stream, a press should just catch the fling.
-			_pressPosition = _lastPosition = position;
-			_history.clear();
-			setState(Pressed);
-			setState(Dragging);
-			return true;
-		}
-		return false;
+		break;
 	}
-	Unexpected("State in KineticScroller::handleInput.");
 }
 
 void KineticScroller::stop() {
 	if (_state == Inactive) {
 		return;
 	}
-	_contentPosition = clamped(_contentPosition);
 	setState(Inactive);
 }
 
-void KineticScroller::resendPrepareEvent() {
-	sendPrepare(_pressPosition);
-}
-
-bool KineticScroller::press(QPointF position) {
-	if (!sendPrepare(position)) {
-		return false;
-	}
-	_pressPosition = _lastPosition = position;
+void KineticScroller::press() {
 	_history.clear();
+	// A press during Scrolling catches the fling: the new gesture's stream
+	// replaces ours, so no final ScrollEnd is emitted.
+	_emitted = false;
 	setState(Pressed);
-	return true;
 }
 
-void KineticScroller::drag(QPointF position, crl::time timestamp) {
-	const auto delta = position - _lastPosition;
-	_lastPosition = position;
+void KineticScroller::drag(not_null<QWheelEvent*> e, crl::time timestamp) {
 	while (!_history.empty()
 		&& _history.front().time < timestamp - kVelocityWindow) {
 		_history.erase(begin(_history));
 	}
-	_history.push_back({ timestamp, delta });
+	_history.push_back({
+		.time = timestamp,
+		.angle = QPointF(e->angleDelta()),
+		.pixel = QPointF(e->pixelDelta())
+			* (::Platform::IsWayland() ? kMagicScrollMultiplier : 1.),
+	});
 	if (_state == Pressed) {
 		// The gesture stream is synthesized from wheel events which are
 		// already intentional, so no drag-start distance slop is needed.
 		setState(Dragging);
 	}
-	_contentPosition = clamped(_contentPosition - delta);
-	sendScroll();
 }
 
 void KineticScroller::flick(crl::time timestamp) {
 	const auto velocity = dragVelocity(timestamp);
 	_history.clear();
 	const auto throwing = std::max(
-		std::abs(velocity.x()),
-		std::abs(velocity.y())) / kFriction;
+		std::abs(velocity.pixel.x()),
+		std::abs(velocity.pixel.y())) / kFriction;
 	if (throwing < kFlickRemainingThreshold) {
 		setState(Inactive);
 		return;
@@ -130,8 +128,9 @@ void KineticScroller::flick(crl::time timestamp) {
 		setState(Inactive);
 		return;
 	}
-	_flickFrom = _contentPosition;
 	_flickVelocity = velocity;
+	_flickEmittedPixel = QPointF();
+	_flickEmittedAngle = QPointF();
 	// The fling is animated against crl::now() (see flickTick), but the
 	// drag deltas history uses the events' own timestamps.
 	_flickStarted = crl::now();
@@ -139,35 +138,56 @@ void KineticScroller::flick(crl::time timestamp) {
 }
 
 void KineticScroller::flickTick(crl::time now) {
-	_contentPosition = clamped(
-		flickPosition((now - _flickStarted) / 1000.));
-	const auto weak = QPointer<KineticScroller>(this);
-	sendScroll();
-	if (!weak || _state != Scrolling) {
-		return;
-	}
-	// The widget could have handled the event by extending the range
-	// through resendPrepareEvent (which rebases the fling), so evaluate
-	// the trajectory only now, against the possibly updated state.
 	const auto time = (now - _flickStarted) / 1000.;
-	const auto position = flickPosition(time);
+	const auto progress = (1. - std::exp(-kFriction * time)) / kFriction;
+	// Truncation carries each channel's sub-quantum remainder with the
+	// correct sign, so the slow tail of the fling still progresses.
+	const auto quantum = [](QPointF wanted) {
+		return QPoint(
+			int(std::trunc(wanted.x())),
+			int(std::trunc(wanted.y())));
+	};
+	const auto pixel = quantum(
+		_flickVelocity.pixel * progress - _flickEmittedPixel);
+	const auto angle = quantum(
+		_flickVelocity.angle * progress - _flickEmittedAngle);
+	_flickEmittedPixel += pixel;
+	_flickEmittedAngle += angle;
+	if (!pixel.isNull() || !angle.isNull()) {
+		_emitted = true;
+		const auto weak = QPointer<KineticScroller>(this);
+		sendWheel(Qt::ScrollMomentum, pixel, angle);
+		if (!weak || _state != Scrolling) {
+			return;
+		}
+	}
 	const auto remaining = std::exp(-kFriction * time) / kFriction;
-	const auto doneX = (std::abs(_flickVelocity.x()) * remaining
-			< kFlickRemainingThreshold)
-		|| (position.x() != std::clamp(
-			position.x(),
-			_range.left(),
-			_range.right()));
-	const auto doneY = (std::abs(_flickVelocity.y()) * remaining
-			< kFlickRemainingThreshold)
-		|| (position.y() != std::clamp(
-			position.y(),
-			_range.top(),
-			_range.bottom()));
+	const auto doneX = std::abs(_flickVelocity.pixel.x()) * remaining
+		< kFlickRemainingThreshold;
+	const auto doneY = std::abs(_flickVelocity.pixel.y()) * remaining
+		< kFlickRemainingThreshold;
 	if (doneX && doneY) {
-		_contentPosition = clamped(position);
 		setState(Inactive);
 	}
+}
+
+void KineticScroller::sendWheel(
+		Qt::ScrollPhase phase,
+		QPoint pixel,
+		QPoint angle) {
+	const auto global = QCursor::pos();
+	auto e = QWheelEvent(
+		_target->mapFromGlobal(global),
+		global,
+		pixel,
+		angle,
+		Qt::NoButton,
+		_modifiers,
+		phase,
+		_inverted,
+		Qt::MouseEventSynthesizedByApplication);
+	e.setTimestamp(crl::now());
+	QCoreApplication::sendEvent(_target, &e);
 }
 
 void KineticScroller::armFrameClock() {
@@ -224,15 +244,11 @@ bool KineticScroller::eventFilter(QObject *object, QEvent *event) {
 	return QObject::eventFilter(object, event);
 }
 
-QPointF KineticScroller::flickPosition(float64 time) const {
-	return _flickFrom
-		+ _flickVelocity * ((1. - std::exp(-kFriction * time)) / kFriction);
-}
-
-QPointF KineticScroller::dragVelocity(crl::time now) const {
+KineticScroller::Velocity KineticScroller::dragVelocity(
+		crl::time now) const {
 	auto first = crl::time(0);
 	auto last = crl::time(0);
-	auto accumulated = QPointF();
+	auto accumulated = Velocity();
 	for (const auto &sample : _history) {
 		if (sample.time < now - kVelocityWindow) {
 			continue;
@@ -240,62 +256,21 @@ QPointF KineticScroller::dragVelocity(crl::time now) const {
 			first = sample.time;
 		}
 		last = sample.time;
-		accumulated += sample.delta;
+		accumulated.angle += sample.angle;
+		accumulated.pixel += sample.pixel;
 	}
 	if (first && last == first) {
 		// Handle a single-event flick (empirically possible).
 		last = now;
 	}
-	return (last > first)
-		? -accumulated * 1000. / float64(last - first)
-		: QPointF();
-}
-
-QPointF KineticScroller::clamped(QPointF position) const {
-	return QPointF(
-		std::clamp(position.x(), _range.left(), _range.right()),
-		std::clamp(position.y(), _range.top(), _range.bottom()));
-}
-
-bool KineticScroller::sendPrepare(QPointF position) {
-	auto prepare = QScrollPrepareEvent(position);
-	prepare.ignore();
-	const auto weak = QPointer<KineticScroller>(this);
-	QCoreApplication::sendEvent(_target, &prepare);
-	if (!weak || !prepare.isAccepted()) {
-		return false;
+	if (last <= first) {
+		return {};
 	}
-	auto range = prepare.contentPosRange();
-	if (range.width() < 0.) {
-		range.setWidth(0.);
-	}
-	if (range.height() < 0.) {
-		range.setHeight(0.);
-	}
-	_range = range;
-	const auto reported = clamped(prepare.contentPos());
-	if (_state == Scrolling) {
-		// Continue the fling from the freshly reported position with
-		// the velocity it has decayed to by now.
-		const auto now = crl::now();
-		_flickVelocity *= std::exp(
-			-kFriction * (now - _flickStarted) / 1000.);
-		_flickFrom = reported;
-		_flickStarted = now;
-	}
-	_contentPosition = reported;
-	return true;
-}
-
-void KineticScroller::sendScroll() {
-	auto event = QScrollEvent(
-		_contentPosition,
-		QPointF(),
-		(_scrollSent
-			? QScrollEvent::ScrollUpdated
-			: QScrollEvent::ScrollStarted));
-	_scrollSent = true;
-	QCoreApplication::sendEvent(_target, &event);
+	const auto scale = 1000. / float64(last - first);
+	return {
+		.angle = accumulated.angle * scale,
+		.pixel = accumulated.pixel * scale,
+	};
 }
 
 void KineticScroller::setState(State state) {
@@ -310,15 +285,12 @@ void KineticScroller::setState(State state) {
 		_stopMousePos = QCursor::pos();
 		armFrameClock();
 	}
-	if (state == Inactive && _scrollSent) {
-		// Mirroring QScroller: the final event goes out after the state
-		// is already Inactive and only if any scroll happened at all.
-		_scrollSent = false;
-		auto event = QScrollEvent(
-			_contentPosition,
-			QPointF(),
-			QScrollEvent::ScrollFinished);
-		QCoreApplication::sendEvent(_target, &event);
+	if (state == Inactive && _emitted) {
+		// Native momentum streams always finish with a ScrollEnd event,
+		// so ours does too - it drives the same end-of-scroll handling
+		// in the host. May destroy `this`, keep it last.
+		_emitted = false;
+		sendWheel(Qt::ScrollEnd, {}, {});
 	}
 }
 

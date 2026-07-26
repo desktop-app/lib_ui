@@ -462,7 +462,7 @@ ScrollArea::ScrollArea(
 		OptionKineticScroller.changes()
 	) | rpl::on_next([=] {
 		_scroller = OptionKineticScroller.value()
-			? std::make_unique<KineticScroller>(this)
+			? std::make_unique<KineticScroller>(viewport())
 			: nullptr;
 	}, lifetime());
 }
@@ -656,62 +656,41 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 						phase);
 			}
 		}
-		if (_scroller) {
-			switch (ev->phase()) {
-			case Qt::ScrollBegin:
-			case Qt::ScrollUpdate: {
-				if (ev->phase() == Qt::ScrollBegin
-					&& !ScrollDelta(ev).isNull()
-					&& _scroller->state() == KineticScroller::Scrolling) {
-					// On macOS, when Qt loses the race detecting that a
-					// momentum phase follows the finger lift, the OS
-					// momentum stream leaks through as ScrollBegin
-					// + ScrollMomentum. A real begin (fingers resting on
-					// the pad) carries a zero delta, so a delta-carrying
-					// begin while our fling runs is that leak - pressing
-					// would catch and kill the fling. If this ever
-					// swallows a real begin, the next ScrollUpdate finds
-					// _wheelPos null and presses instead.
-					return true;
-				}
-				const auto wasNull = _wheelPos.isNull();
-				if (wasNull) {
-					_wheelPos = QPoint(width(), height()) / 2;
-				} else {
-					auto unmultiplied = ScrollDelta(ev);
-					if (_wheelDirectionLocked) {
-						unmultiplied.setX(0);
-					}
-					const auto multiply = ev->modifiers()
-						& (Qt::ControlModifier | Qt::ShiftModifier);
-					_wheelPos += multiply
-						? QPoint(
-							unmultiplied.x() * std::max(width(), 120) / 120.,
-							unmultiplied.y() * std::max(height(), 120) / 120.)
-						: unmultiplied;
-				}
-				// Estimate the velocity by the events' own timestamps:
-				// some transports (e.g. bluetooth) may sometimes deliver
-				// several events at once, and their identical processing times
-				// would break the estimation.
-				_scroller->handleInput(
-					(wasNull
-						? KineticScroller::InputPress
-						: KineticScroller::InputMove),
-					_wheelPos,
-					crl::time(ev->timestamp()));
-			} return true;
-			case Qt::ScrollEnd:
-			case Qt::ScrollMomentum: {
-				if (!_wheelPos.isNull()) {
-					_scroller->handleInput(
-						KineticScroller::InputRelease,
-						_wheelPos,
-						crl::time(ev->timestamp()));
-					_wheelPos = {};
-				}
-			} return true;
+		if (_scroller && ev->phase() != Qt::NoScrollPhase) {
+			// The scroller only observes the gesture stream to measure
+			// the release velocity: the fling comes back through here as
+			// a synthesized ScrollMomentum stream, applied by the same
+			// stock handling below as the finger events (QScrollBar math
+			// consumes the angle channel with 1px granularity).
+			_scroller->handleWheelEvent(ev);
+			if (ev->phase() != Qt::ScrollMomentum) {
+				return QScrollArea::viewportEvent(e);
 			}
+			const auto angle = ev->angleDelta();
+			const auto horizontal = std::abs(angle.x())
+				> std::abs(angle.y());
+			const auto bar = horizontal
+				? horizontalScrollBar()
+				: verticalScrollBar();
+			const auto was = bar->value();
+			const auto weak = base::make_weak(this);
+			const auto result = QScrollArea::viewportEvent(e);
+			if (!weak) {
+				return true;
+			}
+			// A positive (inverted-adjusted) delta scrolls towards the
+			// minimum, matching QScrollBar::wheelEvent. The bare "value
+			// unchanged" is not enough: sub-quantum ticks legitimately
+			// leave it unchanged mid-range while the fraction accumulates.
+			const auto delta = (horizontal ? angle.x() : angle.y())
+				* (ev->inverted() ? -1 : 1);
+			if (bar->value() == was
+				&& ((delta > 0 && was == bar->minimum())
+					|| (delta < 0 && was == bar->maximum()))) {
+				// The fling ran into the end of the range.
+				_scroller->stop();
+			}
+			return result;
 		}
 	}
 	return QScrollArea::viewportEvent(e);
@@ -970,9 +949,6 @@ void ScrollArea::scrollToX(int toLeft, int toRight) {
 
 void ScrollArea::scrollToY(int toTop, int toBottom) {
 	verticalScrollBar()->setValue(computeScrollToY(toTop, toBottom));
-	if (_scroller) {
-		_scroller->resendPrepareEvent();
-	}
 }
 
 void ScrollArea::doSetOwnedWidget(object_ptr<QWidget> w) {

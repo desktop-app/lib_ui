@@ -21,7 +21,6 @@ namespace Ui {
 namespace {
 
 constexpr auto kDefaultWheelScrollLines = 3;
-constexpr auto kMagicScrollMultiplier = 2.5;
 
 class WidgetCreator : public QWidget {
 public:
@@ -273,7 +272,8 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 			style::ConvertScaleExact(point.y()));
 	};
 
-	// Wheel events are synthesized on touchscreens.
+	// Wheel events are synthesized on touchscreens and by the
+	// KineticScroller's fling replay.
 	const auto synthesized = (e->source()
 		== Qt::MouseEventSynthesizedByApplication);
 

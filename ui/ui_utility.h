@@ -24,6 +24,7 @@ class object_ptr;
 namespace Ui {
 
 inline constexpr auto kPixelToAngleDelta = 2;
+inline constexpr auto kMagicScrollMultiplier = 2.5;
 
 template <typename Widget, typename ...Args>
 inline base::unique_qptr<Widget> CreateObject(Args &&...args) {
