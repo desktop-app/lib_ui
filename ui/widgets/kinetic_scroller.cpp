@@ -39,6 +39,14 @@ KineticScroller::KineticScroller(not_null<QWidget*> target)
 , _target(target) {
 }
 
+QPointF KineticScroller::velocity() const {
+	if (_state != Scrolling) {
+		return QPointF();
+	}
+	const auto time = (crl::now() - _flickStarted) / 1000.;
+	return _flickVelocity.pixel * std::exp(-kFriction * time);
+}
+
 void KineticScroller::handleWheelEvent(not_null<QWheelEvent*> e) {
 	if (e->source() == Qt::MouseEventSynthesizedByApplication) {
 		// Our own echo, or the host's touchscreen emulation.

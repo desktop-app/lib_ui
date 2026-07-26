@@ -980,6 +980,21 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 	const auto momentum = (phase == Qt::ScrollMomentum)
 		|| (phase == Qt::ScrollEnd);
 	trackWheelVelocity(phase, delta, crl::time(e->timestamp()));
+	if (_scroller && _scroller->state() == KineticScroller::Scrolling) {
+		// Scrolling here means the event stream is our own fling: its
+		// deltas are truncated to whole pixels per tick, so the velocity
+		// tracked back from them reads zero in the slow tail and would
+		// suppress the edge bounce. The scroller's closed-form velocity
+		// is exact at any instant, use it instead, converted the same
+		// way the applied deltas are.
+		const auto exact = _scroller->velocity() * style::Scale() / 100.;
+		const auto limit = kMaxTrackedVelocity * style::Scale() / 100.;
+		_wheelVelocity = std::clamp(
+			-(_vertical ? exact.y() : exact.x()),
+			-limit,
+			limit);
+		_wheelVelocityTime = crl::now();
+	}
 	if (_ignoreMomentumFromOverscroll) {
 		const auto stopFling = [&] {
 			if (_scroller

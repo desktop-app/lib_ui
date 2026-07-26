@@ -52,6 +52,11 @@ public:
 	[[nodiscard]] State state() const {
 		return _state;
 	}
+	// The exact fling velocity in the stream's raw pixels per second,
+	// non-zero only while Scrolling: the synthesized events truncate it to
+	// whole pixels per tick, so hosts measuring it back from them would read
+	// zero in the slow tail of the fling.
+	[[nodiscard]] QPointF velocity() const;
 	// Never consumes: real events are applied by the host, synthetic ones
 	// (including our own echo) are ignored here. Never sends events back
 	// synchronously either (the fling is paced by the frame clock), so
