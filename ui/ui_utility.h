@@ -75,6 +75,11 @@ void SendPendingMoveResizeEvents(not_null<QWidget*> target);
 	QRect rect = QRect(),
 	QColor bg = QColor(255, 255, 255, 0));
 
+[[nodiscard]] QPixmap GrabOpaque(
+	not_null<QWidget*> target,
+	QRect rect,
+	QColor bg);
+
 void RenderWidget(
 	QPainter &painter,
 	not_null<QWidget*> source,
