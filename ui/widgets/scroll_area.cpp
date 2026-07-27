@@ -122,6 +122,10 @@ void SetupScrollerPhysics(not_null<QScroller*> scroller) {
 	// goes Inactive, drops the press and eats the following moves.
 	// A touchpad has no clicks, so a press should just take over the fling.
 	set(P::MaximumClickThroughVelocity, 0.);
+	// The 5mm dead zone telling a touchscreen tap from a drag is pure loss
+	// here: it re-eats the first 5mm on every re-press and drops sub-5mm
+	// scrolls entirely. Touchpad events are always deliberate scrolls.
+	set(P::DragStartDistance, 0.);
 
 	// QScroller never does the overscroll itself: ScrollArea has none at
 	// all, and ElasticScroll implements its own rubber-band physics fed
