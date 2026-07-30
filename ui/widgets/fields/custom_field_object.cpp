@@ -135,6 +135,14 @@ QSizeF CustomFieldObject::intrinsicSize(
 		const auto height = Text::kQuoteCollapsedLines * line;
 		return QSizeF(doc->pageSize().width() - paddings - skip, height);
 	}
+	const auto object = resolve(format);
+	if (object && !object->semantics().isEmoji) {
+		const auto metrics = object->vertical(_field->_st.style);
+		const auto height = metrics ? metrics->height() : line;
+		return QSizeF(
+			std::max(object->width(), 1),
+			std::max(line * 1., height * 1.));
+	}
 	const auto size = st::emojiSize * 1.;
 	const auto width = size + st::emojiPadding * 2.;
 	const auto height = std::max(line * 1., size);
@@ -173,29 +181,47 @@ void CustomFieldObject::drawObject(
 		}
 		return;
 	}
-	const auto id = format.property(InputField::kCustomEmojiId).toULongLong();
-	if (!id) {
+	const auto object = resolve(format);
+	if (!object) {
 		return;
 	}
-	auto i = _emoji.find(id);
-	if (i == end(_emoji)) {
-		const auto link = format.property(InputField::kCustomEmojiLink);
-		const auto data = InputField::CustomEmojiEntityData(link.toString());
-		if (auto emoji = _factory(data)) {
-			i = _emoji.emplace(id, std::move(emoji)).first;
+	const auto left = int(base::SafeRound(rect.x()));
+	const auto top = int(base::SafeRound(rect.y()));
+	const auto position = [&] {
+		if (object->semantics().isEmoji) {
+			return QPoint(left + st::emojiPadding + _skip, top + _skip);
 		}
-	}
-	if (i == end(_emoji)) {
-		return;
-	}
-	i->second->paint(*painter, {
+		const auto metrics = object->vertical(_field->_st.style);
+		if (!metrics) {
+			return QPoint(left, top);
+		}
+		const auto height = int(std::floor(rect.height()));
+		const auto skip = std::max(height - metrics->height(), 0) / 2;
+		return QPoint(left, top + skip);
+	}();
+	object->paint(*painter, {
 		.textColor = format.foreground().color(),
 		.now = _now,
-		.position = QPoint(
-			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
-			int(base::SafeRound(rect.y())) + _skip),
+		.position = position,
 		.paused = _pausedEmoji && _pausedEmoji(),
 	});
+}
+
+Text::CustomEmoji *CustomFieldObject::resolve(const QTextFormat &format) {
+	const auto link = format.property(InputField::kCustomEmojiLink);
+	const auto data = InputField::CustomEmojiEntityData(link.toString());
+	if (data.isEmpty()) {
+		return nullptr;
+	}
+	auto i = _emoji.find(data);
+	if (i == end(_emoji)) {
+		auto emoji = _factory(data);
+		if (!emoji) {
+			return nullptr;
+		}
+		i = _emoji.emplace(data, std::move(emoji)).first;
+	}
+	return i->second.get();
 }
 
 void CustomFieldObject::clearEmoji() {

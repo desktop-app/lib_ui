@@ -60,6 +60,7 @@ private:
 	using Factory = Fn<std::unique_ptr<Text::CustomEmoji>(QStringView)>;
 	[[nodiscard]] Factory makeFactory();
 	[[nodiscard]] Text::MarkedContext makeFieldContext();
+	[[nodiscard]] Text::CustomEmoji *resolve(const QTextFormat &format);
 
 	const not_null<InputField*> _field;
 	const Text::MarkedContext _context;
@@ -67,7 +68,7 @@ private:
 	const Fn<bool()> _pausedSpoiler;
 	const Factory _factory;
 
-	base::flat_map<uint64, std::unique_ptr<Text::CustomEmoji>> _emoji;
+	base::flat_map<QString, std::unique_ptr<Text::CustomEmoji>> _emoji;
 	base::flat_map<int, Quote> _quotes;
 	crl::time _now = 0;
 	int _skip = 0;

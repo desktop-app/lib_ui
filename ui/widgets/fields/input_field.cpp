@@ -10,7 +10,6 @@
 #include "base/qt_signal_producer.h"
 #include "base/qt/qt_common_adapters.h"
 #include "base/invoke_queued.h"
-#include "base/qthelp_regex.h"
 #include "base/random.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "emoji_suggestions_helper.h"
@@ -466,9 +465,12 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 		return link.toString();
 	}
 	const auto index = link.indexOf('?');
-	return u"%1?%2"_q
-		.arg((index < 0) ? link : base::StringViewMid(link, 0, index))
-		.arg(++GlobalCustomEmojiCounter);
+	const auto data = (index < 0)
+		? link
+		: base::StringViewMid(link, 0, index);
+	return data.toString()
+		+ u"?"_q
+		+ QString::number(++GlobalCustomEmojiCounter);
 }
 
 [[nodiscard]] QString DefaultTagMimeProcessor(QStringView mimeTag) {
@@ -477,13 +479,7 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 }
 
 [[nodiscard]] uint64 CustomEmojiIdFromLink(QStringView link) {
-	const auto skip = InputField::kCustomEmojiTagStart.size();
-	const auto index = link.indexOf('?', skip + 1);
-	return base::StringViewMid(
-		link,
-		skip,
-		(index <= skip) ? -1 : (index - skip)
-	).toULongLong();
+	return InputField::CustomEmojiEntityData(link).toULongLong();
 }
 
 [[nodiscard]] QString CheckFullTextTag(
@@ -3272,9 +3268,14 @@ QString InputField::getTextPart(
 						}
 						result.append(collapsed.text);
 					} else {
-						adjustedLength += emojiText.size() - 1;
-						if (!emojiText.isEmpty()) {
-							result.append(emojiText);
+						const auto replacement = !emojiText.isEmpty()
+							? emojiText
+							: (format.objectType() == kCustomEmojiFormat)
+							? kObjectReplacement
+							: QString();
+						adjustedLength += replacement.size() - 1;
+						if (!replacement.isEmpty()) {
+							result.append(replacement);
 						}
 					}
 					begin = ch + 1;
@@ -5361,16 +5362,18 @@ bool InputField::IsInstantViewAnchorLink(QStringView link) {
 }
 
 QString InputField::CustomEmojiLink(QStringView entityData) {
-	return MakeUniqueCustomEmojiLink(u"%1%2"_q
-		.arg(kCustomEmojiTagStart)
-		.arg(entityData));
+	return MakeUniqueCustomEmojiLink(
+		kCustomEmojiTagStart + entityData.toString());
 }
 
 QString InputField::CustomEmojiEntityData(QStringView link) {
-	const auto match = qthelp::regex_match(
-		"^(\\d+)(\\?|$)",
-		base::StringViewMid(link, kCustomEmojiTagStart.size()));
-	return match ? match->captured(1) : QString();
+	if (!link.startsWith(kCustomEmojiTagStart)) {
+		return QString();
+	}
+	const auto skip = kCustomEmojiTagStart.size();
+	const auto index = link.indexOf('?', skip);
+	const auto length = (index < 0) ? -1 : (index - skip);
+	return base::StringViewMid(link, skip, length).toString();
 }
 
 void InputField::commitMarkdownLinkEdit(
