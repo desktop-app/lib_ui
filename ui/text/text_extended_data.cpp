@@ -94,8 +94,10 @@ void BlockquoteClickHandler::onClick(ClickContext context) const {
 }
 
 CustomEmojiClickHandler::CustomEmojiClickHandler(
-	const std::shared_ptr<CustomEmojiData> &data)
-: _data(data) {
+	const std::shared_ptr<CustomEmojiData> &data,
+	QString entityData)
+: _data(data)
+, _entityData(std::move(entityData)) {
 }
 
 void CustomEmojiClickHandler::onClick(ClickContext context) const {
@@ -106,11 +108,14 @@ void CustomEmojiClickHandler::onClick(ClickContext context) const {
 	if (!data) {
 		return;
 	}
-	if (data->predicate && !data->predicate(data->entityData)) {
+	if (data->pressedLink.get() == this) {
+		data->pressedLink = nullptr;
+	}
+	if (data->predicate && !data->predicate(_entityData)) {
 		return;
 	}
 	if (data->callback) {
-		data->callback(data->entityData, context);
+		data->callback(_entityData, context);
 	}
 }
 

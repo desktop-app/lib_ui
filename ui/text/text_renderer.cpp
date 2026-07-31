@@ -23,6 +23,12 @@ namespace {
 
 constexpr auto kQuoteHeaderTextLarge = 25;
 
+const ClickHandlerPtr &CustomEmojiMismatchLink() {
+	static const ClickHandlerPtr result
+		= std::make_shared<LambdaClickHandler>([] {});
+	return result;
+}
+
 void InitTextItemWithScriptItem(QTextItemInt &ti, const QScriptItem &si) {
 	// explicitly initialize flags so that initFontAttributes can be called
 	// multiple times on the same TextItem
@@ -1918,8 +1924,8 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
 			|| !_t->_extended) {
 			return nullptr;
 		}
-		const auto customEmoji = _t->_extended->customEmoji.get();
-		if (!customEmoji || !customEmoji->link) {
+		const auto customEmoji = _t->_extended->customEmoji;
+		if (!customEmoji) {
 			return nullptr;
 		}
 		const auto customBlock = static_cast<const CustomEmojiBlock*>(block);
@@ -1927,10 +1933,23 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
 		if (!custom->semantics().allowCustomEmojiClick) {
 			return nullptr;
 		}
-		customEmoji->entityData = custom->entityData();
+		const auto entityData = custom->entityData();
 		if (customEmoji->predicate
-			&& !customEmoji->predicate(customEmoji->entityData)) {
+			&& !customEmoji->predicate(entityData)) {
 			return nullptr;
+		}
+		const auto same = customEmoji->link
+			&& (customEmoji->entityData == entityData);
+		if (customEmoji->link
+			&& ClickHandler::getPressed() == customEmoji->link) {
+			customEmoji->pressedLink = customEmoji->link;
+			return same ? customEmoji->link : CustomEmojiMismatchLink();
+		}
+		if (!same) {
+			customEmoji->entityData = entityData;
+			customEmoji->link = std::make_shared<CustomEmojiClickHandler>(
+				customEmoji,
+				entityData);
 		}
 		return customEmoji->link;
 	}

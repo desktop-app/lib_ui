@@ -858,7 +858,6 @@ void String::setCustomEmojiClickHandler(
 	const auto &data = extended->customEmoji;
 	data->predicate = std::move(predicate);
 	data->callback = std::move(callback);
-	data->link = std::make_shared<CustomEmojiClickHandler>(data);
 }
 
 void String::setBlockquoteExpandCallback(

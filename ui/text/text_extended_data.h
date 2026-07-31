@@ -99,20 +99,23 @@ struct CustomEmojiData;
 class CustomEmojiClickHandler final : public ClickHandler {
 public:
 	explicit CustomEmojiClickHandler(
-		const std::shared_ptr<CustomEmojiData> &data);
+		const std::shared_ptr<CustomEmojiData> &data,
+		QString entityData);
 
 	void onClick(ClickContext context) const override;
 
 private:
 	const std::weak_ptr<CustomEmojiData> _data;
+	const QString _entityData;
 
 };
 
 struct CustomEmojiData {
-	std::shared_ptr<CustomEmojiClickHandler> link;
+	ClickHandlerPtr link;
+	ClickHandlerPtr pressedLink;
+	QString entityData;
 	Fn<bool(QStringView)> predicate;
 	Fn<void(QStringView, ClickContext)> callback;
-	mutable QString entityData;
 
 };
 
