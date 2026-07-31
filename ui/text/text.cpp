@@ -853,9 +853,6 @@ bool String::hasCustomEmoji() const {
 void String::setCustomEmojiClickHandler(
 		Fn<bool(QStringView)> predicate,
 		Fn<void(QStringView, ClickContext)> callback) {
-	if (!_hasCustomEmoji) {
-		return;
-	}
 	const auto extended = ensureExtended();
 	extended->customEmoji = std::make_unique<CustomEmojiData>();
 	const auto data = extended->customEmoji.get();
