@@ -854,8 +854,8 @@ void String::setCustomEmojiClickHandler(
 		Fn<bool(QStringView)> predicate,
 		Fn<void(QStringView, ClickContext)> callback) {
 	const auto extended = ensureExtended();
-	extended->customEmoji = std::make_unique<CustomEmojiData>();
-	const auto data = extended->customEmoji.get();
+	extended->customEmoji = std::make_shared<CustomEmojiData>();
+	const auto &data = extended->customEmoji;
 	data->predicate = std::move(predicate);
 	data->callback = std::move(callback);
 	data->link = std::make_shared<CustomEmojiClickHandler>(data);

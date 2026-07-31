@@ -94,7 +94,7 @@ void BlockquoteClickHandler::onClick(ClickContext context) const {
 }
 
 CustomEmojiClickHandler::CustomEmojiClickHandler(
-	not_null<CustomEmojiData*> data)
+	const std::shared_ptr<CustomEmojiData> &data)
 : _data(data) {
 }
 
@@ -102,11 +102,15 @@ void CustomEmojiClickHandler::onClick(ClickContext context) const {
 	if (context.button != Qt::LeftButton) {
 		return;
 	}
-	if (_data->predicate && !_data->predicate(_data->entityData)) {
+	const auto data = _data.lock();
+	if (!data) {
 		return;
 	}
-	if (_data->callback) {
-		_data->callback(_data->entityData, context);
+	if (data->predicate && !data->predicate(data->entityData)) {
+		return;
+	}
+	if (data->callback) {
+		data->callback(data->entityData, context);
 	}
 }
 

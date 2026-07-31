@@ -98,12 +98,13 @@ struct CustomEmojiData;
 
 class CustomEmojiClickHandler final : public ClickHandler {
 public:
-	explicit CustomEmojiClickHandler(not_null<CustomEmojiData*> data);
+	explicit CustomEmojiClickHandler(
+		const std::shared_ptr<CustomEmojiData> &data);
 
 	void onClick(ClickContext context) const override;
 
 private:
-	const not_null<CustomEmojiData*> _data;
+	const std::weak_ptr<CustomEmojiData> _data;
 
 };
 
@@ -119,7 +120,7 @@ struct ExtendedData {
 	std::vector<ClickHandlerPtr> links;
 	std::unique_ptr<QuotesData> quotes;
 	std::unique_ptr<SpoilerData> spoiler;
-	std::unique_ptr<CustomEmojiData> customEmoji;
+	std::shared_ptr<CustomEmojiData> customEmoji;
 	std::vector<Modification> modifications;
 	int32 nextFormattedDateUpdate = 0;
 
