@@ -57,6 +57,7 @@ bool LastCheckCrashed/* = false*/;
 base::options::toggle OptionUseQtRhi({
 	.id = kOptionUseQtRhi,
 	.name = "Use Qt RHI renderer",
+	.description = "Render the main window on the GPU instead of the CPU.",
 	.defaultValue = true,
 	.scope = [] {
 		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
