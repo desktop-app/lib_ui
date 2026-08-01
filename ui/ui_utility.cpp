@@ -272,7 +272,13 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 			style::ConvertScaleExact(point.x()),
 			style::ConvertScaleExact(point.y()));
 	};
-	if (!e->pixelDelta().isNull()) {
+	// A usual wheel mouse on macOS has no pixel deltas, Qt fabricates them
+	// from the accelerated line delta - the angle one is de-accelerated.
+	const auto ignorePixels = ::Platform::IsMac()
+		&& !touch
+		&& (e->phase() == Qt::NoScrollPhase)
+		&& !e->angleDelta().isNull();
+	if (!ignorePixels && !e->pixelDelta().isNull()) {
 		return convert(e->pixelDelta())
 			* ((::Platform::IsWayland() && !touch)
 				? kMagicScrollMultiplier
