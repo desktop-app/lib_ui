@@ -35,6 +35,9 @@
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
 #include <QtGui/QOffscreenSurface>
 #include <QtGui/QSurfaceFormat>
+#if QT_CONFIG(vulkan)
+#include <QtGui/QVulkanInstance>
+#endif // QT_CONFIG(vulkan)
 #endif // !Q_OS_MAC && !Q_OS_WIN
 #endif // Qt >= 6.7
 
@@ -63,6 +66,26 @@ base::options::toggle OptionUseQtRhi({
 		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
 			&& QLibraryInfo::version() >= QVersionNumber(6, 7);
 	},
+	.restartRequired = true,
+});
+
+[[nodiscard]] bool VulkanRhiAvailable() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && QT_CONFIG(vulkan)
+	return !Platform::IsMac()
+		&& !Platform::IsWindows()
+		&& QLibraryInfo::version() >= QVersionNumber(6, 7);
+#else
+	return false;
+#endif
+}
+
+base::options::toggle OptionEnableVulkanRhi({
+	.id = kOptionEnableVulkanRhi,
+	.name = "Enable Vulkan renderer",
+	.description = "Use Vulkan for GPU rendering "
+		"instead of OpenGL when it is available.",
+	.defaultValue = false,
+	.scope = [] { return VulkanRhiAvailable(); },
 	.restartRequired = true,
 });
 
@@ -115,6 +138,40 @@ void CrashCheckStart() {
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if !defined(Q_OS_MAC) && !defined(Q_OS_WIN) && QT_CONFIG(vulkan)
+[[nodiscard]] std::optional<RhiCapabilities> ProbeVulkanCapabilities() {
+	auto instance = QVulkanInstance();
+	if (!instance.create()) {
+		LOG(("RHI: Vulkan instance not available."));
+		return std::nullopt;
+	}
+	auto params = QRhiVulkanInitParams();
+	params.inst = &instance;
+	const auto rhi = std::unique_ptr<QRhi>(
+		QRhi::create(QRhi::Vulkan, &params));
+	if (!rhi) {
+		LOG(("RHI: Vulkan probe failed, no device."));
+		return std::nullopt;
+	}
+	const auto info = rhi->driverInfo();
+	const auto software = (info.deviceType == QRhiDriverInfo::CpuDevice);
+	const auto compute = rhi->isFeatureSupported(QRhi::Compute);
+	LOG(("RHI: Vulkan probe device=%1 software=%2 compute=%3."
+		).arg(QString::fromUtf8(info.deviceName)
+		).arg(software ? "yes" : "no"
+		).arg(compute ? "yes" : "no"));
+	if (software) {
+		LOG(("RHI: Vulkan not chosen, software device."));
+		return std::nullopt;
+	}
+	return RhiCapabilities{
+		.supported = true,
+		.compute = compute,
+		.vulkan = true,
+	};
+}
+#endif // !Q_OS_MAC && !Q_OS_WIN && QT_CONFIG(vulkan)
+
 [[nodiscard]] RhiCapabilities ProbeRhiCapabilities() {
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
 	auto offscreen = std::unique_ptr<QOffscreenSurface>();
@@ -129,6 +186,14 @@ void CrashCheckStart() {
 	auto params = QRhiD3D11InitParams();
 	rhi.reset(QRhi::create(QRhi::D3D11, &params));
 #else // Q_OS_MAC || Q_OS_WIN
+#if QT_CONFIG(vulkan)
+	if (OptionEnableVulkanRhi.value()) {
+		if (const auto vulkan = ProbeVulkanCapabilities()) {
+			return *vulkan;
+		}
+		LOG(("RHI: Falling back to OpenGL."));
+	}
+#endif // QT_CONFIG(vulkan)
 	const auto tryCreate = [&](QSurfaceFormat format) {
 		offscreen.reset(QRhiGles2InitParams::newFallbackSurface(format));
 		if (!offscreen) {
@@ -169,6 +234,7 @@ void CrashCheckStart() {
 } // namespace
 
 const char kOptionUseQtRhi[] = "use-qt-rhi";
+const char kOptionEnableVulkanRhi[] = "enable-vulkan-rhi";
 
 Capabilities CheckCapabilities(QWidget *widget) {
 	if (WidgetsRhiSupported()) {
@@ -350,6 +416,10 @@ bool WidgetsRhiEnabled() {
 
 bool WidgetsRhiSupported() {
 	return WidgetsRhiEnabled() && CheckRhiCapabilities().supported;
+}
+
+bool WidgetsRhiVulkan() {
+	return WidgetsRhiSupported() && CheckRhiCapabilities().vulkan;
 }
 
 RhiCapabilities CheckRhiCapabilities() {
