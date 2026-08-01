@@ -48,7 +48,7 @@ private:
 
 class Color {
 public:
-	Color(Qt::Initialization = Qt::Uninitialized) {
+	constexpr Color(Qt::Initialization = Qt::Uninitialized) {
 	}
 	Color(const Color &other) = default;
 	Color &operator=(const Color &other) = default;

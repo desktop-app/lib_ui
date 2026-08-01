@@ -62,7 +62,7 @@ using FontVariants = std::array<Font, kFontVariants>;
 class FontData;
 class Font final {
 public:
-	Font(Qt::Initialization = Qt::Uninitialized) {
+	constexpr Font(Qt::Initialization = Qt::Uninitialized) {
 	}
 	Font(int size, FontFlags flags, const QString &family);
 	Font(int size, FontFlags flags, int family);

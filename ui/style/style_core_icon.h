@@ -19,12 +19,12 @@ namespace internal {
 class IconMask {
 public:
 	template <int N>
-	IconMask(const uchar (&data)[N]) : _data(data), _size(N) {
+	constexpr IconMask(const uchar (&data)[N]) : _data(data), _size(N) {
 		static_assert(N > 0, "invalid image data");
 	}
 
 	template <int N>
-	IconMask(const uchar (&data)[N], QSize rendered)
+	constexpr IconMask(const uchar (&data)[N], QSize rendered)
 	: _data(data)
 	, _size(N)
 	, _rendered(rendered) {
@@ -188,7 +188,7 @@ private:
 
 class Icon {
 public:
-	Icon(Qt::Initialization = Qt::Uninitialized) {
+	constexpr Icon(Qt::Initialization = Qt::Uninitialized) {
 	}
 
 	template <typename ... MonoIcons>
