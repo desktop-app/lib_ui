@@ -177,7 +177,8 @@ void AddUnique(
 		const EntityInText &entity) {
 	const auto textSize = int(text.text.size());
 	const auto from = std::clamp(entity.offset(), 0, textSize);
-	const auto till = std::clamp(entity.offset() + entity.length(), 0, textSize);
+	const auto till
+		= std::clamp(entity.offset() + entity.length(), 0, textSize);
 	return (till > from)
 		? QStringView(text.text).mid(from, till - from).toString()
 		: QString();
@@ -501,9 +502,9 @@ void SwitchTags(
 
 void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 	// EscapeForHtml() instead of QString::toHtmlEscaped(): the latter goes
-	// through std::u16string_view::find_first_of(), which hangs in an infinite
-	// loop on Windows ARM64 builds because of a bug in the MSVC STL Neon
-	// implementation (_Impl_first_neon in vector_algorithms.cpp).
+	// through std::u16string_view::find_first_of(), which hangs in an
+	// infinite loop on Windows ARM64 builds because of a bug in the MSVC
+	// STL Neon implementation (_Impl_first_neon in vector_algorithms.cpp).
 	auto start = 0;
 	const auto size = text.size();
 	for (auto i = 0; i != size; ++i) {
@@ -709,7 +710,8 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 	const auto source = u"&"_q
 		+ key
 		+ u";"_q;
-	const auto decoded = QTextDocumentFragment::fromHtml(source).toPlainText();
+	const auto decoded
+		= QTextDocumentFragment::fromHtml(source).toPlainText();
 	const auto result = (decoded.isEmpty() || decoded == source)
 		? std::optional<QString>()
 		: std::make_optional(decoded);
@@ -786,7 +788,8 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		} while (from != till && IsAttributeNameChar(html[from]));
 
 		auto attribute = HtmlAttribute();
-		attribute.name = html.mid(nameStart, from - nameStart).toString().toLower();
+		attribute.name
+			= html.mid(nameStart, from - nameStart).toString().toLower();
 		while (from != till && html[from].isSpace()) {
 			++from;
 		}
@@ -984,8 +987,10 @@ void RemoveRedundantAnchorLink(ParseState &state, const OpenAnchor &anchor) {
 	if (till <= offset) {
 		return;
 	}
-	const auto visible = QStringView(state.result.text).mid(offset, till - offset);
-	if (anchor.href != UrlClickHandler::EncodeForOpening(visible.toString())) {
+	const auto visible
+		= QStringView(state.result.text).mid(offset, till - offset);
+	if (anchor.href
+		!= UrlClickHandler::EncodeForOpening(visible.toString())) {
 		return;
 	}
 	auto removed = false;
@@ -995,7 +1000,8 @@ void RemoveRedundantAnchorLink(ParseState &state, const OpenAnchor &anchor) {
 			++i;
 			continue;
 		}
-		const auto updated = TextUtilities::TagWithRemoved(i->id, anchor.href);
+		const auto updated
+			= TextUtilities::TagWithRemoved(i->id, anchor.href);
 		if (updated == i->id) {
 			++i;
 			continue;
@@ -1354,8 +1360,8 @@ void TrimTrailingStructuralNewlines(ParseState &state) {
 QString EscapeForHtml(QStringView text) {
 	// Mirrors QString::toHtmlEscaped(), escaping & " < > as HTML entities.
 	// We do it by hand because toHtmlEscaped() goes through
-	// std::u16string_view::find_first_of(), which hangs in an infinite loop on
-	// Windows ARM64 builds (a bug in the MSVC STL Neon implementation,
+	// std::u16string_view::find_first_of(), which hangs in an infinite loop
+	// on Windows ARM64 builds (a bug in the MSVC STL Neon implementation,
 	// _Impl_first_neon in vector_algorithms.cpp).
 	auto result = QString();
 	result.reserve(text.size());
