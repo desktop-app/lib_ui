@@ -23,6 +23,7 @@ namespace TextUtilities {
 namespace {
 
 constexpr auto kMinimalBoldFontWeight = 600;
+constexpr auto kCellSourceLengthFactor = 16;
 
 enum class HtmlTag {
 	Pre,
@@ -70,9 +71,54 @@ struct StyleDelta {
 	}
 };
 
-struct OpenStyledElement {
+struct StyleRule {
+	StyleDelta delta;
+	HtmlTableAlignment alignment = HtmlTableAlignment::Default;
+
+	[[nodiscard]] bool empty() const {
+		return delta.empty()
+			&& (alignment == HtmlTableAlignment::Default);
+	}
+};
+
+using StyleClasses = QHash<QString, StyleRule>;
+
+struct OpenElement {
 	QString name;
 	StyleDelta delta;
+};
+
+struct OpenElements {
+	std::vector<OpenElement> list;
+	QHash<QString, int> counts;
+
+	[[nodiscard]] bool empty() const {
+		return list.empty();
+	}
+	[[nodiscard]] int lastIndexOf(const QString &name) const {
+		if (counts.value(name) <= 0) {
+			return -1;
+		}
+		for (auto i = int(list.size()); i != 0; --i) {
+			if (list[i - 1].name == name) {
+				return i - 1;
+			}
+		}
+		return -1;
+	}
+	void push(const QString &name, const StyleDelta &delta = StyleDelta()) {
+		++counts[name];
+		list.push_back({ name, delta });
+	}
+	void eraseFrom(int index) {
+		for (auto i = int(list.size()); i != index; --i) {
+			const auto j = counts.find(list[i - 1].name);
+			if ((j != counts.end()) && (--j.value() <= 0)) {
+				counts.erase(j);
+			}
+		}
+		list.erase(list.begin() + index, list.end());
+	}
 };
 
 struct ParseState {
@@ -80,9 +126,10 @@ struct ParseState {
 	TextWithTags::Tags tags;
 	ActiveTags active;
 	std::vector<OpenAnchor> openAnchors;
-	std::vector<OpenStyledElement> styledElements;
+	OpenElements styledElements;
+	const StyleClasses *classes = nullptr;
 	NamedEntityCache entityCache;
-	std::vector<QString> hidden;
+	OpenElements hidden;
 	int trailingStructuralNewlines = 0;
 	bool pendingWhitespace = false;
 	QString pendingWhitespaceTagId;
@@ -1322,35 +1369,114 @@ template <std::size_t Size>
 	return ok && (weight >= kMinimalBoldFontWeight);
 }
 
-[[nodiscard]] StyleDelta StyleDeltaFromAttributes(
-		const std::vector<HtmlAttribute> &attributes) {
+[[nodiscard]] StyleDelta StyleDeltaFromDeclarations(QStringView style) {
 	auto result = StyleDelta();
-	for (const auto &attribute : attributes) {
-		if (!attribute.hasValue || (attribute.name != u"style"_q)) {
-			continue;
+	result.bold = CssWeightIsBold(
+		CssDeclarationValue(style, u"font-weight"_q));
+	const auto fontStyle = CssDeclarationValue(style, u"font-style"_q);
+	result.italic = !fontStyle.compare(u"italic"_q, Qt::CaseInsensitive)
+		|| !fontStyle.compare(u"oblique"_q, Qt::CaseInsensitive);
+	static const auto kDecorations = std::array{
+		u"text-decoration"_q,
+		u"text-decoration-line"_q,
+	};
+	for (const auto &name : kDecorations) {
+		const auto value = CssDeclarationValue(style, name);
+		if (value.contains(u"underline"_q, Qt::CaseInsensitive)) {
+			result.underline = true;
 		}
-		const auto style = QStringView(attribute.value);
-		result.bold = CssWeightIsBold(
-			CssDeclarationValue(style, u"font-weight"_q));
-		const auto fontStyle = CssDeclarationValue(style, u"font-style"_q);
-		result.italic = !fontStyle.compare(u"italic"_q, Qt::CaseInsensitive)
-			|| !fontStyle.compare(u"oblique"_q, Qt::CaseInsensitive);
-		static const auto kDecorations = std::array{
-			u"text-decoration"_q,
-			u"text-decoration-line"_q,
-		};
-		for (const auto &name : kDecorations) {
-			const auto value = CssDeclarationValue(style, name);
-			if (value.contains(u"underline"_q, Qt::CaseInsensitive)) {
-				result.underline = true;
-			}
-			if (value.contains(u"line-through"_q, Qt::CaseInsensitive)) {
-				result.strikeOut = true;
-			}
+		if (value.contains(u"line-through"_q, Qt::CaseInsensitive)) {
+			result.strikeOut = true;
 		}
-		break;
 	}
 	return result;
+}
+
+void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
+	result.bold = result.bold || delta.bold;
+	result.italic = result.italic || delta.italic;
+	result.underline = result.underline || delta.underline;
+	result.strikeOut = result.strikeOut || delta.strikeOut;
+}
+
+[[nodiscard]] HtmlTableAlignment ParseAlignment(QStringView value) {
+	if (value.contains(u"right"_q, Qt::CaseInsensitive)) {
+		return HtmlTableAlignment::Right;
+	} else if (value.contains(u"center"_q, Qt::CaseInsensitive)) {
+		return HtmlTableAlignment::Center;
+	} else if (value.contains(u"left"_q, Qt::CaseInsensitive)) {
+		return HtmlTableAlignment::Left;
+	}
+	return HtmlTableAlignment::Default;
+}
+
+[[nodiscard]] StyleRule StyleRuleFromDeclarations(QStringView style) {
+	return {
+		.delta = StyleDeltaFromDeclarations(style),
+		.alignment = ParseAlignment(
+			CssDeclarationValue(style, u"text-align"_q)),
+	};
+}
+
+[[nodiscard]] StyleRule StyleRuleFromClasses(
+		QStringView value,
+		const StyleClasses &classes) {
+	auto result = StyleRule();
+	const auto size = int(value.size());
+	for (auto from = 0; from < size;) {
+		while (from < size && value[from].isSpace()) {
+			++from;
+		}
+		auto till = from;
+		while (till < size && !value[till].isSpace()) {
+			++till;
+		}
+		if (till > from) {
+			const auto name = value.mid(from, till - from).toString();
+			if (const auto i = classes.find(name); i != classes.end()) {
+				MergeStyleDelta(result.delta, i->delta);
+				if (i->alignment != HtmlTableAlignment::Default) {
+					result.alignment = i->alignment;
+				}
+			}
+		}
+		from = till;
+	}
+	return result;
+}
+
+[[nodiscard]] StyleRule StyleRuleFromAttributes(
+		const std::vector<HtmlAttribute> &attributes,
+		const StyleClasses *classes) {
+	auto fromClasses = StyleRule();
+	auto inlined = StyleRule();
+	auto align = HtmlTableAlignment::Default;
+	for (const auto &attribute : attributes) {
+		if (!attribute.hasValue) {
+			continue;
+		} else if (attribute.name == u"style"_q) {
+			inlined = StyleRuleFromDeclarations(attribute.value);
+		} else if (attribute.name == u"align"_q) {
+			align = ParseAlignment(attribute.value);
+		} else if (classes && (attribute.name == u"class"_q)) {
+			fromClasses = StyleRuleFromClasses(attribute.value, *classes);
+		}
+	}
+	auto result = StyleRule();
+	MergeStyleDelta(result.delta, fromClasses.delta);
+	MergeStyleDelta(result.delta, inlined.delta);
+	result.alignment = (inlined.alignment != HtmlTableAlignment::Default)
+		? inlined.alignment
+		: (fromClasses.alignment != HtmlTableAlignment::Default)
+		? fromClasses.alignment
+		: align;
+	return result;
+}
+
+[[nodiscard]] StyleDelta StyleDeltaFromAttributes(
+		const std::vector<HtmlAttribute> &attributes,
+		const StyleClasses *classes) {
+	return StyleRuleFromAttributes(attributes, classes).delta;
 }
 
 void ApplyStyleDelta(
@@ -1395,13 +1521,9 @@ void UpdateActive(ActiveTags &active, HtmlTag tag, bool closing) {
 }
 
 void CloseHiddenElement(ParseState &state, const QString &name) {
-	for (auto i = state.hidden.size(); i != 0; --i) {
-		if (state.hidden[i - 1] == name) {
-			state.hidden.erase(
-				state.hidden.begin() + i - 1,
-				state.hidden.end());
-			return;
-		}
+	const auto index = state.hidden.lastIndexOf(name);
+	if (index >= 0) {
+		state.hidden.eraseFrom(index);
 	}
 }
 
@@ -1415,6 +1537,8 @@ void CloseHiddenElement(ParseState &state, const QString &name) {
 		u"hr"_q,
 		u"img"_q,
 		u"input"_q,
+		u"link"_q,
+		u"meta"_q,
 		u"param"_q,
 		u"source"_q,
 		u"track"_q,
@@ -1429,21 +1553,15 @@ void CloseHiddenElement(ParseState &state, const QString &name) {
 }
 
 void CloseStyledElement(ParseState &state, const QString &name) {
-	for (auto i = state.styledElements.size(); i != 0; --i) {
-		if (state.styledElements[i - 1].name != name) {
-			continue;
-		}
-		for (auto j = state.styledElements.size(); j != i - 1; --j) {
-			ApplyStyleDelta(
-				state.active,
-				state.styledElements[j - 1].delta,
-				true);
-		}
-		state.styledElements.erase(
-			state.styledElements.begin() + i - 1,
-			state.styledElements.end());
+	const auto index = state.styledElements.lastIndexOf(name);
+	if (index < 0) {
 		return;
 	}
+	auto &list = state.styledElements.list;
+	for (auto i = int(list.size()); i != index; --i) {
+		ApplyStyleDelta(state.active, list[i - 1].delta, true);
+	}
+	state.styledElements.eraseFrom(index);
 }
 
 void ProcessTag(
@@ -1455,15 +1573,16 @@ void ProcessTag(
 	if (!state.hidden.empty()) {
 		if (closing) {
 			CloseHiddenElement(state, name);
-		} else if (!selfClosing) {
-			state.hidden.push_back(name);
+		} else if (!selfClosing && !IsVoidElement(name)) {
+			state.hidden.push(name);
 		}
 		return;
 	}
 	if (!closing
 		&& !selfClosing
+		&& !IsVoidElement(name)
 		&& (IsHiddenElement(name) || IsHiddenByAttributes(attributes))) {
-		state.hidden.push_back(name);
+		state.hidden.push(name);
 		return;
 	}
 	if (!closing && name == u"br"_q) {
@@ -1497,9 +1616,11 @@ void ProcessTag(
 		if (closing) {
 			CloseStyledElement(state, name);
 		} else if (!selfClosing) {
-			auto delta = StyleDeltaFromAttributes(attributes);
+			const auto delta = StyleDeltaFromAttributes(
+				attributes,
+				state.classes);
 			ApplyStyleDelta(state.active, delta, false);
-			state.styledElements.push_back({ name, delta });
+			state.styledElements.push(name, delta);
 		}
 	}
 	if (closing && blockBoundary) {
@@ -1507,25 +1628,494 @@ void ProcessTag(
 	}
 }
 
-void TrimTrailingStructuralNewlines(ParseState &state) {
-	if (state.trailingStructuralNewlines <= 0) {
+void TruncateTextWithTags(TextWithTags &text, int limit) {
+	auto length = std::max(limit, 0);
+	if (length >= int(text.text.size())) {
 		return;
+	} else if ((length > 0) && text.text[length - 1].isHighSurrogate()) {
+		--length;
 	}
-	auto &text = state.result;
-	const auto length = text.text.size() - state.trailingStructuralNewlines;
 	text.text.truncate(length);
 	for (auto i = text.tags.begin(); i != text.tags.end();) {
-		const auto till = i->offset + i->length;
 		if (i->offset >= length) {
 			i = text.tags.erase(i);
 		} else {
-			if (till > length) {
+			if (i->offset + i->length > length) {
 				i->length = length - i->offset;
 			}
 			++i;
 		}
 	}
+}
+
+void TrimTrailingStructuralNewlines(ParseState &state) {
+	if (state.trailingStructuralNewlines <= 0) {
+		return;
+	}
+	TruncateTextWithTags(
+		state.result,
+		int(state.result.text.size()) - state.trailingStructuralNewlines);
 	state.trailingStructuralNewlines = 0;
+}
+
+struct ParsedFragment {
+	TextWithTags text;
+	bool removedRedundantLinks = false;
+};
+
+[[nodiscard]] ParsedFragment ParseFragment(
+		QStringView html,
+		const StyleDelta &outer = {},
+		const StyleClasses *classes = nullptr) {
+	auto state = ParseState();
+	state.classes = classes;
+	ApplyStyleDelta(state.active, outer, false);
+	for (auto i = 0, size = int(html.size()); i != size;) {
+		const auto nextTag = html.indexOf(QChar('<'), i);
+		if (nextTag < 0) {
+			if (state.hidden.empty()) {
+				AppendText(state, html.mid(i));
+			}
+			break;
+		}
+		if (nextTag > i && state.hidden.empty()) {
+			AppendText(state, html.mid(i, nextTag - i));
+		}
+		i = nextTag;
+		if (i + 4 <= size
+			&& HasSequence(html, i, u"<!--"_q)) {
+			const auto end = FindSequence(html, i + 4, u"-->"_q);
+			i = (end < 0) ? size : end + 3;
+			continue;
+		} else if (i + 2 <= size
+			&& (html[i + 1] == '!'
+				|| html[i + 1] == '?')) {
+			const auto end = FindTagEnd(html, i + 2);
+			i = (end < 0) ? size : end + 1;
+			continue;
+		}
+		auto tagStart = i + 1;
+		auto closing = false;
+		if (tagStart != size && html[tagStart] == '/') {
+			closing = true;
+			++tagStart;
+		}
+		const auto tagEnd = FindTagEnd(html, tagStart);
+		if (tagEnd < 0) {
+			if (state.hidden.empty()) {
+				AppendText(state, html.mid(i));
+			}
+			break;
+		}
+		auto nameEnd = tagStart;
+		const auto name = ReadTagName(html, tagStart, tagEnd, &nameEnd);
+		if (name.isEmpty()) {
+			if (state.hidden.empty()) {
+				AppendText(state, html.mid(i, 1));
+			}
+			++i;
+			continue;
+		}
+		auto attributes = std::vector<HtmlAttribute>();
+		if (!closing) {
+			attributes = ReadAttributes(
+				html,
+				nameEnd,
+				tagEnd,
+				state.entityCache);
+		}
+		ProcessTag(
+			state,
+			name,
+			attributes,
+			closing,
+			IsSelfClosing(html, tagStart, tagEnd));
+		i = tagEnd + 1;
+	}
+	state.result.tags = SimplifyParserTags(std::move(state.tags));
+	TrimTrailingStructuralNewlines(state);
+	return {
+		.text = std::move(state.result),
+		.removedRedundantLinks = state.removedRedundantLinks,
+	};
+}
+
+struct TableScanCell {
+	int contentFrom = 0;
+	int contentTill = 0;
+	int colspan = 1;
+	int rowspan = 1;
+	bool header = false;
+	HtmlTableAlignment alignment = HtmlTableAlignment::Default;
+	StyleDelta style;
+};
+
+struct TableScanRow {
+	std::vector<TableScanCell> cells;
+};
+
+struct TableScanResult {
+	std::vector<TableScanRow> rows;
+	int sourceTill = 0;
+	bool truncated = false;
+};
+
+[[nodiscard]] const QString *AttributeValue(
+		const std::vector<HtmlAttribute> &attributes,
+		const QString &name) {
+	for (const auto &attribute : attributes) {
+		if (attribute.hasValue && attribute.name == name) {
+			return &attribute.value;
+		}
+	}
+	return nullptr;
+}
+
+[[nodiscard]] int AttributeSpan(
+		const std::vector<HtmlAttribute> &attributes,
+		const QString &name,
+		int limit) {
+	const auto value = AttributeValue(attributes, name);
+	if (!value) {
+		return 1;
+	}
+	auto ok = false;
+	const auto parsed = value->trimmed().toInt(&ok);
+	return ok ? std::clamp(parsed, 1, limit) : 1;
+}
+
+[[nodiscard]] bool NameIsCellStart(const QString &name) {
+	return (name == u"td"_q) || (name == u"th"_q);
+}
+
+[[nodiscard]] int FindTagStart(QStringView html, QStringView name, int from) {
+	for (auto i = from;;) {
+		const auto index = html.indexOf(name, i, Qt::CaseInsensitive);
+		if (index < 0) {
+			return -1;
+		}
+		const auto after = index + int(name.size());
+		if (after >= int(html.size())) {
+			return -1;
+		}
+		const auto next = html[after];
+		if (next.isSpace() || (next == '>') || (next == '/')) {
+			return index;
+		}
+		i = index + 1;
+	}
+}
+
+[[nodiscard]] QString StyleClassName(QStringView selector) {
+	const auto trimmed = selector.trimmed();
+	const auto dot = trimmed.lastIndexOf(QChar('.'));
+	if (dot < 0) {
+		return QString();
+	}
+	const auto name = trimmed.mid(dot + 1);
+	if (name.isEmpty()) {
+		return QString();
+	}
+	for (const auto ch : name) {
+		if (!ch.isLetterOrNumber() && (ch != '-') && (ch != '_')) {
+			return QString();
+		}
+	}
+	return name.toString();
+}
+
+void ParseStyleRules(QStringView css, not_null<StyleClasses*> classes) {
+	const auto size = int(css.size());
+	for (auto from = 0; from < size;) {
+		const auto open = css.indexOf(QChar('{'), from);
+		if (open < 0) {
+			return;
+		}
+		const auto close = css.indexOf(QChar('}'), open + 1);
+		const auto till = (close < 0) ? size : close;
+		const auto rule = StyleRuleFromDeclarations(
+			css.mid(open + 1, till - open - 1));
+		if (!rule.empty()) {
+			const auto selectors = css.mid(from, open - from);
+			const auto count = int(selectors.size());
+			for (auto start = 0; start <= count;) {
+				auto end = selectors.indexOf(QChar(','), start);
+				if (end < 0) {
+					end = count;
+				}
+				const auto name = StyleClassName(
+					selectors.mid(start, end - start));
+				if (!name.isEmpty()) {
+					auto &entry = (*classes)[name];
+					MergeStyleDelta(entry.delta, rule.delta);
+					if (rule.alignment != HtmlTableAlignment::Default) {
+						entry.alignment = rule.alignment;
+					}
+				}
+				start = end + 1;
+			}
+		}
+		if (close < 0) {
+			return;
+		}
+		from = close + 1;
+	}
+}
+
+[[nodiscard]] StyleClasses ParseStyleClasses(QStringView html) {
+	auto result = StyleClasses();
+	for (auto i = 0;;) {
+		const auto open = FindTagStart(html, u"<style"_q, i);
+		if (open < 0) {
+			return result;
+		}
+		const auto contentFrom = FindTagEnd(html, open + 6);
+		if (contentFrom < 0) {
+			return result;
+		}
+		const auto close = html.indexOf(
+			u"</style"_q,
+			contentFrom,
+			Qt::CaseInsensitive);
+		const auto contentTill = (close < 0) ? int(html.size()) : close;
+		ParseStyleRules(
+			html.mid(contentFrom + 1, contentTill - contentFrom - 1),
+			&result);
+		if (close < 0) {
+			return result;
+		}
+		i = close + 7;
+	}
+}
+
+[[nodiscard]] TableScanResult ScanTable(
+		QStringView html,
+		int from,
+		const HtmlTableLimits &limits,
+		const StyleClasses &classes) {
+	auto result = TableScanResult();
+	auto entityCache = NamedEntityCache();
+	auto hidden = OpenElements();
+	auto depth = 0;
+	auto headerSection = 0;
+	auto cell = std::optional<TableScanCell>();
+	auto row = std::optional<TableScanRow>();
+	auto cells = 0;
+	auto finished = false;
+	auto skippedRow = false;
+
+	const auto finishCell = [&](int till) {
+		if (!cell || !row) {
+			return;
+		}
+		cell->contentTill = std::max(till, cell->contentFrom);
+		row->cells.push_back(*cell);
+		cell = std::nullopt;
+	};
+	const auto finishRow = [&](int till) {
+		finishCell(till);
+		if (!row) {
+			return;
+		}
+		if (!row->cells.empty()) {
+			result.rows.push_back(std::move(*row));
+		}
+		row = std::nullopt;
+	};
+
+	for (auto i = from, size = int(html.size()); i != size && !finished;) {
+		const auto nextTag = html.indexOf(QChar('<'), i);
+		if (nextTag < 0) {
+			break;
+		}
+		i = nextTag;
+		if (i + 4 <= size && HasSequence(html, i, u"<!--"_q)) {
+			const auto end = FindSequence(html, i + 4, u"-->"_q);
+			i = (end < 0) ? size : end + 3;
+			continue;
+		} else if (i + 2 <= size
+			&& (html[i + 1] == '!' || html[i + 1] == '?')) {
+			const auto end = FindTagEnd(html, i + 2);
+			i = (end < 0) ? size : end + 1;
+			continue;
+		}
+		auto tagStart = i + 1;
+		auto closing = false;
+		if (tagStart != size && html[tagStart] == '/') {
+			closing = true;
+			++tagStart;
+		}
+		const auto tagEnd = FindTagEnd(html, tagStart);
+		if (tagEnd < 0) {
+			break;
+		}
+		auto nameEnd = tagStart;
+		const auto name = ReadTagName(html, tagStart, tagEnd, &nameEnd);
+		if (name.isEmpty()) {
+			++i;
+			continue;
+		}
+		const auto selfClosing = IsSelfClosing(html, tagStart, tagEnd);
+		const auto tagFrom = i;
+		i = tagEnd + 1;
+
+		if (!hidden.empty()) {
+			if (closing) {
+				const auto index = hidden.lastIndexOf(name);
+				if (index >= 0) {
+					hidden.eraseFrom(index);
+				}
+			} else if (!selfClosing && !IsVoidElement(name)) {
+				hidden.push(name);
+			}
+			continue;
+		} else if (!closing
+			&& !selfClosing
+			&& !IsVoidElement(name)
+			&& IsHiddenElement(name)) {
+			hidden.push(name);
+			continue;
+		}
+
+		if (name == u"table"_q) {
+			if (closing) {
+				if (depth <= 1) {
+					finishRow(tagFrom);
+					result.sourceTill = i;
+					finished = true;
+				} else {
+					--depth;
+				}
+			} else if (!selfClosing) {
+				++depth;
+			}
+			continue;
+		} else if (!depth || (depth > 1)) {
+			continue;
+		}
+
+		if (name == u"thead"_q) {
+			if (!selfClosing) {
+				headerSection += closing ? -1 : 1;
+				headerSection = std::max(headerSection, 0);
+			}
+		} else if (!closing
+			&& ((name == u"tbody"_q) || (name == u"tfoot"_q))) {
+			headerSection = 0;
+		} else if (name == u"tr"_q) {
+			finishRow(tagFrom);
+			skippedRow = false;
+			if (!closing && !selfClosing) {
+				if (int(result.rows.size()) >= limits.maxRows) {
+					result.truncated = true;
+					finished = true;
+					continue;
+				}
+				const auto attributes = ReadAttributes(
+					html,
+					nameEnd,
+					tagEnd,
+					entityCache);
+				if (IsHiddenByAttributes(attributes)) {
+					skippedRow = true;
+					continue;
+				}
+				row = TableScanRow();
+			}
+		} else if (NameIsCellStart(name)) {
+			if (skippedRow) {
+				continue;
+			}
+			finishCell(tagFrom);
+			if (closing || selfClosing) {
+				continue;
+			} else if (cells >= limits.maxCells) {
+				result.truncated = true;
+				finished = true;
+				continue;
+			} else if (!row) {
+				row = TableScanRow();
+			}
+			++cells;
+			const auto attributes = ReadAttributes(
+				html,
+				nameEnd,
+				tagEnd,
+				entityCache);
+			const auto rule = StyleRuleFromAttributes(attributes, &classes);
+			cell = TableScanCell{
+				.contentFrom = i,
+				.contentTill = i,
+				.colspan = AttributeSpan(
+					attributes,
+					u"colspan"_q,
+					limits.maxColumns),
+				.rowspan = AttributeSpan(
+					attributes,
+					u"rowspan"_q,
+					limits.maxRows),
+				.header = (name == u"th"_q) || (headerSection > 0),
+				.alignment = rule.alignment,
+				.style = rule.delta,
+			};
+			if (IsHiddenByAttributes(attributes)) {
+				finishCell(i);
+			}
+		}
+	}
+	finishRow(int(html.size()));
+	if (!result.sourceTill) {
+		result.sourceTill = int(html.size());
+	}
+	return result;
+}
+
+void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
+	auto spans = std::vector<int>();
+	auto used = std::vector<int>();
+	used.reserve(table.rows.size());
+	for (auto &row : table.rows) {
+		auto column = 0;
+		auto kept = 0;
+		for (auto &cell : row.cells) {
+			while ((column < int(spans.size())) && (spans[column] > 0)) {
+				++column;
+			}
+			if (column + cell.colspan > limits.maxColumns) {
+				table.truncated = true;
+				break;
+			}
+			if (int(spans.size()) < column + cell.colspan) {
+				spans.resize(column + cell.colspan, 0);
+			}
+			for (auto j = 0; j != cell.colspan; ++j) {
+				spans[column + j] = cell.rowspan;
+			}
+			column += cell.colspan;
+			++kept;
+		}
+		row.cells.resize(kept);
+		auto accounted = column;
+		auto extent = column;
+		for (auto j = column; j != int(spans.size()); ++j) {
+			if (spans[j] > 0) {
+				++accounted;
+				extent = j + 1;
+			}
+		}
+		used.push_back(accounted);
+		table.columns = std::max(table.columns, extent);
+		for (auto &value : spans) {
+			if (value > 0) {
+				--value;
+			}
+		}
+	}
+	for (auto i = 0, count = int(table.rows.size()); i != count; ++i) {
+		for (auto j = used[i]; j < table.columns; ++j) {
+			table.rows[i].cells.push_back(HtmlTableCell());
+		}
+	}
 }
 
 } // namespace
@@ -1636,75 +2226,78 @@ QString TextForMimeDataToHtml(const TextForMimeData &text) {
 }
 
 std::optional<TextWithTags> TextWithTagsFromHtml(QStringView html) {
-	auto state = ParseState();
-	for (auto i = 0, size = int(html.size()); i != size;) {
-		const auto nextTag = html.indexOf(QChar('<'), i);
-		if (nextTag < 0) {
-			if (state.hidden.empty()) {
-				AppendText(state, html.mid(i));
-			}
-			break;
-		}
-		if (nextTag > i && state.hidden.empty()) {
-			AppendText(state, html.mid(i, nextTag - i));
-		}
-		i = nextTag;
-		if (i + 4 <= size
-			&& HasSequence(html, i, u"<!--"_q)) {
-			const auto end = FindSequence(html, i + 4, u"-->"_q);
-			i = (end < 0) ? size : end + 3;
-			continue;
-		} else if (i + 2 <= size
-			&& (html[i + 1] == '!'
-				|| html[i + 1] == '?')) {
-			const auto end = FindTagEnd(html, i + 2);
-			i = (end < 0) ? size : end + 1;
-			continue;
-		}
-		auto tagStart = i + 1;
-		auto closing = false;
-		if (tagStart != size && html[tagStart] == '/') {
-			closing = true;
-			++tagStart;
-		}
-		const auto tagEnd = FindTagEnd(html, tagStart);
-		if (tagEnd < 0) {
-			if (state.hidden.empty()) {
-				AppendText(state, html.mid(i));
-			}
-			break;
-		}
-		auto nameEnd = tagStart;
-		const auto name = ReadTagName(html, tagStart, tagEnd, &nameEnd);
-		if (name.isEmpty()) {
-			if (state.hidden.empty()) {
-				AppendText(state, html.mid(i, 1));
-			}
-			++i;
-			continue;
-		}
-		auto attributes = std::vector<HtmlAttribute>();
-		if (!closing) {
-			attributes = ReadAttributes(
-				html,
-				nameEnd,
-				tagEnd,
-				state.entityCache);
-		}
-		ProcessTag(
-			state,
-			name,
-			attributes,
-			closing,
-			IsSelfClosing(html, tagStart, tagEnd));
-		i = tagEnd + 1;
-	}
-	state.result.tags = SimplifyParserTags(std::move(state.tags));
-	TrimTrailingStructuralNewlines(state);
-	if (state.result.tags.isEmpty() && !state.removedRedundantLinks) {
+	auto parsed = ParseFragment(html);
+	if (parsed.text.tags.isEmpty() && !parsed.removedRedundantLinks) {
 		return std::nullopt;
 	}
-	return state.result;
+	return std::move(parsed.text);
+}
+
+TextWithTags TextWithTagsFromHtmlFragment(QStringView html) {
+	return ParseFragment(html).text;
+}
+
+bool HtmlContainsTable(QStringView html) {
+	return (FindTagStart(html, u"<table"_q, 0) >= 0);
+}
+
+std::optional<HtmlTable> TableFromHtml(
+		QStringView html,
+		const HtmlTableLimits &limits) {
+	if ((limits.maxRows <= 0)
+		|| (limits.maxColumns <= 0)
+		|| (limits.maxCells <= 0)) {
+		return std::nullopt;
+	}
+	const auto start = FindTagStart(html, u"<table"_q, 0);
+	if (start < 0) {
+		return std::nullopt;
+	}
+	const auto classes = ParseStyleClasses(html);
+	auto scanned = ScanTable(html, start, limits, classes);
+	if (scanned.rows.empty()) {
+		return std::nullopt;
+	}
+	auto result = HtmlTable();
+	result.sourceFrom = start;
+	result.sourceTill = scanned.sourceTill;
+	result.truncated = scanned.truncated;
+	result.rows.reserve(scanned.rows.size());
+	const auto sourceLimit = int(std::min(
+		int64(std::max(limits.maxCellLength, 0)) * kCellSourceLengthFactor,
+		int64(html.size())));
+	for (const auto &scannedRow : scanned.rows) {
+		auto row = HtmlTableRow();
+		row.cells.reserve(scannedRow.cells.size());
+		for (const auto &scannedCell : scannedRow.cells) {
+			auto length = scannedCell.contentTill - scannedCell.contentFrom;
+			if (length > sourceLimit) {
+				length = sourceLimit;
+				result.truncated = true;
+			}
+			auto text = ParseFragment(
+				html.mid(scannedCell.contentFrom, length),
+				scannedCell.style,
+				&classes).text;
+			if (text.text.size() > limits.maxCellLength) {
+				TruncateTextWithTags(text, limits.maxCellLength);
+				result.truncated = true;
+			}
+			row.cells.push_back({
+				.text = std::move(text),
+				.colspan = scannedCell.colspan,
+				.rowspan = scannedCell.rowspan,
+				.header = scannedCell.header,
+				.alignment = scannedCell.alignment,
+			});
+		}
+		result.rows.push_back(std::move(row));
+	}
+	NormalizeTable(result, limits);
+	if (!result.columns) {
+		return std::nullopt;
+	}
+	return result;
 }
 
 } // namespace TextUtilities
