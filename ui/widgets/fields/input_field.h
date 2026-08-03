@@ -146,6 +146,11 @@ public:
 		bool closed = false;
 		QString tag;
 	};
+
+	struct TabbedRequest {
+		bool backward = false;
+		bool handled = false;
+	};
 	static const QString kTagBold;
 	static const QString kTagItalic;
 	static const QString kTagUnderline;
@@ -403,7 +408,7 @@ public:
 
 	[[nodiscard]] rpl::producer<> heightChanges() const;
 	[[nodiscard]] rpl::producer<bool> focusedChanges() const;
-	[[nodiscard]] rpl::producer<not_null<bool*>> tabbed() const;
+	[[nodiscard]] rpl::producer<not_null<TabbedRequest*>> tabbed() const;
 	[[nodiscard]] rpl::producer<> cancelled() const;
 	[[nodiscard]] rpl::producer<> changes() const;
 	[[nodiscard]] rpl::producer<Qt::KeyboardModifiers> submits() const;
@@ -713,7 +718,7 @@ private:
 
 	rpl::event_stream<bool> _focusedChanges;
 	rpl::event_stream<> _heightChanges;
-	rpl::event_stream<not_null<bool*>> _tabbed;
+	rpl::event_stream<not_null<TabbedRequest*>> _tabbed;
 	rpl::event_stream<> _cancelled;
 	rpl::event_stream<> _changes;
 	rpl::event_stream<Qt::KeyboardModifiers> _submits;
