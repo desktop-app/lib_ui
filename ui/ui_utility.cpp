@@ -272,6 +272,11 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 			style::ConvertScaleExact(point.x()),
 			style::ConvertScaleExact(point.y()));
 	};
+
+	// Wheel events are synthesized on touchscreens.
+	const auto synthesized = (e->source()
+		== Qt::MouseEventSynthesizedByApplication);
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 	using QInputDevice::Capability::PixelScroll;
 	if (touch || e->device()->capabilities().testFlag(PixelScroll)) {
@@ -279,7 +284,7 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 	if (!e->pixelDelta().isNull()) {
 #endif // Qt < 6.2.0
 		return convert(e->pixelDelta())
-			* ((::Platform::IsWayland() && !touch)
+			* ((::Platform::IsWayland() && !synthesized)
 				? kMagicScrollMultiplier
 				: 1.);
 	}
