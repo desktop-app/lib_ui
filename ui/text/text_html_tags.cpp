@@ -22,6 +22,8 @@
 namespace TextUtilities {
 namespace {
 
+constexpr auto kMinimalBoldFontWeight = 600;
+
 enum class HtmlTag {
 	Pre,
 	Code,
@@ -57,11 +59,28 @@ struct OpenAnchor {
 	int visibleOffset = -1;
 };
 
+struct StyleDelta {
+	bool bold = false;
+	bool italic = false;
+	bool underline = false;
+	bool strikeOut = false;
+
+	[[nodiscard]] bool empty() const {
+		return !bold && !italic && !underline && !strikeOut;
+	}
+};
+
+struct OpenStyledElement {
+	QString name;
+	StyleDelta delta;
+};
+
 struct ParseState {
 	TextWithTags result;
 	TextWithTags::Tags tags;
 	ActiveTags active;
 	std::vector<OpenAnchor> openAnchors;
+	std::vector<OpenStyledElement> styledElements;
 	NamedEntityCache entityCache;
 	std::vector<QString> hidden;
 	int trailingStructuralNewlines = 0;
@@ -1249,6 +1268,110 @@ template <std::size_t Size>
 	return std::nullopt;
 }
 
+[[nodiscard]] QStringView CssValueWithoutImportant(QStringView value) {
+	static const auto kImportant = u"!important"_q;
+	auto result = value.trimmed();
+	if (result.endsWith(kImportant, Qt::CaseInsensitive)) {
+		result = result.chopped(kImportant.size()).trimmed();
+	}
+	return result;
+}
+
+[[nodiscard]] QStringView CssDeclarationValue(
+		QStringView style,
+		QStringView name) {
+	auto quote = QChar();
+	auto start = 0;
+	auto result = QStringView();
+	const auto size = int(style.size());
+	for (auto i = 0; i <= size; ++i) {
+		if (i != size) {
+			const auto ch = style[i];
+			if (!quote.isNull()) {
+				if (ch == quote) {
+					quote = QChar();
+				}
+				continue;
+			} else if (ch == '\'' || ch == '"') {
+				quote = ch;
+				continue;
+			} else if (ch != ';') {
+				continue;
+			}
+		}
+		const auto declaration = style.mid(start, i - start);
+		const auto colon = declaration.indexOf(QChar(':'));
+		if (colon > 0) {
+			const auto key = declaration.left(colon).trimmed();
+			if (!key.compare(name, Qt::CaseInsensitive)) {
+				result = CssValueWithoutImportant(declaration.mid(colon + 1));
+			}
+		}
+		start = i + 1;
+	}
+	return result;
+}
+
+[[nodiscard]] bool CssWeightIsBold(QStringView value) {
+	if (!value.compare(u"bold"_q, Qt::CaseInsensitive)
+		|| !value.compare(u"bolder"_q, Qt::CaseInsensitive)) {
+		return true;
+	}
+	auto ok = false;
+	const auto weight = value.toInt(&ok);
+	return ok && (weight >= kMinimalBoldFontWeight);
+}
+
+[[nodiscard]] StyleDelta StyleDeltaFromAttributes(
+		const std::vector<HtmlAttribute> &attributes) {
+	auto result = StyleDelta();
+	for (const auto &attribute : attributes) {
+		if (!attribute.hasValue || (attribute.name != u"style"_q)) {
+			continue;
+		}
+		const auto style = QStringView(attribute.value);
+		result.bold = CssWeightIsBold(
+			CssDeclarationValue(style, u"font-weight"_q));
+		const auto fontStyle = CssDeclarationValue(style, u"font-style"_q);
+		result.italic = !fontStyle.compare(u"italic"_q, Qt::CaseInsensitive)
+			|| !fontStyle.compare(u"oblique"_q, Qt::CaseInsensitive);
+		static const auto kDecorations = std::array{
+			u"text-decoration"_q,
+			u"text-decoration-line"_q,
+		};
+		for (const auto &name : kDecorations) {
+			const auto value = CssDeclarationValue(style, name);
+			if (value.contains(u"underline"_q, Qt::CaseInsensitive)) {
+				result.underline = true;
+			}
+			if (value.contains(u"line-through"_q, Qt::CaseInsensitive)) {
+				result.strikeOut = true;
+			}
+		}
+		break;
+	}
+	return result;
+}
+
+void ApplyStyleDelta(
+		ActiveTags &active,
+		const StyleDelta &delta,
+		bool closing) {
+	const auto update = [&](bool set, int &value) {
+		if (!set) {
+			return;
+		} else if (!closing) {
+			++value;
+		} else if (value > 0) {
+			--value;
+		}
+	};
+	update(delta.bold, active.bold);
+	update(delta.italic, active.italic);
+	update(delta.underline, active.underline);
+	update(delta.strikeOut, active.strikeOut);
+}
+
 void UpdateActive(ActiveTags &active, HtmlTag tag, bool closing) {
 	auto update = [&](int &value) {
 		if (closing) {
@@ -1279,6 +1402,47 @@ void CloseHiddenElement(ParseState &state, const QString &name) {
 				state.hidden.end());
 			return;
 		}
+	}
+}
+
+[[nodiscard]] bool IsVoidElement(const QString &name) {
+	static const auto kElements = std::array{
+		u"area"_q,
+		u"base"_q,
+		u"br"_q,
+		u"col"_q,
+		u"embed"_q,
+		u"hr"_q,
+		u"img"_q,
+		u"input"_q,
+		u"param"_q,
+		u"source"_q,
+		u"track"_q,
+		u"wbr"_q,
+	};
+	for (const auto &element : kElements) {
+		if (name == element) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void CloseStyledElement(ParseState &state, const QString &name) {
+	for (auto i = state.styledElements.size(); i != 0; --i) {
+		if (state.styledElements[i - 1].name != name) {
+			continue;
+		}
+		for (auto j = state.styledElements.size(); j != i - 1; --j) {
+			ApplyStyleDelta(
+				state.active,
+				state.styledElements[j - 1].delta,
+				true);
+		}
+		state.styledElements.erase(
+			state.styledElements.begin() + i - 1,
+			state.styledElements.end());
+		return;
 	}
 }
 
@@ -1328,6 +1492,15 @@ void ProcessTag(
 	}
 	if (const auto tag = SupportedInputTag(name); tag && !selfClosing) {
 		UpdateActive(state.active, *tag, closing);
+	}
+	if (!IsVoidElement(name)) {
+		if (closing) {
+			CloseStyledElement(state, name);
+		} else if (!selfClosing) {
+			auto delta = StyleDeltaFromAttributes(attributes);
+			ApplyStyleDelta(state.active, delta, false);
+			state.styledElements.push_back({ name, delta });
+		}
 	}
 	if (closing && blockBoundary) {
 		AppendLine(state, false, LineBreakKind::Structural);
