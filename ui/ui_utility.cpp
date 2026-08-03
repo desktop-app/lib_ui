@@ -278,7 +278,8 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 	if (!e->pixelDelta().isNull()) {
 #endif // Qt < 6.2.0
 		return convert(e->pixelDelta())
-			* ((::Platform::IsWayland() && !touch)
+			* ((::Platform::IsWayland()
+				&& e->source() != Qt::MouseEventSynthesizedByApplication)
 				? kMagicScrollMultiplier
 				: 1.);
 	}
