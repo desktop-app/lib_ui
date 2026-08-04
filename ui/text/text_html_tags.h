@@ -51,16 +51,23 @@ enum class HtmlBlockKind : uchar {
 	Paragraph,
 	Heading,
 	Divider,
+	Quote,
+	Pullquote,
+	Code,
+	Footer,
 };
 
 struct HtmlBlock {
 	HtmlBlockKind kind = HtmlBlockKind::Paragraph;
 	TextWithTags text;
+	QString language;
 	int headingLevel = 0;
+	std::vector<HtmlBlock> children;
 };
 
 struct HtmlBlocksLimits {
 	int maxBlocks = 1024;
+	int maxDepth = 16;
 	int maxBlockLength = 16384;
 	int maxTotalLength = 65536;
 };

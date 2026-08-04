@@ -2192,15 +2192,52 @@ void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
 	}
 }
 
+struct BlockContainer {
+	QString element;
+	HtmlBlock block;
+	bool unwrap = false;
+};
+
 struct BlockParseState {
 	ParseState content;
 	std::vector<HtmlBlock> blocks;
+	std::vector<BlockContainer> stack;
 	const HtmlBlocksLimits *limits = nullptr;
 	HtmlBlockKind leafKind = HtmlBlockKind::Paragraph;
 	int headingLevel = 0;
+	QString codeLanguage;
+	int preDepth = 0;
+	int blockCount = 0;
 	int totalLength = 0;
 	bool truncated = false;
 };
+
+[[nodiscard]] std::vector<HtmlBlock> &CurrentBlocks(BlockParseState &state) {
+	return state.stack.empty()
+		? state.blocks
+		: state.stack.back().block.children;
+}
+
+[[nodiscard]] int RealContainerDepth(const BlockParseState &state) {
+	auto result = 0;
+	for (const auto &container : state.stack) {
+		if (!container.unwrap) {
+			++result;
+		}
+	}
+	return result;
+}
+
+[[nodiscard]] bool HasOpenContainer(
+		const BlockParseState &state,
+		const QString &element) {
+	for (const auto &container : state.stack) {
+		if (container.element == element) {
+			return true;
+		}
+	}
+	return false;
+}
 
 [[nodiscard]] int HeadingLevelFromName(const QString &name) {
 	if (name.size() == 2
@@ -2250,12 +2287,26 @@ void TrimTrailingBlockWhitespace(TextWithTags &text) {
 	}
 }
 
-void AppendLeafBlock(BlockParseState &state, TextWithTags text) {
-	const auto &limits = *state.limits;
-	if (int(state.blocks.size()) >= limits.maxBlocks) {
+void StripCodeBlockText(TextWithTags &text) {
+	text.tags.clear();
+	if (!text.text.isEmpty() && text.text.front() == '\n') {
+		text.text.remove(0, 1);
+	}
+}
+
+[[nodiscard]] bool EmitBlockAllowed(BlockParseState &state) {
+	if (state.blockCount >= state.limits->maxBlocks) {
 		state.truncated = true;
+		return false;
+	}
+	return true;
+}
+
+void AppendLeafBlock(BlockParseState &state, TextWithTags text) {
+	if (!EmitBlockAllowed(state)) {
 		return;
 	}
+	const auto &limits = *state.limits;
 	const auto remaining = limits.maxTotalLength - state.totalLength;
 	if (remaining <= 0) {
 		state.truncated = true;
@@ -2275,12 +2326,18 @@ void AppendLeafBlock(BlockParseState &state, TextWithTags text) {
 	block.text = std::move(text);
 	if (state.leafKind == HtmlBlockKind::Heading) {
 		block.headingLevel = state.headingLevel;
+	} else if (state.leafKind == HtmlBlockKind::Code) {
+		block.language = state.codeLanguage;
 	}
-	state.blocks.push_back(std::move(block));
+	++state.blockCount;
+	CurrentBlocks(state).push_back(std::move(block));
 }
 
 void FlushLeafBlock(BlockParseState &state) {
 	auto text = TakeBlockText(state.content);
+	if (state.leafKind == HtmlBlockKind::Code) {
+		StripCodeBlockText(text);
+	}
 	TrimTrailingBlockWhitespace(text);
 	if (text.text.isEmpty()) {
 		return;
@@ -2289,13 +2346,13 @@ void FlushLeafBlock(BlockParseState &state) {
 }
 
 void AppendDividerBlock(BlockParseState &state) {
-	if (int(state.blocks.size()) >= state.limits->maxBlocks) {
-		state.truncated = true;
+	if (!EmitBlockAllowed(state)) {
 		return;
 	}
 	auto block = HtmlBlock();
 	block.kind = HtmlBlockKind::Divider;
-	state.blocks.push_back(std::move(block));
+	++state.blockCount;
+	CurrentBlocks(state).push_back(std::move(block));
 }
 
 void PushStyledBlockElement(
@@ -2306,6 +2363,152 @@ void PushStyledBlockElement(
 	ResolveStyleDelta(delta);
 	ApplyStyleDelta(state.content.active, delta, false);
 	state.content.styledElements.push(name, delta);
+}
+
+[[nodiscard]] bool AllChildrenAreParagraphs(const HtmlBlock &block) {
+	for (const auto &child : block.children) {
+		if (child.kind != HtmlBlockKind::Paragraph) {
+			return false;
+		}
+	}
+	return true;
+}
+
+[[nodiscard]] TextWithTags JoinParagraphTexts(std::vector<HtmlBlock> &blocks) {
+	auto result = TextWithTags();
+	for (auto &block : blocks) {
+		if (!result.text.isEmpty()) {
+			result.text.append(QChar('\n'));
+		}
+		const auto offset = int(result.text.size());
+		for (auto tag : block.text.tags) {
+			tag.offset += offset;
+			result.tags.push_back(std::move(tag));
+		}
+		result.text.append(block.text.text);
+	}
+	return result;
+}
+
+void OpenBlockContainer(
+		BlockParseState &state,
+		HtmlBlockKind kind,
+		const QString &name,
+		const std::vector<HtmlAttribute> &attributes) {
+	FlushLeafBlock(state);
+	auto container = BlockContainer();
+	container.element = name;
+	container.block.kind = kind;
+	if (RealContainerDepth(state) >= state.limits->maxDepth) {
+		container.unwrap = true;
+		state.truncated = true;
+	}
+	state.stack.push_back(std::move(container));
+	PushStyledBlockElement(state, name, attributes);
+}
+
+void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
+	auto &parent = CurrentBlocks(state);
+	if (container.unwrap) {
+		for (auto &child : container.block.children) {
+			parent.push_back(std::move(child));
+		}
+		return;
+	}
+	auto &block = container.block;
+	if (block.kind == HtmlBlockKind::Quote
+		|| block.kind == HtmlBlockKind::Pullquote) {
+		if (block.children.empty()) {
+			return;
+		} else if (block.children.size() == 1
+			&& block.children.front().kind == HtmlBlockKind::Paragraph) {
+			block.text = std::move(block.children.front().text);
+			block.children.clear();
+			--state.blockCount;
+		}
+	} else if (block.kind == HtmlBlockKind::Footer) {
+		if (block.children.empty()) {
+			return;
+		} else if (AllChildrenAreParagraphs(block)) {
+			block.text = JoinParagraphTexts(block.children);
+			state.blockCount -= int(block.children.size());
+			block.children.clear();
+		} else {
+			for (auto &child : block.children) {
+				parent.push_back(std::move(child));
+			}
+			return;
+		}
+	}
+	if (!EmitBlockAllowed(state)) {
+		return;
+	}
+	++state.blockCount;
+	parent.push_back(std::move(block));
+}
+
+void PopBlockContainer(BlockParseState &state) {
+	FlushLeafBlock(state);
+	auto container = std::move(state.stack.back());
+	state.stack.pop_back();
+	FinishBlockContainer(state, std::move(container));
+}
+
+void CloseBlockContainer(BlockParseState &state, const QString &name) {
+	auto index = -1;
+	for (auto i = int(state.stack.size()); i != 0; --i) {
+		if (state.stack[i - 1].element == name) {
+			index = i - 1;
+			break;
+		}
+	}
+	if (index < 0) {
+		return;
+	}
+	while (int(state.stack.size()) > index) {
+		PopBlockContainer(state);
+	}
+}
+
+[[nodiscard]] QString CodeLanguageFromAttributes(
+		const std::vector<HtmlAttribute> &attributes) {
+	const auto value = AttributeValue(attributes, u"class"_q);
+	if (!value) {
+		return QString();
+	}
+	static const auto kPrefixes = std::array{
+		u"language-"_q,
+		u"lang-"_q,
+		u"highlight-source-"_q,
+	};
+	const auto parts = value->split(
+		QChar(' '),
+		Qt::SkipEmptyParts);
+	for (const auto &part : parts) {
+		for (const auto &prefix : kPrefixes) {
+			if (!part.startsWith(prefix, Qt::CaseInsensitive)) {
+				continue;
+			}
+			const auto language = part.mid(prefix.size());
+			const auto good = !language.isEmpty()
+				&& (language.size() <= 20)
+				&& std::all_of(
+					language.begin(),
+					language.end(),
+					[](QChar ch) {
+						return ch.isLetterOrNumber()
+							|| (ch == '+')
+							|| (ch == '#')
+							|| (ch == '.')
+							|| (ch == '_')
+							|| (ch == '-');
+					});
+			if (good) {
+				return language.toLower();
+			}
+		}
+	}
+	return QString();
 }
 
 void ProcessBlockTag(
@@ -2330,9 +2533,65 @@ void ProcessBlockTag(
 		content.hidden.push(name);
 		return;
 	}
+	if (state.preDepth > 0) {
+		if (name == u"pre"_q) {
+			if (closing) {
+				CloseStyledElement(content, name);
+				UpdateActive(content.active, HtmlTag::Pre, true);
+				if (--state.preDepth == 0) {
+					FlushLeafBlock(state);
+					state.leafKind = HtmlBlockKind::Paragraph;
+					state.codeLanguage = QString();
+				}
+			} else if (!selfClosing) {
+				UpdateActive(content.active, HtmlTag::Pre, false);
+				PushStyledBlockElement(state, name, attributes);
+				++state.preDepth;
+			}
+			return;
+		}
+		if (!closing
+			&& (name == u"code"_q)
+			&& state.codeLanguage.isEmpty()) {
+			state.codeLanguage = CodeLanguageFromAttributes(attributes);
+		}
+		ProcessTag(content, name, attributes, closing, selfClosing);
+		return;
+	}
 	if (!closing && (name == u"hr"_q)) {
 		FlushLeafBlock(state);
 		AppendDividerBlock(state);
+		return;
+	}
+	if (name == u"pre"_q) {
+		if (!closing && !selfClosing) {
+			FlushLeafBlock(state);
+			state.leafKind = HtmlBlockKind::Code;
+			state.codeLanguage = CodeLanguageFromAttributes(attributes);
+			UpdateActive(content.active, HtmlTag::Pre, false);
+			PushStyledBlockElement(state, name, attributes);
+			++state.preDepth;
+		}
+		return;
+	}
+	if ((name == u"blockquote"_q)
+		|| (name == u"aside"_q)
+		|| (name == u"footer"_q)) {
+		const auto kind = (name == u"blockquote"_q)
+			? HtmlBlockKind::Quote
+			: (name == u"aside"_q)
+			? HtmlBlockKind::Pullquote
+			: HtmlBlockKind::Footer;
+		if (closing) {
+			if (HasOpenContainer(state, name)) {
+				CloseStyledElement(content, name);
+				CloseBlockContainer(state, name);
+			}
+		} else if (!selfClosing) {
+			OpenBlockContainer(state, kind, name, attributes);
+		} else {
+			FlushLeafBlock(state);
+		}
 		return;
 	}
 	if (const auto level = HeadingLevelFromName(name)) {
@@ -2579,6 +2838,9 @@ std::optional<HtmlBlocks> BlocksFromHtml(
 		}
 		ProcessBlockTag(state, name, attributes, closing, selfClosing);
 	});
+	while (!state.stack.empty()) {
+		PopBlockContainer(state);
+	}
 	FlushLeafBlock(state);
 	if (state.blocks.empty()
 		|| (state.blocks.size() == 1
