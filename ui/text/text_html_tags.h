@@ -47,6 +47,29 @@ struct HtmlTable {
 	bool truncated = false;
 };
 
+enum class HtmlBlockKind : uchar {
+	Paragraph,
+	Heading,
+	Divider,
+};
+
+struct HtmlBlock {
+	HtmlBlockKind kind = HtmlBlockKind::Paragraph;
+	TextWithTags text;
+	int headingLevel = 0;
+};
+
+struct HtmlBlocksLimits {
+	int maxBlocks = 1024;
+	int maxBlockLength = 16384;
+	int maxTotalLength = 65536;
+};
+
+struct HtmlBlocks {
+	std::vector<HtmlBlock> blocks;
+	bool truncated = false;
+};
+
 [[nodiscard]] QString EscapeForHtml(QStringView text);
 [[nodiscard]] QString TextWithTagsToHtml(const TextWithTags &text);
 [[nodiscard]] QString TextForMimeDataToHtml(const TextForMimeData &text);
@@ -57,5 +80,9 @@ struct HtmlTable {
 [[nodiscard]] std::optional<HtmlTable> TableFromHtml(
 	QStringView html,
 	const HtmlTableLimits &limits);
+
+[[nodiscard]] std::optional<HtmlBlocks> BlocksFromHtml(
+	QStringView html,
+	const HtmlBlocksLimits &limits);
 
 } // namespace TextUtilities

@@ -1725,25 +1725,16 @@ struct ParsedFragment {
 	bool removedRedundantLinks = false;
 };
 
-[[nodiscard]] ParsedFragment ParseFragment(
-		QStringView html,
-		const StyleDelta &outer = {},
-		const StyleClasses *classes = nullptr) {
-	auto state = ParseState();
-	state.classes = classes;
-	auto resolvedOuter = outer;
-	ResolveStyleDelta(resolvedOuter);
-	ApplyStyleDelta(state.active, resolvedOuter, false);
+template <typename Text, typename Tag>
+void ScanHtml(QStringView html, Text &&text, Tag &&tag) {
 	for (auto i = 0, size = int(html.size()); i != size;) {
 		const auto nextTag = html.indexOf(QChar('<'), i);
 		if (nextTag < 0) {
-			if (state.hidden.empty()) {
-				AppendText(state, html.mid(i));
-			}
+			text(i, size);
 			break;
 		}
-		if (nextTag > i && state.hidden.empty()) {
-			AppendText(state, html.mid(i, nextTag - i));
+		if (nextTag > i) {
+			text(i, nextTag);
 		}
 		i = nextTag;
 		if (i + 4 <= size
@@ -1766,20 +1757,45 @@ struct ParsedFragment {
 		}
 		const auto tagEnd = FindTagEnd(html, tagStart);
 		if (tagEnd < 0) {
-			if (state.hidden.empty()) {
-				AppendText(state, html.mid(i));
-			}
+			text(i, size);
 			break;
 		}
 		auto nameEnd = tagStart;
 		const auto name = ReadTagName(html, tagStart, tagEnd, &nameEnd);
 		if (name.isEmpty()) {
-			if (state.hidden.empty()) {
-				AppendText(state, html.mid(i, 1));
-			}
+			text(i, i + 1);
 			++i;
 			continue;
 		}
+		tag(
+			name,
+			nameEnd,
+			tagEnd,
+			closing,
+			IsSelfClosing(html, tagStart, tagEnd));
+		i = tagEnd + 1;
+	}
+}
+
+[[nodiscard]] ParsedFragment ParseFragment(
+		QStringView html,
+		const StyleDelta &outer = {},
+		const StyleClasses *classes = nullptr) {
+	auto state = ParseState();
+	state.classes = classes;
+	auto resolvedOuter = outer;
+	ResolveStyleDelta(resolvedOuter);
+	ApplyStyleDelta(state.active, resolvedOuter, false);
+	ScanHtml(html, [&](int from, int till) {
+		if (state.hidden.empty()) {
+			AppendText(state, html.mid(from, till - from));
+		}
+	}, [&](
+			const QString &name,
+			int nameEnd,
+			int tagEnd,
+			bool closing,
+			bool selfClosing) {
 		auto attributes = std::vector<HtmlAttribute>();
 		if (!closing) {
 			attributes = ReadAttributes(
@@ -1788,14 +1804,8 @@ struct ParsedFragment {
 				tagEnd,
 				state.entityCache);
 		}
-		ProcessTag(
-			state,
-			name,
-			attributes,
-			closing,
-			IsSelfClosing(html, tagStart, tagEnd));
-		i = tagEnd + 1;
-	}
+		ProcessTag(state, name, attributes, closing, selfClosing);
+	});
 	state.result.tags = SimplifyParserTags(std::move(state.tags));
 	TrimTrailingStructuralNewlines(state);
 	return {
@@ -2182,6 +2192,179 @@ void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
 	}
 }
 
+struct BlockParseState {
+	ParseState content;
+	std::vector<HtmlBlock> blocks;
+	const HtmlBlocksLimits *limits = nullptr;
+	HtmlBlockKind leafKind = HtmlBlockKind::Paragraph;
+	int headingLevel = 0;
+	int totalLength = 0;
+	bool truncated = false;
+};
+
+[[nodiscard]] int HeadingLevelFromName(const QString &name) {
+	if (name.size() == 2
+		&& name[0] == 'h'
+		&& name[1] >= '1'
+		&& name[1] <= '6') {
+		return name[1].unicode() - '0';
+	}
+	return 0;
+}
+
+[[nodiscard]] bool IsParagraphFlushBoundary(const QString &name) {
+	static const auto kExtra = std::array{
+		u"figcaption"_q,
+		u"figure"_q,
+	};
+	if (NameIsOneOf(name, kExtra)) {
+		return true;
+	}
+	return IsBlockBoundary(name)
+		&& (name != u"div"_q)
+		&& (name != u"blockquote"_q)
+		&& (name != u"pre"_q);
+}
+
+[[nodiscard]] TextWithTags TakeBlockText(ParseState &state) {
+	state.result.tags = SimplifyParserTags(std::move(state.tags));
+	state.tags = TextWithTags::Tags();
+	TrimTrailingStructuralNewlines(state);
+	auto result = std::move(state.result);
+	state.result = TextWithTags();
+	ClearPendingWhitespace(state);
+	state.trailingStructuralNewlines = 0;
+	for (auto &anchor : state.openAnchors) {
+		anchor.visibleOffset = -1;
+	}
+	return result;
+}
+
+void TrimTrailingBlockWhitespace(TextWithTags &text) {
+	auto length = int(text.text.size());
+	while (length > 0 && text.text[length - 1].isSpace()) {
+		--length;
+	}
+	if (length < int(text.text.size())) {
+		TruncateTextWithTags(text, length);
+	}
+}
+
+void AppendLeafBlock(BlockParseState &state, TextWithTags text) {
+	const auto &limits = *state.limits;
+	if (int(state.blocks.size()) >= limits.maxBlocks) {
+		state.truncated = true;
+		return;
+	}
+	const auto remaining = limits.maxTotalLength - state.totalLength;
+	if (remaining <= 0) {
+		state.truncated = true;
+		return;
+	}
+	const auto cap = std::min(limits.maxBlockLength, remaining);
+	if (int(text.text.size()) > cap) {
+		TruncateTextWithTags(text, cap);
+		state.truncated = true;
+		if (text.text.isEmpty()) {
+			return;
+		}
+	}
+	state.totalLength += int(text.text.size());
+	auto block = HtmlBlock();
+	block.kind = state.leafKind;
+	block.text = std::move(text);
+	if (state.leafKind == HtmlBlockKind::Heading) {
+		block.headingLevel = state.headingLevel;
+	}
+	state.blocks.push_back(std::move(block));
+}
+
+void FlushLeafBlock(BlockParseState &state) {
+	auto text = TakeBlockText(state.content);
+	TrimTrailingBlockWhitespace(text);
+	if (text.text.isEmpty()) {
+		return;
+	}
+	AppendLeafBlock(state, std::move(text));
+}
+
+void AppendDividerBlock(BlockParseState &state) {
+	if (int(state.blocks.size()) >= state.limits->maxBlocks) {
+		state.truncated = true;
+		return;
+	}
+	auto block = HtmlBlock();
+	block.kind = HtmlBlockKind::Divider;
+	state.blocks.push_back(std::move(block));
+}
+
+void PushStyledBlockElement(
+		BlockParseState &state,
+		const QString &name,
+		const std::vector<HtmlAttribute> &attributes) {
+	auto delta = StyleDeltaFromAttributes(attributes, state.content.classes);
+	ResolveStyleDelta(delta);
+	ApplyStyleDelta(state.content.active, delta, false);
+	state.content.styledElements.push(name, delta);
+}
+
+void ProcessBlockTag(
+		BlockParseState &state,
+		const QString &name,
+		const std::vector<HtmlAttribute> &attributes,
+		bool closing,
+		bool selfClosing) {
+	auto &content = state.content;
+	if (!content.hidden.empty()) {
+		if (closing) {
+			CloseHiddenElement(content, name);
+		} else if (!selfClosing && !IsVoidElement(name)) {
+			content.hidden.push(name);
+		}
+		return;
+	}
+	if (!closing
+		&& !selfClosing
+		&& !IsVoidElement(name)
+		&& (IsHiddenElement(name) || IsHiddenByAttributes(attributes))) {
+		content.hidden.push(name);
+		return;
+	}
+	if (!closing && (name == u"hr"_q)) {
+		FlushLeafBlock(state);
+		AppendDividerBlock(state);
+		return;
+	}
+	if (const auto level = HeadingLevelFromName(name)) {
+		FlushLeafBlock(state);
+		if (closing) {
+			CloseStyledElement(content, name);
+			state.leafKind = HtmlBlockKind::Paragraph;
+			state.headingLevel = 0;
+		} else {
+			state.leafKind = HtmlBlockKind::Heading;
+			state.headingLevel = level;
+			if (!selfClosing) {
+				PushStyledBlockElement(state, name, attributes);
+			}
+		}
+		return;
+	}
+	if (IsParagraphFlushBoundary(name)) {
+		if (closing) {
+			CloseStyledElement(content, name);
+			FlushLeafBlock(state);
+		} else {
+			FlushLeafBlock(state);
+			if (!selfClosing) {
+				PushStyledBlockElement(state, name, attributes);
+			}
+		}
+		return;
+	}
+	ProcessTag(content, name, attributes, closing, selfClosing);
+}
+
 } // namespace
 
 QString EscapeForHtml(QStringView text) {
@@ -2362,6 +2545,50 @@ std::optional<HtmlTable> TableFromHtml(
 		return std::nullopt;
 	}
 	return result;
+}
+
+std::optional<HtmlBlocks> BlocksFromHtml(
+		QStringView html,
+		const HtmlBlocksLimits &limits) {
+	if ((limits.maxBlocks <= 0)
+		|| (limits.maxBlockLength <= 0)
+		|| (limits.maxTotalLength <= 0)) {
+		return std::nullopt;
+	}
+	const auto classes = ParseStyleClasses(html);
+	auto state = BlockParseState();
+	state.limits = &limits;
+	state.content.classes = &classes;
+	ScanHtml(html, [&](int from, int till) {
+		if (state.content.hidden.empty()) {
+			AppendText(state.content, html.mid(from, till - from));
+		}
+	}, [&](
+			const QString &name,
+			int nameEnd,
+			int tagEnd,
+			bool closing,
+			bool selfClosing) {
+		auto attributes = std::vector<HtmlAttribute>();
+		if (!closing) {
+			attributes = ReadAttributes(
+				html,
+				nameEnd,
+				tagEnd,
+				state.content.entityCache);
+		}
+		ProcessBlockTag(state, name, attributes, closing, selfClosing);
+	});
+	FlushLeafBlock(state);
+	if (state.blocks.empty()
+		|| (state.blocks.size() == 1
+			&& state.blocks.front().kind == HtmlBlockKind::Paragraph)) {
+		return std::nullopt;
+	}
+	return HtmlBlocks{
+		.blocks = std::move(state.blocks),
+		.truncated = state.truncated,
+	};
 }
 
 } // namespace TextUtilities
