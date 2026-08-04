@@ -45,6 +45,12 @@ public:
 	[[nodiscard]] virtual const QWidget *rpWidget() const = 0;
 
 	[[nodiscard]] rpl::producer<not_null<QEvent*>> events() const;
+	// Existing subscriptions to geometryValue(), sizeValue(), heightValue(),
+	// widthValue(), positionValue(), leftValue(), and topValue() are fed by
+	// delivered move/resize events. While hidden, a geometry change may leave
+	// the last emitted value unchanged until pending events are delivered.
+	// Use naturalWidthValue() for width maintained by setNaturalWidth() when
+	// that value must emit synchronously while hidden.
 	[[nodiscard]] rpl::producer<QRect> geometryValue() const;
 	[[nodiscard]] rpl::producer<QSize> sizeValue() const;
 	[[nodiscard]] rpl::producer<int> heightValue() const;
