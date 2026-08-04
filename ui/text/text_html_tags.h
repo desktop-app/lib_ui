@@ -41,6 +41,7 @@ struct HtmlTableLimits {
 
 struct HtmlTable {
 	std::vector<HtmlTableRow> rows;
+	TextWithTags caption;
 	int columns = 0;
 	int sourceFrom = 0;
 	int sourceTill = 0;
@@ -56,6 +57,8 @@ enum class HtmlBlockKind : uchar {
 	Code,
 	Footer,
 	List,
+	Details,
+	Table,
 };
 
 enum class HtmlListKind : uchar {
@@ -85,8 +88,10 @@ struct HtmlBlock {
 	int headingLevel = 0;
 	HtmlListKind listKind = HtmlListKind::Bullet;
 	bool listReversed = false;
+	bool detailsOpen = false;
 	std::optional<int> listStart;
 	QString listType;
+	std::optional<HtmlTable> table;
 	std::vector<HtmlListItem> items;
 	std::vector<HtmlBlock> children;
 };
@@ -96,6 +101,7 @@ struct HtmlBlocksLimits {
 	int maxDepth = 16;
 	int maxBlockLength = 16384;
 	int maxTotalLength = 65536;
+	HtmlTableLimits table;
 };
 
 struct HtmlBlocks {

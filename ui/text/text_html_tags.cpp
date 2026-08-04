@@ -1767,13 +1767,14 @@ void ScanHtml(QStringView html, Text &&text, Tag &&tag) {
 			++i;
 			continue;
 		}
-		tag(
+		const auto skipTo = tag(
 			name,
+			i,
 			nameEnd,
 			tagEnd,
 			closing,
 			IsSelfClosing(html, tagStart, tagEnd));
-		i = tagEnd + 1;
+		i = (skipTo > tagEnd) ? skipTo : (tagEnd + 1);
 	}
 }
 
@@ -1792,6 +1793,7 @@ void ScanHtml(QStringView html, Text &&text, Tag &&tag) {
 		}
 	}, [&](
 			const QString &name,
+			int tagFrom,
 			int nameEnd,
 			int tagEnd,
 			bool closing,
@@ -1805,6 +1807,7 @@ void ScanHtml(QStringView html, Text &&text, Tag &&tag) {
 				state.entityCache);
 		}
 		ProcessTag(state, name, attributes, closing, selfClosing);
+		return -1;
 	});
 	state.result.tags = SimplifyParserTags(std::move(state.tags));
 	TrimTrailingStructuralNewlines(state);
@@ -1830,6 +1833,8 @@ struct TableScanRow {
 
 struct TableScanResult {
 	std::vector<TableScanRow> rows;
+	int captionFrom = -1;
+	int captionTill = -1;
 	int sourceTill = 0;
 	bool truncated = false;
 };
@@ -2073,6 +2078,14 @@ void ParseStyleRules(QStringView css, not_null<StyleClasses*> classes) {
 				headerSection += closing ? -1 : 1;
 				headerSection = std::max(headerSection, 0);
 			}
+		} else if (name == u"caption"_q) {
+			if (closing) {
+				if (result.captionFrom >= 0 && result.captionTill < 0) {
+					result.captionTill = tagFrom;
+				}
+			} else if (!selfClosing && result.captionFrom < 0) {
+				result.captionFrom = i;
+			}
 		} else if (!closing
 			&& ((name == u"tbody"_q) || (name == u"tfoot"_q))) {
 			headerSection = 0;
@@ -2192,6 +2205,71 @@ void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
 	}
 }
 
+[[nodiscard]] std::optional<HtmlTable> TableFromScan(
+		QStringView html,
+		const TableScanResult &scanned,
+		const HtmlTableLimits &limits,
+		const StyleClasses &classes) {
+	if (scanned.rows.empty()) {
+		return std::nullopt;
+	}
+	auto result = HtmlTable();
+	result.sourceTill = scanned.sourceTill;
+	result.truncated = scanned.truncated;
+	result.rows.reserve(scanned.rows.size());
+	const auto sourceLimit = int(std::min(
+		int64(std::max(limits.maxCellLength, 0)) * kCellSourceLengthFactor,
+		int64(html.size())));
+	if (scanned.captionFrom >= 0 && scanned.captionTill > scanned.captionFrom) {
+		auto length = scanned.captionTill - scanned.captionFrom;
+		if (length > sourceLimit) {
+			length = sourceLimit;
+			result.truncated = true;
+		}
+		auto caption = ParseFragment(
+			html.mid(scanned.captionFrom, length),
+			StyleDelta(),
+			&classes).text;
+		if (int(caption.text.size()) > limits.maxCellLength) {
+			TruncateTextWithTags(caption, limits.maxCellLength);
+			result.truncated = true;
+		}
+		result.caption = std::move(caption);
+	}
+	for (const auto &scannedRow : scanned.rows) {
+		auto row = HtmlTableRow();
+		row.cells.reserve(scannedRow.cells.size());
+		for (const auto &scannedCell : scannedRow.cells) {
+			auto length = scannedCell.contentTill - scannedCell.contentFrom;
+			if (length > sourceLimit) {
+				length = sourceLimit;
+				result.truncated = true;
+			}
+			auto text = ParseFragment(
+				html.mid(scannedCell.contentFrom, length),
+				scannedCell.style,
+				&classes).text;
+			if (text.text.size() > limits.maxCellLength) {
+				TruncateTextWithTags(text, limits.maxCellLength);
+				result.truncated = true;
+			}
+			row.cells.push_back({
+				.text = std::move(text),
+				.colspan = scannedCell.colspan,
+				.rowspan = scannedCell.rowspan,
+				.header = scannedCell.header,
+				.alignment = scannedCell.alignment,
+			});
+		}
+		result.rows.push_back(std::move(row));
+	}
+	NormalizeTable(result, limits);
+	if (!result.columns) {
+		return std::nullopt;
+	}
+	return result;
+}
+
 struct BlockContainer {
 	QString element;
 	HtmlBlock block;
@@ -2213,6 +2291,7 @@ struct BlockParseState {
 	int preDepth = 0;
 	int blockCount = 0;
 	int totalLength = 0;
+	bool inSummary = false;
 	bool truncated = false;
 };
 
@@ -2364,6 +2443,18 @@ void FlushLeafBlock(BlockParseState &state) {
 	TrimTrailingBlockWhitespace(text);
 	if (text.text.isEmpty()) {
 		return;
+	}
+	if (state.inSummary) {
+		for (auto i = int(state.stack.size()); i != 0; --i) {
+			auto &container = state.stack[i - 1];
+			if (container.block.kind == HtmlBlockKind::Details
+				&& !container.isListItem) {
+				if (container.block.text.text.isEmpty()) {
+					container.block.text = std::move(text);
+				}
+				return;
+			}
+		}
 	}
 	EnsureListItemTarget(state);
 	AppendLeafBlock(state, std::move(text));
@@ -2579,6 +2670,10 @@ void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
 			}
 			return;
 		}
+	} else if (block.kind == HtmlBlockKind::Details) {
+		if (block.text.text.isEmpty() && block.children.empty()) {
+			return;
+		}
 	}
 	if (!EmitBlockAllowed(state)) {
 		return;
@@ -2654,6 +2749,22 @@ void ProcessListItemTag(
 	container.styled = true;
 	state.stack.push_back(std::move(container));
 	PushStyledBlockElement(state, u"li"_q, attributes);
+}
+
+void AppendTableBlock(BlockParseState &state, HtmlTable table) {
+	FlushLeafBlock(state);
+	if (!EmitBlockAllowed(state)) {
+		return;
+	}
+	EnsureListItemTarget(state);
+	if (table.truncated) {
+		state.truncated = true;
+	}
+	auto block = HtmlBlock();
+	block.kind = HtmlBlockKind::Table;
+	block.table = std::move(table);
+	++state.blockCount;
+	CurrentBlocks(state).push_back(std::move(block));
 }
 
 void ApplyCheckboxInput(
@@ -2813,6 +2924,50 @@ void ProcessBlockTag(
 			OpenListContainer(state, name, attributes);
 		} else {
 			FlushLeafBlock(state);
+		}
+		return;
+	}
+	if (name == u"details"_q) {
+		if (closing) {
+			if (HasOpenContainer(state, name)) {
+				state.inSummary = false;
+				CloseStyledElement(content, name);
+				CloseBlockContainer(state, name);
+			}
+		} else if (!selfClosing) {
+			OpenBlockContainer(
+				state,
+				HtmlBlockKind::Details,
+				name,
+				attributes);
+			state.stack.back().block.detailsOpen
+				= HasAttribute(attributes, u"open"_q);
+		} else {
+			FlushLeafBlock(state);
+		}
+		return;
+	}
+	if (name == u"summary"_q) {
+		if (closing) {
+			if (state.inSummary) {
+				CloseStyledElement(content, name);
+				FlushLeafBlock(state);
+				state.inSummary = false;
+			}
+		} else {
+			FlushLeafBlock(state);
+			const auto hasDetails = [&] {
+				for (const auto &container : state.stack) {
+					if (container.block.kind == HtmlBlockKind::Details) {
+						return true;
+					}
+				}
+				return false;
+			}();
+			if (hasDetails && !selfClosing && !state.inSummary) {
+				state.inSummary = true;
+				PushStyledBlockElement(state, name, attributes);
+			}
 		}
 		return;
 	}
@@ -2990,48 +3145,10 @@ std::optional<HtmlTable> TableFromHtml(
 		return std::nullopt;
 	}
 	const auto classes = ParseStyleClasses(html);
-	auto scanned = ScanTable(html, start, limits, classes);
-	if (scanned.rows.empty()) {
-		return std::nullopt;
-	}
-	auto result = HtmlTable();
-	result.sourceFrom = start;
-	result.sourceTill = scanned.sourceTill;
-	result.truncated = scanned.truncated;
-	result.rows.reserve(scanned.rows.size());
-	const auto sourceLimit = int(std::min(
-		int64(std::max(limits.maxCellLength, 0)) * kCellSourceLengthFactor,
-		int64(html.size())));
-	for (const auto &scannedRow : scanned.rows) {
-		auto row = HtmlTableRow();
-		row.cells.reserve(scannedRow.cells.size());
-		for (const auto &scannedCell : scannedRow.cells) {
-			auto length = scannedCell.contentTill - scannedCell.contentFrom;
-			if (length > sourceLimit) {
-				length = sourceLimit;
-				result.truncated = true;
-			}
-			auto text = ParseFragment(
-				html.mid(scannedCell.contentFrom, length),
-				scannedCell.style,
-				&classes).text;
-			if (text.text.size() > limits.maxCellLength) {
-				TruncateTextWithTags(text, limits.maxCellLength);
-				result.truncated = true;
-			}
-			row.cells.push_back({
-				.text = std::move(text),
-				.colspan = scannedCell.colspan,
-				.rowspan = scannedCell.rowspan,
-				.header = scannedCell.header,
-				.alignment = scannedCell.alignment,
-			});
-		}
-		result.rows.push_back(std::move(row));
-	}
-	NormalizeTable(result, limits);
-	if (!result.columns) {
-		return std::nullopt;
+	const auto scanned = ScanTable(html, start, limits, classes);
+	auto result = TableFromScan(html, scanned, limits, classes);
+	if (result) {
+		result->sourceFrom = start;
 	}
 	return result;
 }
@@ -3054,6 +3171,7 @@ std::optional<HtmlBlocks> BlocksFromHtml(
 		}
 	}, [&](
 			const QString &name,
+			int tagFrom,
 			int nameEnd,
 			int tagEnd,
 			bool closing,
@@ -3066,7 +3184,29 @@ std::optional<HtmlBlocks> BlocksFromHtml(
 				tagEnd,
 				state.content.entityCache);
 		}
+		if (!closing
+			&& !selfClosing
+			&& (name == u"table"_q)
+			&& state.content.hidden.empty()
+			&& (state.preDepth == 0)
+			&& !IsHiddenByAttributes(attributes)) {
+			const auto scanned = ScanTable(
+				html,
+				tagFrom,
+				limits.table,
+				classes);
+			if (auto table = TableFromScan(
+					html,
+					scanned,
+					limits.table,
+					classes)) {
+				table->sourceFrom = tagFrom;
+				AppendTableBlock(state, std::move(*table));
+				return scanned.sourceTill;
+			}
+		}
 		ProcessBlockTag(state, name, attributes, closing, selfClosing);
+		return -1;
 	});
 	while (!state.stack.empty()) {
 		PopBlockContainer(state);
