@@ -113,7 +113,8 @@ struct HtmlBlocks {
 [[nodiscard]] QString TextWithTagsToHtml(const TextWithTags &text);
 [[nodiscard]] QString TextForMimeDataToHtml(const TextForMimeData &text);
 [[nodiscard]] std::optional<TextWithTags> TextWithTagsFromHtml(
-	QStringView html);
+	QStringView html,
+	bool richFormatting = false);
 [[nodiscard]] TextWithTags TextWithTagsFromHtmlFragment(QStringView html);
 [[nodiscard]] bool HtmlContainsTable(QStringView html);
 [[nodiscard]] std::optional<HtmlTable> TableFromHtml(

@@ -34,6 +34,10 @@ enum class HtmlTag {
 	Italic,
 	Underline,
 	StrikeOut,
+	Spoiler,
+	Subscript,
+	Superscript,
+	Marked,
 };
 
 using NamedEntityCache = QHash<QString, std::optional<QString>>;
@@ -52,6 +56,10 @@ struct ActiveTags {
 	int italic = 0;
 	int underline = 0;
 	int strikeOut = 0;
+	int spoiler = 0;
+	int subscript = 0;
+	int superscript = 0;
+	int marked = 0;
 	std::vector<QString> links;
 };
 
@@ -65,6 +73,10 @@ struct StyleDelta {
 	bool italic = false;
 	bool underline = false;
 	bool strikeOut = false;
+	bool spoiler = false;
+	bool subscript = false;
+	bool superscript = false;
+	bool marked = false;
 	bool notBold = false;
 	bool notItalic = false;
 	bool notUnderline = false;
@@ -75,6 +87,10 @@ struct StyleDelta {
 			&& !italic
 			&& !underline
 			&& !strikeOut
+			&& !spoiler
+			&& !subscript
+			&& !superscript
+			&& !marked
 			&& !notBold
 			&& !notItalic
 			&& !notUnderline
@@ -145,6 +161,7 @@ struct ParseState {
 	bool pendingWhitespace = false;
 	QString pendingWhitespaceTagId;
 	bool removedRedundantLinks = false;
+	bool richFormatting = false;
 };
 
 struct HtmlTagCounts {
@@ -155,6 +172,10 @@ struct HtmlTagCounts {
 	int italic = 0;
 	int underline = 0;
 	int strikeOut = 0;
+	int spoiler = 0;
+	int subscript = 0;
+	int superscript = 0;
+	int marked = 0;
 	std::vector<QString> links;
 };
 
@@ -188,8 +209,12 @@ struct LinkRun {
 	case HtmlTag::Italic: return 3;
 	case HtmlTag::Underline: return 4;
 	case HtmlTag::StrikeOut: return 5;
-	case HtmlTag::Pre: return 6;
-	case HtmlTag::Code: return 7;
+	case HtmlTag::Spoiler: return 6;
+	case HtmlTag::Subscript: return 7;
+	case HtmlTag::Superscript: return 8;
+	case HtmlTag::Marked: return 9;
+	case HtmlTag::Pre: return 10;
+	case HtmlTag::Code: return 11;
 	}
 	return 0;
 }
@@ -337,6 +362,14 @@ void AddUnique(
 			AddUnique(result, { HtmlTag::Underline });
 		} else if (tag == Ui::InputField::kTagStrikeOut) {
 			AddUnique(result, { HtmlTag::StrikeOut });
+		} else if (tag == Ui::InputField::kTagSpoiler) {
+			AddUnique(result, { HtmlTag::Spoiler });
+		} else if (tag == Ui::InputField::kTagIvSubscript) {
+			AddUnique(result, { HtmlTag::Subscript });
+		} else if (tag == Ui::InputField::kTagIvSuperscript) {
+			AddUnique(result, { HtmlTag::Superscript });
+		} else if (tag == Ui::InputField::kTagIvMarked) {
+			AddUnique(result, { HtmlTag::Marked });
 		} else if (tag == Ui::InputField::kTagCode) {
 			hasCode = true;
 		} else if (IsPreTag(tag)) {
@@ -389,6 +422,10 @@ void UpdateCount(
 	case HtmlTag::Italic: counts.italic += delta; break;
 	case HtmlTag::Underline: counts.underline += delta; break;
 	case HtmlTag::StrikeOut: counts.strikeOut += delta; break;
+	case HtmlTag::Spoiler: counts.spoiler += delta; break;
+	case HtmlTag::Subscript: counts.subscript += delta; break;
+	case HtmlTag::Superscript: counts.superscript += delta; break;
+	case HtmlTag::Marked: counts.marked += delta; break;
 	case HtmlTag::Link: break;
 	}
 }
@@ -510,6 +547,18 @@ void AddLinkRunSegment(
 	if (counts.strikeOut > 0) {
 		result.push_back({ HtmlTag::StrikeOut });
 	}
+	if (counts.spoiler > 0) {
+		result.push_back({ HtmlTag::Spoiler });
+	}
+	if (counts.subscript > 0) {
+		result.push_back({ HtmlTag::Subscript });
+	}
+	if (counts.superscript > 0) {
+		result.push_back({ HtmlTag::Superscript });
+	}
+	if (counts.marked > 0) {
+		result.push_back({ HtmlTag::Marked });
+	}
 	return result;
 }
 
@@ -534,6 +583,10 @@ void AppendOpenTag(QString &result, const HtmlTagDescriptor &descriptor) {
 	case HtmlTag::Italic: result.append(u"<i>"_q); break;
 	case HtmlTag::Underline: result.append(u"<u>"_q); break;
 	case HtmlTag::StrikeOut: result.append(u"<s>"_q); break;
+	case HtmlTag::Spoiler: result.append(u"<tg-spoiler>"_q); break;
+	case HtmlTag::Subscript: result.append(u"<sub>"_q); break;
+	case HtmlTag::Superscript: result.append(u"<sup>"_q); break;
+	case HtmlTag::Marked: result.append(u"<mark>"_q); break;
 	case HtmlTag::Link:
 		result.append(u"<a href=\""_q);
 		result.append(EscapeForHtml(SerializeLinkHref(descriptor.data)));
@@ -553,6 +606,10 @@ void AppendCloseTag(QString &result, HtmlTag tag) {
 	case HtmlTag::Italic: result.append(u"</i>"_q); break;
 	case HtmlTag::Underline: result.append(u"</u>"_q); break;
 	case HtmlTag::StrikeOut: result.append(u"</s>"_q); break;
+	case HtmlTag::Spoiler: result.append(u"</tg-spoiler>"_q); break;
+	case HtmlTag::Subscript: result.append(u"</sub>"_q); break;
+	case HtmlTag::Superscript: result.append(u"</sup>"_q); break;
+	case HtmlTag::Marked: result.append(u"</mark>"_q); break;
 	case HtmlTag::Link: result.append(u"</a>"_q); break;
 	}
 }
@@ -608,7 +665,7 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 }
 
 [[nodiscard]] bool IsTagNameChar(QChar ch) {
-	return ch.isLetterOrNumber();
+	return ch.isLetterOrNumber() || (ch == '-');
 }
 
 [[nodiscard]] bool IsAttributeNameStartChar(QChar ch) {
@@ -1022,6 +1079,18 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 	if (active.strikeOut > 0) {
 		tags.push_back(Ui::InputField::kTagStrikeOut);
 	}
+	if (active.spoiler > 0) {
+		tags.push_back(Ui::InputField::kTagSpoiler);
+	}
+	if (active.subscript > 0) {
+		tags.push_back(Ui::InputField::kTagIvSubscript);
+	}
+	if (active.superscript > 0) {
+		tags.push_back(Ui::InputField::kTagIvSuperscript);
+	}
+	if (active.marked > 0) {
+		tags.push_back(Ui::InputField::kTagIvMarked);
+	}
 	return TextUtilities::JoinTag(tags);
 }
 
@@ -1316,6 +1385,14 @@ template <std::size_t Size>
 		return HtmlTag::Underline;
 	} else if (NameIsOneOf(name, kStrikeOut)) {
 		return HtmlTag::StrikeOut;
+	} else if (name == u"tg-spoiler"_q) {
+		return HtmlTag::Spoiler;
+	} else if (name == u"sub"_q) {
+		return HtmlTag::Subscript;
+	} else if (name == u"sup"_q) {
+		return HtmlTag::Superscript;
+	} else if (name == u"mark"_q) {
+		return HtmlTag::Marked;
 	} else if (name == u"code"_q) {
 		return HtmlTag::Code;
 	} else if (name == u"pre"_q) {
@@ -1417,6 +1494,14 @@ template <std::size_t Size>
 			result.notStrikeOut = true;
 		}
 	}
+	const auto verticalAlign = CssDeclarationValue(
+		style,
+		u"vertical-align"_q);
+	if (!verticalAlign.compare(u"sub"_q, Qt::CaseInsensitive)) {
+		result.subscript = true;
+	} else if (!verticalAlign.compare(u"super"_q, Qt::CaseInsensitive)) {
+		result.superscript = true;
+	}
 	return result;
 }
 
@@ -1425,6 +1510,10 @@ void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
 	result.italic = result.italic || delta.italic;
 	result.underline = result.underline || delta.underline;
 	result.strikeOut = result.strikeOut || delta.strikeOut;
+	result.spoiler = result.spoiler || delta.spoiler;
+	result.subscript = result.subscript || delta.subscript;
+	result.superscript = result.superscript || delta.superscript;
+	result.marked = result.marked || delta.marked;
 	result.notBold = result.notBold || delta.notBold;
 	result.notItalic = result.notItalic || delta.notItalic;
 	result.notUnderline = result.notUnderline || delta.notUnderline;
@@ -1477,12 +1566,31 @@ void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
 	return result;
 }
 
+[[nodiscard]] bool ClassListContains(QStringView value, QStringView name) {
+	const auto size = int(value.size());
+	for (auto from = 0; from < size;) {
+		while (from < size && value[from].isSpace()) {
+			++from;
+		}
+		auto till = from;
+		while (till < size && !value[till].isSpace()) {
+			++till;
+		}
+		if (till > from && value.mid(from, till - from) == name) {
+			return true;
+		}
+		from = till;
+	}
+	return false;
+}
+
 [[nodiscard]] StyleRule StyleRuleFromAttributes(
 		const std::vector<HtmlAttribute> &attributes,
 		const StyleClasses *classes) {
 	auto fromClasses = StyleRule();
 	auto inlined = StyleRule();
 	auto align = HtmlTableAlignment::Default;
+	auto spoiler = false;
 	for (const auto &attribute : attributes) {
 		if (!attribute.hasValue) {
 			continue;
@@ -1490,13 +1598,25 @@ void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
 			inlined = StyleRuleFromDeclarations(attribute.value);
 		} else if (attribute.name == u"align"_q) {
 			align = ParseAlignment(attribute.value);
-		} else if (classes && (attribute.name == u"class"_q)) {
-			fromClasses = StyleRuleFromClasses(attribute.value, *classes);
+		} else if (attribute.name == u"class"_q) {
+			if (ClassListContains(attribute.value, u"tg-spoiler"_q)) {
+				spoiler = true;
+			}
+			if (classes) {
+				fromClasses = StyleRuleFromClasses(
+					attribute.value,
+					*classes);
+			}
+		} else if (attribute.name == u"data-entity-type"_q) {
+			if (attribute.value == u"MessageEntitySpoiler"_q) {
+				spoiler = true;
+			}
 		}
 	}
 	auto result = StyleRule();
 	MergeStyleDelta(result.delta, fromClasses.delta);
 	MergeStyleDelta(result.delta, inlined.delta);
+	result.delta.spoiler = result.delta.spoiler || spoiler;
 	result.alignment = (inlined.alignment != HtmlTableAlignment::Default)
 		? inlined.alignment
 		: (fromClasses.alignment != HtmlTableAlignment::Default)
@@ -1515,7 +1635,11 @@ void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
 	return (tag == HtmlTag::Bold)
 		|| (tag == HtmlTag::Italic)
 		|| (tag == HtmlTag::Underline)
-		|| (tag == HtmlTag::StrikeOut);
+		|| (tag == HtmlTag::StrikeOut)
+		|| (tag == HtmlTag::Spoiler)
+		|| (tag == HtmlTag::Subscript)
+		|| (tag == HtmlTag::Superscript)
+		|| (tag == HtmlTag::Marked);
 }
 
 void ApplyImpliedStyleTag(StyleDelta &delta, HtmlTag tag) {
@@ -1524,6 +1648,10 @@ void ApplyImpliedStyleTag(StyleDelta &delta, HtmlTag tag) {
 	case HtmlTag::Italic: delta.italic = true; break;
 	case HtmlTag::Underline: delta.underline = true; break;
 	case HtmlTag::StrikeOut: delta.strikeOut = true; break;
+	case HtmlTag::Spoiler: delta.spoiler = true; break;
+	case HtmlTag::Subscript: delta.subscript = true; break;
+	case HtmlTag::Superscript: delta.superscript = true; break;
+	case HtmlTag::Marked: delta.marked = true; break;
 	default: break;
 	}
 }
@@ -1552,6 +1680,10 @@ void ApplyStyleDelta(
 	update(delta.italic, active.italic);
 	update(delta.underline, active.underline);
 	update(delta.strikeOut, active.strikeOut);
+	update(delta.spoiler, active.spoiler);
+	update(delta.subscript, active.subscript);
+	update(delta.superscript, active.superscript);
+	update(delta.marked, active.marked);
 }
 
 void UpdateActive(ActiveTags &active, HtmlTag tag, bool closing) {
@@ -1572,6 +1704,10 @@ void UpdateActive(ActiveTags &active, HtmlTag tag, bool closing) {
 	case HtmlTag::Italic: update(active.italic); break;
 	case HtmlTag::Underline: update(active.underline); break;
 	case HtmlTag::StrikeOut: update(active.strikeOut); break;
+	case HtmlTag::Spoiler: update(active.spoiler); break;
+	case HtmlTag::Subscript: update(active.subscript); break;
+	case HtmlTag::Superscript: update(active.superscript); break;
+	case HtmlTag::Marked: update(active.marked); break;
 	case HtmlTag::Link: break;
 	}
 }
@@ -1680,6 +1816,11 @@ void ProcessTag(
 			if (styleInputTag) {
 				ApplyImpliedStyleTag(delta, *inputTag);
 			}
+			if (!state.richFormatting) {
+				delta.subscript = false;
+				delta.superscript = false;
+				delta.marked = false;
+			}
 			ResolveStyleDelta(delta);
 			ApplyStyleDelta(state.active, delta, false);
 			state.styledElements.push(name, delta);
@@ -1781,9 +1922,11 @@ void ScanHtml(QStringView html, Text &&text, Tag &&tag) {
 [[nodiscard]] ParsedFragment ParseFragment(
 		QStringView html,
 		const StyleDelta &outer = {},
-		const StyleClasses *classes = nullptr) {
+		const StyleClasses *classes = nullptr,
+		bool richFormatting = false) {
 	auto state = ParseState();
 	state.classes = classes;
+	state.richFormatting = richFormatting;
 	auto resolvedOuter = outer;
 	ResolveStyleDelta(resolvedOuter);
 	ApplyStyleDelta(state.active, resolvedOuter, false);
@@ -2229,7 +2372,8 @@ void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
 		auto caption = ParseFragment(
 			html.mid(scanned.captionFrom, length),
 			StyleDelta(),
-			&classes).text;
+			&classes,
+			true).text;
 		if (int(caption.text.size()) > limits.maxCellLength) {
 			TruncateTextWithTags(caption, limits.maxCellLength);
 			result.truncated = true;
@@ -2248,7 +2392,8 @@ void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
 			auto text = ParseFragment(
 				html.mid(scannedCell.contentFrom, length),
 				scannedCell.style,
-				&classes).text;
+				&classes,
+				true).text;
 			if (text.text.size() > limits.maxCellLength) {
 				TruncateTextWithTags(text, limits.maxCellLength);
 				result.truncated = true;
@@ -3116,8 +3261,10 @@ QString TextForMimeDataToHtml(const TextForMimeData &text) {
 	return u"<html><body>"_q + result + u"</body></html>"_q;
 }
 
-std::optional<TextWithTags> TextWithTagsFromHtml(QStringView html) {
-	auto parsed = ParseFragment(html);
+std::optional<TextWithTags> TextWithTagsFromHtml(
+		QStringView html,
+		bool richFormatting) {
+	auto parsed = ParseFragment(html, {}, nullptr, richFormatting);
 	if (parsed.text.tags.isEmpty() && !parsed.removedRedundantLinks) {
 		return std::nullopt;
 	}
@@ -3165,6 +3312,7 @@ std::optional<HtmlBlocks> BlocksFromHtml(
 	auto state = BlockParseState();
 	state.limits = &limits;
 	state.content.classes = &classes;
+	state.content.richFormatting = true;
 	ScanHtml(html, [&](int from, int till) {
 		if (state.content.hidden.empty()) {
 			AppendText(state.content, html.mid(from, till - from));
