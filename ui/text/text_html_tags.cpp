@@ -65,9 +65,20 @@ struct StyleDelta {
 	bool italic = false;
 	bool underline = false;
 	bool strikeOut = false;
+	bool notBold = false;
+	bool notItalic = false;
+	bool notUnderline = false;
+	bool notStrikeOut = false;
 
 	[[nodiscard]] bool empty() const {
-		return !bold && !italic && !underline && !strikeOut;
+		return !bold
+			&& !italic
+			&& !underline
+			&& !strikeOut
+			&& !notBold
+			&& !notItalic
+			&& !notUnderline
+			&& !notStrikeOut;
 	}
 };
 
@@ -1359,23 +1370,36 @@ template <std::size_t Size>
 	return result;
 }
 
-[[nodiscard]] bool CssWeightIsBold(QStringView value) {
+[[nodiscard]] std::optional<bool> CssWeightIsBold(QStringView value) {
 	if (!value.compare(u"bold"_q, Qt::CaseInsensitive)
 		|| !value.compare(u"bolder"_q, Qt::CaseInsensitive)) {
 		return true;
+	} else if (!value.compare(u"normal"_q, Qt::CaseInsensitive)
+		|| !value.compare(u"lighter"_q, Qt::CaseInsensitive)) {
+		return false;
 	}
 	auto ok = false;
 	const auto weight = value.toInt(&ok);
-	return ok && (weight >= kMinimalBoldFontWeight);
+	if (!ok) {
+		return std::nullopt;
+	}
+	return (weight >= kMinimalBoldFontWeight);
 }
 
 [[nodiscard]] StyleDelta StyleDeltaFromDeclarations(QStringView style) {
 	auto result = StyleDelta();
-	result.bold = CssWeightIsBold(
-		CssDeclarationValue(style, u"font-weight"_q));
+	if (const auto bold = CssWeightIsBold(
+			CssDeclarationValue(style, u"font-weight"_q))) {
+		result.bold = *bold;
+		result.notBold = !*bold;
+	}
 	const auto fontStyle = CssDeclarationValue(style, u"font-style"_q);
-	result.italic = !fontStyle.compare(u"italic"_q, Qt::CaseInsensitive)
-		|| !fontStyle.compare(u"oblique"_q, Qt::CaseInsensitive);
+	if (!fontStyle.compare(u"italic"_q, Qt::CaseInsensitive)
+		|| !fontStyle.compare(u"oblique"_q, Qt::CaseInsensitive)) {
+		result.italic = true;
+	} else if (!fontStyle.compare(u"normal"_q, Qt::CaseInsensitive)) {
+		result.notItalic = true;
+	}
 	static const auto kDecorations = std::array{
 		u"text-decoration"_q,
 		u"text-decoration-line"_q,
@@ -1388,6 +1412,10 @@ template <std::size_t Size>
 		if (value.contains(u"line-through"_q, Qt::CaseInsensitive)) {
 			result.strikeOut = true;
 		}
+		if (!value.compare(u"none"_q, Qt::CaseInsensitive)) {
+			result.notUnderline = true;
+			result.notStrikeOut = true;
+		}
 	}
 	return result;
 }
@@ -1397,6 +1425,10 @@ void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
 	result.italic = result.italic || delta.italic;
 	result.underline = result.underline || delta.underline;
 	result.strikeOut = result.strikeOut || delta.strikeOut;
+	result.notBold = result.notBold || delta.notBold;
+	result.notItalic = result.notItalic || delta.notItalic;
+	result.notUnderline = result.notUnderline || delta.notUnderline;
+	result.notStrikeOut = result.notStrikeOut || delta.notStrikeOut;
 }
 
 [[nodiscard]] HtmlTableAlignment ParseAlignment(QStringView value) {
@@ -1477,6 +1509,30 @@ void MergeStyleDelta(StyleDelta &result, const StyleDelta &delta) {
 		const std::vector<HtmlAttribute> &attributes,
 		const StyleClasses *classes) {
 	return StyleRuleFromAttributes(attributes, classes).delta;
+}
+
+[[nodiscard]] bool IsStyleInputTag(HtmlTag tag) {
+	return (tag == HtmlTag::Bold)
+		|| (tag == HtmlTag::Italic)
+		|| (tag == HtmlTag::Underline)
+		|| (tag == HtmlTag::StrikeOut);
+}
+
+void ApplyImpliedStyleTag(StyleDelta &delta, HtmlTag tag) {
+	switch (tag) {
+	case HtmlTag::Bold: delta.bold = true; break;
+	case HtmlTag::Italic: delta.italic = true; break;
+	case HtmlTag::Underline: delta.underline = true; break;
+	case HtmlTag::StrikeOut: delta.strikeOut = true; break;
+	default: break;
+	}
+}
+
+void ResolveStyleDelta(StyleDelta &delta) {
+	delta.bold = delta.bold && !delta.notBold;
+	delta.italic = delta.italic && !delta.notItalic;
+	delta.underline = delta.underline && !delta.notUnderline;
+	delta.strikeOut = delta.strikeOut && !delta.notStrikeOut;
 }
 
 void ApplyStyleDelta(
@@ -1609,16 +1665,22 @@ void ProcessTag(
 	if (!closing && blockBoundary) {
 		AppendLine(state, false, LineBreakKind::Structural);
 	}
-	if (const auto tag = SupportedInputTag(name); tag && !selfClosing) {
-		UpdateActive(state.active, *tag, closing);
+	const auto inputTag = SupportedInputTag(name);
+	const auto styleInputTag = inputTag && IsStyleInputTag(*inputTag);
+	if (inputTag && !styleInputTag && !selfClosing) {
+		UpdateActive(state.active, *inputTag, closing);
 	}
 	if (!IsVoidElement(name)) {
 		if (closing) {
 			CloseStyledElement(state, name);
 		} else if (!selfClosing) {
-			const auto delta = StyleDeltaFromAttributes(
+			auto delta = StyleDeltaFromAttributes(
 				attributes,
 				state.classes);
+			if (styleInputTag) {
+				ApplyImpliedStyleTag(delta, *inputTag);
+			}
+			ResolveStyleDelta(delta);
 			ApplyStyleDelta(state.active, delta, false);
 			state.styledElements.push(name, delta);
 		}
@@ -1669,7 +1731,9 @@ struct ParsedFragment {
 		const StyleClasses *classes = nullptr) {
 	auto state = ParseState();
 	state.classes = classes;
-	ApplyStyleDelta(state.active, outer, false);
+	auto resolvedOuter = outer;
+	ResolveStyleDelta(resolvedOuter);
+	ApplyStyleDelta(state.active, resolvedOuter, false);
 	for (auto i = 0, size = int(html.size()); i != size;) {
 		const auto nextTag = html.indexOf(QChar('<'), i);
 		if (nextTag < 0) {
