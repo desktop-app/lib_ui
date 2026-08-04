@@ -17,6 +17,7 @@
 #include <array>
 #include <cstddef>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace TextUtilities {
@@ -1014,12 +1015,16 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 }
 
 [[nodiscard]] QString ValidatedHref(
-		const std::vector<HtmlAttribute> &attributes) {
+		const std::vector<HtmlAttribute> &attributes,
+		bool allowAnchorLinks) {
 	const auto value = AttributeValue(attributes, u"href"_q);
 	if (!value) {
 		return QString();
 	}
 	const auto href = value->trimmed();
+	if (allowAnchorLinks && href.size() > 1 && href[0] == '#') {
+		return href;
+	}
 	if (!Ui::InputField::IsValidMarkdownLink(href)
 		|| TextUtilities::IsMentionLink(href)) {
 		return QString();
@@ -1791,7 +1796,9 @@ void ProcessTag(
 				state.active.links.pop_back();
 			}
 		} else {
-			const auto href = ValidatedHref(attributes);
+			const auto href = ValidatedHref(
+				attributes,
+				state.richFormatting);
 			state.active.links.push_back(href);
 			state.openAnchors.push_back({ href });
 		}
@@ -2433,12 +2440,25 @@ struct BlockParseState {
 	HtmlBlockKind leafKind = HtmlBlockKind::Paragraph;
 	int headingLevel = 0;
 	QString codeLanguage;
+	QString leafAnchorId;
 	int preDepth = 0;
 	int blockCount = 0;
 	int totalLength = 0;
 	bool inSummary = false;
+	bool inCaption = false;
 	bool truncated = false;
 };
+
+[[nodiscard]] QString AnchorIdFromAttributes(
+		const std::vector<HtmlAttribute> &attributes) {
+	constexpr auto kMaxAnchorIdLength = 64;
+	const auto value = AttributeValue(attributes, u"id"_q);
+	if (!value) {
+		return QString();
+	}
+	const auto trimmed = value->trimmed();
+	return (trimmed.size() > kMaxAnchorIdLength) ? QString() : trimmed;
+}
 
 [[nodiscard]] std::vector<HtmlBlock> &CurrentBlocks(BlockParseState &state) {
 	return state.stack.empty()
@@ -2497,11 +2517,7 @@ void EnsureListItemTarget(BlockParseState &state) {
 }
 
 [[nodiscard]] bool IsParagraphFlushBoundary(const QString &name) {
-	static const auto kExtra = std::array{
-		u"figcaption"_q,
-		u"figure"_q,
-	};
-	if (NameIsOneOf(name, kExtra)) {
+	if (name == u"figure"_q) {
 		return true;
 	}
 	return IsBlockBoundary(name)
@@ -2571,6 +2587,7 @@ void AppendLeafBlock(BlockParseState &state, TextWithTags text) {
 	auto block = HtmlBlock();
 	block.kind = state.leafKind;
 	block.text = std::move(text);
+	block.anchorId = std::exchange(state.leafAnchorId, QString());
 	if (state.leafKind == HtmlBlockKind::Heading) {
 		block.headingLevel = state.headingLevel;
 	} else if (state.leafKind == HtmlBlockKind::Code) {
@@ -2587,6 +2604,7 @@ void FlushLeafBlock(BlockParseState &state) {
 	}
 	TrimTrailingBlockWhitespace(text);
 	if (text.text.isEmpty()) {
+		state.leafAnchorId = QString();
 		return;
 	}
 	if (state.inSummary) {
@@ -2597,8 +2615,20 @@ void FlushLeafBlock(BlockParseState &state) {
 				if (container.block.text.text.isEmpty()) {
 					container.block.text = std::move(text);
 				}
+				state.leafAnchorId = QString();
 				return;
 			}
+		}
+	}
+	if (state.inCaption) {
+		auto &blocks = CurrentBlocks(state);
+		if (!blocks.empty()
+			&& ((blocks.back().kind == HtmlBlockKind::Quote)
+				|| (blocks.back().kind == HtmlBlockKind::Pullquote))
+			&& blocks.back().caption.text.isEmpty()) {
+			blocks.back().caption = std::move(text);
+			state.leafAnchorId = QString();
+			return;
 		}
 	}
 	EnsureListItemTarget(state);
@@ -2661,6 +2691,7 @@ void OpenBlockContainer(
 	auto container = BlockContainer();
 	container.element = name;
 	container.block.kind = kind;
+	container.block.anchorId = AnchorIdFromAttributes(attributes);
 	container.styled = true;
 	if (RealContainerDepth(state) >= state.limits->maxDepth) {
 		container.unwrap = true;
@@ -2730,6 +2761,7 @@ void FinishListItemContainer(
 	auto item = HtmlListItem();
 	item.taskState = container.taskState;
 	item.value = container.itemValue;
+	item.anchorId = std::move(container.block.anchorId);
 	auto &children = container.block.children;
 	if (children.size() == 1
 		&& children.front().kind == HtmlBlockKind::Paragraph
@@ -2891,12 +2923,16 @@ void ProcessListItemTag(
 	container.element = u"li"_q;
 	container.isListItem = true;
 	container.itemValue = AttributeInt(attributes, u"value"_q);
+	container.block.anchorId = AnchorIdFromAttributes(attributes);
 	container.styled = true;
 	state.stack.push_back(std::move(container));
 	PushStyledBlockElement(state, u"li"_q, attributes);
 }
 
-void AppendTableBlock(BlockParseState &state, HtmlTable table) {
+void AppendTableBlock(
+		BlockParseState &state,
+		HtmlTable table,
+		QString anchorId) {
 	FlushLeafBlock(state);
 	if (!EmitBlockAllowed(state)) {
 		return;
@@ -2907,6 +2943,7 @@ void AppendTableBlock(BlockParseState &state, HtmlTable table) {
 	}
 	auto block = HtmlBlock();
 	block.kind = HtmlBlockKind::Table;
+	block.anchorId = std::move(anchorId);
 	block.table = std::move(table);
 	++state.blockCount;
 	CurrentBlocks(state).push_back(std::move(block));
@@ -3124,6 +3161,22 @@ void ProcessBlockTag(
 		ApplyCheckboxInput(state, attributes);
 		return;
 	}
+	if (name == u"figcaption"_q) {
+		if (closing) {
+			if (state.inCaption) {
+				CloseStyledElement(content, name);
+				FlushLeafBlock(state);
+				state.inCaption = false;
+			}
+		} else {
+			FlushLeafBlock(state);
+			if (!selfClosing && !state.inCaption) {
+				state.inCaption = true;
+				PushStyledBlockElement(state, name, attributes);
+			}
+		}
+		return;
+	}
 	if (const auto level = HeadingLevelFromName(name)) {
 		FlushLeafBlock(state);
 		if (closing) {
@@ -3133,6 +3186,7 @@ void ProcessBlockTag(
 		} else {
 			state.leafKind = HtmlBlockKind::Heading;
 			state.headingLevel = level;
+			state.leafAnchorId = AnchorIdFromAttributes(attributes);
 			if (!selfClosing) {
 				PushStyledBlockElement(state, name, attributes);
 			}
@@ -3145,6 +3199,7 @@ void ProcessBlockTag(
 			FlushLeafBlock(state);
 		} else {
 			FlushLeafBlock(state);
+			state.leafAnchorId = AnchorIdFromAttributes(attributes);
 			if (!selfClosing) {
 				PushStyledBlockElement(state, name, attributes);
 			}
@@ -3349,7 +3404,10 @@ std::optional<HtmlBlocks> BlocksFromHtml(
 					limits.table,
 					classes)) {
 				table->sourceFrom = tagFrom;
-				AppendTableBlock(state, std::move(*table));
+				AppendTableBlock(
+					state,
+					std::move(*table),
+					AnchorIdFromAttributes(attributes));
 				return scanned.sourceTill;
 			}
 		}

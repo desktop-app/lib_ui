@@ -77,6 +77,7 @@ struct HtmlBlock;
 struct HtmlListItem {
 	TextWithTags text;
 	std::vector<HtmlBlock> blocks;
+	QString anchorId;
 	HtmlTaskState taskState = HtmlTaskState::None;
 	std::optional<int> value;
 };
@@ -84,7 +85,9 @@ struct HtmlListItem {
 struct HtmlBlock {
 	HtmlBlockKind kind = HtmlBlockKind::Paragraph;
 	TextWithTags text;
+	TextWithTags caption;
 	QString language;
+	QString anchorId;
 	int headingLevel = 0;
 	HtmlListKind listKind = HtmlListKind::Bullet;
 	bool listReversed = false;
