@@ -2195,6 +2195,10 @@ void NormalizeTable(HtmlTable &table, const HtmlTableLimits &limits) {
 struct BlockContainer {
 	QString element;
 	HtmlBlock block;
+	HtmlTaskState taskState = HtmlTaskState::None;
+	std::optional<int> itemValue;
+	bool isListItem = false;
+	bool styled = false;
 	bool unwrap = false;
 };
 
@@ -2237,6 +2241,25 @@ struct BlockParseState {
 		}
 	}
 	return false;
+}
+
+[[nodiscard]] bool IsListContainer(const BlockContainer &container) {
+	return (container.block.kind == HtmlBlockKind::List)
+		&& !container.isListItem;
+}
+
+void EnsureListItemTarget(BlockParseState &state) {
+	if (state.stack.empty()) {
+		return;
+	}
+	const auto &top = state.stack.back();
+	if (!IsListContainer(top) || top.unwrap) {
+		return;
+	}
+	auto container = BlockContainer();
+	container.element = u"li"_q;
+	container.isListItem = true;
+	state.stack.push_back(std::move(container));
 }
 
 [[nodiscard]] int HeadingLevelFromName(const QString &name) {
@@ -2342,6 +2365,7 @@ void FlushLeafBlock(BlockParseState &state) {
 	if (text.text.isEmpty()) {
 		return;
 	}
+	EnsureListItemTarget(state);
 	AppendLeafBlock(state, std::move(text));
 }
 
@@ -2349,6 +2373,7 @@ void AppendDividerBlock(BlockParseState &state) {
 	if (!EmitBlockAllowed(state)) {
 		return;
 	}
+	EnsureListItemTarget(state);
 	auto block = HtmlBlock();
 	block.kind = HtmlBlockKind::Divider;
 	++state.blockCount;
@@ -2396,9 +2421,11 @@ void OpenBlockContainer(
 		const QString &name,
 		const std::vector<HtmlAttribute> &attributes) {
 	FlushLeafBlock(state);
+	EnsureListItemTarget(state);
 	auto container = BlockContainer();
 	container.element = name;
 	container.block.kind = kind;
+	container.styled = true;
 	if (RealContainerDepth(state) >= state.limits->maxDepth) {
 		container.unwrap = true;
 		state.truncated = true;
@@ -2407,9 +2434,113 @@ void OpenBlockContainer(
 	PushStyledBlockElement(state, name, attributes);
 }
 
-void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
+[[nodiscard]] std::optional<int> AttributeInt(
+		const std::vector<HtmlAttribute> &attributes,
+		const QString &name) {
+	const auto value = AttributeValue(attributes, name);
+	if (!value) {
+		return std::nullopt;
+	}
+	auto ok = false;
+	const auto parsed = value->trimmed().toInt(&ok);
+	if (!ok) {
+		return std::nullopt;
+	}
+	return parsed;
+}
+
+void OpenListContainer(
+		BlockParseState &state,
+		const QString &name,
+		const std::vector<HtmlAttribute> &attributes) {
+	OpenBlockContainer(state, HtmlBlockKind::List, name, attributes);
+	auto &block = state.stack.back().block;
+	if (name != u"ol"_q) {
+		return;
+	}
+	block.listKind = HtmlListKind::Ordered;
+	block.listStart = AttributeInt(attributes, u"start"_q);
+	block.listReversed = HasAttribute(attributes, u"reversed"_q);
+	if (const auto type = AttributeValue(attributes, u"type"_q)) {
+		const auto trimmed = type->trimmed();
+		if (trimmed.size() == 1
+			&& QStringView(u"1aAiI").contains(trimmed[0])) {
+			block.listType = trimmed;
+		}
+	}
+}
+
+[[nodiscard]] int NearestListIndex(const BlockParseState &state) {
+	for (auto i = int(state.stack.size()); i != 0; --i) {
+		if (IsListContainer(state.stack[i - 1])) {
+			return i - 1;
+		}
+	}
+	return -1;
+}
+
+[[nodiscard]] int NearestListItemIndex(const BlockParseState &state) {
+	for (auto i = int(state.stack.size()); i != 0; --i) {
+		if (state.stack[i - 1].isListItem) {
+			return i - 1;
+		}
+	}
+	return -1;
+}
+
+void FinishListItemContainer(
+		BlockParseState &state,
+		BlockContainer container) {
+	auto item = HtmlListItem();
+	item.taskState = container.taskState;
+	item.value = container.itemValue;
+	auto &children = container.block.children;
+	if (children.size() == 1
+		&& children.front().kind == HtmlBlockKind::Paragraph
+		&& children.front().children.empty()) {
+		item.text = std::move(children.front().text);
+		--state.blockCount;
+	} else {
+		item.blocks = std::move(children);
+	}
+	const auto empty = item.text.text.isEmpty()
+		&& item.blocks.empty()
+		&& (item.taskState == HtmlTaskState::None);
+	if (empty) {
+		return;
+	}
+	if (!state.stack.empty()
+		&& IsListContainer(state.stack.back())
+		&& !state.stack.back().unwrap) {
+		if (!EmitBlockAllowed(state)) {
+			return;
+		}
+		++state.blockCount;
+		state.stack.back().block.items.push_back(std::move(item));
+		return;
+	}
 	auto &parent = CurrentBlocks(state);
+	if (!item.text.text.isEmpty()) {
+		if (!EmitBlockAllowed(state)) {
+			return;
+		}
+		auto paragraph = HtmlBlock();
+		paragraph.text = std::move(item.text);
+		++state.blockCount;
+		parent.push_back(std::move(paragraph));
+	}
+	for (auto &child : item.blocks) {
+		parent.push_back(std::move(child));
+	}
+}
+
+void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
+	if (container.isListItem) {
+		FinishListItemContainer(state, std::move(container));
+		return;
+	}
 	if (container.unwrap) {
+		auto &parent = CurrentBlocks(state);
 		for (auto &child : container.block.children) {
 			parent.push_back(std::move(child));
 		}
@@ -2434,6 +2565,15 @@ void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
 			state.blockCount -= int(block.children.size());
 			block.children.clear();
 		} else {
+			auto &parent = CurrentBlocks(state);
+			for (auto &child : block.children) {
+				parent.push_back(std::move(child));
+			}
+			return;
+		}
+	} else if (block.kind == HtmlBlockKind::List) {
+		if (block.items.empty()) {
+			auto &parent = CurrentBlocks(state);
 			for (auto &child : block.children) {
 				parent.push_back(std::move(child));
 			}
@@ -2443,8 +2583,9 @@ void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
 	if (!EmitBlockAllowed(state)) {
 		return;
 	}
+	EnsureListItemTarget(state);
 	++state.blockCount;
-	parent.push_back(std::move(block));
+	CurrentBlocks(state).push_back(std::move(block));
 }
 
 void PopBlockContainer(BlockParseState &state) {
@@ -2467,6 +2608,74 @@ void CloseBlockContainer(BlockParseState &state, const QString &name) {
 	}
 	while (int(state.stack.size()) > index) {
 		PopBlockContainer(state);
+	}
+}
+
+void CloseListItemAt(BlockParseState &state, int itemIndex) {
+	if (state.stack[itemIndex].styled) {
+		CloseStyledElement(state.content, u"li"_q);
+	}
+	while (int(state.stack.size()) > itemIndex) {
+		PopBlockContainer(state);
+	}
+}
+
+void ProcessListItemTag(
+		BlockParseState &state,
+		const std::vector<HtmlAttribute> &attributes,
+		bool closing,
+		bool selfClosing) {
+	if (closing) {
+		const auto listIndex = NearestListIndex(state);
+		const auto itemIndex = NearestListItemIndex(state);
+		if (itemIndex >= 0 && itemIndex > listIndex) {
+			CloseListItemAt(state, itemIndex);
+		}
+		return;
+	}
+	FlushLeafBlock(state);
+	const auto listIndex = NearestListIndex(state);
+	const auto itemIndex = NearestListItemIndex(state);
+	if (itemIndex >= 0 && itemIndex > listIndex) {
+		CloseListItemAt(state, itemIndex);
+	}
+	if (state.stack.empty()
+		|| !IsListContainer(state.stack.back())
+		|| state.stack.back().unwrap) {
+		return;
+	}
+	if (selfClosing) {
+		return;
+	}
+	auto container = BlockContainer();
+	container.element = u"li"_q;
+	container.isListItem = true;
+	container.itemValue = AttributeInt(attributes, u"value"_q);
+	container.styled = true;
+	state.stack.push_back(std::move(container));
+	PushStyledBlockElement(state, u"li"_q, attributes);
+}
+
+void ApplyCheckboxInput(
+		BlockParseState &state,
+		const std::vector<HtmlAttribute> &attributes) {
+	const auto type = AttributeValue(attributes, u"type"_q);
+	if (!type
+		|| type->trimmed().compare(u"checkbox"_q, Qt::CaseInsensitive)) {
+		return;
+	}
+	for (auto i = int(state.stack.size()); i != 0; --i) {
+		auto &container = state.stack[i - 1];
+		if (container.isListItem) {
+			if (container.taskState == HtmlTaskState::None) {
+				container.taskState = HasAttribute(attributes, u"checked"_q)
+					? HtmlTaskState::Checked
+					: HtmlTaskState::Unchecked;
+			}
+			return;
+		} else if (IsListContainer(container)) {
+			return;
+		}
 	}
 }
 
@@ -2592,6 +2801,27 @@ void ProcessBlockTag(
 		} else {
 			FlushLeafBlock(state);
 		}
+		return;
+	}
+	if ((name == u"ul"_q) || (name == u"ol"_q)) {
+		if (closing) {
+			if (HasOpenContainer(state, name)) {
+				CloseStyledElement(content, name);
+				CloseBlockContainer(state, name);
+			}
+		} else if (!selfClosing) {
+			OpenListContainer(state, name, attributes);
+		} else {
+			FlushLeafBlock(state);
+		}
+		return;
+	}
+	if (name == u"li"_q) {
+		ProcessListItemTag(state, attributes, closing, selfClosing);
+		return;
+	}
+	if (!closing && (name == u"input"_q)) {
+		ApplyCheckboxInput(state, attributes);
 		return;
 	}
 	if (const auto level = HeadingLevelFromName(name)) {

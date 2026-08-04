@@ -55,6 +55,27 @@ enum class HtmlBlockKind : uchar {
 	Pullquote,
 	Code,
 	Footer,
+	List,
+};
+
+enum class HtmlListKind : uchar {
+	Bullet,
+	Ordered,
+};
+
+enum class HtmlTaskState : uchar {
+	None,
+	Unchecked,
+	Checked,
+};
+
+struct HtmlBlock;
+
+struct HtmlListItem {
+	TextWithTags text;
+	std::vector<HtmlBlock> blocks;
+	HtmlTaskState taskState = HtmlTaskState::None;
+	std::optional<int> value;
 };
 
 struct HtmlBlock {
@@ -62,6 +83,11 @@ struct HtmlBlock {
 	TextWithTags text;
 	QString language;
 	int headingLevel = 0;
+	HtmlListKind listKind = HtmlListKind::Bullet;
+	bool listReversed = false;
+	std::optional<int> listStart;
+	QString listType;
+	std::vector<HtmlListItem> items;
 	std::vector<HtmlBlock> children;
 };
 
