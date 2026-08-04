@@ -1842,7 +1842,7 @@ void TruncateTextWithTags(TextWithTags &text, int limit) {
 	auto length = std::max(limit, 0);
 	if (length >= int(text.text.size())) {
 		return;
-	} else if ((length > 0) && text.text[length - 1].isHighSurrogate()) {
+	} else if ((length > 0) && text.text.at(length - 1).isHighSurrogate()) {
 		--length;
 	}
 	text.text.truncate(length);
