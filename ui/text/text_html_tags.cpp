@@ -39,6 +39,7 @@ enum class HtmlTag {
 	Subscript,
 	Superscript,
 	Marked,
+	IvMath,
 };
 
 using NamedEntityCache = QHash<QString, std::optional<QString>>;
@@ -61,6 +62,7 @@ struct ActiveTags {
 	int subscript = 0;
 	int superscript = 0;
 	int marked = 0;
+	int ivMath = 0;
 	std::vector<QString> links;
 };
 
@@ -177,6 +179,7 @@ struct HtmlTagCounts {
 	int subscript = 0;
 	int superscript = 0;
 	int marked = 0;
+	int ivMath = 0;
 	std::vector<QString> links;
 };
 
@@ -214,6 +217,7 @@ struct LinkRun {
 	case HtmlTag::Subscript: return 7;
 	case HtmlTag::Superscript: return 8;
 	case HtmlTag::Marked: return 9;
+	case HtmlTag::IvMath: return 12;
 	case HtmlTag::Pre: return 10;
 	case HtmlTag::Code: return 11;
 	}
@@ -371,6 +375,8 @@ void AddUnique(
 			AddUnique(result, { HtmlTag::Superscript });
 		} else if (tag == Ui::InputField::kTagIvMarked) {
 			AddUnique(result, { HtmlTag::Marked });
+		} else if (tag == Ui::InputField::kTagIvMath) {
+			AddUnique(result, { HtmlTag::IvMath });
 		} else if (tag == Ui::InputField::kTagCode) {
 			hasCode = true;
 		} else if (IsPreTag(tag)) {
@@ -427,6 +433,7 @@ void UpdateCount(
 	case HtmlTag::Subscript: counts.subscript += delta; break;
 	case HtmlTag::Superscript: counts.superscript += delta; break;
 	case HtmlTag::Marked: counts.marked += delta; break;
+	case HtmlTag::IvMath: counts.ivMath += delta; break;
 	case HtmlTag::Link: break;
 	}
 }
@@ -1096,6 +1103,9 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 	if (active.marked > 0) {
 		tags.push_back(Ui::InputField::kTagIvMarked);
 	}
+	if (active.ivMath > 0) {
+		tags.push_back(Ui::InputField::kTagIvMath);
+	}
 	return TextUtilities::JoinTag(tags);
 }
 
@@ -1713,6 +1723,7 @@ void UpdateActive(ActiveTags &active, HtmlTag tag, bool closing) {
 	case HtmlTag::Subscript: update(active.subscript); break;
 	case HtmlTag::Superscript: update(active.superscript); break;
 	case HtmlTag::Marked: update(active.marked); break;
+	case HtmlTag::IvMath: update(active.ivMath); break;
 	case HtmlTag::Link: break;
 	}
 }
@@ -2597,6 +2608,28 @@ void AppendLeafBlock(BlockParseState &state, TextWithTags text) {
 	CurrentBlocks(state).push_back(std::move(block));
 }
 
+[[nodiscard]] bool IsMediaBlockKind(HtmlBlockKind kind) {
+	return (kind == HtmlBlockKind::Photo)
+		|| (kind == HtmlBlockKind::Video)
+		|| (kind == HtmlBlockKind::Audio);
+}
+
+[[nodiscard]] bool BlockAcceptsCaption(HtmlBlockKind kind) {
+	switch (kind) {
+	case HtmlBlockKind::Quote:
+	case HtmlBlockKind::Pullquote:
+	case HtmlBlockKind::Photo:
+	case HtmlBlockKind::Video:
+	case HtmlBlockKind::Audio:
+	case HtmlBlockKind::Collage:
+	case HtmlBlockKind::Slideshow:
+	case HtmlBlockKind::Map:
+		return true;
+	default:
+		return false;
+	}
+}
+
 void FlushLeafBlock(BlockParseState &state) {
 	auto text = TakeBlockText(state.content);
 	if (state.leafKind == HtmlBlockKind::Code) {
@@ -2621,10 +2654,22 @@ void FlushLeafBlock(BlockParseState &state) {
 		}
 	}
 	if (state.inCaption) {
+		for (auto i = int(state.stack.size()); i != 0; --i) {
+			auto &container = state.stack[i - 1];
+			if (container.isListItem) {
+				break;
+			} else if (container.block.kind == HtmlBlockKind::Collage
+				|| container.block.kind == HtmlBlockKind::Slideshow) {
+				if (container.block.caption.text.isEmpty()) {
+					container.block.caption = std::move(text);
+				}
+				state.leafAnchorId = QString();
+				return;
+			}
+		}
 		auto &blocks = CurrentBlocks(state);
 		if (!blocks.empty()
-			&& ((blocks.back().kind == HtmlBlockKind::Quote)
-				|| (blocks.back().kind == HtmlBlockKind::Pullquote))
+			&& BlockAcceptsCaption(blocks.back().kind)
 			&& blocks.back().caption.text.isEmpty()) {
 			blocks.back().caption = std::move(text);
 			state.leafAnchorId = QString();
@@ -2851,6 +2896,21 @@ void FinishBlockContainer(BlockParseState &state, BlockContainer container) {
 		if (block.text.text.isEmpty() && block.children.empty()) {
 			return;
 		}
+	} else if (block.kind == HtmlBlockKind::Collage
+		|| block.kind == HtmlBlockKind::Slideshow) {
+		auto media = 0;
+		for (const auto &child : block.children) {
+			if (IsMediaBlockKind(child.kind)) {
+				++media;
+			}
+		}
+		if (!media) {
+			auto &parent = CurrentBlocks(state);
+			for (auto &child : block.children) {
+				parent.push_back(std::move(child));
+			}
+			return;
+		}
 	}
 	if (!EmitBlockAllowed(state)) {
 		return;
@@ -2927,6 +2987,168 @@ void ProcessListItemTag(
 	container.styled = true;
 	state.stack.push_back(std::move(container));
 	PushStyledBlockElement(state, u"li"_q, attributes);
+}
+
+[[nodiscard]] std::optional<HtmlBlockKind> MediaKindFromName(
+		const QString &name) {
+	if (name == u"img"_q) {
+		return HtmlBlockKind::Photo;
+	} else if (name == u"video"_q) {
+		return HtmlBlockKind::Video;
+	} else if (name == u"audio"_q) {
+		return HtmlBlockKind::Audio;
+	}
+	return std::nullopt;
+}
+
+[[nodiscard]] bool IsMediaGroupName(const QString &name) {
+	return (name == u"tg-collage"_q) || (name == u"tg-slideshow"_q);
+}
+
+[[nodiscard]] bool HasClass(
+		const std::vector<HtmlAttribute> &attributes,
+		const QString &name) {
+	const auto value = AttributeValue(attributes, u"class"_q);
+	if (!value) {
+		return false;
+	}
+	const auto list = value->split(QChar(' '), Qt::SkipEmptyParts);
+	for (const auto &entry : list) {
+		if (entry == name) {
+			return true;
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] bool HasOpenMediaGroup(const BlockParseState &state) {
+	for (const auto &container : state.stack) {
+		if ((container.block.kind == HtmlBlockKind::Collage)
+			|| (container.block.kind == HtmlBlockKind::Slideshow)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] bool IsOwnMediaTag(
+		const std::vector<HtmlAttribute> &attributes) {
+	return HasAttribute(attributes, u"data-tg-src"_q)
+		|| HasAttribute(attributes, u"data-tg-math"_q)
+		|| HasClass(attributes, u"math-image"_q)
+		|| HasClass(attributes, u"math-inline"_q)
+		|| HasClass(attributes, u"inline-image"_q);
+}
+
+[[nodiscard]] bool HasOpenMediaGroupContainer(
+		const BlockParseState &state,
+		const QString &element) {
+	for (const auto &container : state.stack) {
+		if ((container.element == element)
+			&& ((container.block.kind == HtmlBlockKind::Collage)
+				|| (container.block.kind == HtmlBlockKind::Slideshow))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] bool HasInlineMathTag(const TextWithTags::Tags &tags) {
+	for (const auto &tag : tags) {
+		if (TextUtilities::SplitTags(tag.id).contains(
+				QStringView(Ui::InputField::kTagIvMath))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] bool IsInlineMathImage(
+		const std::vector<HtmlAttribute> &attributes) {
+	return HasClass(attributes, u"math-inline"_q);
+}
+
+[[nodiscard]] std::optional<QString> ImageMathFormula(
+		const std::vector<HtmlAttribute> &attributes) {
+	const auto alt = [&] {
+		const auto value = AttributeValue(attributes, u"alt"_q);
+		return value ? *value : QString();
+	};
+	if (HasAttribute(attributes, u"data-tg-math"_q)) {
+		const auto value = AttributeValue(attributes, u"data-tg-math"_q);
+		return (value && !value->isEmpty()) ? *value : alt();
+	}
+	return (HasClass(attributes, u"math-image"_q)
+		|| HasClass(attributes, u"math-inline"_q))
+		? std::make_optional(alt())
+		: std::nullopt;
+}
+
+void AppendMathBlock(
+		BlockParseState &state,
+		const QString &formula,
+		const std::vector<HtmlAttribute> &attributes) {
+	FlushLeafBlock(state);
+	if (formula.isEmpty() || !EmitBlockAllowed(state)) {
+		return;
+	}
+	EnsureListItemTarget(state);
+	auto block = HtmlBlock();
+	block.kind = HtmlBlockKind::Math;
+	block.anchorId = AnchorIdFromAttributes(attributes);
+	block.formula = formula;
+	++state.blockCount;
+	CurrentBlocks(state).push_back(std::move(block));
+}
+
+void AppendMediaBlock(
+		BlockParseState &state,
+		HtmlBlockKind kind,
+		const std::vector<HtmlAttribute> &attributes) {
+	FlushLeafBlock(state);
+	const auto source = AttributeValue(attributes, u"src"_q);
+	if (!source || source->trimmed().isEmpty()) {
+		return;
+	} else if (!EmitBlockAllowed(state)) {
+		return;
+	}
+	EnsureListItemTarget(state);
+	auto block = HtmlBlock();
+	block.kind = kind;
+	block.anchorId = AnchorIdFromAttributes(attributes);
+	block.media.source = source->trimmed();
+	if (const auto identity = AttributeValue(attributes, u"data-tg-src"_q)) {
+		block.media.identity = identity->trimmed();
+	}
+	block.media.width = AttributeInt(attributes, u"width"_q).value_or(0);
+	block.media.height = AttributeInt(attributes, u"height"_q).value_or(0);
+	block.media.spoiler = HasAttribute(attributes, u"tg-spoiler"_q);
+	block.media.autoplay = HasAttribute(attributes, u"autoplay"_q);
+	block.media.loop = HasAttribute(attributes, u"loop"_q);
+	++state.blockCount;
+	CurrentBlocks(state).push_back(std::move(block));
+}
+
+void AppendMapBlock(
+		BlockParseState &state,
+		const std::vector<HtmlAttribute> &attributes) {
+	FlushLeafBlock(state);
+	const auto latitude = AttributeValue(attributes, u"lat"_q);
+	const auto longitude = AttributeValue(attributes, u"long"_q);
+	if (!latitude || !longitude) {
+		return;
+	} else if (!EmitBlockAllowed(state)) {
+		return;
+	}
+	EnsureListItemTarget(state);
+	auto block = HtmlBlock();
+	block.kind = HtmlBlockKind::Map;
+	block.anchorId = AnchorIdFromAttributes(attributes);
+	block.mapPoint.latitude = latitude->trimmed();
+	block.mapPoint.longitude = longitude->trimmed();
+	block.mapPoint.zoom = AttributeInt(attributes, u"zoom"_q).value_or(0);
+	++state.blockCount;
+	CurrentBlocks(state).push_back(std::move(block));
 }
 
 void AppendTableBlock(
@@ -3159,6 +3381,71 @@ void ProcessBlockTag(
 	}
 	if (!closing && (name == u"input"_q)) {
 		ApplyCheckboxInput(state, attributes);
+		return;
+	}
+	if (const auto kind = MediaKindFromName(name)) {
+		if (closing) {
+			return;
+		} else if (!IsOwnMediaTag(attributes)
+			&& !HasOpenMediaGroup(state)) {
+			ProcessTag(content, name, attributes, closing, selfClosing);
+			return;
+		} else if (const auto formula = ImageMathFormula(attributes)) {
+			if (IsInlineMathImage(attributes)) {
+				UpdateActive(content.active, HtmlTag::IvMath, false);
+				AppendText(content, *formula);
+				UpdateActive(content.active, HtmlTag::IvMath, true);
+			} else {
+				AppendMathBlock(state, *formula, attributes);
+			}
+		} else {
+			AppendMediaBlock(state, *kind, attributes);
+		}
+		return;
+	}
+	if (closing && HasOpenMediaGroupContainer(state, name)) {
+		CloseStyledElement(content, name);
+		CloseBlockContainer(state, name);
+		return;
+	}
+	if (!closing) {
+		const auto group = IsMediaGroupName(name)
+			? std::make_optional((name == u"tg-slideshow"_q)
+				? HtmlBlockKind::Slideshow
+				: HtmlBlockKind::Collage)
+			: std::optional<HtmlBlockKind>();
+		if (group) {
+			if (!selfClosing) {
+				OpenBlockContainer(state, *group, name, attributes);
+			} else {
+				FlushLeafBlock(state);
+			}
+			return;
+		}
+	} else if (IsMediaGroupName(name)) {
+		return;
+	}
+	if (name == u"tg-map"_q) {
+		if (!closing) {
+			AppendMapBlock(state, attributes);
+		}
+		return;
+	}
+	if (name == u"tg-math-block"_q) {
+		FlushLeafBlock(state);
+		if (closing) {
+			state.leafKind = HtmlBlockKind::Paragraph;
+		} else if (!selfClosing) {
+			const auto &blocks = CurrentBlocks(state);
+			if (!blocks.empty()
+				&& (blocks.back().kind == HtmlBlockKind::Math)
+				&& !blocks.back().formula.isEmpty()) {
+				content.hidden.push(name);
+				return;
+			}
+			state.leafKind = HtmlBlockKind::Math;
+			state.leafAnchorId = AnchorIdFromAttributes(attributes);
+		}
 		return;
 	}
 	if (name == u"figcaption"_q) {
@@ -3418,9 +3705,10 @@ std::optional<HtmlBlocks> BlocksFromHtml(
 		PopBlockContainer(state);
 	}
 	FlushLeafBlock(state);
-	if (state.blocks.empty()
-		|| (state.blocks.size() == 1
-			&& state.blocks.front().kind == HtmlBlockKind::Paragraph)) {
+	const auto plainSingle = (state.blocks.size() == 1)
+		&& (state.blocks.front().kind == HtmlBlockKind::Paragraph)
+		&& !HasInlineMathTag(state.blocks.front().text.tags);
+	if (state.blocks.empty() || plainSingle) {
 		return std::nullopt;
 	}
 	return HtmlBlocks{

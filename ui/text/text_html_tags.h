@@ -59,6 +59,29 @@ enum class HtmlBlockKind : uchar {
 	List,
 	Details,
 	Table,
+	Photo,
+	Video,
+	Audio,
+	Collage,
+	Slideshow,
+	Map,
+	Math,
+};
+
+struct HtmlMedia {
+	QString source;
+	QString identity;
+	int width = 0;
+	int height = 0;
+	bool spoiler = false;
+	bool autoplay = false;
+	bool loop = false;
+};
+
+struct HtmlMapPoint {
+	QString latitude;
+	QString longitude;
+	int zoom = 0;
 };
 
 enum class HtmlListKind : uchar {
@@ -97,6 +120,9 @@ struct HtmlBlock {
 	std::optional<HtmlTable> table;
 	std::vector<HtmlListItem> items;
 	std::vector<HtmlBlock> children;
+	HtmlMedia media;
+	HtmlMapPoint mapPoint;
+	QString formula;
 };
 
 struct HtmlBlocksLimits {
