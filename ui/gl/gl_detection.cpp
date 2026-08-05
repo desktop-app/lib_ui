@@ -194,6 +194,10 @@ void CrashCheckStart() {
 		LOG(("RHI: Falling back to OpenGL."));
 	}
 #endif // QT_CONFIG(vulkan)
+	if (!OpenGLLibraryAvailable()) {
+		LOG(("RHI: OpenGL library unavailable."));
+		return {};
+	}
 	const auto tryCreate = [&](QSurfaceFormat format) {
 		offscreen.reset(QRhiGles2InitParams::newFallbackSurface(format));
 		if (!offscreen) {
@@ -402,9 +406,7 @@ bool WidgetsRhiEnabled() {
 	if (!OptionUseQtRhi.value()) {
 		return false;
 	} else if (!Platform::IsMac()) {
-		if (ForceDisabled
-			|| LastCrashCheckFailed()
-			|| !OpenGLLibraryAvailable()) {
+		if (ForceDisabled || LastCrashCheckFailed()) {
 			return false;
 		}
 	}
@@ -426,9 +428,7 @@ RhiCapabilities CheckRhiCapabilities() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 	static const auto result = [] {
 		if (!Platform::IsMac()) {
-			if (ForceDisabled
-				|| LastCrashCheckFailed()
-				|| !OpenGLLibraryAvailable()) {
+			if (ForceDisabled || LastCrashCheckFailed()) {
 				return RhiCapabilities();
 			}
 			CrashCheckStart();
