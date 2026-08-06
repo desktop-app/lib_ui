@@ -13,11 +13,54 @@
 #include "ui/ui_utility.h" // kPixelToAngleDelta
 #include "ui/rp_widget.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+#include <QtCore/QCoreApplication>
+#include <QtGui/QPointingDevice>
+#endif // Qt >= 6.2.0
+
 #include <qpa/qwindowsysteminterface.h>
 #include <qpa/qwindowsysteminterface_p.h>
 
 namespace Ui::Platform {
 namespace {
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+
+constexpr auto kMaxTouchPoints = 10;
+
+// Direct Manipulation delivers precise touchpad deltas, but the Windows
+// platform plugin doesn't know about them, so the events would otherwise
+// come from the generic mouse device without the PixelScroll capability.
+[[nodiscard]] not_null<const QPointingDevice*> TouchpadDevice() {
+	static const auto Result = [] {
+		// Make sure the default "core pointer" mouse exists before we
+		// register ours. primaryPointingDevice() creates it only when
+		// neither a mouse nor a touchpad is registered, and the Windows
+		// plugin never registers a mouse, so our touchpad coming first
+		// would silently become the primary device and all the ordinary
+		// mouse events would be attributed to it, with PixelScroll.
+		QPointingDevice::primaryPointingDevice();
+
+		const auto device = new QPointingDevice(
+			u"touchpad"_q,
+			0,
+			QInputDevice::DeviceType::TouchPad,
+			QPointingDevice::PointerType::Finger,
+			(QInputDevice::Capability::Position
+				| QInputDevice::Capability::Scroll
+				| QInputDevice::Capability::PixelScroll),
+			kMaxTouchPoints,
+			0,
+			QString(),
+			QPointingDeviceUniqueId(),
+			QCoreApplication::instance());
+		QWindowSystemInterface::registerInputDevice(device);
+		return device;
+	}();
+	return Result;
+}
+
+#endif // Qt >= 6.2.0
 
 [[nodiscard]] Qt::KeyboardModifiers LookupModifiers() {
 	const auto check = [](int key) {
@@ -538,6 +581,9 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
 			QWindowSystemInterface::handleWheelEvent(
 				windowHandle,
 				QWindowSystemInterfacePrivate::eventTime.elapsed(),
+#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+				TouchpadDevice(),
+#endif // Qt >= 6.2.0
 				QPointF(local.x, local.y),
 				QPointF(global.x, global.y),
 				delta.toPoint(),
