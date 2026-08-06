@@ -6,17 +6,23 @@
 //
 #include "ui/rp_widget.h"
 
+#include "base/flat_map.h"
+#include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
 #include "base/qt_signal_producer.h"
 #include "ui/accessible/ui_accessible_item.h"
 #include "ui/accessible/ui_accessible_widget.h"
 #include "ui/gl/gl_detection.h"
+#include "ui/screen_reader_mode.h"
 
+#include <QtCore/QVariant>
 #include <QtGui/QWindow>
 #include <QtGui/QtEvents>
 #include <QtGui/QColorSpace>
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
+
+#include <algorithm>
 
 namespace Ui {
 namespace {
@@ -538,6 +544,311 @@ bool RpWidget::accessibilitySelectionList() const {
 
 RpWidget *RpWidget::accessibilityParent() const {
 	return nullptr;
+}
+
+namespace {
+
+constexpr auto kVisualTabOrderProperty = "ui_visual_tab_order";
+constexpr auto kVisualTabOrderOverlayProperty = "ui_visual_tab_order_overlay";
+
+// Whether the chain can be wired through this widget. In screen reader
+// mode the accessibility layer grants the real focus policy lazily, when
+// the assistive technology first queries the widget - so a freshly
+// created widget (like the message list right after a chat switch) still
+// reports NoFocus here. Check the declared policy instead and force the
+// lazy registration right away: it applies the policy and keeps the
+// widget managed across screen reader mode switches.
+[[nodiscard]] bool TakesTabFocus(not_null<QWidget*> widget) {
+	if (widget->focusPolicy() & Qt::TabFocus) {
+		return true;
+	}
+	if (ScreenReaderModeActive()) {
+		if (const auto rp = qobject_cast<RpWidget*>(widget.get())) {
+			if (rp->accessibilityFocusPolicy() & Qt::TabFocus) {
+				QAccessible::queryAccessibleInterface(rp);
+				return (widget->focusPolicy() & Qt::TabFocus) != 0;
+			}
+		}
+	}
+	return false;
+}
+
+// Every Tab stop a child contributes, not just the outermost one: a widget
+// can be focusable and still hold focusable widgets of its own (a bar button
+// with a settings button inside it), and QWidget::setTabOrder moves a whole
+// block only for real compound widgets, established through a focus proxy.
+// Endpoints alone would leave the widgets between them where they were, so
+// each stop is placed explicitly. Compound widgets (like InputField) keep a
+// NoFocus container around a focusable inner widget without a focus proxy,
+// so the chain is wired through the inner widget - setTabOrder refuses
+// NoFocus arguments. Hidden descendants are collected as well: focus
+// traversal skips widgets that aren't visible, so keeping them in their
+// group costs nothing and means they are already in the right place when
+// they are shown. Every widget on the way is queried, so the lazily granted
+// screen reader focus policy gets materialized for all of them and not only
+// for the first one found.
+void CollectTabFocusable(
+		not_null<QWidget*> widget,
+		std::vector<QWidget*> &result) {
+	if (TakesTabFocus(widget)) {
+		result.push_back(widget);
+	}
+	for (const auto object : widget->children()) {
+		if (object->isWidgetType()) {
+			CollectTabFocusable(static_cast<QWidget*>(object), result);
+		}
+	}
+}
+
+// Holds the visual Tab order state of a single container. It is created only
+// when a container asks for the ordering and lives as its child, found back
+// through a dynamic property - so widgets that never ask store nothing.
+class VisualTabOrder final : public QObject {
+public:
+	explicit VisualTabOrder(not_null<RpWidget*> parent);
+
+	void schedule();
+	void apply();
+
+	[[nodiscard]] static VisualTabOrder *Find(not_null<QWidget*> widget);
+	static void Enable(not_null<RpWidget*> widget);
+	static void Disable(not_null<RpWidget*> widget);
+
+private:
+	bool eventFilter(QObject *watched, QEvent *e) override;
+
+	const not_null<RpWidget*> _widget;
+	bool _scheduled = false;
+	rpl::lifetime _lifetime;
+
+};
+
+VisualTabOrder::VisualTabOrder(not_null<RpWidget*> parent)
+: QObject(parent)
+, _widget(parent) {
+	parent->installEventFilter(this);
+
+	// Focus policies that come from accessibility roles are granted only
+	// once a screen reader is detected - which happens asynchronously on
+	// Windows and can also be switched on while the app is running. The
+	// widgets report NoFocus until then, so the order has to be redone.
+	ScreenReaderModeActiveValue(
+	) | rpl::on_next([=] {
+		schedule();
+	}, _lifetime);
+}
+
+VisualTabOrder *VisualTabOrder::Find(not_null<QWidget*> widget) {
+	const auto value = widget->property(kVisualTabOrderProperty);
+	return value.isValid()
+		? static_cast<VisualTabOrder*>(value.value<void*>())
+		: nullptr;
+}
+
+void VisualTabOrder::Enable(not_null<RpWidget*> widget) {
+	if (Find(widget)) {
+		return;
+	}
+	const auto state = new VisualTabOrder(widget);
+	widget->setProperty(
+		kVisualTabOrderProperty,
+		QVariant::fromValue(static_cast<void*>(state)));
+	state->schedule();
+}
+
+void VisualTabOrder::Disable(not_null<RpWidget*> widget) {
+	if (const auto state = Find(widget)) {
+		widget->setProperty(kVisualTabOrderProperty, QVariant());
+		delete state;
+	}
+}
+
+bool VisualTabOrder::eventFilter(QObject *watched, QEvent *e) {
+	const auto type = e->type();
+	if (type == QEvent::Resize
+		|| type == QEvent::Move
+		|| type == QEvent::Show
+		|| type == QEvent::Hide
+		|| type == QEvent::ZOrderChange
+		|| type == QEvent::ChildAdded
+		|| type == QEvent::ChildRemoved
+		|| type == QEvent::LayoutRequest) {
+		schedule();
+	}
+	return QObject::eventFilter(watched, e);
+}
+
+void VisualTabOrder::schedule() {
+	if (_scheduled) {
+		return;
+	}
+	_scheduled = true;
+	InvokeQueued(this, [=] {
+		_scheduled = false;
+		apply();
+	});
+}
+
+void VisualTabOrder::apply() {
+	// Band vertically overlapping children together, so a row of controls
+	// keeps its horizontal order even when tops differ by a few pixels.
+	struct Entry {
+		QWidget *widget = nullptr;
+		std::vector<QWidget*> stops;
+		bool overlay = false;
+		int band = 0;
+	};
+	auto list = std::vector<Entry>();
+	for (const auto object : _widget->children()) {
+		if (!object->isWidgetType()) {
+			continue;
+		}
+		const auto child = static_cast<QWidget*>(object);
+
+		// Watch the children as well: showing, hiding or moving one of them
+		// doesn't produce any event on this widget, so the order would stay
+		// as it was until something else happened to poke it.
+		child->installEventFilter(this);
+
+		if (child->isHidden()) {
+			// Hidden widgets keep a parked / stale position, so their
+			// geometry must not influence the order. They keep their
+			// current chain place until they are shown - which now
+			// reapplies the order through the filter above.
+			continue;
+		}
+		if (const auto nested = Find(child)) {
+			// A nested container that opted in may have changes of its own
+			// waiting - let it arrange its children first, so the order
+			// preserved below is its final one and not a stale one.
+			nested->apply();
+		}
+		auto stops = std::vector<QWidget*>();
+		CollectTabFocusable(child, stops);
+		if (!stops.empty()) {
+			const auto overlay = child->property(
+				kVisualTabOrderOverlayProperty
+			).toBool();
+			list.push_back({ child, std::move(stops), overlay });
+		}
+	}
+	if (list.size() < 2) {
+		return;
+	}
+	std::stable_sort(begin(list), end(list), [](
+			const Entry &a,
+			const Entry &b) {
+		return a.widget->y() < b.widget->y();
+	});
+	auto band = 0;
+	auto bandBottom = 0;
+	for (auto i = 0, count = int(list.size()); i != count; ++i) {
+		const auto top = list[i].widget->y();
+		const auto bottom = top + list[i].widget->height();
+		if (!i) {
+			bandBottom = bottom;
+		} else if (top < bandBottom) {
+			bandBottom = std::max(bandBottom, bottom);
+		} else {
+			++band;
+			bandBottom = bottom;
+		}
+		list[i].band = band;
+	}
+	const auto rtl = style::RightToLeft();
+	std::stable_sort(begin(list), end(list), [&](
+			const Entry &a,
+			const Entry &b) {
+		if (a.overlay != b.overlay) {
+			// An overlay floats over the others instead of being laid out
+			// next to them, so it comes after the content it covers.
+			return !a.overlay;
+		} else if (a.band != b.band) {
+			return a.band < b.band;
+		}
+		// The mirror of ordering by the left edge is ordering by the right
+		// edge, not the left one backwards: children of different widths
+		// starting at the same place would keep the order they were created
+		// in, so a narrow overlay would come before the wide child it
+		// covers instead of after it.
+		const auto ax = rtl
+			? a.widget->geometry().right()
+			: a.widget->geometry().left();
+		const auto bx = rtl
+			? b.widget->geometry().right()
+			: b.widget->geometry().left();
+		return rtl ? (ax > bx) : (ax < bx);
+	});
+
+	// Keep the stops of a single child in the order they currently sit in
+	// the focus chain, so whatever arranged them - a nested container that
+	// opted in, or a plain setTabOrder somewhere - is not undone here. A
+	// stop that isn't in this window's chain is left out: setTabOrder only
+	// works within one window anyway.
+	auto positions = base::flat_map<QWidget*, int>();
+	for (auto i = 0, count = int(list.size()); i != count; ++i) {
+		for (const auto stop : list[i].stops) {
+			positions.emplace(stop, i);
+		}
+	}
+	auto ordered = std::vector<std::vector<QWidget*>>(list.size());
+	const auto window = _widget->window();
+	auto widget = window;
+	do {
+		const auto i = positions.find(widget);
+		if (i != end(positions)) {
+			ordered[i->second].push_back(widget);
+		}
+		widget = widget->nextInFocusChain();
+	} while (widget && widget != window);
+
+	auto flat = std::vector<QWidget*>();
+	for (const auto &stops : ordered) {
+		flat.insert(end(flat), begin(stops), end(stops));
+	}
+	for (auto i = 1, count = int(flat.size()); i != count; ++i) {
+		QWidget::setTabOrder(flat[i - 1], flat[i]);
+	}
+}
+
+} // namespace
+
+void RpWidget::setVisualTabOrder(bool enabled) {
+	if (enabled) {
+		VisualTabOrder::Enable(this);
+	} else {
+		VisualTabOrder::Disable(this);
+	}
+}
+
+void RpWidget::setVisualTabOrderOverlay(bool overlay) {
+	setProperty(
+		kVisualTabOrderOverlayProperty,
+		overlay ? QVariant(true) : QVariant());
+	RefreshVisualTabOrder(this);
+}
+
+void RpWidget::refreshVisualTabOrder() {
+	if (const auto state = VisualTabOrder::Find(this)) {
+		state->schedule();
+	}
+}
+
+void RefreshVisualTabOrder(not_null<QWidget*> widget) {
+	auto parent = widget->parentWidget();
+	while (parent) {
+		if (const auto state = VisualTabOrder::Find(parent)) {
+			state->schedule();
+		}
+		parent = parent->parentWidget();
+	}
+}
+
+bool RpWidget::focusNextPrevChild(bool next) {
+	if (const auto state = VisualTabOrder::Find(this)) {
+		state->apply();
+	}
+	return RpWidgetBase<QWidget>::focusNextPrevChild(next);
 }
 
 QAccessibleInterface *RpWidget::accessibilityChildInterface(

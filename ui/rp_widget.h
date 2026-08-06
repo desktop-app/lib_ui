@@ -34,6 +34,11 @@ void ResizeFitChild(
 	not_null<RpWidget*> child,
 	int heightMin = 0);
 
+// Rewire the visual Tab order of every container above this widget that keeps
+// one - for a Tab-focusable widget created or replaced deeper in the tree than
+// those containers watch. See RpWidget::setVisualTabOrder.
+void RefreshVisualTabOrder(not_null<QWidget*> widget);
+
 template <typename Widget, typename Traits>
 class RpWidgetBase;
 
@@ -485,6 +490,42 @@ public:
 	virtual void accessibilityChildSetFocus(quintptr identity);
 	virtual void accessibilityChildActivate(quintptr identity);
 
+	// Keep this widget's Tab-focusable children ordered in the focus chain
+	// by visual position (row bands top-to-bottom, left-to-right within a
+	// band, mirrored in RTL) instead of widget creation order. The chain is
+	// rewired only among this widget's own children, lazily on Tab handling
+	// and after layout changes, and traversal is still done by the default
+	// implementation - so the existing focusNextPrevChild overloads (like
+	// the layer blocking in base::FocusNextPrevChildBlocked) keep working:
+	// they walk the focus chain and simply see the visual order in it.
+	//
+	// A child may hold any number of Tab stops - all of them are placed,
+	// keeping the order they already have in the chain, so a nested
+	// container that orders its own children composes with this one and
+	// isn't undone by it.
+	//
+	// The state this needs is attached to the widget only when it is enabled,
+	// so widgets that never ask for it store nothing.
+	void setVisualTabOrder(bool enabled);
+
+	// Mark this widget as floating over its siblings instead of being laid
+	// out next to them, so the container above places it after the content
+	// it covers. Position alone can't say that - "on top of" is not a
+	// direction - and leaving it to geometry makes the order depend on where
+	// the overlay happens to sit: one covering the whole child, or sitting
+	// on the side the reading order starts from, would come before it.
+	void setVisualTabOrderOverlay(bool overlay);
+
+	// The lazy rewiring above triggers on Tab handling inside this widget,
+	// on layout and visibility changes of this widget and of its children,
+	// and when the screen reader mode changes. A container that changes
+	// which widget is Tab-focusable outside of those - like a list moving
+	// its roving Tab-stop from the arrow keys - must call this right after
+	// such a change, or a Tab entering from outside still sees the old
+	// chain. For a widget created deeper in the tree, where the container
+	// sees nothing, call Ui::RefreshVisualTabOrder with it instead.
+	void refreshVisualTabOrder();
+
 protected:
 	// e - from enterEvent() of child RpWidget
 	virtual void leaveToChildEvent(QEvent *e, QWidget *child) {
@@ -510,6 +551,8 @@ protected:
 		int visibleTop,
 		int visibleBottom) {
 	}
+
+	bool focusNextPrevChild(bool next) override;
 
 	template <typename OtherWidget, typename OtherTraits>
 	friend class RpWidgetBase;
