@@ -234,6 +234,11 @@ void TableLayout::insertRow(
 			}, [=] {
 				removeChild(wlabel);
 			}, _rowsLifetime);
+
+			wlabel->naturalWidthValue(
+			) | rpl::skip(1) | rpl::on_next([=] {
+				childNaturalWidthUpdated();
+			}, _rowsLifetime);
 		}
 		if (wvalue) {
 			wvalue->heightValue(
@@ -243,6 +248,11 @@ void TableLayout::insertRow(
 				}
 			}, [=] {
 				removeChild(wvalue);
+			}, _rowsLifetime);
+
+			wvalue->naturalWidthValue(
+			) | rpl::skip(1) | rpl::on_next([=] {
+				childNaturalWidthUpdated();
 			}, _rowsLifetime);
 		}
 	}
@@ -263,6 +273,14 @@ void TableLayout::childHeightUpdated(RpWidget *child) {
 		top += rowVerticalSkip(row);
 	}
 	resize(width(), _rows.empty() ? 0 : top);
+}
+
+void TableLayout::childNaturalWidthUpdated() {
+	if (_inResize || width() <= 0) {
+		return;
+	}
+	resizeToWidth(width(), true);
+	update();
 }
 
 void TableLayout::removeChild(RpWidget *child) {

@@ -84,6 +84,7 @@ private:
 
 	[[nodiscard]] int rowVerticalSkip(const Row &row) const;
 	void childHeightUpdated(RpWidget *child);
+	void childNaturalWidthUpdated();
 	void removeChild(RpWidget *child);
 	void updateRowGeometry(const Row &row, int width, int top) const;
 	void updateRowPosition(const Row &row, int width, int top) const;
