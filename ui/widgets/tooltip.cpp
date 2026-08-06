@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/tooltip.h"
 
+#include "ui/integration.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
 #include "ui/platform/ui_platform_utility.h"
@@ -527,6 +528,7 @@ object_ptr<RpWidget> MakeTooltipWithClose(
 	const auto button = CreateChild<IconButton>(
 		result.data(),
 		closeSt);
+	button->setAccessibleName(Integration::Instance().phraseButtonClose());
 	result->sizeValue(
 	) | rpl::on_next([=](QSize size) {
 		button->resize(button->width(), size.height());
