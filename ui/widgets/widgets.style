@@ -491,19 +491,6 @@ MultiSelect {
 	fieldCancelSkip: pixels;
 }
 
-CallButton {
-	button: IconButton;
-	bg: color;
-	bgSize: pixels;
-	bgPosition: point;
-	angle: double;
-	outerRadius: pixels;
-	outerBg: color;
-	label: FlatLabel;
-	cornerButtonPosition: point;
-	cornerButtonBorder: pixels;
-}
-
 InnerDropdown {
 	padding: margins;
 	shadow: Shadow;
