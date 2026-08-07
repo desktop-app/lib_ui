@@ -26,6 +26,7 @@ private:
 	void paintEvent(QPaintEvent *e) override;
 
 	void updateGeometry();
+	void paintBackground(QPainter &p);
 	void paintToProxy();
 	void disableChildrenPaintOnce();
 	void toggleChildrenPaint(bool enable);

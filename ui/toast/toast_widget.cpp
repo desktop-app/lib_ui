@@ -521,6 +521,11 @@ void Widget::setShownLevel(float64 shownLevel) {
 	}
 }
 
+void Widget::paintBackground(QPainter &p) {
+	auto hq = PainterHighQualityEnabler(p);
+	_roundRect.paint(p, rect());
+}
+
 void Widget::paintToProxy() {
 	const auto ratio = devicePixelRatio();
 	const auto full = size() * ratio;
@@ -531,9 +536,20 @@ void Widget::paintToProxy() {
 	_shownProxy.fill(Qt::transparent);
 
 	auto q = QPainter(&_shownProxy);
-	const auto saved = std::exchange(_shownLevel, 1.);
-	Ui::RenderWidget(q, this);
-	_shownLevel = saved;
+	paintBackground(q);
+
+	// Rendering `this` would re-enter our own paintEvent, which Qt reports
+	// as a recursive repaint, so the children are rendered one by one.
+	for (const auto child : children()) {
+		if (!child->isWidgetType()) {
+			continue;
+		}
+		const auto widget = static_cast<QWidget*>(child);
+		if (widget->isHidden() || widget->isWindow()) {
+			continue;
+		}
+		Ui::RenderWidget(q, widget, widget->pos());
+	}
 }
 
 void Widget::disableChildrenPaintOnce() {
@@ -579,8 +595,7 @@ void Widget::paintEvent(QPaintEvent *e) {
 		return;
 	}
 
-	auto hq = PainterHighQualityEnabler(p);
-	_roundRect.paint(p, rect());
+	paintBackground(p);
 }
 
 } // namespace Ui::Toast::internal
