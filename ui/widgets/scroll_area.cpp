@@ -8,10 +8,8 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
-#include "base/platform/base_platform_info.h"
 #include "base/qt/qt_common_adapters.h"
 #include "base/debug_log.h"
-#include "base/options.h"
 
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QApplication>
@@ -21,13 +19,6 @@
 
 namespace Ui {
 namespace {
-
-base::options::toggle OptionKineticScroller({
-	.id = kOptionKineticScroller,
-	.name = "Use KineticScroller for touchpad scrolling",
-	.description = "Provides kinetic scrolling",
-	.defaultValue = Platform::IsLinux(),
-});
 
 [[nodiscard]] int ComputeScrollTo(
 		int toFrom,
@@ -67,8 +58,6 @@ base::options::toggle OptionKineticScroller({
 }
 
 } // namespace
-
-const char kOptionKineticScroller[] = "kinetic-scroller";
 
 // flick scroll taken from http://qt-project.org/doc/qt-4.8/demos-embedded-anomaly-src-flickcharm-cpp.html
 
@@ -455,16 +444,6 @@ ScrollArea::ScrollArea(
 		_touchTimer.setCallback([=] { _touchRightButton = true; });
 		_touchScrollTimer.setCallback([=] { touchScrollTimer(); });
 	}
-
-	rpl::single(
-		rpl::empty
-	) | rpl::then(
-		OptionKineticScroller.changes()
-	) | rpl::on_next([=] {
-		_scroller = OptionKineticScroller.value()
-			? std::make_unique<KineticScroller>(viewport())
-			: nullptr;
-	}, lifetime());
 }
 
 void ScrollArea::touchDeaccelerate(int32 elapsed) {
@@ -655,42 +634,6 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 						{ qRound(delta.x()), 0 },
 						phase);
 			}
-		}
-		if (_scroller && ev->phase() != Qt::NoScrollPhase) {
-			// The scroller only observes the gesture stream to measure
-			// the release velocity: the fling comes back through here as
-			// a synthesized ScrollMomentum stream, applied by the same
-			// stock handling below as the finger events (QScrollBar math
-			// consumes the angle channel with 1px granularity).
-			_scroller->handleWheelEvent(ev);
-			if (ev->phase() != Qt::ScrollMomentum) {
-				return QScrollArea::viewportEvent(e);
-			}
-			const auto angle = ev->angleDelta();
-			const auto horizontal = std::abs(angle.x())
-				> std::abs(angle.y());
-			const auto bar = horizontal
-				? horizontalScrollBar()
-				: verticalScrollBar();
-			const auto was = bar->value();
-			const auto weak = base::make_weak(this);
-			const auto result = QScrollArea::viewportEvent(e);
-			if (!weak) {
-				return true;
-			}
-			// A positive (inverted-adjusted) delta scrolls towards the
-			// minimum, matching QScrollBar::wheelEvent. The bare "value
-			// unchanged" is not enough: sub-quantum ticks legitimately
-			// leave it unchanged mid-range while the fraction accumulates.
-			const auto delta = (horizontal ? angle.x() : angle.y())
-				* (ev->inverted() ? -1 : 1);
-			if (bar->value() == was
-				&& ((delta > 0 && was == bar->minimum())
-					|| (delta < 0 && was == bar->maximum()))) {
-				// The fling ran into the end of the range.
-				_scroller->stop();
-			}
-			return result;
 		}
 	}
 	return QScrollArea::viewportEvent(e);

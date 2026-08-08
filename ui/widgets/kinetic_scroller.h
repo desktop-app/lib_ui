@@ -21,6 +21,8 @@ class QWindow;
 
 namespace Ui {
 
+extern const char kOptionKineticScroller[];
+
 // Replacement for QScroller: observes the phased wheel event stream of a
 // touchpad gesture to measure the release velocity, and after the release
 // synthesizes a stream of Qt::ScrollMomentum wheel events (finished by a
@@ -38,6 +40,14 @@ namespace Ui {
 //
 // Here the release velocity is averaged over the last 150 ms of drag deltas
 // and the fling decays it exponentially.
+//
+// One instance per window, fed the window-level gesture stream by an
+// application-wide watcher: any widget the window delivers a gesture to
+// (scroll areas, input fields, any QTextEdit) gets the fling without
+// per-host wiring, and a new gesture anywhere in the window catches a
+// fling still running on any of its widgets. The fling target is taken
+// from Qt's own wheel grab and the synthesized events climb the same
+// widget chain as the real ones.
 class KineticScroller final : public QObject {
 public:
 	enum State {
@@ -47,20 +57,28 @@ public:
 		Scrolling,
 	};
 
-	explicit KineticScroller(not_null<QWidget*> target);
+	// The window's shared scroller (created on demand as a child of the
+	// widget's window handle), nullptr when the option is disabled.
+	[[nodiscard]] static KineticScroller *For(not_null<QWidget*> widget);
+	// The watcher's entry point, use For() from widgets.
+	[[nodiscard]] static not_null<KineticScroller*> ForWindow(
+		not_null<QWindow*> window);
 
-	[[nodiscard]] State state() const {
-		return _state;
-	}
+	// Inactive unless the current gesture / fling runs inside `target`
+	// (the grab is on the deepest widget under the gesture, so a scroll
+	// host asks whether the stream belongs to its subtree).
+	[[nodiscard]] State state(not_null<QWidget*> target) const;
 	// The exact fling velocity in the stream's raw pixels per second,
 	// non-zero only while Scrolling: the synthesized events truncate it to
 	// whole pixels per tick, so hosts measuring it back from them would read
 	// zero in the slow tail of the fling.
 	[[nodiscard]] QPointF velocity() const;
-	// Never consumes: real events are applied by the host, synthetic ones
-	// (including our own echo) are ignored here. Never sends events back
-	// synchronously either (the fling is paced by the frame clock), so
-	// the caller can't be destroyed inside this call.
+	// Fed by the application-wide watcher with the window-level event,
+	// before the widget delivery - hosts don't call this. Never consumes:
+	// real events are applied by their receivers, synthetic ones (including
+	// our own echo) are ignored here. A retarget flushes the previous
+	// target's final ScrollEnd synchronously, the fling itself is paced by
+	// the frame clock.
 	void handleWheelEvent(not_null<QWheelEvent*> e);
 	void stop();
 
@@ -83,18 +101,21 @@ private:
 		QPointF pixel;
 	};
 
+	explicit KineticScroller(not_null<QWindow*> window);
+
 	void setState(State state);
 	void armFrameClock();
 	void disarmFrameClock();
 	void press();
+	[[nodiscard]] bool setTarget(not_null<QWidget*> target);
 	void drag(not_null<QWheelEvent*> e, crl::time timestamp);
 	void flick(crl::time timestamp);
 	void flickTick(crl::time now);
 	void sendWheel(Qt::ScrollPhase phase, QPoint pixel, QPoint angle);
 	[[nodiscard]] Velocity dragVelocity(crl::time now) const;
 
-	const not_null<QWidget*> _target;
-	QPointer<QWindow> _frameWindow;
+	const not_null<QWindow*> _window;
+	QPointer<QWidget> _target;
 	QPoint _stopMousePos;
 	State _state = Inactive;
 	std::vector<DragSample> _history;

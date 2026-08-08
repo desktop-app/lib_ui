@@ -8,7 +8,7 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
-#include "base/options.h"
+#include "ui/widgets/kinetic_scroller.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_widgets.h"
 
@@ -424,19 +424,6 @@ ElasticScroll::ElasticScroll(
 	) | rpl::on_next([=](int from) {
 		tryScrollTo(from, false);
 	}, _bar->lifetime());
-
-	static const auto &OptionKineticScroller = base::options::lookup<bool>(
-		kOptionKineticScroller);
-
-	rpl::single(
-		rpl::empty
-	) | rpl::then(
-		OptionKineticScroller.changes()
-	) | rpl::on_next([=] {
-		_scroller = OptionKineticScroller.value()
-			? std::make_unique<KineticScroller>(this)
-			: nullptr;
-	}, lifetime());
 }
 
 ElasticScroll::~ElasticScroll() {
@@ -958,36 +945,19 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			overscrollReturn();
 		}
 		return true;
-	} else if (_scroller && !touch) {
-		// The scroller only observes the gesture stream to measure the
-		// release velocity: the deltas are applied by the code below, and
-		// the fling comes back through here as a synthesized ScrollMomentum
-		// stream.
-		_scroller->handleWheelEvent(e);
-		const auto elastic = _overscroll
-			|| _overscrollAccumulated
-			|| _pendingOverscrollDelta
-			|| _overscrollReturning;
-		if (elastic && _scroller->state() != KineticScroller::Inactive) {
-			// The overscroll physics own this gesture: no fling on top.
-			const auto weak = base::make_weak(this);
-			_scroller->stop();
-			if (!weak) {
-				return true;
-			}
-		}
 	}
 	const auto momentum = (phase == Qt::ScrollMomentum)
 		|| (phase == Qt::ScrollEnd);
 	trackWheelVelocity(phase, delta, crl::time(e->timestamp()));
-	if (_scroller && _scroller->state() == KineticScroller::Scrolling) {
+	const auto scroller = KineticScroller::For(this);
+	if (scroller && scroller->state(this) == KineticScroller::Scrolling) {
 		// Scrolling here means the event stream is our own fling: its
 		// deltas are truncated to whole pixels per tick, so the velocity
 		// tracked back from them reads zero in the slow tail and would
 		// suppress the edge bounce. The scroller's closed-form velocity
 		// is exact at any instant, use it instead, converted the same
 		// way the applied deltas are.
-		const auto exact = _scroller->velocity() * style::Scale() / 100.;
+		const auto exact = scroller->velocity() * style::Scale() / 100.;
 		const auto limit = kMaxTrackedVelocity * style::Scale() / 100.;
 		_wheelVelocity = std::clamp(
 			-(_vertical ? exact.y() : exact.x()),
@@ -996,20 +966,10 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 		_wheelVelocityTime = crl::now();
 	}
 	if (_ignoreMomentumFromOverscroll) {
-		const auto stopFling = [&] {
-			if (_scroller
-				&& _scroller->state() == KineticScroller::Scrolling) {
-				// The spring owns the edge: kill the residual synthetic
-				// stream, or its mouse-stop filter would keep eating
-				// clicks until the fling decays. May destroy `this`.
-				_scroller->stop();
-			}
-		};
 		if (!momentum) {
 			_ignoreMomentumFromOverscroll = 0;
 		} else if (_springSide) {
 			if (!base::OppositeSigns(_springSide, delta)) {
-				stopFling();
 				return true;
 			}
 			// Opposite-direction input during the bounce is a new
@@ -1020,7 +980,6 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			overscrollReturnCancel();
 		} else if (!_overscrollReturnAnimation.animating()
 			&& !base::OppositeSigns(_ignoreMomentumFromOverscroll, delta)) {
-			stopFling();
 			return true;
 		}
 	}

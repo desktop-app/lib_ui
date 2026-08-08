@@ -9,7 +9,6 @@
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "ui/effects/animations.h"
-#include "ui/widgets/kinetic_scroller.h"
 #include "base/object_ptr.h"
 #include "base/timer.h"
 #include "styles/style_widgets.h"
@@ -46,8 +45,6 @@ struct ScrollToRequest {
 	int ymax = 0;
 
 };
-
-extern const char kOptionKineticScroller[];
 
 class ScrollShadow final : public QWidget {
 public:
@@ -248,8 +245,6 @@ private:
 	object_ptr<ScrollBar> _horizontalBar, _verticalBar;
 	object_ptr<ScrollShadow> _topShadow, _bottomShadow;
 	int _horizontalValue, _verticalValue;
-
-	std::unique_ptr<KineticScroller> _scroller;
 
 	bool _touchEnabled = false;
 	base::Timer _touchTimer;
