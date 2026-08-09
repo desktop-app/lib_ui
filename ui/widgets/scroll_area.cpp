@@ -843,7 +843,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 				}
 				_scroller->handleInput(wasNull
 					? QScroller::InputPress
-					: QScroller::InputMove, _wheelPos, crl::now());
+					: QScroller::InputMove, _wheelPos, ev->timestamp());
 			} return true;
 			case Qt::ScrollEnd:
 			case Qt::ScrollMomentum: {
@@ -851,7 +851,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 					_scroller->handleInput(
 						QScroller::InputRelease,
 						_wheelPos,
-						crl::now());
+						ev->timestamp());
 					_wheelPos = {};
 				}
 			} return true;
