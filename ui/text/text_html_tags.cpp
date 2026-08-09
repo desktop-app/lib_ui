@@ -3107,7 +3107,10 @@ void AppendMediaBlock(
 		const std::vector<HtmlAttribute> &attributes) {
 	FlushLeafBlock(state);
 	const auto source = AttributeValue(attributes, u"src"_q);
-	if (!source || source->trimmed().isEmpty()) {
+	const auto identity = AttributeValue(attributes, u"data-tg-src"_q);
+	const auto trimmedSource = source ? source->trimmed() : QString();
+	const auto trimmedIdentity = identity ? identity->trimmed() : QString();
+	if (trimmedSource.isEmpty() && trimmedIdentity.isEmpty()) {
 		return;
 	} else if (!EmitBlockAllowed(state)) {
 		return;
@@ -3116,10 +3119,8 @@ void AppendMediaBlock(
 	auto block = HtmlBlock();
 	block.kind = kind;
 	block.anchorId = AnchorIdFromAttributes(attributes);
-	block.media.source = source->trimmed();
-	if (const auto identity = AttributeValue(attributes, u"data-tg-src"_q)) {
-		block.media.identity = identity->trimmed();
-	}
+	block.media.source = trimmedSource;
+	block.media.identity = trimmedIdentity;
 	block.media.width = AttributeInt(attributes, u"width"_q).value_or(0);
 	block.media.height = AttributeInt(attributes, u"height"_q).value_or(0);
 	block.media.spoiler = HasAttribute(attributes, u"tg-spoiler"_q);
