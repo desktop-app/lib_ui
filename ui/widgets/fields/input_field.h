@@ -249,12 +249,18 @@ public:
 		Check,
 		Edit,
 	};
+	enum class EditLinkItems : uchar {
+		None,
+		DateOnly,
+		LinkAndDate,
+	};
 	void setEditLinkCallback(
 		Fn<bool(
 			EditLinkSelection selection,
 			TextWithTags text,
 			QString link,
-			EditLinkAction action)> callback);
+			EditLinkAction action)> callback,
+		EditLinkItems items = EditLinkItems::LinkAndDate);
 	void setEditLanguageCallback(
 		Fn<void(QString now, Fn<void(QString)> save)> callback);
 
@@ -544,6 +550,7 @@ private:
 		EditLinkData *outData);
 	void editMarkdownLink(EditLinkSelection selection);
 	void editMarkdownDate(EditLinkSelection selection);
+	[[nodiscard]] EditLinkItems editLinkItems() const;
 
 	void commitInstantReplacement(
 		int from,
@@ -657,6 +664,7 @@ private:
 	SubmitSettings _submitSettings = SubmitSettings::Enter;
 	MarkdownEnabledState _markdownEnabledState;
 	MarkdownSet _markdownSet = MarkdownSet::All;
+	EditLinkItems _editLinkItems = EditLinkItems::LinkAndDate;
 	bool _instantViewEditorTagsEnabled = false;
 	bool _undoAvailable = false;
 	bool _redoAvailable = false;

@@ -2014,7 +2014,7 @@ bool InputField::executeMarkdownAction(MarkdownAction action) {
 	if (_markdownEnabledState.disabled()) {
 		return false;
 	} else if (action.type == MarkdownActionType::EditLink) {
-		if (!_editLinkCallback) {
+		if (editLinkItems() != EditLinkItems::LinkAndDate) {
 			return false;
 		}
 		const auto cursor = textCursor();
@@ -2023,7 +2023,7 @@ bool InputField::executeMarkdownAction(MarkdownAction action) {
 			cursor.selectionEnd()
 		});
 	} else if (action.type == MarkdownActionType::EditDate) {
-		if (!_editLinkCallback) {
+		if (editLinkItems() == EditLinkItems::None) {
 			return false;
 		}
 		const auto cursor = textCursor();
@@ -4755,8 +4755,12 @@ TextWithTags InputField::prepareTextStrippingLinks(
 	return text;
 }
 
+InputField::EditLinkItems InputField::editLinkItems() const {
+	return _editLinkCallback ? _editLinkItems : EditLinkItems::None;
+}
+
 void InputField::editMarkdownLink(EditLinkSelection selection) {
-	if (!_editLinkCallback) {
+	if (editLinkItems() != EditLinkItems::LinkAndDate) {
 		return;
 	}
 	auto data = EditLinkData();
@@ -4765,7 +4769,7 @@ void InputField::editMarkdownLink(EditLinkSelection selection) {
 }
 
 void InputField::editMarkdownDate(EditLinkSelection selection) {
-	if (!_editLinkCallback) {
+	if (editLinkItems() == EditLinkItems::None) {
 		return;
 	}
 	auto data = EditLinkData();
@@ -5612,7 +5616,7 @@ void InputField::clearCurrentMarkdown() {
 }
 
 bool InputField::hasCurrentMarkdownLink() const {
-	if (!_editLinkCallback) {
+	if (editLinkItems() != EditLinkItems::LinkAndDate) {
 		return false;
 	}
 	const auto cursor = textCursor();
@@ -5855,9 +5859,10 @@ void InputField::addMarkdownActions(
 	const auto textWithTags = getTextWithTagsSelected();
 	const auto &text = textWithTags.text;
 	const auto &tags = textWithTags.tags;
+	const auto items = editLinkItems();
 	const auto hasText = !text.isEmpty();
 	const auto hasTags = !tags.isEmpty();
-	const auto disabled = (!_editLinkCallback && !hasText);
+	const auto disabled = ((items == EditLinkItems::None) && !hasText);
 	formatting->setDisabled(disabled);
 	if (disabled) {
 		return;
@@ -5919,9 +5924,11 @@ void InputField::addMarkdownActions(
 		addtag(integration.phraseFormattingMonospace(), kMonospaceSequence, kTagCode);
 		addtag(integration.phraseFormattingSpoiler(), kSpoilerSequence, kTagSpoiler);
 
-		if (_editLinkCallback) {
+		if (items != EditLinkItems::None) {
 			submenu->addSeparator();
-			addlink();
+			if (items == EditLinkItems::LinkAndDate) {
+				addlink();
+			}
 			const auto dateSelection = editLinkSelection(e);
 			const auto dateData = selectionEditLinkData(dateSelection);
 			const auto overDate = IsCustomDateLink(dateData.link);
@@ -6089,8 +6096,10 @@ void InputField::setEditLinkCallback(
 		EditLinkSelection selection,
 		TextWithTags text,
 		QString link,
-		EditLinkAction action)> callback) {
+		EditLinkAction action)> callback,
+	EditLinkItems items) {
 	_editLinkCallback = std::move(callback);
+	_editLinkItems = items;
 }
 
 void InputField::setEditLanguageCallback(
