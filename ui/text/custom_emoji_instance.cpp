@@ -809,9 +809,13 @@ void Instance::decrementUsage(not_null<Object*> object) {
 	});
 }
 
-Object::Object(not_null<Instance*> instance, Fn<void()> repaint)
+Object::Object(
+	not_null<Instance*> instance,
+	Fn<void()> repaint,
+	int width)
 : _instance(instance)
-, _repaint(std::move(repaint)) {
+, _repaint(std::move(repaint))
+, _width(width) {
 }
 
 Object::~Object() {
@@ -819,7 +823,7 @@ Object::~Object() {
 }
 
 int Object::width() {
-	return st::emojiSize + 2 * st::emojiPadding;
+	return _width;
 }
 
 QString Object::entityData() {
