@@ -2550,6 +2550,8 @@ TextForMimeData TextForMimeData::WithExpandedLinks(
 		for (const auto &entity : text.entities) {
 			if (entity.type() != EntityType::CustomUrl) {
 				continue;
+			} else if (!entity.validForText(text.text.size())) {
+				continue;
 			}
 			// This logic is duplicated in Ui::Text::String::toText.
 			const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(
@@ -2592,9 +2594,10 @@ int EntityInText::FirstMonospaceOffset(
 	auto &&monospace = ranges::make_subrange(
 		entities.begin(),
 		entities.end()
-	) | ranges::views::filter([](const EntityInText & entity) {
-		return (entity.type() == EntityType::Pre)
-			|| (entity.type() == EntityType::Code);
+	) | ranges::views::filter([=](const EntityInText &entity) {
+		return entity.validForText(textLength)
+			&& ((entity.type() == EntityType::Pre)
+				|| (entity.type() == EntityType::Code));
 	});
 	const auto i = ranges::max_element(
 		monospace,
