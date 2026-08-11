@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/text/text_entity.h"
+
 #include <QtGui/QColor>
 #include <QtGui/QImage>
 #include <QtCore/QSize>
@@ -86,6 +88,9 @@ public:
 	[[nodiscard]] virtual QString replacementText() {
 		return QString();
 	}
+	[[nodiscard]] virtual EntitiesInText replacementEntities() {
+		return {};
+	}
 	[[nodiscard]] virtual CustomEmojiSemantics semantics() {
 		return {};
 	}
@@ -107,6 +112,7 @@ public:
 	std::optional<CustomEmojiVerticalMetrics> vertical(
 		const style::TextStyle &st) override;
 	QString replacementText() override;
+	EntitiesInText replacementEntities() override;
 	CustomEmojiSemantics semantics() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
@@ -128,6 +134,7 @@ public:
 	std::optional<CustomEmojiVerticalMetrics> vertical(
 		const style::TextStyle &st) override;
 	QString replacementText() override;
+	EntitiesInText replacementEntities() override;
 	CustomEmojiSemantics semantics() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;
@@ -151,6 +158,7 @@ public:
 	std::optional<CustomEmojiVerticalMetrics> vertical(
 		const style::TextStyle &st) override;
 	QString replacementText() override;
+	EntitiesInText replacementEntities() override;
 	CustomEmojiSemantics semantics() override;
 	void paint(QPainter &p, const Context &context) override;
 	void unload() override;

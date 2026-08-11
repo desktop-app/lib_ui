@@ -1878,16 +1878,19 @@ void String::enumerateText(
 				const auto semantics = custom->semantics();
 				if (!semantics.exportEntity) {
 					const auto replacement = custom->replacementText();
-					const auto data = custom->entityData();
+					const auto empty = replacement.isEmpty();
 					appendPartCallback(
-						replacement.isEmpty()
+						empty
 							? base::StringViewMid(
 								_text,
 								rangeFrom,
 								rangeTo - rangeFrom)
 							: QStringView(replacement),
-						data,
-						false);
+						custom->entityData(),
+						false,
+						empty
+							? EntitiesInText()
+							: custom->replacementEntities());
 					continue;
 				}
 			}
@@ -1897,7 +1900,8 @@ void String::enumerateText(
 			appendPartCallback(
 				base::StringViewMid(_text, rangeFrom, rangeTo - rangeFrom),
 				customEmojiData,
-				true);
+				true,
+				EntitiesInText());
 		}
 	}
 }
@@ -2114,7 +2118,8 @@ TextForMimeData String::toText(
 	const auto appendPartCallback = [&](
 			QStringView part,
 			const QString &customEmojiData,
-			bool exportCustomEmojiEntity) {
+			bool exportCustomEmojiEntity,
+			const EntitiesInText &replacementEntities) {
 		const auto offset = int(result.rich.text.size());
 		result.rich.text += part;
 		if (composeExpanded) {
@@ -2137,6 +2142,16 @@ TextForMimeData String::toText(
 				int(part.size()),
 				customEmojiData,
 			});
+		}
+		if (composeEntities) {
+			for (const auto &entity : replacementEntities) {
+				insertEntity({
+					entity.type(),
+					offset + entity.offset(),
+					entity.length(),
+					entity.data(),
+				});
+			}
 		}
 	};
 

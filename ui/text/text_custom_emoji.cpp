@@ -70,6 +70,10 @@ QString ShiftedEmoji::replacementText() {
 	return _wrapped->replacementText();
 }
 
+EntitiesInText ShiftedEmoji::replacementEntities() {
+	return _wrapped->replacementEntities();
+}
+
 CustomEmojiSemantics ShiftedEmoji::semantics() {
 	return _wrapped->semantics();
 }
@@ -112,6 +116,10 @@ std::optional<CustomEmojiVerticalMetrics> FirstFrameEmoji::vertical(
 
 QString FirstFrameEmoji::replacementText() {
 	return _wrapped->replacementText();
+}
+
+EntitiesInText FirstFrameEmoji::replacementEntities() {
+	return _wrapped->replacementEntities();
 }
 
 CustomEmojiSemantics FirstFrameEmoji::semantics() {
@@ -162,6 +170,10 @@ std::optional<CustomEmojiVerticalMetrics> LimitedLoopsEmoji::vertical(
 
 QString LimitedLoopsEmoji::replacementText() {
 	return _wrapped->replacementText();
+}
+
+EntitiesInText LimitedLoopsEmoji::replacementEntities() {
+	return _wrapped->replacementEntities();
 }
 
 CustomEmojiSemantics LimitedLoopsEmoji::semantics() {
