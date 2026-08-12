@@ -1782,6 +1782,11 @@ bool MarkdownEnabledState::typedTagsEnabled() const {
 	return yes && yes->typedTags;
 }
 
+bool MarkdownEnabledState::instantTagsEnabled() const {
+	const auto yes = std::get_if<MarkdownEnabled>(&data);
+	return yes && yes->instantTags;
+}
+
 InputField::InputField(
 	QWidget *parent,
 	const style::InputField &st,
@@ -2185,7 +2190,8 @@ void InputField::setMarkdownReplacesEnabled(
 	) | rpl::on_next([=](MarkdownEnabledState state) {
 		if (_markdownEnabledState != state) {
 			_markdownEnabledState = state;
-			if (!_markdownEnabledState.typedTagsEnabled()) {
+			if (!_markdownEnabledState.typedTagsEnabled()
+				&& !_markdownEnabledState.instantTagsEnabled()) {
 				_lastMarkdownTags = {};
 			} else {
 				handleContentsChanged();
@@ -3888,6 +3894,9 @@ void InputField::chopByMaxLength(int insertPosition, int insertLength) {
 
 void InputField::handleContentsChanged() {
 	setErrorShown(false);
+	if (!_committingMarkdownReplacement) {
+		_reverseMarkdownReplacement = false;
+	}
 
 	auto tagsChanged = false;
 	const auto currentText = getTextPart(
@@ -3895,7 +3904,8 @@ void InputField::handleContentsChanged() {
 		-1,
 		_lastTextWithTags.tags,
 		tagsChanged,
-		(_markdownEnabledState.typedTagsEnabled()
+		((_markdownEnabledState.typedTagsEnabled()
+			|| _markdownEnabledState.instantTagsEnabled())
 			? &_lastMarkdownTags
 			: nullptr));
 
@@ -4821,44 +4831,71 @@ const InstantReplaces &InputField::instantReplaces() const {
 	return _mutableInstantReplaces;
 }
 
-// Disable markdown instant replacement.
 bool InputField::processMarkdownReplaces(const QString &appended) {
-	//if (appended.size() != 1 || !_markdownEnabled) {
-	//	return false;
-	//}
-	//const auto ch = appended[0];
-	//if (ch == '`') {
-	//	return processMarkdownReplace(kTagCode)
-	//		|| processMarkdownReplace(kTagPre);
-	//} else if (ch == '*') {
-	//	return processMarkdownReplace(kTagBold);
-	//} else if (ch == '_') {
-	//	return processMarkdownReplace(kTagItalic);
-	//}
+	if (appended.isEmpty()
+		|| !_markdownEnabledState.instantTagsEnabled()) {
+		return false;
+	}
+	const auto last = appended[appended.size() - 1];
+	if (last != '*'
+		&& last != '_'
+		&& last != '~'
+		&& last != '`'
+		&& last != '|') {
+		return false;
+	}
+	const auto position = textCursor().position();
+	for (const auto &tag : _lastMarkdownTags) {
+		if (!tag.closed
+			|| (tag.internalStart + tag.internalLength != position)
+			|| (tag.internalLength <= 2 * int(tag.tag.size()))
+			|| !_markdownEnabledState.enabledForTag(tag.tag)) {
+			continue;
+		}
+		const auto edge = int(tag.tag.size());
+		const auto inner = getTextWithTagsPart(
+			tag.internalStart + edge,
+			position - edge).text;
+		const auto multiline = ranges::any_of(inner, IsNewline);
+		if (inner.isEmpty()
+			|| inner.front().isSpace()
+			|| inner.back().isSpace()
+			|| multiline) {
+			continue;
+		}
+		const auto lineStart = document()->findBlock(
+			tag.internalStart).position();
+		const auto before = getTextWithTagsPart(
+			lineStart,
+			tag.internalStart).text;
+		const auto wordStart = [&] {
+			for (auto i = before.size(); i != 0; --i) {
+				if (before[i - 1].isSpace()) {
+					return int(i);
+				}
+			}
+			return 0;
+		}();
+		if (base::StringViewMid(before, wordStart).contains(u"://")) {
+			continue;
+		}
+		if ((tag.tag != kTagCode)
+			&& (tag.tag != kTagPre)
+			&& _markdownEnabledState.enabledForTag(kTagCode)
+			&& (before.count(QChar('`')) % 2 == 1)) {
+			continue;
+		}
+		// The insertText inside rebuilds _lastMarkdownTags, so pass
+		// a copy of the tag, not a reference into the destroyed list.
+		const auto id = tag.tag;
+		return commitMarkdownReplacement(
+			tag.internalStart,
+			position,
+			id,
+			id);
+	}
 	return false;
 }
-
-//bool InputField::processMarkdownReplace(const QString &tag) {
-//	const auto position = textCursor().position();
-//	const auto tagLength = tag.size();
-//	const auto start = [&] {
-//		for (const auto &possible : _lastMarkdownTags) {
-//			const auto end = possible.start + possible.length;
-//			if (possible.start + 2 * tagLength >= position) {
-//				return MarkdownTag();
-//			} else if (end >= position || end + tagLength == position) {
-//				if (possible.tag == tag) {
-//					return possible;
-//				}
-//			}
-//		}
-//		return MarkdownTag();
-//	}();
-//	if (start.tag.isEmpty()) {
-//		return false;
-//	}
-//	return commitMarkdownReplacement(start.start, position, tag, tag);
-//}
 
 void InputField::processInstantReplaces(const QString &appended) {
 	const auto &replaces = instantReplaces();
@@ -5100,7 +5137,6 @@ void InputField::commitInstantReplacement(
 	cursor.insertText(replacement, format);
 }
 
-#if 0
 bool InputField::commitMarkdownReplacement(
 		int from,
 		int till,
@@ -5201,6 +5237,10 @@ bool InputField::commitMarkdownReplacement(
 		_reverseMarkdownReplacement = true;
 	}
 	_insertedTagsAreFromMime = false;
+	_committingMarkdownReplacement = true;
+	const auto guard = gsl::finally([&] {
+		_committingMarkdownReplacement = false;
+	});
 	cursor.insertText(insert, format);
 	_insertedTags.clear();
 
@@ -5212,7 +5252,6 @@ bool InputField::commitMarkdownReplacement(
 
 	return true;
 }
-#endif
 
 auto InputField::addMarkdownTag(TextRange range, const QString &tag)
 -> TextRange {
