@@ -12,7 +12,11 @@ namespace Ui {
 
 class TimePart : public MaskedInputField {
 public:
-	using MaskedInputField::MaskedInputField;
+	TimePart(
+		QWidget *parent,
+		const style::InputField &st,
+		rpl::producer<QString> placeholder = nullptr,
+		const QString &val = QString());
 
 	void setMaxValue(int value);
 	void setWheelStep(int value);
