@@ -1828,6 +1828,7 @@ InputField::InputField(
 #endif
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
 	_inner->setAcceptRichText(false);
+	updateInnerInputMethodHints();
 	resize(_st.width, _minHeight);
 	if (_st.width > 0) {
 		setNaturalWidth(_st.width);
@@ -2546,6 +2547,7 @@ void InputField::setMode(Mode mode) {
 		|| (_mode != Mode::SingleLine && mode != Mode::SingleLine));
 
 	_mode = mode;
+	updateInnerInputMethodHints();
 	forceProcessContentsChanges();
 }
 
@@ -4047,6 +4049,7 @@ void InputField::customUpDown(bool isCustom) {
 
 void InputField::setSubmitSettings(SubmitSettings settings) {
 	_submitSettings = settings;
+	updateInnerInputMethodHints();
 }
 
 not_null<QTextDocument*> InputField::document() {
@@ -4255,6 +4258,19 @@ Qt::InputMethodHints InputField::inputMethodHints() const {
 }
 
 void InputField::setInputMethodHints(Qt::InputMethodHints hints) {
+	_inputMethodHints = hints;
+	updateInnerInputMethodHints();
+}
+
+void InputField::updateInnerInputMethodHints() {
+	// The inner text edit sets Qt::ImhMultiLine for itself in the
+	// constructor, but the flag tells the input method that Enter inserts
+	// a new line, which is true only in the multiline mode and only while
+	// Enter isn't taken by submitting.
+	const auto multiline = (_mode == Mode::MultiLine)
+		&& !ShouldSubmit(_submitSettings, Qt::NoModifier);
+	auto hints = _inputMethodHints;
+	hints.setFlag(Qt::ImhMultiLine, multiline);
 	_inner->setInputMethodHints(hints);
 }
 

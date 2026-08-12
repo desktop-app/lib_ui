@@ -472,6 +472,7 @@ private:
 	void contextMenuEventInner(QContextMenuEvent *e);
 	void dropEventInner(QDropEvent *e);
 	void inputMethodEventInner(QInputMethodEvent *e);
+	void updateInnerInputMethodHints();
 	void paintEventInner(QPaintEvent *e);
 	void paintQuotes(QPaintEvent *e);
 
@@ -611,6 +612,7 @@ private:
 	int _maxHeight = -1;
 
 	const std::unique_ptr<Inner> _inner;
+	Qt::InputMethodHints _inputMethodHints;
 
 	Fn<bool(
 		EditLinkSelection selection,
