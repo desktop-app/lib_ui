@@ -16,6 +16,7 @@ NumberInput::NumberInput(
 	int limit)
 : MaskedInputField(parent, st, std::move(placeholder), value)
 , _limit(limit) {
+	setInputMethodHints(Qt::ImhDigitsOnly | Qt::ImhNoPredictiveText);
 	if (!value.toInt() || (limit > 0 && value.toInt() > limit)) {
 		setText(QString());
 	}

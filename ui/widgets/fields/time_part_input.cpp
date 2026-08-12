@@ -13,6 +13,15 @@
 
 namespace Ui {
 
+TimePart::TimePart(
+	QWidget *parent,
+	const style::InputField &st,
+	rpl::producer<QString> placeholder,
+	const QString &val)
+: MaskedInputField(parent, st, std::move(placeholder), val) {
+	setInputMethodHints(Qt::ImhDigitsOnly | Qt::ImhNoPredictiveText);
+}
+
 std::optional<int> TimePart::number() {
 	static const auto RegExp = QRegularExpression("^\\d+$");
 	const auto text = getLastText();
