@@ -4250,6 +4250,14 @@ void InputField::ensureCursorVisible() {
 	_inner->ensureCursorVisible();
 }
 
+Qt::InputMethodHints InputField::inputMethodHints() const {
+	return _inner->inputMethodHints();
+}
+
+void InputField::setInputMethodHints(Qt::InputMethodHints hints) {
+	_inner->setInputMethodHints(hints);
+}
+
 not_null<QTextEdit*> InputField::rawTextEdit() {
 	return _inner.get();
 }

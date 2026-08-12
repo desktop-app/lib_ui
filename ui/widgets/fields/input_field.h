@@ -370,6 +370,8 @@ public:
 	void setFocus();
 	void clearFocus();
 	void ensureCursorVisible();
+	Qt::InputMethodHints inputMethodHints() const;
+	void setInputMethodHints(Qt::InputMethodHints hints);
 	not_null<QTextEdit*> rawTextEdit();
 	not_null<const QTextEdit*> rawTextEdit() const;
 
