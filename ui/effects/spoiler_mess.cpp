@@ -219,8 +219,11 @@ void WriteDefaultMask(
 		return;
 	}
 	const auto bytes = mask.serialize();
+	if (bytes.size() > kMaxCacheSize) {
+		return;
+	}
 	auto file = QFile(folder + '/' + name);
-	if (file.open(QIODevice::WriteOnly) && bytes.size() <= kMaxCacheSize) {
+	if (file.open(QIODevice::WriteOnly)) {
 		file.write(bytes);
 	}
 }
