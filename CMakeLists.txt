@@ -101,6 +101,8 @@ PRIVATE
     ui/rhi/rhi_surface.h
     ui/image/image_prepare.cpp
     ui/image/image_prepare.h
+    ui/image/svg_safety.cpp
+    ui/image/svg_safety.h
     ui/layers/box_content.cpp
     ui/layers/box_content.h
     ui/layers/box_layer_widget.cpp

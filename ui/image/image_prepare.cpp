@@ -7,6 +7,7 @@
 #include "ui/image/image_prepare.h"
 
 #include "ui/effects/animation_value.h"
+#include "ui/image/svg_safety.h"
 #include "ui/style/style_core.h"
 #include "ui/painter.h"
 #include "base/flat_map.h"
@@ -409,6 +410,11 @@ std::array<QImage, 4> PrepareCorners(
 				bytes.remove(start, end + 4 - start);
 			}
 		}
+	}
+	bytes = SanitizeSvg(bytes);
+	if (bytes.isEmpty()) {
+		LOG(("Svg Error: Unsafe data."));
+		return {};
 	}
 	auto renderer = QSvgRenderer(bytes);
 	if (!renderer.isValid()) {
