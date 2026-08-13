@@ -58,6 +58,7 @@ namespace {
 	const auto raw = result.data();
 
 	raw->lifetime().add(std::move(lifetime));
+	raw->setTryMakeSimilarLines(config.similarLines);
 	auto context = config.textContext;
 	context.repaint = [raw] { raw->update(); };
 	raw->setMarkedText(ComputeText(config), context);

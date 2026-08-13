@@ -52,6 +52,7 @@ struct Config {
 	ClickHandlerFilter filter;
 	int maxlines = 16;
 	bool singleline = false;
+	bool similarLines = false;
 
 	// Custom way of composing any content.
 	object_ptr<RpWidget> content = { nullptr };
