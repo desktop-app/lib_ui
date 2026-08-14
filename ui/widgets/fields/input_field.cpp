@@ -445,7 +445,22 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 		InputField::kTagIvMath);
 }
 
-[[nodiscard]] QString TagWithAddedDroppingMath(
+[[nodiscard]] QString TagWithoutOppositeScript(
+		const QString &tag,
+		const QString &added) {
+	if (added == InputField::kTagIvSubscript) {
+		return TextUtilities::TagWithRemoved(
+			tag,
+			InputField::kTagIvSuperscript);
+	} else if (added == InputField::kTagIvSuperscript) {
+		return TextUtilities::TagWithRemoved(
+			tag,
+			InputField::kTagIvSubscript);
+	}
+	return tag;
+}
+
+[[nodiscard]] QString TagWithAddedDroppingConflicts(
 		const QString &tag,
 		const QString &added,
 		bool instantViewEditorTagsEnabled) {
@@ -455,7 +470,7 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 	}
 	const auto base = (instantViewEditorTagsEnabled
 			&& added != InputField::kTagIvMath)
-		? TagWithoutInstantViewMath(tag)
+		? TagWithoutOppositeScript(TagWithoutInstantViewMath(tag), added)
 		: tag;
 	return TextUtilities::TagWithAdded(base, added);
 }
@@ -1700,7 +1715,7 @@ void InsertCustomEmojiAtCursor(
 	format.setBackground(QBrush());
 	ApplyTagFormat(format, currentFormat);
 	format.setVerticalAlignment(QTextCharFormat::AlignTop);
-	format.setProperty(kTagProperty, TagWithAddedDroppingMath(
+	format.setProperty(kTagProperty, TagWithAddedDroppingConflicts(
 		format.property(kTagProperty).toString(),
 		unique,
 		true));
@@ -5129,7 +5144,7 @@ void InputField::commitInstantReplacement(
 			format.property(kTagProperty).toString()));
 	}
 	if (!unique.isEmpty()) {
-		format.setProperty(kTagProperty, TagWithAddedDroppingMath(
+		format.setProperty(kTagProperty, TagWithAddedDroppingConflicts(
 			format.property(kTagProperty).toString(),
 			unique,
 			_instantViewEditorTagsEnabled));
@@ -5263,7 +5278,7 @@ auto InputField::addMarkdownTag(TextRange range, const QString &tag)
 			if (existing.offset > filled) {
 				tags.push_back({ filled, existing.offset - filled, tag });
 			}
-			existing.id = TagWithAddedDroppingMath(
+			existing.id = TagWithAddedDroppingConflicts(
 				existing.id,
 				tag,
 				_instantViewEditorTagsEnabled);
@@ -5613,7 +5628,7 @@ void InputField::toggleCurrentMarkdownTag(const QString &tag) {
 		cursor.charFormat().property(kTagProperty).toString());
 	const auto updatedTag = isMarkdownTagActive(tag)
 		? TextUtilities::TagWithRemoved(currentTag, tag)
-		: TagWithAddedDroppingMath(
+		: TagWithAddedDroppingConflicts(
 			currentTag,
 			tag,
 			_instantViewEditorTagsEnabled);
