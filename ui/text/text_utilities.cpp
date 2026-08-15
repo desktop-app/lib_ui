@@ -251,9 +251,6 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
 		const auto r2 = midEnd - 1;
 		return !(l1 > r2 || l2 > r1);
 	}) | ranges::views::transform([&](const EntityInText &entity) {
-		if ((entity.offset() == position) && (entity.length() == n)) {
-			return entity;
-		}
 		const auto start = std::max(entity.offset(), position);
 		const auto end = std::min(entity.offset() + entity.length(), midEnd);
 		return EntityInText(
