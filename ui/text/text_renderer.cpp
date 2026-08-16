@@ -14,10 +14,6 @@
 #include "ui/style/style_core.h"
 #include "styles/style_basic.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <private/qharfbuzz_p.h>
-#endif // Qt < 6.0.0
-
 namespace Ui::Text {
 namespace {
 

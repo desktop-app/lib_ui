@@ -13,7 +13,6 @@
 #include "styles/style_basic.h"
 
 #include <QtCore/QUrl>
-#include <private/qfixed_p.h>
 
 namespace Ui::Text {
 namespace {
