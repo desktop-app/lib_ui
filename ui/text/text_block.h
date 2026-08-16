@@ -13,8 +13,6 @@
 
 #include <crl/crl_time.h>
 
-#include <private/qfixed_p.h>
-
 namespace style {
 struct TextStyle;
 } // namespace style

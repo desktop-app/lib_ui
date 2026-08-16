@@ -8,8 +8,6 @@
 
 #include "styles/style_basic.h"
 
-#include <private/qfontengine_p.h>
-
 namespace Ui {
 namespace Text {
 
