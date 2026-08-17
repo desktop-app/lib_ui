@@ -1142,16 +1142,34 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		for (int g = glyphsStart; g < glyphsEnd; ++g)
 			itemWidth += glyphs.effectiveAdvance(g);
 
+		// Each half of a middle elision keeps the end of the item that faces
+		// the middle of the line, and which end that is depends on the item's
+		// direction: glyphs are stored in logical order, so the visually left
+		// part of a right-to-left item is its last glyphs. Walking from the
+		// first glyph regardless keeps the wrong end as soon as a half spans
+		// more than one item - it would show neither the beginning nor the end
+		// of the text, but two stretches out of its middle, out of order.
 		if (_elisionMiddle && !paintRightToMiddleElision) {
 			itemWidth = 0;
-			for (int g = glyphsStart; g < glyphsEnd; ++g) {
+			const auto forward = !rtl;
+			for (int k = 0; k < glyphsEnd - glyphsStart; ++k) {
+				const auto g = forward
+					? (glyphsStart + k)
+					: (glyphsEnd - 1 - k);
 				const auto adv = glyphs.effectiveAdvance(g);
 				if (leftLineLengthLeft - adv.toReal() < 0) {
 					leftLineLengthLeft = 0;
-					if (isSpaceGlyph(g)) {
+					const auto at = forward
+						? g
+						: std::min(g + 1, glyphsEnd - 1);
+					if (isSpaceGlyph(at)) {
 						rightLineLengthLeft += _f->spacew;
 					}
-					glyphsEnd = g;
+					if (forward) {
+						glyphsEnd = g;
+					} else {
+						glyphsStart = at;
+					}
 					i = -1;
 					lastLeftToMiddleX = (x + itemWidth);
 					break;
@@ -1167,13 +1185,24 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			if (i == 0) {
 				x = _x + _lineWidth;
 			}
-			for (int g = glyphsEnd - 1; g >= glyphsStart; --g) {
+			const auto forward = rtl;
+			for (int k = 0; k < glyphsEnd - glyphsStart; ++k) {
+				const auto g = forward
+					? (glyphsStart + k)
+					: (glyphsEnd - 1 - k);
 				const auto adv = glyphs.effectiveAdvance(g);
 				if (rightLineLengthLeft - adv.toReal() < 0) {
 					rightLineLengthLeft = 0;
-					glyphsStart = std::min(g + 1, glyphsEnd - 1);
+					const auto at = forward
+						? g
+						: std::min(g + 1, glyphsEnd - 1);
+					if (forward) {
+						glyphsEnd = std::max(at, glyphsStart + 1);
+					} else {
+						glyphsStart = at;
+					}
 					i = nItems;
-					if (isSpaceGlyph(glyphsStart)) {
+					if (isSpaceGlyph(at)) {
 						x -= _f->spacew;
 					}
 					{
