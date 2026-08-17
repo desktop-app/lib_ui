@@ -735,6 +735,18 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		}
 	}
 
+	// Kept to the end of this call, where the items have been laid out and the
+	// exact end of the text is known: taking what is left away from the line
+	// width counts the last word's bearing, which the items do not, and the
+	// difference left a gap. A line with no items has nothing to wait for.
+	auto fillTillLineEnd = false;
+	const auto fillSelectTillLineEnd = [&](QFixed from) {
+		if (fillTillLineEnd) {
+			fillTillLineEnd = false;
+			fillSelectRange({ from, _x + _lineWidth });
+		}
+	};
+
 	if (_fullWidthSelection) {
 		const auto selectFromStart = (_selection.to > _lineStart)
 			&& (_lineStart > 0)
@@ -753,11 +765,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		if ((selectTillEnd && _paragraphDirection == Qt::LeftToRight)
 			|| (selectFromStart && _paragraphDirection == Qt::RightToLeft)) {
 			if (x < _x + _wLeft) {
-				fillSelectRange({ x + _lineWidth - _wLeft, _x + _lineWidth });
+				fillTillLineEnd = true;
 			}
 		}
 	}
 	if (trimmedLineEnd == _lineStart && !_elidedLine) {
+		fillSelectTillLineEnd(x);
 		return true;
 	}
 
@@ -782,6 +795,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
 	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0;
 	if (!nItems) {
+		fillSelectTillLineEnd(x);
 		return !_elidedLine;
 	}
 
@@ -1353,6 +1367,13 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			} else {
 				fillSelectRange(fillSelect, textTop, textHeight);
 			}
+			if (i == nItems - 1) {
+				// With the glyphs of the last item, not after them: the gap
+				// this fills is where that item's last glyph reaches past its
+				// advance, so a fill that came later would paint over the ink
+				// it is there to sit behind.
+				fillSelectTillLineEnd(x + itemWidth);
+			}
 
 			if (_highlight) {
 				pushHighlightRange(findSelectTextRange(
@@ -1473,6 +1494,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			x -= itemWidth;
 		}
 	}
+	fillSelectTillLineEnd(x);
 	fillRectsFromRanges();
 	return !_elidedLine;
 }
