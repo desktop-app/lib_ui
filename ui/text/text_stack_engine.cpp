@@ -9,10 +9,6 @@
 #include "ui/text/text_block.h"
 #include "styles/style_basic.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <private/qharfbuzz_p.h>
-#endif // Qt < 6.0.0
-
 namespace Ui::Text {
 namespace {
 
@@ -139,9 +135,6 @@ void StackEngine::itemize() {
 				}
 			} else {
 				for (auto i = from - _offset, count = till - _offset; i != count; ++i) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-					_analysis[i].script = hbscript_to_script(script_to_hbscript(_analysis[i].script)); // retain the old behavior
-#endif // Qt < 6.0.0
 					if (chars[i] == QChar::LineFeed) {
 						_analysis[i].flags = QScriptAnalysis::LineOrParagraphSeparator;
 					} else {
