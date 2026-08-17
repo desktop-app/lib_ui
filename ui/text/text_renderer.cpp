@@ -75,6 +75,19 @@ void AppendRange(
 	ranges.push_back(range);
 }
 
+// A cluster can map to several glyphs, and the first one's advance is not the
+// whole of it.
+[[nodiscard]] QFixed GlyphsAdvance(
+		const QGlyphLayout &glyphs,
+		int from,
+		int till) {
+	auto result = QFixed();
+	for (auto i = from; i < till; ++i) {
+		result += glyphs.effectiveAdvance(i);
+	}
+	return result;
+}
+
 } // namespace
 
 FixedRange Intersected(FixedRange a, FixedRange b) {
@@ -1246,12 +1259,20 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				QFixed tmpx = rtl ? (x + itemWidth) : x;
 				for (int ch = 0, g, itemL = itemEnd - itemStart; ch < itemL;) {
 					g = logClusters[itemStart - si.position + ch];
-					QFixed gwidth = glyphs.effectiveAdvance(g);
 					// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
 					int ch2 = ch + 1;
 					while ((ch2 < itemL) && (g == logClusters[itemStart - si.position + ch2])) {
 						++ch2;
 					}
+					// Taking only the first glyph's advance lets tmpx fall
+					// behind the text as it is drawn, so the position a click
+					// maps to drifts away from the pointer.
+					const auto gwidth = GlyphsAdvance(
+						glyphs,
+						g,
+						(ch2 < itemL)
+							? logClusters[itemStart - si.position + ch2]
+							: glyphsEnd);
 					for (int charsCount = (ch2 - ch); ch < ch2; ++ch) {
 						QFixed shift1 = QFixed(2 * (charsCount - (ch2 - ch)) + 2) * gwidth / QFixed(2 * charsCount),
 							shift2 = QFixed(2 * (charsCount - (ch2 - ch)) + 1) * gwidth / QFixed(2 * charsCount);
@@ -1504,12 +1525,19 @@ FixedRange Renderer::findSelectTextRange(
 		const auto lczero = gf.logClusters[0];
 		for (int ch = 0, g; ch < selEnd;) {
 			g = gf.logClusters[ch];
-			const auto gwidth = gf.glyphs.effectiveAdvance(g - lczero);
 			// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
 			int ch2 = ch + 1;
 			while ((ch2 < itemL) && (g == gf.logClusters[ch2])) {
 				++ch2;
 			}
+			// The whole cluster, not just its first glyph: otherwise selX
+			// falls behind the text as it is drawn and the highlight starts
+			// left of the characters it covers.
+			const auto gwidth = GlyphsAdvance(
+				gf.glyphs,
+				g - lczero,
+				((ch2 < itemL) ? gf.logClusters[ch2] : (lczero + gf.glyphs.numGlyphs))
+					- lczero);
 			if (ch2 <= selStart) {
 				selX += gwidth;
 			} else if (ch >= selStart && ch2 <= selEnd) {
