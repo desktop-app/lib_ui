@@ -560,6 +560,19 @@ void Renderer::initParagraphBidi() {
 	bidi.process();
 }
 
+// The caret at an edge of the line - which edge is which depends on the
+// direction the paragraph runs in.
+void Renderer::lookupLineEdge(uint16 lineEnd, bool pastLineEnd) {
+	const auto atLineEnd = (_paragraphDirection == Qt::RightToLeft)
+		? !pastLineEnd
+		: pastLineEnd;
+	const auto hasSymbols = (lineEnd > _lineStart);
+	_lookupResult.symbol = (atLineEnd && hasSymbols)
+		? (lineEnd - 1)
+		: _lineStart;
+	_lookupResult.afterSymbol = (atLineEnd && hasSymbols);
+}
+
 bool Renderer::drawLinePostprocessed(
 		uint16 lineEnd,
 		Blocks::const_iterator blocksEnd) {
@@ -702,15 +715,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	if (!_p) {
 		if (_lookupX < x) {
 			if (_lookupSymbol) {
-				if (_paragraphDirection == Qt::RightToLeft) {
-					_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
-					_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
-					//_lookupResult.uponSymbol = ((_lookupX >= _x) && (lineEnd < _t->_text.size()) && (!endBlock || endBlock->type() != TextBlockType::Skip)) ? true : false;
-				} else {
-					_lookupResult.symbol = _lineStart;
-					_lookupResult.afterSymbol = false;
-					//_lookupResult.uponSymbol = ((_lookupX >= _x) && (_lineStart > 0)) ? true : false;
-				}
+				lookupLineEdge(lineEnd, false);
 			}
 			if (_lookupLink) {
 				_lookupResult.link = nullptr;
@@ -718,15 +723,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			_lookupResult.uponSymbol = false;
 			return false;
 		} else if (_lookupX >= x + (_lineWidth - _wLeft)) {
-			if (_paragraphDirection == Qt::RightToLeft) {
-				_lookupResult.symbol = _lineStart;
-				_lookupResult.afterSymbol = false;
-				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (_lineStart > 0)) ? true : false;
-			} else {
-				_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
-				_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
-				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (lineEnd < _t->_text.size()) && (!endBlock || endBlock->type() != TextBlockType::Skip)) ? true : false;
-			}
+			lookupLineEdge(lineEnd, true);
 			if (_lookupLink) {
 				_lookupResult.link = nullptr;
 			}
@@ -924,13 +921,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				}
 				if (_lookupSymbol) {
 					if (_type == TextBlockType::Skip) {
-						if (_paragraphDirection == Qt::RightToLeft) {
-							_lookupResult.symbol = _lineStart;
-							_lookupResult.afterSymbol = false;
-						} else {
-							_lookupResult.symbol = (trimmedLineEnd > _lineStart) ? (trimmedLineEnd - 1) : _lineStart;
-							_lookupResult.afterSymbol = (trimmedLineEnd > _lineStart) ? true : false;
-						}
+						lookupLineEdge(trimmedLineEnd, true);
 						return false;
 					}
 
@@ -1493,6 +1484,14 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		if (paintRightToMiddleElision) {
 			x -= itemWidth;
 		}
+	}
+	if (!_p && !_elisionMiddle) {
+		// Nothing on the line took the point, so it landed between where the
+		// items ended and where the line is wide enough to be past: the line
+		// width counts the last word's right bearing and the items do not.
+		// A pixel there belongs at the end of the line, like a point past it,
+		// and used to resolve to the very start of the text instead.
+		lookupLineEdge(lineEnd, true);
 	}
 	fillSelectTillLineEnd(x);
 	fillRectsFromRanges();

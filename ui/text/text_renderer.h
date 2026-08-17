@@ -69,6 +69,7 @@ private:
 	bool drawLinePostprocessed(
 		uint16 lineEnd,
 		Blocks::const_iterator blocksEnd);
+	void lookupLineEdge(uint16 lineEnd, bool pastLineEnd);
 	[[nodiscard]] FixedRange findSelectObjectRange(
 		const QScriptItem &si,
 		std::vector<Block>::const_iterator blockIt,
