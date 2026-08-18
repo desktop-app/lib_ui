@@ -155,6 +155,8 @@ protected:
 	bool eventFilter(QObject *o, QEvent *e) override;
 
 private:
+	struct SubmenuAim;
+
 	void paintBg(QPainter &p);
 	void hideFast();
 	void setOrigin(PanelAnimation::Origin origin);
@@ -204,6 +206,12 @@ private:
 		not_null<PopupMenu*> submenu,
 		int actionTop,
 		TriggeredSource source);
+	[[nodiscard]] QAction *activeSubmenuAction() const;
+	[[nodiscard]] not_null<SubmenuAim*> submenuAim();
+	[[nodiscard]] bool insideSubmenuAim(QPoint position) const;
+	void watchMouseMoves();
+	void handleMouseMoved(QPoint globalPosition);
+	void clearSubmenuAim();
 	bool prepareGeometryFor(
 		const QPoint &p,
 		PopupMenu *parent,
@@ -232,6 +240,9 @@ private:
 	QMargins _additionalMenuMargins;
 
 	QPointer<PopupMenu> _activeSubmenu;
+
+	// Filled in only while a submenu of this menu is shown.
+	std::unique_ptr<SubmenuAim> _submenuAim;
 
 	std::optional<VerticalOrigin> _forcedVerticalOrigin;
 	PanelAnimation::Origin _origin = PanelAnimation::Origin::TopLeft;

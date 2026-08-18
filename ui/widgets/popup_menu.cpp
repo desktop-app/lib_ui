@@ -18,6 +18,7 @@
 #include "ui/painter.h"
 #include "ui/integration.h"
 #include "ui/screen_reader_mode.h"
+#include "base/timer.h"
 #include "ui/ui_utility.h"
 
 #include <QtGui/QtEvents>
@@ -29,6 +30,38 @@
 #include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
+namespace {
+
+constexpr auto kSubmenuAimDelay = crl::time(300);
+
+[[nodiscard]] bool PointInTriangle(
+		QPoint point,
+		QPoint apex,
+		QPoint from,
+		QPoint till) {
+	const auto side = [](QPoint a, QPoint b, QPoint c) {
+		return (int64(a.x()) - c.x()) * (int64(b.y()) - c.y())
+			- (int64(b.x()) - c.x()) * (int64(a.y()) - c.y());
+	};
+	const auto first = side(point, apex, from);
+	const auto second = side(point, from, till);
+	const auto third = side(point, till, apex);
+	const auto negative = (first < 0) || (second < 0) || (third < 0);
+	const auto positive = (first > 0) || (second > 0) || (third > 0);
+	return !negative || !positive;
+}
+
+} // namespace
+
+struct PopupMenu::SubmenuAim {
+	explicit SubmenuAim(Fn<void()> callback) : timer(std::move(callback)) {
+	}
+
+	QAction *action = nullptr;
+	QPoint apex;
+	base::Timer timer;
+	bool aiming = false;
+};
 
 PopupMenu::PopupMenu(QWidget *parent, const style::PopupMenu &st)
 : RpWidget(parent)
@@ -355,12 +388,107 @@ void PopupMenu::paintBg(QPainter &p) {
 }
 
 void PopupMenu::handleActivated(const Menu::CallbackData &data) {
-	if (data.source == TriggeredSource::Mouse) {
-		if (!popupSubmenuFromAction(data)) {
-			if (const auto currentSubmenu = base::take(_activeSubmenu)) {
-				currentSubmenu->hideMenu(true);
-			}
+	if (data.source != TriggeredSource::Mouse || _submenus.empty()) {
+		return;
+	} else if (!popupSubmenuFromAction(data)) {
+		clearSubmenuAim();
+		if (const auto currentSubmenu = base::take(_activeSubmenu)) {
+			currentSubmenu->hideMenu(true);
 		}
+	}
+}
+
+QAction *PopupMenu::activeSubmenuAction() const {
+	return (_activeSubmenu && _submenuAim) ? _submenuAim->action : nullptr;
+}
+
+not_null<PopupMenu::SubmenuAim*> PopupMenu::submenuAim() {
+	if (!_submenuAim) {
+		_submenuAim = std::make_unique<SubmenuAim>([=] {
+			if (isHidden() || _hiding) {
+				return;
+			}
+			// Pointer stopped while aiming, let hovered item win.
+			_submenuAim->aiming = false;
+			_menu->setMouseSelectionFrozen(false);
+			_menu->handleMouseMove(_menu->lastMouseGlobal());
+		});
+		watchMouseMoves();
+	}
+	return _submenuAim.get();
+}
+
+void PopupMenu::watchMouseMoves() {
+	_menu->setMouseMovedCallback([=](QPoint globalPosition) {
+		handleMouseMoved(globalPosition);
+	});
+}
+
+void PopupMenu::handleMouseMoved(QPoint globalPosition) {
+	if (_parent
+		&& QRect(mapToGlobal(_inner.topLeft()), _inner.size()).contains(
+			globalPosition)) {
+		// Pointer reached this submenu, not aiming at it anymore.
+		_parent->clearSubmenuAim();
+	}
+	if (!_activeSubmenu || !_submenuAim) {
+		return;
+	}
+	const auto aim = _submenuAim.get();
+	const auto owner = aim->action
+		? _menu->itemForAction(aim->action)
+		: nullptr;
+	if (owner
+		&& QRect(owner->mapToGlobal(QPoint()), owner->size()).contains(
+			globalPosition)) {
+		aim->apex = globalPosition;
+		aim->aiming = true;
+		aim->timer.cancel();
+		_menu->setMouseSelectionFrozen(false);
+	} else if (aim->aiming
+		&& !QGuiApplication::mouseButtons()
+		&& insideSubmenuAim(globalPosition)) {
+		_menu->setMouseSelectionFrozen(true);
+		aim->timer.callOnce(kSubmenuAimDelay);
+	} else {
+		clearSubmenuAim();
+	}
+}
+
+bool PopupMenu::insideSubmenuAim(QPoint position) const {
+	if (::Platform::IsWayland()) {
+		// Compositor owns popup positions there, geometry is unknown.
+		return true;
+	}
+	const auto submenu = QRect(
+		_activeSubmenu->mapToGlobal(_activeSubmenu->inner().topLeft()),
+		_activeSubmenu->inner().size());
+	if (submenu.isEmpty()) {
+		return false;
+	}
+	const auto mine = QRect(mapToGlobal(_inner.topLeft()), _inner.size());
+	const auto opensRight = (submenu.center().x() >= mine.center().x());
+	const auto edge = opensRight ? submenu.left() : submenu.right();
+	const auto beyond = opensRight
+		? (position.x() >= edge)
+		: (position.x() <= edge);
+	if (beyond) {
+		// Menus overlap by shadow width, last pixels belong to this menu.
+		return (position.y() >= submenu.top())
+			&& (position.y() <= submenu.bottom());
+	}
+	return PointInTriangle(
+		position,
+		_submenuAim->apex,
+		QPoint(edge, submenu.top()),
+		QPoint(edge, submenu.bottom()));
+}
+
+void PopupMenu::clearSubmenuAim() {
+	if (_submenuAim) {
+		_submenuAim->aiming = false;
+		_submenuAim->timer.cancel();
+		_menu->setMouseSelectionFrozen(false);
 	}
 }
 
@@ -401,6 +529,7 @@ void PopupMenu::popupSubmenu(
 		not_null<PopupMenu*> submenu,
 		int actionTop,
 		TriggeredSource source) {
+	clearSubmenuAim();
 	if (auto currentSubmenu = base::take(_activeSubmenu)) {
 		currentSubmenu->hideMenu(true);
 	}
@@ -418,6 +547,10 @@ void PopupMenu::popupSubmenu(
 				_menu->itemForAction(action))) {
 			_activeSubmenu->showPrepared(source);
 			_menu->setChildShownAction(action);
+			const auto aim = submenuAim();
+			aim->action = action;
+			aim->aiming = (source == TriggeredSource::Mouse);
+			aim->apex = _menu->lastMouseGlobal();
 		} else {
 			_activeSubmenu = nullptr;
 		}
@@ -431,6 +564,8 @@ void PopupMenu::forwardKeyPress(not_null<QKeyEvent*> e) {
 }
 
 bool PopupMenu::handleKeyPress(int key) {
+	// Keyboard takes over, pending mouse aim must not switch items.
+	clearSubmenuAim();
 	if (_activeSubmenu) {
 		_activeSubmenu->handleKeyPress(key);
 		return true;
@@ -565,6 +700,10 @@ void PopupMenu::childHiding(PopupMenu *child) {
 		_activeSubmenu = nullptr;
 	}
 	if (!_activeSubmenu) {
+		clearSubmenuAim();
+		if (_submenuAim) {
+			_submenuAim->action = nullptr;
+		}
 		_menu->setChildShownAction(nullptr);
 	}
 	if (!_hiding && !isHidden()) {
@@ -862,6 +1001,9 @@ bool PopupMenu::prepareGeometryFor(
 	}
 
 	_parent = parent;
+	if (_parent) {
+		watchMouseMoves();
+	}
 	const auto screen = QGuiApplication::screenAt(p);
 
 	createWinId();
