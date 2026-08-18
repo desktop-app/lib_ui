@@ -309,6 +309,17 @@ const std::vector<not_null<QAction*>> &Menu::actions() const {
 	return _actions;
 }
 
+QPoint Menu::lastMouseGlobal() const {
+	return _lastMouseGlobal.value_or(QCursor::pos());
+}
+
+void Menu::setLastMouseGlobal(QPoint position) {
+	_lastMouseGlobal = position;
+	if (_mouseMovedCallback) {
+		_mouseMovedCallback(position);
+	}
+}
+
 ItemBase *Menu::itemForAction(not_null<QAction*> action) const {
 	const auto i = ranges::find(_actions, action);
 	return (i != end(_actions))
@@ -322,6 +333,9 @@ void Menu::setForceWidth(int forceWidth) {
 }
 
 void Menu::updateSelected(QPoint globalPosition) {
+	if (_mouseSelectionFrozen) {
+		return;
+	}
 	const auto p = mapFromGlobal(globalPosition) - QPoint(0, _st.skip);
 	for (const auto &widget : _actionWidgets) {
 		const auto widgetRect = QRect(widget->pos(), widget->size());
@@ -443,6 +457,7 @@ void Menu::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void Menu::handleMouseMove(QPoint globalPosition) {
+	setLastMouseGlobal(globalPosition);
 	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
 	const auto visible = visibleRect();
 	const auto inner = rect().marginsRemoved(margins).intersected(visible);

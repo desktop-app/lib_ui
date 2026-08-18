@@ -8,6 +8,8 @@
 
 #include "ui/widgets/menu/menu.h"
 
+#include <QtGui/QtEvents>
+
 namespace Ui::Menu {
 
 ItemBase::ItemBase(
@@ -134,7 +136,14 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 		if (((type == QEvent::Leave)
 			|| (type == QEvent::Enter)
 			|| (type == QEvent::MouseMove)) && action()->isEnabled()) {
-			setSelected(e->type() != QEvent::Leave);
+			const auto leave = (type == QEvent::Leave);
+			if (!leave) {
+				_menu->setLastMouseGlobal(static_cast<QSinglePointEvent*>(
+					e.get())->globalPosition().toPoint());
+			}
+			if (!_menu->mouseSelectionFrozen()) {
+				setSelected(!leave);
+			}
 		} else if ((type == QEvent::MouseButtonRelease)
 			&& isEnabled()
 			&& isSelected()) {

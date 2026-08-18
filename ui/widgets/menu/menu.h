@@ -65,6 +65,21 @@ public:
 
 	void clearSelection();
 
+	// Global position of the last mouse event over this menu.
+	[[nodiscard]] QPoint lastMouseGlobal() const;
+	void setLastMouseGlobal(QPoint position);
+	void setMouseMovedCallback(Fn<void(QPoint globalPosition)> callback) {
+		_mouseMovedCallback = std::move(callback);
+	}
+
+	// While frozen mouse moves don't change the selected item.
+	[[nodiscard]] bool mouseSelectionFrozen() const {
+		return _mouseSelectionFrozen;
+	}
+	void setMouseSelectionFrozen(bool frozen) {
+		_mouseSelectionFrozen = frozen;
+	}
+
 	void setChildShownAction(QAction *action) {
 		_childShownAction = action;
 	}
@@ -142,6 +157,9 @@ private:
 		int visibleBottom) override;
 
 	const style::Menu &_st;
+	std::optional<QPoint> _lastMouseGlobal;
+	Fn<void(QPoint globalPosition)> _mouseMovedCallback;
+	bool _mouseSelectionFrozen = false;
 
 	Fn<void(const CallbackData &data)> _activatedCallback;
 	Fn<void(const CallbackData &data)> _triggeredCallback;
