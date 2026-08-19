@@ -1299,6 +1299,14 @@ enum class LineBreakKind {
 	Structural,
 };
 
+[[nodiscard]] QString BlockLineTagId(const ActiveTags &active) {
+	return (active.pre > 0)
+		? Ui::InputField::kTagPre
+		: (active.blockquote > 0)
+		? Ui::InputField::kTagBlockquote
+		: QString();
+}
+
 void AppendLine(ParseState &state, bool repeat, LineBreakKind kind) {
 	ClearPendingWhitespace(state);
 	if (!repeat
@@ -1306,15 +1314,41 @@ void AppendLine(ParseState &state, bool repeat, LineBreakKind kind) {
 			|| state.result.text.back() == '\n')) {
 		return;
 	}
+	const auto newline = QString(QChar('\n'));
 	if (kind == LineBreakKind::Visible) {
-		const auto newline = QString(QChar('\n'));
 		AppendTaggedText(
 			state,
 			newline,
 			ActiveTagId(state.active));
-	} else {
+		return;
+	}
+	const auto blockTagId = BlockLineTagId(state.active);
+	if (blockTagId.isEmpty()) {
 		state.result.text.append(QChar('\n'));
 		++state.trailingStructuralNewlines;
+		return;
+	}
+	// Untagged newline would end the quote and start another one.
+	const auto structural = state.trailingStructuralNewlines;
+	AppendTaggedText(state, newline, blockTagId);
+	state.trailingStructuralNewlines = structural + 1;
+}
+
+void DropTrailingBlockLineTag(ParseState &state, const QString &blockTagId) {
+	if (blockTagId.isEmpty()
+		|| state.tags.empty()
+		|| state.result.text.isEmpty()
+		|| state.result.text.back() != '\n') {
+		return;
+	}
+	auto &last = state.tags.back();
+	if (last.id != blockTagId
+		|| last.offset + last.length != int(state.result.text.size())) {
+		return;
+	}
+	--last.length;
+	if (!last.length) {
+		state.tags.pop_back();
 	}
 }
 
@@ -1847,7 +1881,11 @@ void ProcessTag(
 	const auto inputTag = SupportedInputTag(name);
 	const auto styleInputTag = inputTag && IsStyleInputTag(*inputTag);
 	if (inputTag && !styleInputTag && !selfClosing) {
+		const auto wasBlockTagId = BlockLineTagId(state.active);
 		UpdateActive(state.active, *inputTag, closing);
+		if (closing && BlockLineTagId(state.active) != wasBlockTagId) {
+			DropTrailingBlockLineTag(state, wasBlockTagId);
+		}
 	}
 	if (!IsVoidElement(name)) {
 		if (closing) {
