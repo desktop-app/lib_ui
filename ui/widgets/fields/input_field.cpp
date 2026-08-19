@@ -240,7 +240,10 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 	};
 	auto wholeSpan = std::vector<QString>();
 	for (const auto &part : parts) {
-		if (coversFull(part)) {
+		// Quote over whole text was selected, not added by source.
+		if ((part == kTagBlockquote) || (part == kTagBlockquoteCollapsed)) {
+			continue;
+		} else if (coversFull(part)) {
 			wholeSpan.push_back(part);
 		}
 	}
