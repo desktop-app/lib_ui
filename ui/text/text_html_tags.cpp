@@ -992,6 +992,22 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		});
 }
 
+[[nodiscard]] bool HasClass(
+		const std::vector<HtmlAttribute> &attributes,
+		const QString &name) {
+	const auto value = AttributeValue(attributes, u"class"_q);
+	if (!value) {
+		return false;
+	}
+	const auto list = value->split(QChar(' '), Qt::SkipEmptyParts);
+	for (const auto &entry : list) {
+		if (entry == name) {
+			return true;
+		}
+	}
+	return false;
+}
+
 [[nodiscard]] QString NormalizedStyleValue(QStringView value) {
 	auto result = QString();
 	result.reserve(value.size());
@@ -1772,6 +1788,11 @@ void CloseStyledElement(ParseState &state, const QString &name) {
 	state.styledElements.eraseFrom(index);
 }
 
+[[nodiscard]] bool IsInterchangeNewline(
+		const std::vector<HtmlAttribute> &attributes) {
+	return HasClass(attributes, u"Apple-interchange-newline"_q);
+}
+
 void ProcessTag(
 		ParseState &state,
 		const QString &name,
@@ -1794,7 +1815,11 @@ void ProcessTag(
 		return;
 	}
 	if (!closing && name == u"br"_q) {
-		AppendLine(state, true, LineBreakKind::Visible);
+		if (IsInterchangeNewline(attributes)) {
+			AppendLine(state, false, LineBreakKind::Structural);
+		} else {
+			AppendLine(state, true, LineBreakKind::Visible);
+		}
 		return;
 	}
 	if (name == u"a"_q && !selfClosing) {
@@ -3003,22 +3028,6 @@ void ProcessListItemTag(
 
 [[nodiscard]] bool IsMediaGroupName(const QString &name) {
 	return (name == u"tg-collage"_q) || (name == u"tg-slideshow"_q);
-}
-
-[[nodiscard]] bool HasClass(
-		const std::vector<HtmlAttribute> &attributes,
-		const QString &name) {
-	const auto value = AttributeValue(attributes, u"class"_q);
-	if (!value) {
-		return false;
-	}
-	const auto list = value->split(QChar(' '), Qt::SkipEmptyParts);
-	for (const auto &entry : list) {
-		if (entry == name) {
-			return true;
-		}
-	}
-	return false;
 }
 
 [[nodiscard]] bool HasOpenMediaGroup(const BlockParseState &state) {
