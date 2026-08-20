@@ -145,7 +145,7 @@ void SetGeometryAndScreen(
 
 class ScrollDirectionLock final {
 public:
-	[[nodiscard]] std::optional<Qt::Orientation> update(
+	std::optional<Qt::Orientation> update(
 		Qt::ScrollPhase phase,
 		QPointF delta);
 
