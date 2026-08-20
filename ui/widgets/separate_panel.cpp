@@ -1388,6 +1388,17 @@ void SeparatePanel::toggleFullScreen(bool fullscreen) {
 	_fullscreen = fullscreen;
 	if (fullscreen) {
 		showFullScreen();
+		// On Windows, frameless showFullScreen() may resize without moving to
+		// the screen origin (QTBUG-39537). Mini apps then stay anchored at the
+		// pre-fullscreen panel position - see telegramdesktop/tdesktop#30963.
+		if (const auto current = screen()
+				? screen()
+				: QGuiApplication::primaryScreen()) {
+			const auto geometry = current->geometry();
+			if (this->geometry() != geometry) {
+				Ui::SetGeometryAndScreen(this, geometry);
+			}
+		}
 	} else {
 		showNormal();
 	}
