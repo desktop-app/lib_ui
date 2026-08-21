@@ -334,6 +334,7 @@ private:
 
 	QPointer<QScroller> _scroller;
 	QPoint _wheelPos;
+	QPointF _wheelDeltaRemainder;
 
 	base::Timer _touchTimer;
 	base::Timer _touchScrollTimer;
