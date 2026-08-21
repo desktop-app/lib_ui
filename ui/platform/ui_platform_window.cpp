@@ -127,6 +127,10 @@ not_null<RpWidget*> BasicWindowHelper::body() {
 	return _window;
 }
 
+RpWidget *BasicWindowHelper::titleWidget() {
+	return nullptr;
+}
+
 QMargins BasicWindowHelper::frameMargins() {
 	return nativeFrameMargins();
 }
@@ -492,6 +496,10 @@ void DefaultWindowHelper::updateRoundingOverlay() {
 
 not_null<RpWidget*> DefaultWindowHelper::body() {
 	return _body;
+}
+
+RpWidget *DefaultWindowHelper::titleWidget() {
+	return _title.get();
 }
 
 QMargins DefaultWindowHelper::frameMargins() {

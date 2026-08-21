@@ -24,6 +24,7 @@ public:
 
 	void initInWindow(not_null<RpWindow*> window) override;
 	not_null<RpWidget*> body() override;
+	RpWidget *titleWidget() override;
 	QMargins frameMargins() override;
 	int additionalContentPadding() const override;
 	rpl::producer<int> additionalContentPaddingValue() const override;

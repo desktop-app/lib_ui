@@ -39,6 +39,7 @@ public:
 
 	virtual void initInWindow(not_null<RpWindow*> window);
 	[[nodiscard]] virtual not_null<RpWidget*> body();
+	[[nodiscard]] virtual RpWidget *titleWidget();
 	[[nodiscard]] virtual QMargins frameMargins();
 	[[nodiscard]] virtual int additionalContentPadding() const;
 	[[nodiscard]] virtual auto additionalContentPaddingValue() const
@@ -94,6 +95,7 @@ public:
 	explicit DefaultWindowHelper(not_null<RpWidget*> window);
 
 	not_null<RpWidget*> body() override;
+	RpWidget *titleWidget() override;
 	QMargins frameMargins() override;
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;

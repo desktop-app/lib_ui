@@ -199,6 +199,10 @@ not_null<RpWidget*> WindowHelper::body() {
 	return _body;
 }
 
+RpWidget *WindowHelper::titleWidget() {
+	return _title.get();
+}
+
 QMargins WindowHelper::frameMargins() {
 	return _title->isHidden()
 		? BasicWindowHelper::nativeFrameMargins()

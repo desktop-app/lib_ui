@@ -49,6 +49,14 @@ not_null<const RpWidget*> RpWindow::body() const {
 	return _helper->body().get();
 }
 
+RpWidget *RpWindow::titleWidget() {
+	return _helper->titleWidget();
+}
+
+const RpWidget *RpWindow::titleWidget() const {
+	return _helper->titleWidget();
+}
+
 QMargins RpWindow::frameMargins() const {
 	return _helper->frameMargins();
 }

@@ -18,6 +18,7 @@ public:
 	~WindowHelper();
 
 	not_null<RpWidget*> body() override;
+	RpWidget *titleWidget() override;
 	QMargins frameMargins() override;
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;

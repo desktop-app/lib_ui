@@ -41,6 +41,8 @@ public:
 
 	[[nodiscard]] not_null<RpWidget*> body();
 	[[nodiscard]] not_null<const RpWidget*> body() const;
+	[[nodiscard]] RpWidget *titleWidget();
+	[[nodiscard]] const RpWidget *titleWidget() const;
 	[[nodiscard]] QMargins frameMargins() const;
 
 	// In Windows 11 the window rounding shadow takes about

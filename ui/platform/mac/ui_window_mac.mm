@@ -419,6 +419,10 @@ not_null<RpWidget*> WindowHelper::body() {
 	return _body;
 }
 
+RpWidget *WindowHelper::titleWidget() {
+	return _title.get();
+}
+
 QMargins WindowHelper::frameMargins() {
 	const auto titleHeight = !_title->isHidden() ? _title->height() : 0;
 	return QMargins{ 0, titleHeight, 0, 0 };
