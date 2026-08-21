@@ -494,10 +494,13 @@ public:
 	// by visual position (row bands top-to-bottom, left-to-right within a
 	// band, mirrored in RTL) instead of widget creation order. The chain is
 	// rewired only among this widget's own children, lazily on Tab handling
-	// and after layout changes, and traversal is still done by the default
-	// implementation - so the existing focusNextPrevChild overloads (like
-	// the layer blocking in base::FocusNextPrevChildBlocked) keep working:
-	// they walk the focus chain and simply see the visual order in it.
+	// and after layout changes - and then only when the order came out
+	// different from the last wiring, so a scroll step or an animation
+	// frame that keeps it costs next to nothing. Traversal is still done by
+	// the default implementation - so the existing focusNextPrevChild
+	// overloads (like the layer blocking in base::FocusNextPrevChildBlocked)
+	// keep working: they walk the focus chain and simply see the visual
+	// order in it.
 	//
 	// A child may hold any number of Tab stops - all of them are placed,
 	// keeping the order they already have in the chain, so a nested
@@ -517,13 +520,13 @@ public:
 	void setVisualTabOrderOverlay(bool overlay);
 
 	// The lazy rewiring above triggers on Tab handling inside this widget,
-	// on layout and visibility changes of this widget and of its children,
-	// and when the screen reader mode changes. A container that changes
-	// which widget is Tab-focusable outside of those - like a list moving
-	// its roving Tab-stop from the arrow keys - must call this right after
-	// such a change, or a Tab entering from outside still sees the old
-	// chain. For a widget created deeper in the tree, where the container
-	// sees nothing, call Ui::RefreshVisualTabOrder with it instead.
+	// on layout and visibility changes of its children, and when the screen
+	// reader mode changes. A container that changes which widget is
+	// Tab-focusable outside of those - like a list moving its roving
+	// Tab-stop from the arrow keys - must call this right after such a
+	// change, or a Tab entering from outside still sees the old chain. For
+	// a widget created deeper in the tree, where the container sees
+	// nothing, call Ui::RefreshVisualTabOrder with it instead.
 	void refreshVisualTabOrder();
 
 protected:

@@ -608,7 +608,7 @@ public:
 	explicit VisualTabOrder(not_null<RpWidget*> parent);
 
 	void schedule();
-	void apply();
+	void apply(bool force = false);
 
 	[[nodiscard]] static VisualTabOrder *Find(not_null<QWidget*> widget);
 	static void Enable(not_null<RpWidget*> widget);
@@ -618,7 +618,15 @@ private:
 	bool eventFilter(QObject *watched, QEvent *e) override;
 
 	const not_null<RpWidget*> _widget;
+
+	// The children and their stops in the order they were wired last, so
+	// a change that leaves the order as it is - like the list of a scroll
+	// moving under its corner buttons on every scroll step - rewires
+	// nothing. Weak, so a stop destroyed and another created at the same
+	// address doesn't pass for the one it replaced.
+	std::vector<QPointer<QWidget>> _applied;
 	bool _scheduled = false;
+	bool _orderDependsOnGeometry = true;
 	rpl::lifetime _lifetime;
 
 };
@@ -665,15 +673,19 @@ void VisualTabOrder::Disable(not_null<RpWidget*> widget) {
 
 bool VisualTabOrder::eventFilter(QObject *watched, QEvent *e) {
 	const auto type = e->type();
-	if (type == QEvent::Resize
-		|| type == QEvent::Move
-		|| type == QEvent::Show
-		|| type == QEvent::Hide
-		|| type == QEvent::ZOrderChange
-		|| type == QEvent::ChildAdded
+	if (type == QEvent::ChildAdded
 		|| type == QEvent::ChildRemoved
 		|| type == QEvent::LayoutRequest) {
 		schedule();
+	} else if (watched != _widget) {
+		// This widget's own geometry and visibility can't change the order
+		// of its children - the ones laid out anew get events of their own.
+		if (type == QEvent::Show || type == QEvent::Hide) {
+			schedule();
+		} else if ((type == QEvent::Move || type == QEvent::Resize)
+			&& _orderDependsOnGeometry) {
+			schedule();
+		}
 	}
 	return QObject::eventFilter(watched, e);
 }
@@ -689,7 +701,7 @@ void VisualTabOrder::schedule() {
 	});
 }
 
-void VisualTabOrder::apply() {
+void VisualTabOrder::apply(bool force) {
 	// Band vertically overlapping children together, so a row of controls
 	// keeps its horizontal order even when tops differ by a few pixels.
 	struct Entry {
@@ -699,6 +711,7 @@ void VisualTabOrder::apply() {
 		int band = 0;
 	};
 	auto list = std::vector<Entry>();
+	auto overlays = 0;
 	for (const auto object : _widget->children()) {
 		if (!object->isWidgetType()) {
 			continue;
@@ -721,7 +734,7 @@ void VisualTabOrder::apply() {
 			// A nested container that opted in may have changes of its own
 			// waiting - let it arrange its children first, so the order
 			// preserved below is its final one and not a stale one.
-			nested->apply();
+			nested->apply(force);
 		}
 		auto stops = std::vector<QWidget*>();
 		CollectTabFocusable(child, stops);
@@ -729,9 +742,17 @@ void VisualTabOrder::apply() {
 			const auto overlay = child->property(
 				kVisualTabOrderOverlayProperty
 			).toBool();
+			overlays += overlay ? 1 : 0;
 			list.push_back({ child, std::move(stops), overlay });
 		}
 	}
+
+	// Geometry decides the order only between children laid out next to
+	// each other, or between overlays: a single content child under a
+	// single overlay keeps its order wherever it moves, so a scroll doesn't
+	// have to look at its list on every scroll step.
+	_orderDependsOnGeometry = (overlays > 1)
+		|| (int(list.size()) - overlays > 1);
 	if (list.size() < 2) {
 		return;
 	}
@@ -780,6 +801,24 @@ void VisualTabOrder::apply() {
 		return rtl ? (ax > bx) : (ax < bx);
 	});
 
+	// The same children with the same stops in the same order are wired
+	// already. Only the chain changed behind this widget's back could say
+	// otherwise, and Tab handling - the one reading the chain - redoes the
+	// wiring regardless, so that stays repaired where it matters.
+	auto sequence = std::vector<QWidget*>();
+	for (const auto &entry : list) {
+		sequence.push_back(entry.widget);
+		sequence.insert(end(sequence), begin(entry.stops), end(entry.stops));
+	}
+	if (!force
+		&& std::equal(
+			begin(sequence),
+			end(sequence),
+			begin(_applied),
+			end(_applied))) {
+		return;
+	}
+
 	// Keep the stops of a single child in the order they currently sit in
 	// the focus chain, so whatever arranged them - a nested container that
 	// opted in, or a plain setTabOrder somewhere - is not undone here. A
@@ -809,6 +848,7 @@ void VisualTabOrder::apply() {
 	for (auto i = 1, count = int(flat.size()); i != count; ++i) {
 		QWidget::setTabOrder(flat[i - 1], flat[i]);
 	}
+	_applied.assign(begin(sequence), end(sequence));
 }
 
 } // namespace
@@ -846,7 +886,7 @@ void RefreshVisualTabOrder(not_null<QWidget*> widget) {
 
 bool RpWidget::focusNextPrevChild(bool next) {
 	if (const auto state = VisualTabOrder::Find(this)) {
-		state->apply();
+		state->apply(true);
 	}
 	return RpWidgetBase<QWidget>::focusNextPrevChild(next);
 }
