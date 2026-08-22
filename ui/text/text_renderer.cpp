@@ -14,10 +14,6 @@
 #include "ui/style/style_core.h"
 #include "styles/style_basic.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <private/qharfbuzz_p.h>
-#endif // Qt < 6.0.0
-
 namespace Ui::Text {
 namespace {
 
@@ -77,6 +73,62 @@ void AppendRange(
 		}
 	}
 	ranges.push_back(range);
+}
+
+// A visible letter can take several characters - a consonant with its matra, a
+// conjunct, a base with combining marks - and the only places a caret can be at
+// are its boundaries, so that is where a cut or a click belongs.
+[[nodiscard]] int GraphemeEnd(
+		const QCharAttributes *attributes,
+		int from,
+		int till) {
+	for (auto i = from + 1; i < till; ++i) {
+		if (attributes[i].graphemeBoundary) {
+			return i;
+		}
+	}
+	return till;
+}
+
+// The characters that share one glyph: a ligature, a consonant with its matra, a
+// base with its marks. Nothing inside one can be drawn or cut on its own.
+[[nodiscard]] int ClusterEnd(
+		const unsigned short *logClusters,
+		int from,
+		int till) {
+	for (auto i = from + 1; i < till; ++i) {
+		if (logClusters[i] != logClusters[from]) {
+			return i;
+		}
+	}
+	return till;
+}
+
+// Where a cut may fall: a letter boundary that is also a glyph boundary, since
+// half a glyph cannot be drawn and half a letter should not be shown.
+[[nodiscard]] int CutEnd(
+		const QCharAttributes *attributes,
+		const unsigned short *logClusters,
+		int from,
+		int till) {
+	auto result = GraphemeEnd(attributes, from, till);
+	while (result < till && logClusters[result] == logClusters[from]) {
+		result = GraphemeEnd(attributes, result, till);
+	}
+	return result;
+}
+
+// A cluster can map to several glyphs, and the first one's advance is not the
+// whole of it.
+[[nodiscard]] QFixed GlyphsAdvance(
+		const QGlyphLayout &glyphs,
+		int from,
+		int till) {
+	auto result = QFixed();
+	for (auto i = from; i < till; ++i) {
+		result += glyphs.effectiveAdvance(i);
+	}
+	return result;
 }
 
 } // namespace
@@ -551,6 +603,19 @@ void Renderer::initParagraphBidi() {
 	bidi.process();
 }
 
+// The caret at an edge of the line - which edge is which depends on the
+// direction the paragraph runs in.
+void Renderer::lookupLineEdge(uint16 lineEnd, bool pastLineEnd) {
+	const auto atLineEnd = (_paragraphDirection == Qt::RightToLeft)
+		? !pastLineEnd
+		: pastLineEnd;
+	const auto hasSymbols = (lineEnd > _lineStart);
+	_lookupResult.symbol = (atLineEnd && hasSymbols)
+		? (lineEnd - 1)
+		: _lineStart;
+	_lookupResult.afterSymbol = (atLineEnd && hasSymbols);
+}
+
 bool Renderer::drawLinePostprocessed(
 		uint16 lineEnd,
 		Blocks::const_iterator blocksEnd) {
@@ -693,15 +758,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	if (!_p) {
 		if (_lookupX < x) {
 			if (_lookupSymbol) {
-				if (_paragraphDirection == Qt::RightToLeft) {
-					_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
-					_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
-					//_lookupResult.uponSymbol = ((_lookupX >= _x) && (lineEnd < _t->_text.size()) && (!endBlock || endBlock->type() != TextBlockType::Skip)) ? true : false;
-				} else {
-					_lookupResult.symbol = _lineStart;
-					_lookupResult.afterSymbol = false;
-					//_lookupResult.uponSymbol = ((_lookupX >= _x) && (_lineStart > 0)) ? true : false;
-				}
+				lookupLineEdge(lineEnd, false);
 			}
 			if (_lookupLink) {
 				_lookupResult.link = nullptr;
@@ -709,15 +766,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			_lookupResult.uponSymbol = false;
 			return false;
 		} else if (_lookupX >= x + (_lineWidth - _wLeft)) {
-			if (_paragraphDirection == Qt::RightToLeft) {
-				_lookupResult.symbol = _lineStart;
-				_lookupResult.afterSymbol = false;
-				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (_lineStart > 0)) ? true : false;
-			} else {
-				_lookupResult.symbol = (lineEnd > _lineStart) ? (lineEnd - 1) : _lineStart;
-				_lookupResult.afterSymbol = (lineEnd > _lineStart) ? true : false;
-				//_lookupResult.uponSymbol = ((_lookupX < _x + _w) && (lineEnd < _t->_text.size()) && (!endBlock || endBlock->type() != TextBlockType::Skip)) ? true : false;
-			}
+			lookupLineEdge(lineEnd, true);
 			if (_lookupLink) {
 				_lookupResult.link = nullptr;
 			}
@@ -725,6 +774,18 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			return false;
 		}
 	}
+
+	// Kept to the end of this call, where the items have been laid out and the
+	// exact end of the text is known: taking what is left away from the line
+	// width counts the last word's bearing, which the items do not, and the
+	// difference left a gap. A line with no items has nothing to wait for.
+	auto fillTillLineEnd = false;
+	const auto fillSelectTillLineEnd = [&](QFixed from) {
+		if (fillTillLineEnd) {
+			fillTillLineEnd = false;
+			fillSelectRange({ from, _x + _lineWidth });
+		}
+	};
 
 	if (_fullWidthSelection) {
 		const auto selectFromStart = (_selection.to > _lineStart)
@@ -744,11 +805,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		if ((selectTillEnd && _paragraphDirection == Qt::LeftToRight)
 			|| (selectFromStart && _paragraphDirection == Qt::RightToLeft)) {
 			if (x < _x + _wLeft) {
-				fillSelectRange({ x + _lineWidth - _wLeft, _x + _lineWidth });
+				fillTillLineEnd = true;
 			}
 		}
 	}
 	if (trimmedLineEnd == _lineStart && !_elidedLine) {
+		fillSelectTillLineEnd(x);
 		return true;
 	}
 
@@ -773,6 +835,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	int firstItem = e.findItem(lineStart), lastItem = e.findItem(lineStart + lineLength - 1);
 	int nItems = (firstItem >= 0 && lastItem >= firstItem) ? (lastItem - firstItem + 1) : 0;
 	if (!nItems) {
+		fillSelectTillLineEnd(x);
 		return !_elidedLine;
 	}
 
@@ -790,6 +853,13 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			levels[i] = si.analysis.bidiLevel;
 		}
 	}
+	// After the items are shaped: shaping grows the engine's memory block, and
+	// the attributes live in it, so a pointer taken earlier can be left behind.
+	// Only a click and a middle elision ask about letters at all.
+	const auto attributes = (_lookupSymbol || _elisionMiddle)
+		? e.attributes()
+		: nullptr;
+
 	QTextEngine::bidiReorder(nItems, levels.data(), visualOrder.data());
 	if (style::RightToLeft() && skipIndex == nItems - 1) {
 		for (auto i = nItems; i > 1;) {
@@ -901,13 +971,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				}
 				if (_lookupSymbol) {
 					if (_type == TextBlockType::Skip) {
-						if (_paragraphDirection == Qt::RightToLeft) {
-							_lookupResult.symbol = _lineStart;
-							_lookupResult.afterSymbol = false;
-						} else {
-							_lookupResult.symbol = (trimmedLineEnd > _lineStart) ? (trimmedLineEnd - 1) : _lineStart;
-							_lookupResult.afterSymbol = (trimmedLineEnd > _lineStart) ? true : false;
-						}
+						lookupLineEdge(trimmedLineEnd, true);
 						return false;
 					}
 
@@ -1131,7 +1195,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		}
 
 		const auto isSpaceGlyph = [&](int g) {
-			if (!glyphs.attributes[g].dontPrint) {
+			// A cut can land past the last glyph of the item, where there is
+			// no glyph to look at.
+			if (g >= si.num_glyphs || !glyphs.attributes[g].dontPrint) {
 				return false;
 			}
 			for (auto p = itemStart; p < itemEnd; ++p) {
@@ -1146,16 +1212,57 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		for (int g = glyphsStart; g < glyphsEnd; ++g)
 			itemWidth += glyphs.effectiveAdvance(g);
 
+		// Each half of a middle elision keeps the end of the item that faces
+		// the middle of the line, and which end that is depends on the item's
+		// direction: glyphs are stored in logical order, so the visually left
+		// part of a right-to-left item is its last glyphs. Walking from the
+		// first glyph regardless keeps the wrong end as soon as a half spans
+		// more than one item - it would show neither the beginning nor the end
+		// of the text, but two stretches out of its middle, out of order.
+		// Glyph index each visible letter of the item starts at, so that a cut
+		// lands between letters and not inside one - a glyph at a time used to
+		// leave an orphan matra behind and let the line run past its width.
+		auto letters = QVarLengthArray<int, 64>();
+
+		// The characters those glyphs are for: a cut narrows both, or the
+		// characters would keep describing the glyphs that were dropped.
+		auto letterChars = QVarLengthArray<int, 64>();
+		if (_elisionMiddle) {
+			for (auto pos = itemStart; pos < itemEnd;) {
+				letters.push_back(logClusters[pos - si.position]);
+				letterChars.push_back(pos);
+				pos = CutEnd(
+					attributes,
+					logClusters - si.position,
+					pos,
+					itemEnd);
+			}
+			letters.push_back(glyphsEnd);
+			letterChars.push_back(itemEnd);
+		}
+		const auto lettersCount = int(letters.size()) - 1;
 		if (_elisionMiddle && !paintRightToMiddleElision) {
 			itemWidth = 0;
-			for (int g = glyphsStart; g < glyphsEnd; ++g) {
-				const auto adv = glyphs.effectiveAdvance(g);
+			const auto forward = !rtl;
+			for (int k = 0; k < lettersCount; ++k) {
+				const auto index = forward ? k : (lettersCount - 1 - k);
+				const auto adv = GlyphsAdvance(
+					glyphs,
+					letters[index],
+					letters[index + 1]);
 				if (leftLineLengthLeft - adv.toReal() < 0) {
 					leftLineLengthLeft = 0;
-					if (isSpaceGlyph(g)) {
+					const auto at = forward ? letters[index] : letters[index + 1];
+					if (isSpaceGlyph(at)) {
 						rightLineLengthLeft += _f->spacew;
 					}
-					glyphsEnd = g;
+					if (forward) {
+						glyphsEnd = letters[index];
+						itemEnd = letterChars[index];
+					} else {
+						glyphsStart = at;
+						itemStart = letterChars[index + 1];
+					}
 					i = -1;
 					lastLeftToMiddleX = (x + itemWidth);
 					break;
@@ -1171,13 +1278,26 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			if (i == 0) {
 				x = _x + _lineWidth;
 			}
-			for (int g = glyphsEnd - 1; g >= glyphsStart; --g) {
-				const auto adv = glyphs.effectiveAdvance(g);
+			const auto forward = rtl;
+			for (int k = 0; k < lettersCount; ++k) {
+				const auto index = forward ? k : (lettersCount - 1 - k);
+				const auto adv = GlyphsAdvance(
+					glyphs,
+					letters[index],
+					letters[index + 1]);
 				if (rightLineLengthLeft - adv.toReal() < 0) {
 					rightLineLengthLeft = 0;
-					glyphsStart = std::min(g + 1, glyphsEnd - 1);
+					const auto at = forward ? letters[index] : letters[index + 1];
+					const auto space = isSpaceGlyph(at);
+					if (forward) {
+						glyphsEnd = at;
+						itemEnd = letterChars[index];
+					} else {
+						glyphsStart = at;
+						itemStart = letterChars[index + 1];
+					}
 					i = nItems;
-					if (isSpaceGlyph(glyphsStart)) {
+					if (space) {
 						x -= _f->spacew;
 					}
 					{
@@ -1219,34 +1339,67 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			_lookupResult.uponSymbol = true;
 			if (_lookupSymbol) {
 				QFixed tmpx = rtl ? (x + itemWidth) : x;
-				for (int ch = 0, g, itemL = itemEnd - itemStart; ch < itemL;) {
-					g = logClusters[itemStart - si.position + ch];
-					QFixed gwidth = glyphs.effectiveAdvance(g);
-					// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
-					int ch2 = ch + 1;
-					while ((ch2 < itemL) && (g == logClusters[itemStart - si.position + ch2])) {
-						++ch2;
+				const auto clusters = logClusters - si.position;
+				auto letters = QVarLengthArray<int, 16>();
+				for (int ch = 0, itemL = itemEnd - itemStart; ch < itemL;) {
+					// A caret only goes before or after a whole visible letter,
+					// and letters that share a glyph - a ligature, a consonant
+					// with its matra - have no width of their own, so they take
+					// an equal share of the one they are drawn as, which is how
+					// the engine maps a point back to a position.
+					const auto clusterEnd = ClusterEnd(
+						clusters,
+						itemStart + ch,
+						itemEnd) - itemStart;
+					const auto width = GlyphsAdvance(
+						glyphs,
+						clusters[itemStart + ch],
+						(clusterEnd < itemL)
+							? clusters[itemStart + clusterEnd]
+							: glyphsEnd);
+					letters.clear();
+					for (auto i = ch; i != clusterEnd; ++i) {
+						if (attributes[itemStart + i].graphemeBoundary) {
+							letters.push_back(i);
+						}
 					}
-					for (int charsCount = (ch2 - ch); ch < ch2; ++ch) {
-						QFixed shift1 = QFixed(2 * (charsCount - (ch2 - ch)) + 2) * gwidth / QFixed(2 * charsCount),
-							shift2 = QFixed(2 * (charsCount - (ch2 - ch)) + 1) * gwidth / QFixed(2 * charsCount);
-						if ((rtl && _lookupX >= tmpx - shift1) ||
-							(!rtl && _lookupX < tmpx + shift1)) {
-							_lookupResult.symbol = _localFrom + itemStart + ch;
-							if ((rtl && _lookupX >= tmpx - shift2) ||
-								(!rtl && _lookupX < tmpx + shift2)) {
-								_lookupResult.afterSymbol = false;
-							} else {
-								_lookupResult.afterSymbol = true;
-							}
+					if (letters.isEmpty()) {
+						letters.push_back(ch);
+					}
+					// Every boundary is measured from where the cluster
+					// begins. Adding an equal share letter by letter would
+					// drop what the division leaves over, and that remainder
+					// would push everything after it: a line of ligatures
+					// walks away from the text it is being compared with.
+					const auto count = int(letters.size());
+					const auto origin = tmpx;
+					const auto at = [&](int part, int of) {
+						const auto shift = width * part / of;
+						return rtl ? (origin - shift) : (origin + shift);
+					};
+					for (auto k = 0; k != count; ++k) {
+						const auto from = letters[k];
+						const auto till = (k + 1 != count)
+							? letters[k + 1]
+							: clusterEnd;
+						const auto edge = at(k + 1, count);
+						const auto inside = rtl
+							? (_lookupX >= edge)
+							: (_lookupX < edge);
+						if (inside) {
+							const auto middle = at(2 * k + 1, 2 * count);
+							const auto before = rtl
+								? (_lookupX >= middle)
+								: (_lookupX < middle);
+							_lookupResult.symbol = _localFrom
+								+ itemStart
+								+ (before ? from : (till - 1));
+							_lookupResult.afterSymbol = !before;
 							return false;
 						}
 					}
-					if (rtl) {
-						tmpx -= gwidth;
-					} else {
-						tmpx += gwidth;
-					}
+					tmpx = rtl ? (origin - width) : (origin + width);
+					ch = clusterEnd;
 				}
 				if (itemEnd > itemStart) {
 					_lookupResult.symbol = _localFrom + itemEnd - 1;
@@ -1260,6 +1413,14 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		} else if (_p) {
 			QTextItemInt gf;
 			gf.glyphs = glyphs.mid(glyphsStart, glyphsEnd - glyphsStart);
+			// A half of a middle elision can come out with no letter of its
+			// own: the ellipsis is drawn either way, and half a letter is
+			// worse than none.
+			const auto drawGlyphs = [&](QPointF at, const QTextItemInt &item) {
+				if (item.glyphs.numGlyphs > 0) {
+					_p->drawTextItem(at, item);
+				}
+			};
 			gf.f = &e.fnt;
 			gf.chars = e.layoutData->string.unicode() + itemStart;
 			gf.num_chars = itemEnd - itemStart;
@@ -1306,6 +1467,13 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 					textHeight);
 			} else {
 				fillSelectRange(fillSelect, textTop, textHeight);
+			}
+			if (i == nItems - 1) {
+				// With the glyphs of the last item, not after them: the gap
+				// this fills is where that item's last glyph reaches past its
+				// advance, so a fill that came later would paint over the ink
+				// it is there to sit behind.
+				fillSelectTillLineEnd(x + itemWidth);
 			}
 
 			if (_highlight) {
@@ -1362,7 +1530,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 						const auto clippingRegion = _p->clipRegion();
 						_p->setClipRect(selectedRect, Qt::IntersectClip);
 						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(QPointF(
+						drawGlyphs(QPointF(
 							x.toReal(),
 							(textY + baselineShift).toReal()
 						), gf);
@@ -1375,7 +1543,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 								_y + 2 * _lineHeight));
 						_p->setClipRegion(externalClipping - selectedRect);
 						_p->setPen(*_currentPen);
-						_p->drawTextItem(QPointF(
+						drawGlyphs(QPointF(
 							x.toReal(),
 							(textY + baselineShift).toReal()
 						), gf);
@@ -1390,14 +1558,14 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 #endif // Q_OS_MAC
 					} else {
 						_p->setPen(*_currentPenSelected);
-						_p->drawTextItem(QPointF(
+						drawGlyphs(QPointF(
 							x.toReal(),
 							(textY + baselineShift).toReal()
 						), gf);
 					}
 				} else {
 					_p->setPen(*_currentPen);
-					_p->drawTextItem(QPointF(
+					drawGlyphs(QPointF(
 						x.toReal(),
 						(textY + baselineShift).toReal()
 					), gf);
@@ -1427,6 +1595,15 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			x -= itemWidth;
 		}
 	}
+	if (!_p && !_elisionMiddle) {
+		// Nothing on the line took the point, so it landed between where the
+		// items ended and where the line is wide enough to be past: the line
+		// width counts the last word's right bearing and the items do not.
+		// A pixel there belongs at the end of the line, like a point past it,
+		// and used to resolve to the very start of the text instead.
+		lookupLineEdge(lineEnd, true);
+	}
+	fillSelectTillLineEnd(x);
 	fillRectsFromRanges();
 	return !_elidedLine;
 }
@@ -1479,12 +1656,19 @@ FixedRange Renderer::findSelectTextRange(
 		const auto lczero = gf.logClusters[0];
 		for (int ch = 0, g; ch < selEnd;) {
 			g = gf.logClusters[ch];
-			const auto gwidth = gf.glyphs.effectiveAdvance(g - lczero);
 			// ch2 - glyph end, ch - glyph start, (ch2 - ch) - how much chars it takes
 			int ch2 = ch + 1;
 			while ((ch2 < itemL) && (g == gf.logClusters[ch2])) {
 				++ch2;
 			}
+			// The whole cluster, not just its first glyph: otherwise selX
+			// falls behind the text as it is drawn and the highlight starts
+			// left of the characters it covers.
+			const auto gwidth = GlyphsAdvance(
+				gf.glyphs,
+				g - lczero,
+				((ch2 < itemL) ? gf.logClusters[ch2] : (lczero + gf.glyphs.numGlyphs))
+					- lczero);
 			if (ch2 <= selStart) {
 				selX += gwidth;
 			} else if (ch >= selStart && ch2 <= selEnd) {
@@ -1719,6 +1903,10 @@ void Renderer::prepareElidedLine(
 		_lineStartBlock,
 		_blocksSize);
 	auto &e = engine.wrapped();
+
+	// Refreshed after every shape below: shaping grows the engine's memory
+	// block, and the attributes live in it.
+	auto attributes = (const QCharAttributes*)nullptr;
 	_wLeft = _lineWidth
 		- _lineStartPadding
 		- _quotePadding.left()
@@ -1732,6 +1920,7 @@ void Renderer::prepareElidedLine(
 	auto elisionWidth = _t->_st->font->elidew;
 	for (auto i = 0; i < nItems; ++i) {
 		const auto blockIt = engine.shapeGetBlock(firstItem + i);
+		attributes = e.attributes();
 		const auto block = blockIt->get();
 		const auto blockIndex = int(blockIt - begin(_t->_blocks));
 		const auto nextBlock = (blockIndex + 1 < _blocksSize)
@@ -1767,15 +1956,22 @@ void Renderer::prepareElidedLine(
 				glyphsEnd = si.num_glyphs;
 			}
 
-			for (auto g = glyphsStart; g < glyphsEnd; ++g) {
-				auto adv = glyphs.effectiveAdvance(g);
+			// A whole visible letter at a time, so the ellipsis never replaces
+			// half of one - see the elision in drawLine() for the same reason.
+			for (auto pos = itemStart; pos < itemEnd;) {
+				const auto till = CutEnd(
+					attributes,
+					logClusters - si.position,
+					pos,
+					itemEnd);
+				const auto adv = GlyphsAdvance(
+					glyphs,
+					logClusters[pos - si.position],
+					(till < itemEnd)
+						? logClusters[till - si.position]
+						: glyphsEnd);
 				if (_wLeft < elisionWidth + adv) {
 					_wLeft -= elisionWidth;
-
-					auto pos = itemStart;
-					while (pos < itemEnd && logClusters[pos - si.position] < g) {
-						++pos;
-					}
 
 					if (lineText.size() <= pos || recursed > 3) {
 						prepareElisionAt(lineText, lineLength, _localFrom + pos);
@@ -1791,6 +1987,7 @@ void Renderer::prepareElidedLine(
 				} else {
 					_wLeft -= adv;
 				}
+				pos = till;
 			}
 		}
 	}
