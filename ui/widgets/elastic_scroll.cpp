@@ -8,13 +8,12 @@
 
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
-#include "base/options.h"
+#include "ui/widgets/kinetic_scroller.h"
 #include "base/qt/qt_common_adapters.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QWindow>
 #include <QtCore/QtMath>
-#include <QtWidgets/QScroller>
 #include <QtWidgets/QApplication>
 
 namespace Ui {
@@ -425,36 +424,6 @@ ElasticScroll::ElasticScroll(
 	) | rpl::on_next([=](int from) {
 		tryScrollTo(from, false);
 	}, _bar->lifetime());
-
-	static const auto &OptionQScroller = base::options::lookup<bool>(
-		kOptionQScroller);
-
-	rpl::single(
-		rpl::empty
-	) | rpl::then(
-		OptionQScroller.changes()
-	) | rpl::on_next([=] {
-		if (OptionQScroller.value()) {
-			_scroller = QScroller::scroller(this);
-			SetupScrollerPhysics(_scroller);
-		} else if (_scroller) {
-			QObject deleter;
-			_scroller->setParent(&deleter);
-		}
-
-		if (!_scroller) {
-			return;
-		}
-
-		connect(
-			_scroller,
-			&QScroller::stateChanged,
-			[=](QScroller::State state) {
-				if (state == QScroller::Scrolling) {
-					ScrollerStopper::Instance().activate(_scroller);
-				}
-			});
-	}, lifetime());
 }
 
 ElasticScroll::~ElasticScroll() {
@@ -634,15 +603,6 @@ void ElasticScroll::overscrollSpringStart(int side) {
 		0.,
 		1.,
 		kRubberBandMaxReturnDuration);
-}
-
-void ElasticScroll::overscrollBounce(int side, float64 velocity) {
-	_overscrollReturning = true;
-	_ignoreMomentumFromOverscroll = side;
-	_movement = Movement::Returning;
-	_wheelVelocity = velocity;
-	_wheelVelocityTime = crl::now();
-	overscrollSpringStart(side);
 }
 
 void ElasticScroll::overscrollSpringUpdate() {
@@ -864,85 +824,6 @@ bool ElasticScroll::eventHook(QEvent *e) {
 		}
 		return true;
 	}
-	switch (e->type()) {
-	case QEvent::ScrollPrepare: {
-		QScrollPrepareEvent *se = static_cast<QScrollPrepareEvent *>(e);
-		se->setViewportSize(QSizeF(viewport()->size()));
-		se->setContentPosRange(QRectF(
-			0,
-			0,
-			_vertical ? 0 : _state.fullSize - width(),
-			_vertical ? _state.fullSize - height() : 0));
-		se->setContentPos(QPointF(
-			_vertical ? 0 : _state.visibleFrom,
-			_vertical ? _state.visibleFrom : 0));
-		se->accept();
-		return true;
-	}
-	case QEvent::Scroll: {
-		QScrollEvent *se = static_cast<QScrollEvent *>(e);
-		const auto state = _scroller->state();
-		const auto phase = state == QScroller::Pressed
-			? Qt::ScrollBegin
-			: state == QScroller::Dragging
-			? Qt::ScrollUpdate
-			: state == QScroller::Scrolling
-			? Qt::ScrollMomentum
-			: Qt::ScrollEnd;
-		const auto pixels
-			= (se->contentPos() + se->overshootDistance()).toPoint();
-		const auto delta
-			= -(_state.visibleFrom - (_vertical ? pixels.y() : pixels.x()));
-		// Capture the fling velocity before this event is tracked: at the
-		// boundary QScroller clamps the delta, so the sample it produces
-		// underestimates the speed the fling actually hit the edge with.
-		const auto velocity = (_wheelVelocityTime
-			&& (crl::now() - _wheelVelocityTime <= kVelocityZeroingTimeout))
-			? _wheelVelocity
-			: 0.;
-		const auto weak = base::make_weak(this);
-		const auto result = handleScrollEvent(phase, delta);
-		if (!weak) {
-			return true;
-		}
-		if (phase == Qt::ScrollMomentum
-			&& velocity != 0.
-			&& _scroller
-			&& _scroller->state() == QScroller::Scrolling
-			&& !_overscrollReturnAnimation.animating()
-			&& _overscroll == currentOverscrollDefault()) {
-			// QScroller's overshoot is disabled, so a fling just stops
-			// dead at the boundary of the range QScroller knows about.
-			const auto side = (velocity < 0.) ? -1 : 1;
-			const auto target = _state.visibleFrom + side;
-			if (willScrollTo(target) != target) {
-				if (side > 0 && requestBottomContent(1)) {
-					// The boundary wasn't a real edge: more content was
-					// appended below, let the fling continue into it.
-					if (weak) {
-						ResendScrollerPrepare(_scroller);
-					}
-					return true;
-				}
-				if (!weak) {
-					return true;
-				}
-				const auto &allowed = (side < 0)
-					? _overscrollAllowFrom
-					: _overscrollAllowTill;
-				if (overscrollSpringSide(side)
-					&& (!allowed || allowed())) {
-					// A real edge: hand the residual velocity over to the
-					// rubber-band spring for the bounce.
-					_scroller->stop();
-					_wheelPos = {};
-					overscrollBounce(side, velocity);
-				}
-			}
-		}
-		return result;
-	}
-	}
 	return RpWidget::eventHook(e);
 }
 
@@ -1064,107 +945,26 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			overscrollReturn();
 		}
 		return true;
-	} else if (_scroller && !touch) {
-		// QScroller only provides in-range kinetics (its overshoot is
-		// disabled), so while any overscroll state is active - a stretch,
-		// an accumulated default (like the expanded stories strip), a
-		// pending below-threshold delta or a running bounce - and whenever
-		// the delta pushes past an edge, the raw phased events go through
-		// the elastic overscroll physics directly instead of QScroller.
-		const auto elastic = _overscroll
-			|| _overscrollAccumulated
-			|| _pendingOverscrollDelta
-			|| _overscrollReturning;
-		const auto target = _state.visibleFrom + delta;
-		if (elastic || (delta && willScrollTo(target) != target)) {
-			if (!_wheelPos.isNull()
-				|| _scroller->state() != QScroller::Inactive) {
-				_scroller->stop();
-				_wheelPos = {};
-			}
-			// Pass no timestamp: with QScroller enabled the velocity is
-			// also tracked from its synthetic events, which carry none,
-			// and mixing the events' own clock with the processing-time
-			// one would corrupt the estimation at the transition.
-			return handleScrollEvent(phase, delta, ignore, touch);
-		}
-		switch (phase) {
-		case Qt::ScrollBegin:
-		case Qt::ScrollUpdate: {
-			if (phase == Qt::ScrollBegin
-				&& !pixels.isNull()
-				&& _scroller->state() == QScroller::Scrolling) {
-				// On macOS, when Qt loses the race detecting that a
-				// momentum phase follows the finger lift, the OS momentum
-				// stream leaks through as ScrollBegin + ScrollMomentum.
-				// A real begin (fingers resting on the pad) carries a
-				// zero delta, so a delta-carrying begin while our fling
-				// runs is that leak - pressing would catch and kill the
-				// fling. If this ever swallows a real begin, the next
-				// ScrollUpdate finds _wheelPos null and presses instead.
-				break;
-			}
-			const auto wasNull = _wheelPos.isNull();
-			if (wasNull) {
-				_wheelPos = QPoint(width(), height()) / 2;
-			} else {
-				_wheelPos += pixels;
-			}
-			_scroller->handleInput(wasNull
-				? QScroller::InputPress
-				: QScroller::InputMove, _wheelPos, e->timestamp());
-		} break;
-		case Qt::ScrollEnd:
-		case Qt::ScrollMomentum: {
-			if (!_wheelPos.isNull()) {
-				_scroller->handleInput(
-					QScroller::InputRelease,
-					_wheelPos,
-					e->timestamp());
-				_wheelPos = {};
-			}
-		} break;
-		}
-		return true;
 	}
-	return handleScrollEvent(
-		phase,
-		delta,
-		ignore,
-		touch,
-		crl::time(e->timestamp()));
-}
-
-bool ElasticScroll::requestBottomContent(int delta) {
-	if (!_bottomContentRequest
-		|| _insideBottomContentRequest
-		|| _overscroll
-		|| delta <= 0) {
-		return false;
-	}
-	const auto target = _state.visibleFrom + delta;
-	if (willScrollTo(target) >= target) {
-		return false;
-	}
-	const auto request = _bottomContentRequest;
-	const auto weak = base::make_weak(this);
-	_insideBottomContentRequest = true;
-	const auto result = request();
-	if (weak) {
-		_insideBottomContentRequest = false;
-	}
-	return result;
-}
-
-bool ElasticScroll::handleScrollEvent(
-		Qt::ScrollPhase phase,
-		int delta,
-		bool ignore,
-		bool touch,
-		crl::time timestamp) {
 	const auto momentum = (phase == Qt::ScrollMomentum)
 		|| (phase == Qt::ScrollEnd);
-	trackWheelVelocity(phase, delta, timestamp);
+	trackWheelVelocity(phase, delta, crl::time(e->timestamp()));
+	const auto scroller = KineticScroller::For(this);
+	if (scroller && scroller->state(this) == KineticScroller::Scrolling) {
+		// Scrolling here means the event stream is our own fling: its
+		// deltas are truncated to whole pixels per tick, so the velocity
+		// tracked back from them reads zero in the slow tail and would
+		// suppress the edge bounce. The scroller's closed-form velocity
+		// is exact at any instant, use it instead, converted the same
+		// way the applied deltas are.
+		const auto exact = scroller->velocity() * style::Scale() / 100.;
+		const auto limit = kMaxTrackedVelocity * style::Scale() / 100.;
+		_wheelVelocity = std::clamp(
+			-(_vertical ? exact.y() : exact.x()),
+			-limit,
+			limit);
+		_wheelVelocityTime = crl::now();
+	}
 	if (_ignoreMomentumFromOverscroll) {
 		if (!momentum) {
 			_ignoreMomentumFromOverscroll = 0;
@@ -1246,7 +1046,6 @@ bool ElasticScroll::handleScrollEvent(
 				if (!weak) {
 					return true;
 				}
-				ResendScrollerPrepare(_scroller);
 			}
 		}
 	}
@@ -1297,6 +1096,27 @@ bool ElasticScroll::handleScrollEvent(
 		overscrollReturn();
 	}
 	return true;
+}
+
+bool ElasticScroll::requestBottomContent(int delta) {
+	if (!_bottomContentRequest
+		|| _insideBottomContentRequest
+		|| _overscroll
+		|| delta <= 0) {
+		return false;
+	}
+	const auto target = _state.visibleFrom + delta;
+	if (willScrollTo(target) >= target) {
+		return false;
+	}
+	const auto request = _bottomContentRequest;
+	const auto weak = base::make_weak(this);
+	_insideBottomContentRequest = true;
+	const auto result = request();
+	if (weak) {
+		_insideBottomContentRequest = false;
+	}
+	return result;
 }
 
 void ElasticScroll::applyAccumulatedScroll() {
@@ -1870,7 +1690,6 @@ void ElasticScroll::scrollTo(int toFrom, int toTill) {
 		scTo += _overscroll;
 	}
 	applyScrollTo(scTo);
-	ResendScrollerPrepare(_scroller);
 }
 
 void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {
