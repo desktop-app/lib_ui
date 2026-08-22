@@ -6,13 +6,14 @@
 //
 #pragma once
 
+#include "ui/ui_fixed.h"
+
 #include "base/basic_types.h"
 #include "base/flags.h"
 
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
 
-#include <private/qfixed_p.h>
 
 #include <cmath>
 
@@ -134,8 +135,8 @@ public:
 	int spacew = 0;
 	int elidew = 0;
 
-	QFixed fascent = 0;
-	QFixed fleading = 0;
+	Ui::Fixed fascent = 0;
+	Ui::Fixed fleading = 0;
 
 private:
 	friend class OwnedFont;

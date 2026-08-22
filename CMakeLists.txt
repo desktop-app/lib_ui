@@ -194,6 +194,8 @@ PRIVATE
     ui/text/text_isolated_emoji.h
     ui/text/text_renderer.cpp
     ui/text/text_renderer.h
+    ui/text/text_shaper.h
+    ui/text/text_shaper_qt.cpp
     ui/text/text_stack_engine.cpp
     ui/text/text_stack_engine.h
     ui/text/text_utilities.cpp
@@ -329,6 +331,7 @@ PRIVATE
     ui/ui_touch_forward.cpp
     ui/ui_touch_forward.h
     ui/ui_utility.cpp
+    ui/ui_fixed.h
     ui/ui_utility.h
 
     ui/ui_pch.h

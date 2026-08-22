@@ -438,8 +438,8 @@ FontData::FontData(const FontResolveResult &result, FontVariants *modified)
 	spacew = width(QLatin1Char(' '));
 	elidew = width(u"..."_q);
 
-	fascent = QFixed::fromReal(result.ascent);
-	fleading = QFixed::fromReal(_m.leading());
+	fascent = Ui::Fixed::FromReal(result.ascent);
+	fleading = Ui::Fixed::FromReal(_m.leading());
 }
 
 Font FontData::bold(bool set) const {

@@ -603,15 +603,15 @@ void String::recountNaturalSize(
 	auto qpadding = quotePadding(quote);
 	auto qminwidth = quoteMinWidth(quote);
 	auto qlinesleft = quoteLinesLimit(quote);
-	auto qmaxwidth = QFixed(qminwidth);
+	auto qmaxwidth = Fixed(qminwidth);
 	auto qoldheight = 0;
 
 	_maxWidth = 0;
 	_minHeight = qpadding.top();
-	auto maxWidth = QFixed();
-	auto width = QFixed(qminwidth);
-	auto last_rBearing = QFixed();
-	auto last_rPadding = QFixed();
+	auto maxWidth = Fixed();
+	auto width = Fixed(qminwidth);
+	auto last_rBearing = Fixed();
+	auto last_rPadding = Fixed();
 	for (const auto &word : _words) {
 		if (word.newline()) {
 			const auto block = word.newlineBlockIndex();
@@ -1055,7 +1055,7 @@ String::DimensionsResult String::countDimensions(
 	}
 	enumerateLines(
 		geometry,
-		[&](QFixed lineWidth, int lineBottom, int, int, bool) {
+		[&](Fixed lineWidth, int lineBottom, int, int, bool) {
 			const auto width = lineWidth.ceil().toInt();
 			if (request.lineWidths) {
 				result.lineWidths.push_back(width);
@@ -1068,15 +1068,15 @@ String::DimensionsResult String::countDimensions(
 }
 
 QSize String::countSize(int width, bool breakEverywhere) const {
-	if (QFixed(width) >= _maxWidth) {
+	if (Fixed(width) >= _maxWidth) {
 		return { _maxWidth, _minHeight };
 	}
 	auto height = 0;
-	auto maxLineWidth = QFixed(0);
+	auto maxLineWidth = Fixed(0);
 	enumerateLines(
 		width,
 		breakEverywhere,
-		[&](QFixed lineWidth, int lineBottom, int, int, bool) {
+		[&](Fixed lineWidth, int lineBottom, int, int, bool) {
 			if (lineWidth > maxLineWidth) {
 				maxLineWidth = lineWidth;
 			}
@@ -1107,7 +1107,7 @@ std::vector<int> String::countLineWidths(
 	enumerateLines(
 		width,
 		options.breakEverywhere,
-		[&](QFixed lineWidth, int, int, int, bool) {
+		[&](Fixed lineWidth, int, int, int, bool) {
 			result.push_back(lineWidth.ceil().toInt());
 		});
 	return result;
@@ -1121,7 +1121,7 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
 		width,
 		breakEverywhere,
 		[&](
-				QFixed lineWidth,
+				Fixed lineWidth,
 				int lineBottom,
 				int lineLeft,
 				int lineBaseline,
@@ -1176,7 +1176,7 @@ void String::enumerateLines(
 	auto lineLeft = 0;
 	auto lineWidth = 0;
 	auto lineElided = false;
-	auto widthLeft = QFixed(0);
+	auto widthLeft = Fixed(0);
 	auto lineIndex = 0;
 	const auto initNextLine = [&] {
 		const auto line = geometry.layout(lineIndex++);
@@ -1213,8 +1213,8 @@ void String::enumerateLines(
 		initNextParagraph(_startQuoteIndex, 0);
 	}
 
-	auto last_rBearing = QFixed();
-	auto last_rPadding = QFixed();
+	auto last_rBearing = Fixed();
+	auto last_rPadding = Fixed();
 	auto longWordLine = true;
 	auto lastWordStart = begin(_words);
 	auto lastWordStart_wLeft = widthLeft;
@@ -1661,31 +1661,31 @@ const QString &String::quoteHeaderText(QuoteDetails *quote) const {
 		: quote->language;
 }
 
-QFixed String::blockBaselineShift(const AbstractBlock *block) const {
+Fixed String::blockBaselineShift(const AbstractBlock *block) const {
 	const auto flags = block->flags();
 	const auto subscript = (flags & TextBlockFlag::Subscript);
 	const auto superscript = (flags & TextBlockFlag::Superscript);
 	if (!subscript && !superscript) {
-		return QFixed();
+		return Fixed();
 	} else if (_st->qtextEditLineMetrics) {
 		const auto font = WithFlags(_st->font, flags);
 		const auto &metrics = font->metrics();
-		const auto height = QFixed::fromReal(
+		const auto height = Fixed::FromReal(
 			metrics.ascent() + metrics.descent());
 		return subscript ? (height / 6) : -(height / 2);
 	}
 	return subscript
-		? QFixed(int(base::SafeRound(_st->font->size() / 4.)))
-		: -QFixed(int(base::SafeRound(_st->font->size() / 3.)));
+		? Fixed(int(base::SafeRound(_st->font->size() / 4.)))
+		: -Fixed(int(base::SafeRound(_st->font->size() / 3.)));
 }
 
 String::LineMetrics String::defaultLineMetrics() const {
 	if (_st->qtextEditLineMetrics) {
-		const auto lineHeight = QFixed(this->lineHeight());
-		const auto leading = std::max(_st->font->fleading, QFixed());
+		const auto lineHeight = Fixed(this->lineHeight());
+		const auto leading = std::max(_st->font->fleading, Fixed());
 		const auto ascent = std::clamp(
 			(lineHeight * 4 / 5) - leading,
-			QFixed(),
+			Fixed(),
 			lineHeight);
 		return {
 			.ascent = ascent,
@@ -1736,8 +1736,8 @@ String::LineMetrics String::resolveLineMetrics(
 		if (!vertical) {
 			continue;
 		}
-		accumulate_max(result.ascent, QFixed(vertical->ascent));
-		accumulate_max(result.descent, QFixed(vertical->descent));
+		accumulate_max(result.ascent, Fixed(vertical->ascent));
+		accumulate_max(result.descent, Fixed(vertical->descent));
 	}
 	return result;
 }

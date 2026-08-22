@@ -6,6 +6,8 @@
 //
 #pragma once
 
+#include "ui/ui_fixed.h"
+
 #include "ui/text/text_entity.h"
 #include "ui/click_handler.h"
 #include "base/flags.h"
@@ -459,8 +461,8 @@ private:
 	};
 
 	struct LineMetrics {
-		QFixed ascent = 0;
-		QFixed descent = 0;
+		Fixed ascent = 0;
+		Fixed descent = 0;
 
 		[[nodiscard]] int height() const {
 			return (ascent + descent).toInt();
@@ -486,7 +488,7 @@ private:
 	[[nodiscard]] QMargins quotePadding(QuoteDetails *quote) const;
 	[[nodiscard]] int quoteMinWidth(QuoteDetails *quote) const;
 	[[nodiscard]] const QString &quoteHeaderText(QuoteDetails *quote) const;
-	[[nodiscard]] QFixed blockBaselineShift(const AbstractBlock *block) const;
+	[[nodiscard]] Fixed blockBaselineShift(const AbstractBlock *block) const;
 	[[nodiscard]] LineMetrics defaultLineMetrics() const;
 	[[nodiscard]] LineMetrics resolveLineMetrics(
 		int lineStart,
@@ -564,6 +566,8 @@ private:
 	friend class Renderer;
 	friend class BidiAlgorithm;
 	friend class StackEngine;
+	friend class Paragraph;
+	friend class LineShaper;
 
 };
 
