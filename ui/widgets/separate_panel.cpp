@@ -1387,6 +1387,13 @@ QRect SeparatePanel::innerGeometry() const {
 void SeparatePanel::toggleFullScreen(bool fullscreen) {
 	_fullscreen = fullscreen;
 	if (fullscreen) {
+		// RpWidget's constructor calls setGeometry(0, 0, 0, 0), which sets
+		// WA_Moved. After that Qt treats the panel as explicitly positioned
+		// and QWidget::show() / QWidgetPrivate::create pass that position to
+		// the QWindow instead of letting the platform place a fullscreen
+		// window at the screen origin (resize-only). Same workaround as the
+		// Linux transient-parent path in initGeometry().
+		setAttribute(Qt::WA_Moved, false);
 		showFullScreen();
 	} else {
 		showNormal();
