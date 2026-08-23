@@ -102,6 +102,31 @@ base::flat_map<uint64, uint32> QtFontsKeys;
 		| (uint64(font.pixelSize()));
 }
 
+#ifdef LIB_UI_USE_PANGO
+
+// A font added straight from the resources is registered with fontconfig under
+// its resource path, which nothing but Qt can open - and here the text is
+// shaped and drawn by Pango, through fontconfig. So the fonts are written out
+// once and loaded from real files, which both can read.
+[[nodiscard]] QString ExtractedFontPath(const QString &filePath) {
+	const auto directory = Ui::Integration::Instance().fontsCacheFolder();
+	if (directory.isEmpty() || !QDir().mkpath(directory)) {
+		LOG(("Font Error: could not create '%1'.").arg(directory));
+		return filePath;
+	}
+	const auto result = directory + '/' + QFileInfo(filePath).fileName();
+	if (QFile::exists(result)) {
+		QFile::remove(result);
+	}
+	if (!QFile::copy(filePath, result)) {
+		LOG(("Font Error: could not write '%1'.").arg(result));
+		return filePath;
+	}
+	return result;
+}
+
+#endif // LIB_UI_USE_PANGO
+
 bool LoadCustomFont(const QString &filePath) {
 	auto regularId = QFontDatabase::addApplicationFont(filePath);
 	if (regularId < 0) {
@@ -373,7 +398,12 @@ void StartFonts() {
 	const auto name = u"Open Sans"_q;
 
 	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
-		LoadCustomFont(file.canonicalFilePath());
+		const auto path = file.canonicalFilePath();
+#ifdef LIB_UI_USE_PANGO
+		LoadCustomFont(ExtractedFontPath(path));
+#else // LIB_UI_USE_PANGO
+		LoadCustomFont(path);
+#endif // !LIB_UI_USE_PANGO
 	}
 
 	if (!QFontInfo(name).family().trimmed().startsWith(

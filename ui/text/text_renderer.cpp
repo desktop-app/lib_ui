@@ -12,6 +12,8 @@
 #include "ui/style/style_core.h"
 #include "styles/style_basic.h"
 
+#include <QtGui/QPaintEngine>
+
 namespace Ui::Text {
 namespace {
 
@@ -509,7 +511,8 @@ void Renderer::initParagraphBidi() {
 		_paragraphLength,
 		(_paragraphDirection == Qt::RightToLeft),
 		int(_paragraphStartBlock - begin(_t->_blocks)),
-		-1);
+		-1,
+		_p ? _p->paintEngine()->paintDevice()->devicePixelRatioF() : 1.);
 }
 
 // The caret at an edge of the line - which edge is which depends on the

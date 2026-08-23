@@ -195,6 +195,7 @@ PRIVATE
     ui/text/text_renderer.cpp
     ui/text/text_renderer.h
     ui/text/text_shaper.h
+    ui/text/text_shaper_pango.cpp
     ui/text/text_shaper_qt.cpp
     ui/text/text_stack_engine.cpp
     ui/text/text_stack_engine.h
@@ -344,6 +345,19 @@ PRIVATE
 if (DESKTOP_APP_USE_PACKAGED_FONTS)
     target_compile_definitions(lib_ui PRIVATE LIB_UI_USE_PACKAGED_FONTS)
     remove_target_sources(lib_ui ${src_loc} fonts/fonts.qrc)
+endif()
+
+if (DESKTOP_APP_USE_PANGO)
+    remove_target_sources(lib_ui ${src_loc}
+        ui/text/text_bidi_algorithm.h
+        ui/text/text_shaper_qt.cpp
+        ui/text/text_stack_engine.cpp
+        ui/text/text_stack_engine.h
+    )
+    target_compile_definitions(lib_ui PRIVATE LIB_UI_USE_PANGO)
+    target_link_libraries(lib_ui PRIVATE desktop-app::external_pango)
+else()
+    remove_target_sources(lib_ui ${src_loc} ui/text/text_shaper_pango.cpp)
 endif()
 
 target_include_directories(lib_ui

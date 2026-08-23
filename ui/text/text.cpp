@@ -896,6 +896,7 @@ bool String::blockquoteExpanded(int index) const {
 }
 
 void String::setBlockquoteExpanded(int index, bool expanded) {
+	++_version;
 	Expects(_extended && _extended->quotes);
 	Expects(index > 0 && index <= _extended->quotes->list.size());
 
@@ -919,6 +920,7 @@ bool String::updateSkipBlock(int width, int height) {
 	if (!width || !height) {
 		return removeSkipBlock();
 	}
+	++_version;
 	if (!_blocks.empty() && _blocks.back()->type() == TextBlockType::Skip) {
 		const auto &block = _blocks.back().unsafe<SkipBlock>();
 		if (block.width() == width && block.height() == height) {
@@ -959,7 +961,9 @@ bool String::updateSkipBlock(int width, int height) {
 bool String::removeSkipBlock() {
 	if (_blocks.empty() || _blocks.back()->type() != TextBlockType::Skip) {
 		return false;
-	} else if (_skipBlockAddedNewline) {
+	}
+	++_version;
+	if (_skipBlockAddedNewline) {
 		const auto size = _blocks.back()->position() - 1;
 		_text.resize(size);
 		_blocks.pop_back();
@@ -2235,6 +2239,7 @@ int String::lineHeight() const {
 }
 
 void String::clear() {
+	++_version;
 	_text.clear();
 	_blocks.clear();
 	_extended = nullptr;

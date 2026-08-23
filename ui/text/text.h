@@ -544,6 +544,10 @@ private:
 	const style::TextStyle *_st = nullptr;
 	QString _text;
 	std::vector<Block> _blocks;
+
+	// Bumped by everything that changes what is laid out, so that anything
+	// keeping a result of laying it out can tell that its own is stale.
+	uint _version = 0;
 	std::vector<Word> _words;
 	ExtendedWrap _extended;
 

@@ -287,7 +287,10 @@ void Paragraph::resolve(
 		int length,
 		bool baseRtl,
 		int blockIndexHint,
-		int blockIndexLimit) {
+		int blockIndexLimit,
+		qreal ratio) {
+	// The private engine lays out and draws in logical units either way, so
+	// the ratio of the device is not its business.
 	if (ready()) {
 		return;
 	}

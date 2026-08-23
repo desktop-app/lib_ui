@@ -129,13 +129,19 @@ public:
 
 	void clear();
 	[[nodiscard]] bool ready() const;
+	// The ratio is of the device that will be drawn to, so that the text is
+	// shaped and rasterized on the pixel grid that device really has - which
+	// is what Qt gives up when it scales instead. Laying out passes one, so
+	// that where a line wraps does not depend on which monitor the window is
+	// on.
 	void resolve(
 		not_null<const String*> t,
 		int position,
 		int length,
 		bool baseRtl,
 		int blockIndexHint,
-		int blockIndexLimit);
+		int blockIndexLimit,
+		qreal ratio = 1.);
 
 	// The ellipsis is not a part of the text, so it is laid out as a tail of
 	// the paragraph that goes the same way as the character before it.
@@ -145,7 +151,11 @@ private:
 	friend class LineShaper;
 
 	struct State;
-	std::unique_ptr<State> _state;
+
+	// Shared, because the same one is kept aside and handed out again: the
+	// engine resolves a paragraph for every question it is asked about a
+	// point, and the answer depends on nothing that changes between them.
+	std::shared_ptr<State> _state;
 
 };
 

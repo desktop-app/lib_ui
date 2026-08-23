@@ -44,6 +44,7 @@ public:
 	virtual void unregisterLeaveSubscription(not_null<QWidget*> widget) = 0;
 
 	[[nodiscard]] virtual QString emojiCacheFolder() = 0;
+	[[nodiscard]] virtual QString fontsCacheFolder() = 0;
 	[[nodiscard]] virtual QString openglCheckFilePath() = 0;
 	[[nodiscard]] virtual QString angleBackendFilePath() = 0;
 
