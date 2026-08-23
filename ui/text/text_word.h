@@ -21,7 +21,7 @@ public:
 		QFixed width,
 		QFixed rbearing)
 	: _position(position)
-	, _rbearing_modulus(std::min(std::abs(rbearing.value()), 0x7FFF))
+	, _rbearing_modulus(std::min(std::abs(rbearing.value()), 0x1FFF))
 	, _rbearing_positive(rbearing.value() > 0 ? 1 : 0)
 	, _unfinished(unfinished ? 1 : 0)
 	, _qfixedwidth(width.value()) {
