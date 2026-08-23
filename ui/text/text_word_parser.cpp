@@ -152,6 +152,9 @@ void WordParser::parse() {
 		}
 		const auto &current = _e.layoutData->items[_item];
 		const auto atSpaceBreak = [&] {
+			if (!clusterIsWhitespace(_attributes, _lbh.currentPosition)) {
+				return false;
+			}
 			for (auto index = _lbh.currentPosition; index < _itemEnd; ++index) {
 				if (!_attributes[index].whiteSpace) {
 					return false;
@@ -294,7 +297,8 @@ void WordParser::accumulateWhitespaces() {
 
 	_lbh.whiteSpaceOrObject = true;
 	while (_lbh.currentPosition < _itemEnd
-		&& _attributes[_lbh.currentPosition].whiteSpace)
+		&& _attributes[_lbh.currentPosition].whiteSpace
+		&& clusterIsWhitespace(_attributes, _lbh.currentPosition))
 		addNextCluster(
 			_lbh.currentPosition,
 			_itemEnd,
@@ -366,6 +370,23 @@ bool WordParser::isSpaceBreak(
 		int index) const {
 	// Don't break on &nbsp;
 	return attributes[index].whiteSpace && (_tText[index] != QChar::Nbsp);
+}
+
+bool WordParser::clusterIsWhitespace(
+		const QCharAttributes *attributes,
+		int index) const {
+	// A mark with no letter to sit on is shaped onto the space before it, and
+	// the two come out as one cluster, which can not be cut in half. Such a
+	// cluster carries ink of its own, so it belongs to a word and not to the
+	// padding a run of spaces makes: padding is dropped at the end of a line,
+	// and the width the text reports would be short of what it draws.
+	const auto glyph = _lbh.logClusters[index];
+	for (auto i = index; i < _itemEnd && _lbh.logClusters[i] == glyph; ++i) {
+		if (!attributes[i].whiteSpace) {
+			return false;
+		}
+	}
+	return true;
 }
 
 } // namespace Ui::Text
