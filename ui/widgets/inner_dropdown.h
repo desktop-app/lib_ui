@@ -24,6 +24,10 @@ public:
 		QWidget *parent,
 		const style::InnerDropdown &st = st::defaultInnerDropdown);
 
+	[[nodiscard]] const style::InnerDropdown &st() const {
+		return _st;
+	}
+
 	template <typename Widget>
 	QPointer<Widget> setOwnedWidget(object_ptr<Widget> widget) {
 		auto result = doSetOwnedWidget(std::move(widget));
