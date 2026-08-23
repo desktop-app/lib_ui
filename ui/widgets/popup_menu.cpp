@@ -456,10 +456,6 @@ void PopupMenu::handleMouseMoved(QPoint globalPosition) {
 }
 
 bool PopupMenu::insideSubmenuAim(QPoint position) const {
-	if (::Platform::IsWayland()) {
-		// Compositor owns popup positions there, geometry is unknown.
-		return true;
-	}
 	const auto submenu = QRect(
 		_activeSubmenu->mapToGlobal(_activeSubmenu->inner().topLeft()),
 		_activeSubmenu->inner().size());
@@ -472,8 +468,9 @@ bool PopupMenu::insideSubmenuAim(QPoint position) const {
 	const auto beyond = opensRight
 		? (position.x() >= edge)
 		: (position.x() <= edge);
-	if (beyond) {
+	if (beyond && !mine.contains(position)) {
 		// Menus overlap by shadow width, last pixels belong to this menu.
+		// Compositor owned positions may overlap much more than that.
 		return (position.y() >= submenu.top())
 			&& (position.y() <= submenu.bottom());
 	}
