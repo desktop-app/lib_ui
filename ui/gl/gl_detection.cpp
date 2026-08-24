@@ -266,12 +266,34 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		return true;
 	}();
 
+	// The probe is expensive and creates a transient native window, so
+	// remember the result of the parentless run: the capabilities are
+	// facts about the GPU and don't change while the app is running.
+	static auto CachedTopLevel = std::optional<Capabilities>();
+	if (!widget && CachedTopLevel) {
+		return *CachedTopLevel;
+	}
+
 	CrashCheckStart();
 	const auto guard = gsl::finally([=] {
 		CrashCheckFinish();
 	});
 
 	auto tester = QOpenGLWidget(widget);
+	if (!widget) {
+		// Recent Windows 11 builds sometimes keep compositing the last
+		// visual of a destroyed window that carried a swapchain, leaving
+		// an unclickable ghost of it on screen until DWM restarts (the
+		// same OS bug shows a white box for a hidden Chrome helper
+		// window). Shape the probe window like Qt shapes the fallback
+		// window of QOffscreenSurface - frameless, 1x1 and nudged just
+		// outside the desktop corner instead of a default-sized
+		// captioned window - so the worst such leftover is a single
+		// pixel off screen, not a white rectangle.
+		tester.setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+		tester.move(-1, -1);
+		tester.resize(1, 1);
+	}
 	tester.setAttribute(Qt::WA_TranslucentBackground);
 	if (tester.window()->testAttribute(Qt::WA_TranslucentBackground)) {
 		auto format = tester.format();
@@ -385,6 +407,9 @@ Capabilities CheckCapabilities(QWidget *widget) {
 	} else {
 		LOG_ONCE(("OpenGL: QOpenGLContext without alpha created, version: %1"
 			).arg(version));
+	}
+	if (!widget) {
+		CachedTopLevel = result;
 	}
 	return result;
 }
