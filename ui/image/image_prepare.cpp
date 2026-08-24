@@ -684,56 +684,32 @@ yi += stride;
 
 	const auto width_m1 = width - 1;
 	const auto height_m1 = height - 1;
-	const auto widthxheight = width * height;
 	const auto div = 2 * radius + 1;
 	const auto radius_p1 = radius + 1;
-	const auto divsum = radius_p1 * radius_p1;
 
-	const auto dvcount = 256 * divsum;
-	const auto buffers = (div * 3) // stack
-		+ std::max(width, height) // vmin
-		+ widthxheight * 3 // rgb
-		+ dvcount; // dv
-	auto storage = std::vector<int>(buffers);
-	auto taken = 0;
-	const auto take = [&](int size) {
-		const auto result = gsl::make_span(storage).subspan(taken, size);
-		taken += size;
-		return result;
+	// Halving twice by radius + 1 is floor(value / divsum), exact to radius 213.
+	const auto magic = uint32((0x80000000ULL + radius_p1 - 1) / radius_p1);
+	const auto divide = [magic](int value) {
+		const auto once = uint32((uint64(value) * magic) >> 31);
+		return uchar((uint64(once) * magic) >> 31);
 	};
 
-	// Small buffers
-	const auto stack = take(div * 3).data();
-	const auto vmin = take(std::max(width, height)).data();
+	auto stack = std::vector<int>(div * 3);
+	auto vmin = std::vector<int>(std::max(width, height));
+	auto middle = std::make_unique_for_overwrite<uchar[]>(
+		size_t(width) * height * 4);
+	const auto rgb = middle.get();
 
-	// Large buffers
-	const auto rgb = take(widthxheight * 3).data();
-	const auto dvs = take(dvcount);
-
-	auto &&ints = ranges::views::ints;
-	for (auto &&[value, index] : ranges::views::zip(dvs, ints(0, ranges::unreachable))) {
-		value = (index / divsum);
-	}
-	const auto dv = dvs.data();
-
-	// Variables
-	auto stackpointer = 0;
-	for (const auto x : ints(0, width)) {
+	for (auto x = 0; x != width; ++x) {
 		vmin[x] = std::min(x + radius_p1, width_m1);
 	}
-	for (const auto y : ints(0, height)) {
-		auto rinsum = 0;
-		auto ginsum = 0;
-		auto binsum = 0;
-		auto routsum = 0;
-		auto goutsum = 0;
-		auto boutsum = 0;
-		auto rsum = 0;
-		auto gsum = 0;
-		auto bsum = 0;
+	for (auto y = 0; y != height; ++y) {
+		auto rinsum = 0, ginsum = 0, binsum = 0;
+		auto routsum = 0, goutsum = 0, boutsum = 0;
+		auto rsum = 0, gsum = 0, bsum = 0;
 
 		const auto y_width = y * width;
-		for (const auto i : ints(-radius, radius + 1)) {
+		for (auto i = -radius; i != radius_p1; ++i) {
 			const auto sir = &stack[(i + radius) * 3];
 			const auto x = std::clamp(i, 0, width_m1);
 			const auto offset = (y_width + x) * 4;
@@ -756,20 +732,23 @@ yi += stride;
 				boutsum += sir[2];
 			}
 		}
-		stackpointer = radius;
+		auto stackpointer = radius;
+		auto stackstart = 0;
 
-		for (const auto x : ints(0, width)) {
-			const auto position = (y_width + x) * 3;
-			rgb[position] = dv[rsum];
-			rgb[position + 1] = dv[gsum];
-			rgb[position + 2] = dv[bsum];
+		for (auto x = 0; x != width; ++x) {
+			const auto position = (y_width + x) * 4;
+			rgb[position] = divide(rsum);
+			rgb[position + 1] = divide(gsum);
+			rgb[position + 2] = divide(bsum);
 
 			rsum -= routsum;
 			gsum -= goutsum;
 			bsum -= boutsum;
 
-			const auto stackstart = (stackpointer - radius + div) % div;
 			const auto sir = &stack[stackstart * 3];
+			if (++stackstart == div) {
+				stackstart = 0;
+			}
 
 			routsum -= sir[0];
 			goutsum -= sir[1];
@@ -787,7 +766,9 @@ yi += stride;
 			gsum += ginsum;
 			bsum += binsum;
 			{
-				stackpointer = (stackpointer + 1) % div;
+				if (++stackpointer == div) {
+					stackpointer = 0;
+				}
 				const auto sir = &stack[stackpointer * 3];
 
 				routsum += sir[0];
@@ -801,22 +782,16 @@ yi += stride;
 		}
 	}
 
-	for (const auto y : ints(0, height)) {
+	for (auto y = 0; y != height; ++y) {
 		vmin[y] = std::min(y + radius_p1, height_m1) * width;
 	}
-	for (const auto x : ints(0, width)) {
-		auto rinsum = 0;
-		auto ginsum = 0;
-		auto binsum = 0;
-		auto routsum = 0;
-		auto goutsum = 0;
-		auto boutsum = 0;
-		auto rsum = 0;
-		auto gsum = 0;
-		auto bsum = 0;
-		for (const auto i : ints(-radius, radius + 1)) {
+	for (auto x = 0; x != width; ++x) {
+		auto rinsum = 0, ginsum = 0, binsum = 0;
+		auto routsum = 0, goutsum = 0, boutsum = 0;
+		auto rsum = 0, gsum = 0, bsum = 0;
+		for (auto i = -radius; i != radius_p1; ++i) {
 			const auto y = std::clamp(i, 0, height_m1);
-			const auto position = (y * width + x) * 3;
+			const auto position = (y * width + x) * 4;
 			const auto sir = &stack[(i + radius) * 3];
 
 			sir[0] = rgb[position];
@@ -837,24 +812,27 @@ yi += stride;
 				boutsum += sir[2];
 			}
 		}
-		stackpointer = radius;
-		for (const auto y : ints(0, height)) {
+		auto stackpointer = radius;
+		auto stackstart = 0;
+		for (auto y = 0; y != height; ++y) {
 			const auto offset = (y * width + x) * 4;
-			pixels[offset] = dv[rsum];
-			pixels[offset + 1] = dv[gsum];
-			pixels[offset + 2] = dv[bsum];
+			pixels[offset] = divide(rsum);
+			pixels[offset + 1] = divide(gsum);
+			pixels[offset + 2] = divide(bsum);
 			rsum -= routsum;
 			gsum -= goutsum;
 			bsum -= boutsum;
 
-			const auto stackstart = (stackpointer - radius + div) % div;
 			const auto sir = &stack[stackstart * 3];
+			if (++stackstart == div) {
+				stackstart = 0;
+			}
 
 			routsum -= sir[0];
 			goutsum -= sir[1];
 			boutsum -= sir[2];
 
-			const auto position = (vmin[y] + x) * 3;
+			const auto position = (vmin[y] + x) * 4;
 			sir[0] = rgb[position];
 			sir[1] = rgb[position + 1];
 			sir[2] = rgb[position + 2];
@@ -867,7 +845,9 @@ yi += stride;
 			gsum += ginsum;
 			bsum += binsum;
 			{
-				stackpointer = (stackpointer + 1) % div;
+				if (++stackpointer == div) {
+					stackpointer = 0;
+				}
 				const auto sir = &stack[stackpointer * 3];
 
 				routsum += sir[0];
