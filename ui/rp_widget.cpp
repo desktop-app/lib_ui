@@ -270,17 +270,22 @@ bool RpWidgetWrap::handleEvent(QEvent *event) {
 		}
 		break;
 
-	case QEvent::ScreenChangeInternal:
+	case QEvent::ScreenChangeInternal: {
 		if (streams->screen.has_consumers()) {
+			const auto screen = rpWidget()->screen();
+			if (!screen) {
+				// Transiently null while the last screen is removed.
+				break;
+			}
 			if (!allAreObserved) {
 				that = rpWidget();
 			}
-			streams->screen.fire_copy(rpWidget()->screen());
+			streams->screen.fire_copy(screen);
 			if (!that) {
 				return true;
 			}
 		}
-		break;
+	} break;
 
 	case QEvent::Paint:
 		if (streams->paint.has_consumers()) {
