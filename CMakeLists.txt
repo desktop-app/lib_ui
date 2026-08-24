@@ -99,6 +99,10 @@ PRIVATE
     ui/rhi/rhi_shader.h
     ui/rhi/rhi_surface.cpp
     ui/rhi/rhi_surface.h
+    ui/image/image_blur_simd.h
+    ui/image/image_blur_simd_generic.h
+    ui/image/image_blur_simd_neon.h
+    ui/image/image_blur_simd_sse2.h
     ui/image/image_prepare.cpp
     ui/image/image_prepare.h
     ui/image/svg_safety.cpp
