@@ -457,6 +457,12 @@ void RpWidget::accessibilityChildStateChanged(
 	QAccessible::updateAccessibility(&event);
 }
 
+void RpWidget::accessibilityChildSelectionChanged(int index) {
+	auto event = QAccessibleEvent(this, QAccessible::SelectionAdd);
+	event.setChild(index);
+	QAccessible::updateAccessibility(&event);
+}
+
 void RpWidget::accessibilityChildFocused(int index) {
 	QAccessibleEvent event(this, QAccessible::Focus);
 	event.setChild(index);
