@@ -28,11 +28,13 @@
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 
+#include <QtCore/QtMath>
 #include <QtCore/QMimeData>
 #include <QtCore/QRegularExpression>
 #include <QtGui/QClipboard>
 #include <QtGui/QTextBlock>
 #include <QtGui/QTextDocumentFragment>
+#include <QtGui/QPixmapCache>
 #include <QtGui/QRawFont>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCommonStyle>
@@ -58,6 +60,7 @@ constexpr auto kCustomEmojiId = QTextFormat::UserProperty + 7;
 constexpr auto kQuoteFormatId = QTextFormat::UserProperty + 8;
 constexpr auto kQuoteId = QTextFormat::UserProperty + 9;
 constexpr auto kPreLanguage = QTextFormat::UserProperty + 10;
+constexpr auto kMisspelledProperty = QTextFormat::UserProperty + 11;
 constexpr auto kCollapsedQuoteFormat = QTextFormat::UserObject + 1;
 constexpr auto kCustomEmojiFormat = QTextFormat::UserObject + 2;
 
@@ -1628,6 +1631,7 @@ const int InputField::kCustomEmojiFormat = ::Ui::kCustomEmojiFormat;
 const int InputField::kCustomEmojiId = ::Ui::kCustomEmojiId;
 const int InputField::kCustomEmojiLink = ::Ui::kCustomEmojiLink;
 const int InputField::kQuoteId = ::Ui::kQuoteId;
+const int InputField::kMisspelledProperty = ::Ui::kMisspelledProperty;
 
 class InputField::Inner final : public QTextEdit {
 public:
@@ -1690,6 +1694,86 @@ private:
 	friend class InputField;
 
 };
+
+// The mark under a misspelled word, drawn the way Chrome draws it - a wave on
+// Windows and on Linux, a row of dots on macOS. Kept in the cache of pixmaps
+// as one period of it, so that a run of any length is a filled rectangle.
+[[nodiscard]] QPixmap MisspelledMarker(
+		const QColor &color,
+		qreal factor,
+		qreal descent,
+		qreal ratio) {
+	const auto key = u"ui_misspelled_%1_%2_%3_%4"_q
+		.arg(color.name(QColor::HexArgb))
+		.arg(factor)
+		.arg(descent)
+		.arg(ratio);
+	auto result = QPixmap();
+	if (QPixmapCache::find(key, &result)) {
+		return result;
+	}
+	const auto cache = gsl::finally([&] {
+		QPixmapCache::insert(key, result);
+	});
+
+	if constexpr (::Platform::IsMac()) {
+		constexpr auto kMarkerHeight = 3.;
+
+		const auto height = kMarkerHeight * factor;
+		const auto width = height + 1;
+		result = QPixmap(
+			(QSizeF(qCeil(width), qFloor(height)) * ratio).toSize());
+		result.setDevicePixelRatio(ratio);
+		result.fill(Qt::transparent);
+		{
+			auto p = QPainter(&result);
+			p.setPen(Qt::NoPen);
+			p.setBrush(color);
+			p.setRenderHints(
+				QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+			p.drawEllipse(0, 0, qFloor(height), qFloor(height));
+		}
+		return result;
+	}
+
+	constexpr auto kMarkerWidth = 4.;
+	constexpr auto kMarkerHeight = 2.;
+
+	const auto x1 = (kMarkerWidth * -3 / 8) * factor;
+	const auto y1 = (kMarkerHeight * 3 / 4) * factor;
+	const auto cY = (kMarkerHeight * 1 / 4) * factor;
+	const auto c1X1 = (kMarkerWidth * -1 / 8) * factor;
+	const auto c1X2 = (kMarkerWidth * 3 / 8) * factor;
+	const auto c1X3 = (kMarkerWidth * 7 / 8) * factor;
+	const auto c2X1 = (kMarkerWidth * 1 / 8) * factor;
+	const auto c2X2 = (kMarkerWidth * 5 / 8) * factor;
+	const auto c2X3 = (kMarkerWidth * 9 / 8) * factor;
+
+	auto path = QPainterPath();
+	path.moveTo(x1, y1);
+	path.cubicTo(c1X1, y1, c1X1, cY, c2X1, cY);
+	path.cubicTo(c1X2, cY, c1X2, y1, c2X2, y1);
+	path.cubicTo(c1X3, y1, c1X3, cY, c2X3, cY);
+
+	result = QPixmap(
+		(QSizeF(kMarkerWidth * factor, descent) * ratio).toSize());
+	result.setDevicePixelRatio(ratio);
+	result.fill(Qt::transparent);
+	{
+		auto pen = QPen(color);
+		pen.setCapStyle(Qt::RoundCap);
+		pen.setJoinStyle(Qt::RoundJoin);
+		pen.setWidthF(factor);
+
+		auto p = QPainter(&result);
+		p.setPen(pen);
+		p.setRenderHint(QPainter::Antialiasing);
+		p.translate(0, descent - (kMarkerHeight * factor));
+		p.drawPath(path);
+	}
+
+	return result;
+}
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 	const auto currentFormat = cursor.charFormat();
@@ -2261,6 +2345,94 @@ void InputField::paintEventInner(QPaintEvent *e) {
 	_customEmojiRepaintScheduled = false;
 	paintQuotes(e);
 	_inner->QTextEdit::paintEvent(e);
+	paintMisspelled(e);
+}
+
+void InputField::paintMisspelled(QPaintEvent *e) {
+	const auto clip = e->rect();
+	const auto ratio = _inner->viewport()->devicePixelRatioF();
+	const auto document = _inner->document();
+	const auto documentLayout = document->documentLayout();
+	const auto shift = QPoint(
+		-_inner->horizontalScrollBar()->value(),
+		-_inner->verticalScrollBar()->value());
+	auto p = std::optional<QPainter>();
+	for (auto block = document->begin(); block.isValid(); block = block.next()) {
+		const auto layout = block.layout();
+		if (!layout) {
+			continue;
+		}
+		const auto formats = layout->formats();
+		if (formats.isEmpty()) {
+			continue;
+		}
+		const auto blockRect = documentLayout->blockBoundingRect(block);
+		const auto fullShift = blockRect.topLeft() + shift;
+		if (fullShift.y() >= clip.y() + clip.height()) {
+			break;
+		} else if (fullShift.y() + blockRect.height() <= clip.y()) {
+			continue;
+		}
+		const auto lines = std::max(layout->lineCount(), 0);
+		for (const auto &range : formats) {
+			if (!range.format.property(kMisspelledProperty).toBool()) {
+				continue;
+			}
+			const auto color = range.format.underlineColor();
+			const auto pixelSize = range.format.font().pixelSize();
+			const auto factor = std::max(pixelSize, 1) / 10.;
+			for (auto i = 0; i != lines; ++i) {
+				const auto line = layout->lineAt(i);
+				const auto lineFrom = line.textStart();
+				const auto lineTill = lineFrom + line.textLength();
+				const auto from = std::max(range.start, lineFrom);
+				const auto till = std::min(range.start + range.length, lineTill);
+				if (from >= till) {
+					continue;
+				}
+				const auto top = fullShift.y() + line.y();
+				if (top + line.height() <= clip.y()) {
+					continue;
+				} else if (top >= clip.y() + clip.height()) {
+					break;
+				}
+				const auto x = line.cursorToX(from);
+				const auto width = line.cursorToX(till) - x;
+
+				// Where the glyphs of the line end, so that the mark is drawn
+				// in the space a descender would take and not over the letters.
+				const auto descent = std::max(line.descent() - 1., 1.);
+				const auto marker = MisspelledMarker(
+					color,
+					factor,
+					descent,
+					ratio);
+				const auto place = QRectF(
+					fullShift.x() + std::min(x, x + width),
+					top + line.ascent() + 1,
+					std::abs(width),
+					descent);
+				if (!p) {
+					p.emplace(_inner->viewport());
+					p->setClipRect(clip);
+				}
+				p->setBrushOrigin(place.topLeft());
+				if constexpr (!::Platform::IsMac()) {
+					p->fillRect(place, marker);
+					continue;
+				}
+				const auto side = marker.height()
+					/ marker.devicePixelRatio();
+				p->drawTiledPixmap(
+					QRectF(
+						place.x(),
+						place.y() + (descent - side) / 2.,
+						place.width(),
+						side),
+					marker);
+			}
+		}
+	}
 }
 
 void InputField::paintQuotes(QPaintEvent *e) {
