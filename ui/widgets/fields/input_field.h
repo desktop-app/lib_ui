@@ -173,6 +173,7 @@ public:
 	static const int kCustomEmojiId; // QTextFormat::Property
 	static const int kCustomEmojiLink; // QTextFormat::Property
 	static const int kQuoteId; // QTextFormat::Property
+	static const int kMisspelledProperty; // QTextFormat::Property
 
 	InputField(
 		QWidget *parent,
@@ -484,6 +485,7 @@ private:
 	void updateInnerInputMethodHints();
 	void paintEventInner(QPaintEvent *e);
 	void paintQuotes(QPaintEvent *e);
+	void paintMisspelled(QPaintEvent *e);
 
 	void mousePressEventInner(QMouseEvent *e);
 	void mouseReleaseEventInner(QMouseEvent *e);
