@@ -123,6 +123,8 @@ PRIVATE
     ui/paint/blobs.h
     ui/paint/blobs_linear.cpp
     ui/paint/blobs_linear.h
+    ui/platform/linux/ui_font_settings_linux.cpp
+    ui/platform/linux/ui_font_settings_linux.h
     ui/platform/linux/ui_window_linux.cpp
     ui/platform/linux/ui_window_linux.h
     ui/platform/linux/ui_window_title_linux.cpp
@@ -357,7 +359,11 @@ if (DESKTOP_APP_USE_PANGO)
     target_compile_definitions(lib_ui PRIVATE LIB_UI_USE_PANGO)
     target_link_libraries(lib_ui PRIVATE desktop-app::external_pango)
 else()
-    remove_target_sources(lib_ui ${src_loc} ui/text/text_shaper_pango.cpp)
+    remove_target_sources(lib_ui ${src_loc}
+        ui/platform/linux/ui_font_settings_linux.cpp
+        ui/platform/linux/ui_font_settings_linux.h
+        ui/text/text_shaper_pango.cpp
+    )
 endif()
 
 target_include_directories(lib_ui

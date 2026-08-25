@@ -17,6 +17,10 @@
 #if __has_include(<pango/pangofc-font.h>)
 #include <pango/pangofc-font.h>
 #define LIB_UI_PANGO_OVER_FONTCONFIG
+
+// Where fontconfig is what a font is matched by, the desktop is what the
+// settings of its rasterization are read from - see SystemFontOptions().
+#include "ui/platform/linux/ui_font_settings_linux.h"
 #endif // __has_include(<pango/pangofc-font.h>)
 
 #if !PANGO_VERSION_CHECK(1, 48, 0) && __has_include(<dlfcn.h>)
@@ -30,6 +34,7 @@
 #include <QtGui/QPaintEngine>
 #include <QtGui/QBackingStore>
 #include <QtGui/QWindow>
+#include <QtWidgets/QApplication>
 #include <QtWidgets/QWidget>
 
 namespace Ui::Text {
@@ -260,6 +265,101 @@ void ReorderVisually(
 	}
 }
 
+// What the desktop was told about drawing text, said the way GTK says it - and
+// inside a sandbox it is the only place where it is said at all, because the
+// fontconfig there belongs to the sandbox and knows nothing of the system.
+//
+// Only what was actually answered is put here. Everything left alone still
+// comes from the pattern fontconfig matched for the font, because cairo merges
+// the two and takes the pattern for every field these options leave at its
+// default - _cairo_ft_options_merge() in cairo-ft-font.c, where the options
+// handed in are the ones accumulated into. So rules written for a family or
+// for a range of sizes keep applying to whatever the desktop did not name.
+// Asked at the one place the answer is needed: the context every font is
+// loaded through carries it from there on.
+[[nodiscard]] cairo_font_options_t *MakeSystemFontOptions() {
+	const auto make = []() -> cairo_font_options_t* {
+#ifdef LIB_UI_PANGO_OVER_FONTCONFIG
+		const auto settings = Platform::FontSettings();
+		if (!settings.antialias && !settings.hinting) {
+			return nullptr;
+		}
+		const auto options = cairo_font_options_create();
+		if (const auto antialias = settings.antialias) {
+			cairo_font_options_set_antialias(options, [&] {
+				switch (*antialias) {
+				case Platform::FontAntialias::None:
+					return CAIRO_ANTIALIAS_NONE;
+				case Platform::FontAntialias::Subpixel:
+					return CAIRO_ANTIALIAS_SUBPIXEL;
+				}
+				return CAIRO_ANTIALIAS_GRAY;
+			}());
+
+			// Taken only together with the antialiasing it belongs to: where
+			// that one is grey the order means nothing, and the pattern is
+			// asked for it anyway when the antialiasing is left unsaid. An
+			// order that was not named is left at the default of cairo rather
+			// than made up here, so that one coming from the surface still
+			// gets through - merging copies over only what is not default.
+			if (*antialias == Platform::FontAntialias::Subpixel) {
+				if (const auto order = settings.subpixelOrder) {
+					cairo_font_options_set_subpixel_order(options, [&] {
+						switch (*order) {
+						case Platform::FontSubpixelOrder::Bgr:
+							return CAIRO_SUBPIXEL_ORDER_BGR;
+						case Platform::FontSubpixelOrder::Vrgb:
+							return CAIRO_SUBPIXEL_ORDER_VRGB;
+						case Platform::FontSubpixelOrder::Vbgr:
+							return CAIRO_SUBPIXEL_ORDER_VBGR;
+						}
+						return CAIRO_SUBPIXEL_ORDER_RGB;
+					}());
+				}
+			}
+		}
+		if (const auto hinting = settings.hinting) {
+			cairo_font_options_set_hint_style(options, [&] {
+				switch (*hinting) {
+				case Platform::FontHinting::None:
+					return CAIRO_HINT_STYLE_NONE;
+				case Platform::FontHinting::Slight:
+					return CAIRO_HINT_STYLE_SLIGHT;
+				case Platform::FontHinting::Medium:
+					return CAIRO_HINT_STYLE_MEDIUM;
+				}
+				return CAIRO_HINT_STYLE_FULL;
+			}());
+		}
+		return options;
+#else // LIB_UI_PANGO_OVER_FONTCONFIG
+		return nullptr;
+#endif // !LIB_UI_PANGO_OVER_FONTCONFIG
+	};
+	return make();
+}
+
+// Put on the context, which copies them, so nothing of ours is kept: what the
+// desktop says can be said again, and then this is how the new answer arrives.
+void ApplySystemFontOptions(PangoContext *context) {
+	const auto options = MakeSystemFontOptions();
+	pango_cairo_context_set_font_options(context, options);
+	if (options) {
+		cairo_font_options_destroy(options);
+	}
+}
+
+// Everything drawn from a font is drawn differently now, and none of it is
+// text a widget knows it has to draw again - so they are told the way Qt tells
+// them a font of the application changed, which ends in update() on every one
+// of them and in the layouts around them being counted anew.
+void NotifyFontOptionsChanged() {
+	auto event = QEvent(QEvent::FontChange);
+	for (const auto widget : QApplication::allWidgets()) {
+		QCoreApplication::sendEvent(widget, &event);
+	}
+}
+
 // Kept for the whole library: building it lists the fonts of the system once.
 //
 // A map of our own, not the default one of cairo: that one is shared with
@@ -281,8 +381,26 @@ void ReorderVisually(
 // pixels: what a context says about it is read by the layout of Pango, which
 // turns it into a flag of the shaping call - and the shaping here is done by
 // hand, so the answer is given there instead.
+//
+// The settings of the desktop are put on the context, because that is what
+// every font loaded through it is then made with - metrics and rasterization
+// alike, instead of only the glyphs of a call that hands them over itself.
+// Saying it again is all a change of them takes: Pango marks the context as
+// changed and drops the fonts it made for the old answer.
 [[nodiscard]] PangoContext *Context() {
-	static const auto result = pango_font_map_create_context(FontMap());
+	static const auto result = [] {
+		const auto context = pango_font_map_create_context(FontMap());
+		ApplySystemFontOptions(context);
+#ifdef LIB_UI_PANGO_OVER_FONTCONFIG
+		static auto lifetime = rpl::lifetime();
+		Platform::FontSettingsChanges(
+		) | rpl::on_next([=] {
+			ApplySystemFontOptions(context);
+			NotifyFontOptionsChanged();
+		}, lifetime);
+#endif // LIB_UI_PANGO_OVER_FONTCONFIG
+		return context;
+	}();
 	return result;
 }
 
@@ -320,22 +438,47 @@ void ReorderVisually(
 // qfontengine_ft_p.h and qfontengine_ft.cpp - and the same is answered here,
 // so that a hinted font is laid out the same by either backend.
 //
-// The question is about the font that will rasterize the glyphs, so it is
-// answered the way cairo reads the same pattern - _get_pattern_ft_options() in
-// cairo-ft-font.c. Where that differs from Qt, cairo is followed: hinting
-// turned off leaves the glyphs unhinted whatever the style says, and a pattern
-// without a style at all is hinted in full - which is what Qt does with a
-// pattern it can not read either.
+// The question is about the font that will rasterize the glyphs, so the font
+// itself is asked, and the two answers it has are put together the way cairo
+// puts them - _cairo_ft_options_merge() in cairo-ft-font.c. One is what the
+// font was loaded with, which is everything the context of ours was given; the
+// other is the pattern fontconfig matched, read the way cairo reads it in
+// _get_pattern_ft_options(). What the font was loaded with wins, except that a
+// pattern with the hinting turned off leaves the glyphs unhinted whatever else
+// says - the one rule of the merge that goes the other way. A pattern with no
+// style in it at all is hinted in full, which is what Qt does with a pattern it
+// can not read either.
 [[nodiscard]] bool SupportsSubpixelPositions(PangoFont *font) {
 #ifdef LIB_UI_PANGO_OVER_FONTCONFIG
 	const auto pattern = FontPattern(font);
-	if (!pattern) {
-		return false;
-	}
 	auto hinting = FcTrue;
-	if (FcPatternGetBool(pattern, FC_HINTING, 0, &hinting) == FcResultMatch
+	if (pattern
+		&& FcPatternGetBool(pattern, FC_HINTING, 0, &hinting) == FcResultMatch
 		&& !hinting) {
 		return true;
+	}
+	const auto scaled = PANGO_IS_CAIRO_FONT(font)
+		? pango_cairo_font_get_scaled_font(PANGO_CAIRO_FONT(font))
+		: nullptr;
+	if (scaled && cairo_scaled_font_status(scaled) == CAIRO_STATUS_SUCCESS) {
+		const auto options = cairo_font_options_create();
+		const auto guard = gsl::finally([&] {
+			cairo_font_options_destroy(options);
+		});
+		cairo_scaled_font_get_font_options(scaled, options);
+		switch (cairo_font_options_get_hint_style(options)) {
+		case CAIRO_HINT_STYLE_NONE:
+		case CAIRO_HINT_STYLE_SLIGHT:
+			return true;
+		case CAIRO_HINT_STYLE_MEDIUM:
+		case CAIRO_HINT_STYLE_FULL:
+			return false;
+		case CAIRO_HINT_STYLE_DEFAULT:
+			break; // Nothing was said, so the pattern is what is left.
+		}
+	}
+	if (!pattern) {
+		return false;
 	}
 	auto style = FC_HINT_FULL;
 	if (FcPatternGetInteger(pattern, FC_HINT_STYLE, 0, &style)
