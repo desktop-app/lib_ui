@@ -289,10 +289,20 @@ void Widget::doAction(const QString &actionName) {
 	});
 }
 
-// Selection. A selection item is a child with the ListItem role reporting
-// selected = active; the selected one resolves independently of focus. Plain
-// buttons among the children are excluded, and a locked folder reports
-// selectable = false, so it is never claimed as a successful selection.
+// Selection. A selection item is a child with the ListItem (or PageTab, for
+// a strip of tabs) role reporting selected = active; the selected one
+// resolves independently of focus. Plain buttons among the children are
+// excluded, and a locked folder reports selectable = false, so it is never
+// claimed as a successful selection.
+
+namespace {
+
+[[nodiscard]] bool IsSelectionItemRole(QAccessible::Role role) {
+	return (role == QAccessible::ListItem)
+		|| (role == QAccessible::PageTab);
+}
+
+} // namespace
 
 int Widget::selectedItemCount() const {
 	return int(selectedItems().size());
@@ -304,7 +314,7 @@ QList<QAccessibleInterface*> Widget::selectedItems() const {
 	for (auto i = 0; i != count; ++i) {
 		const auto item = child(i);
 		if (item
-			&& item->role() == QAccessible::ListItem
+			&& IsSelectionItemRole(item->role())
 			&& item->state().selected) {
 			result.append(item);
 		}
@@ -320,7 +330,7 @@ QAccessibleInterface *Widget::selectedItem(int selectionIndex) const {
 bool Widget::isSelected(QAccessibleInterface *childItem) const {
 	return childItem
 		&& indexOfChild(childItem) >= 0
-		&& childItem->role() == QAccessible::ListItem
+		&& IsSelectionItemRole(childItem->role())
 		&& childItem->state().selected;
 }
 
@@ -331,7 +341,7 @@ bool Widget::select(QAccessibleInterface *childItem) {
 	// item only implements pressAction, so invoke that rather than toggleAction.
 	if (!childItem
 		|| indexOfChild(childItem) < 0
-		|| childItem->role() != QAccessible::ListItem
+		|| !IsSelectionItemRole(childItem->role())
 		|| childItem->state().disabled
 		|| !childItem->state().selectable) {
 		return false;
