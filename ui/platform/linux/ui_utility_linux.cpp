@@ -170,9 +170,10 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 		return;
 	}
 
-	const auto globalPos = point
-		* widget->windowHandle()->devicePixelRatio()
-		+ widget->windowHandle()->handle()->geometry().topLeft();
+	const auto window = not_null(widget->windowHandle());
+	const auto origin = window->screen()->geometry().topLeft();
+	const auto globalPos = (window->geometry().topLeft() + point - origin)
+		* window->devicePixelRatio() + origin;
 
 	xcb_client_message_event_t xev;
 	xev.response_type = XCB_CLIENT_MESSAGE;
