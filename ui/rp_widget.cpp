@@ -44,7 +44,11 @@ namespace {
 
 void ToggleChildrenVisibility(not_null<QWidget*> widget, bool visible) {
 	for (const auto &child : GetChildWidgets(widget)) {
-		if (child) {
+		// Children that are windows themselves, like submenu windows of a
+		// popup menu, manage their own visibility, QWidget::hideChildren()
+		// skips them as well. Toggling them here would map and unmap their
+		// surfaces in the middle of an unrelated animation.
+		if (child && !child->isWindow()) {
 			child->setVisible(visible);
 		}
 	}
