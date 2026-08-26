@@ -53,7 +53,7 @@ void SideBarButton::setActive(bool active) {
 		return;
 	}
 	_active = active;
-	if (isListItem()) {
+	if (isPageTab()) {
 		// Announce selection via a dedicated selection event (the Windows
 		// bridge maps these to UIA_SelectionItem_ElementSelected); a generic
 		// state-change event is ignored for the selected state.
@@ -66,12 +66,12 @@ void SideBarButton::setActive(bool active) {
 }
 
 AccessibilityState SideBarButton::accessibilityState() const {
-	// Merge the base state so plain buttons keep reporting `pressed`. A list
-	// item exposes the active one as selected - persistently, independent of
+	// Merge the base state so plain buttons keep reporting `pressed`. A tab
+	// exposes the active one as selected - persistently, independent of
 	// keyboard focus. A locked (premium) folder stays a focusable, invokable
-	// list item but can never become current, so it isn't selectable.
+	// tab but can never become current, so it isn't selectable.
 	auto state = RippleButton::accessibilityState();
-	if (isListItem()) {
+	if (isPageTab()) {
 		state.selectable = !_lock.locked;
 		state.selected = _active;
 	}
