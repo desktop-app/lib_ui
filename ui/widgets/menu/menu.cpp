@@ -206,11 +206,17 @@ int Menu::recountHeight() const {
 void Menu::removeAction(int position) {
 	Expects(position >= 0 && position < actions().size());
 
+	// Detached, not erased in place: erasing runs the widget's destructor
+	// while the vector is still shifting its tail down, so a re-entrant pass
+	// (destroying an item fires its selection stream) would walk a
+	// stale-size vector with moved-from entries in it.
+	auto widget = base::take(_actionWidgets[position]);
 	_actionWidgets.erase(begin(_actionWidgets) + position);
 	if (_actions[position]->parent() == this) {
 		delete _actions[position];
 	}
 	_actions.erase(begin(_actions) + position);
+	widget = nullptr;
 	resizeFromInner(width(), recountHeight());
 }
 
