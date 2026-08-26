@@ -197,7 +197,7 @@ private:
 
 	std::optional<QRect> _anchorGeometry;
 	Platform::ForeignParent _transientParent;
-	bool _foreignTransientParentApplied = false;
+	bool _exposed = false;
 
 	const style::PopupMenu &_menuSt;
 	object_ptr<IconButton> _close;

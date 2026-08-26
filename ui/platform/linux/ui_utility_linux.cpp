@@ -204,6 +204,7 @@ void ShowXCBWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 }
 
 #if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
 constexpr auto kWaylandMarshalFlagDestroy = uint32_t(1);
 const auto kWaylandImportedObjectName = u"_td_wayland_foreign_imported"_q;
 
@@ -453,41 +454,41 @@ WaylandImportedParent::~WaylandImportedParent() {
 }
 
 void WaylandImportedParent::apply() {
-	if (_imported || _handle.isEmpty()) {
-		return;
-	}
-
-	using namespace QNativeInterface;
-	using namespace QNativeInterface::Private;
-	const auto native = qApp->nativeInterface<QWaylandApplication>();
-	const auto nativeWindow = _window->nativeInterface<QWaylandWindow>();
-	if (!native || !nativeWindow) {
-		return;
-	}
-
-	const auto surface = nativeWindow->surface();
-	if (!surface) {
-		QObject::connect(
-			nativeWindow,
-			&QWaylandWindow::surfaceCreated,
-			this,
-			[this] { apply(); },
-			Qt::SingleShotConnection);
-		return;
-	}
-	if (!nativeWindow->surfaceRole<xdg_toplevel>()) {
-		QObject::connect(
-			nativeWindow,
-			&QWaylandWindow::surfaceRoleCreated,
-			this,
-			[this] { apply(); },
-			Qt::SingleShotConnection);
+	if (!_window->isExposed() || _handle.isEmpty()) {
 		return;
 	}
 
 	const auto wayland = Wayland();
+	if (!wayland) {
+		return;
+	}
+
+	const auto guard = gsl::finally([&] {
+		if (!_imported) {
+			return;
+		}
+		const auto surface = reinterpret_cast<wl_surface*>(_window->winId());
+		wayland->proxyMarshalFlags(
+			reinterpret_cast<wl_proxy*>(_imported),
+			1,
+			nullptr,
+			wayland->proxyGetVersion(reinterpret_cast<wl_proxy*>(_imported)),
+			0,
+			surface);
+	});
+
+	if (_imported) {
+		return;
+	}
+
+	using namespace QNativeInterface;
+	const auto native = qApp->nativeInterface<QWaylandApplication>();
+	if (!native) {
+		return;
+	}
+
 	const auto importer = WaylandImporter(native->display());
-	if (!wayland || !importer) {
+	if (!importer) {
 		return;
 	}
 
@@ -501,21 +502,11 @@ void WaylandImportedParent::apply() {
 			0,
 			nullptr,
 			handle.constData()));
-	if (!_imported) {
-		return;
-	}
 
 	wayland->proxyAddListener(
 		reinterpret_cast<wl_proxy*>(_imported),
 		reinterpret_cast<void(**)(void)>(&kWaylandImportedListener),
 		this);
-	wayland->proxyMarshalFlags(
-		reinterpret_cast<wl_proxy*>(_imported),
-		1,
-		nullptr,
-		wayland->proxyGetVersion(reinterpret_cast<wl_proxy*>(_imported)),
-		0,
-		surface);
 }
 
 void WaylandImportedParent::destroyImported() {
@@ -535,6 +526,7 @@ void WaylandImportedParent::ImportedDestroyed(
 	const auto self = static_cast<WaylandImportedParent*>(data);
 	self->_imported = nullptr;
 }
+#endif // Qt >= 6.9.0
 
 void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	static const auto wl_proxy_marshal_array = [] {
@@ -659,12 +651,13 @@ void ClearTransientParent(not_null<QWidget*> widget) {
 void SetForeignTransientParent(
 		not_null<QWidget*> widget,
 		const ForeignParent &parent) {
-#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+	const auto window = widget->windowHandle();
+	if (!window) {
+		return;
+	}
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	if (::Platform::IsWayland()) {
-		const auto window = widget->windowHandle();
-		if (!window) {
-			return;
-		}
 		if (const auto existingObject = window->findChild<QObject*>(
 				kWaylandImportedObjectName,
 				Qt::FindDirectChildrenOnly)) {
@@ -685,13 +678,9 @@ void SetForeignTransientParent(
 		}
 		return;
 	}
-#endif // wayland
+#endif // Qt >= 6.9.0 && wayland
 
 	if (::Platform::IsX11()) {
-		const auto window = widget->windowHandle();
-		if (!window) {
-			return;
-		}
 		const auto id = (parent.type == ForeignParent::Type::X11)
 			? WId(parent.x11)
 			: WId(0);
