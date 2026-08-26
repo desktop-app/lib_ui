@@ -543,7 +543,13 @@ void PopupMenu::popupSubmenu(
 				geometry().topLeft() + p,
 				this,
 				_menu->itemForAction(action))) {
+			// showPrepared() reaches the platform window, deep enough for
+			// the owner to destroy us from inside it.
+			const auto weak = base::make_weak(this);
 			_activeSubmenu->showPrepared(source);
+			if (!weak) {
+				return;
+			}
 			_menu->setChildShownAction(action);
 			const auto aim = submenuAim();
 			aim->action = action;
@@ -819,8 +825,12 @@ void PopupMenu::startOpacityAnimation(bool hiding) {
 
 void PopupMenu::showStarted() {
 	if (isHidden()) {
+		// Same as in showPrepared(): show() can end with this menu gone.
+		const auto weak = base::make_weak(this);
 		show();
-		startShowAnimation();
+		if (weak) {
+			startShowAnimation();
+		}
 		return;
 	} else if (!_hiding) {
 		return;
