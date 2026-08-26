@@ -184,6 +184,11 @@ private:
 	mutable int _width = -1;
 	mutable int _height = -1;
 
+	// withPalette() copies are bound to one style::palette copy and are only
+	// ever reset through it, so they stay out of the global registry - which
+	// also means they never touch it from whatever thread built them.
+	bool _registered = false;
+
 };
 
 class Icon {
@@ -219,6 +224,11 @@ public:
 
 	bool empty() const {
 		return _data->empty();
+	}
+	void reset() const {
+		if (_data) {
+			_data->reset();
+		}
 	}
 
 	int width() const {

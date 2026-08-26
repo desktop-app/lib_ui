@@ -408,7 +408,9 @@ void MonoIcon::createCachedPixmap() const {
 }
 
 IconData::IconData(const IconData &other, const style::palette &palette) {
-	created();
+	// Deliberately not created(): this copy belongs to that one palette copy,
+	// which resets it itself. Registering it would put a background thread
+	// building an isolated palette into the process-wide icon registry.
 	_parts.reserve(other._parts.size());
 	for (const auto &part : other._parts) {
 		_parts.push_back(MonoIcon(part, palette));
@@ -416,11 +418,14 @@ IconData::IconData(const IconData &other, const style::palette &palette) {
 }
 
 void IconData::created() {
+	_registered = true;
 	iconData.emplace(this);
 }
 
 IconData::~IconData() {
-	iconData.remove(this);
+	if (_registered) {
+		iconData.remove(this);
+	}
 }
 
 void IconData::fill(QPainter &p, const QRect &rect) const {
