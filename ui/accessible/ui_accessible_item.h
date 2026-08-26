@@ -19,6 +19,14 @@ class RpWidget;
 
 namespace Ui::Accessible {
 
+// Deregister an interface, but run the actual deletion on the next main
+// queue turn. Windows UI Automation holds a raw QAccessibleInterface*
+// across a single call and dereferences it again right after parent()
+// returns, while parent() reaches the caches owning these ids. Deleting
+// inline pulls the object out from under the bridge and turns its next
+// virtual call into a pure virtual call.
+void Retire(QAccessible::Id id);
+
 // Move-only RAII wrapper around QAccessible::Id.
 // Qt's QAccessibleCache owns registered interfaces and calls `delete`
 // on them via QAccessible::deleteAccessibleInterface(). This wrapper
@@ -31,7 +39,7 @@ public:
 
 	~UniqueId() {
 		if (_id) {
-			QAccessible::deleteAccessibleInterface(_id);
+			Retire(_id);
 		}
 	}
 
@@ -41,7 +49,7 @@ public:
 	UniqueId &operator=(UniqueId &&other) noexcept {
 		if (this != &other) {
 			if (_id) {
-				QAccessible::deleteAccessibleInterface(_id);
+				Retire(_id);
 			}
 			_id = std::exchange(other._id, 0);
 		}

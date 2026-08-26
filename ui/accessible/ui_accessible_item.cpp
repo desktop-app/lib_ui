@@ -7,8 +7,37 @@
 #include "ui/accessible/ui_accessible_item.h"
 
 #include "ui/rp_widget.h"
+#include "base/algorithm.h"
+
+#include <crl/crl_on_main.h>
 
 namespace Ui::Accessible {
+namespace {
+
+[[nodiscard]] std::vector<QAccessible::Id> &Retired() {
+	static auto result = std::vector<QAccessible::Id>();
+	return result;
+}
+
+} // namespace
+
+void Retire(QAccessible::Id id) {
+	if (!id) {
+		return;
+	}
+	auto &list = Retired();
+	const auto schedule = list.empty();
+	list.push_back(id);
+	if (schedule) {
+		crl::on_main([] {
+			// Deleting an item destroys the ids of its sub-items, which
+			// retires them in turn, so take the list before walking it.
+			for (const auto id : base::take(Retired())) {
+				QAccessible::deleteAccessibleInterface(id);
+			}
+		});
+	}
+}
 
 Item::Item(not_null<RpWidget*> parent, int index)
 : _parent(parent)
