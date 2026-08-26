@@ -251,7 +251,12 @@ void Menu::clearLastSeparator() {
 			resizeFromInner(
 				width(),
 				height() - _actionWidgets.back()->height());
+			// Detached, not popped in place: pop_back() runs the widget's
+			// destructor while the vector still reports the old size, so a
+			// re-entrant pass would walk a destroyed entry.
+			auto widget = base::take(_actionWidgets.back());
 			_actionWidgets.pop_back();
+			widget = nullptr;
 			if (_actions.back()->parent() == this) {
 				delete _actions.back();
 				_actions.pop_back();
