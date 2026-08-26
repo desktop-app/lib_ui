@@ -391,6 +391,12 @@ std::array<QImage, 4> PrepareCorners(
 		}
 	}
 	result.resize(result.size() - stream.avail_out);
+
+	// resize() down never sheds capacity, so without this the caller keeps
+	// the whole kMaxGzipFileSize scratch buffer alive for however little was
+	// actually unpacked - and Lottie copies it onto a worker thread.
+	result.squeeze();
+
 	return result;
 }
 
