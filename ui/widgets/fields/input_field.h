@@ -17,6 +17,7 @@
 #include <rpl/variable.h>
 
 #include <QtGui/QTextCursor>
+#include <QShortcut>
 
 #include <any>
 
@@ -728,6 +729,7 @@ private:
 	rpl::event_stream<MarkdownTag> _markdownTagApplies;
 
 	std::vector<std::unique_ptr<QShortcut>> _markdownShortcuts;
+	QShortcut _pasteShortcut;
 
 	rpl::event_stream<bool> _focusedChanges;
 	rpl::event_stream<> _heightChanges;
