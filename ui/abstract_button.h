@@ -69,9 +69,17 @@ public:
 	[[nodiscard]] bool isListItem() const {
 		return _listItem;
 	}
+	void setIsPageTab(bool value) {
+		_pageTab = value;
+	}
+	[[nodiscard]] bool isPageTab() const {
+		return _pageTab;
+	}
 
 	QAccessible::Role accessibilityRole() override {
-		return _listItem
+		return _pageTab
+			? QAccessible::PageTab
+			: _listItem
 			? QAccessible::ListItem
 			: _menuButton
 			? QAccessible::ButtonMenu
@@ -132,6 +140,7 @@ private:
 	bool _triggerOnPress : 1 = false;
 	bool _menuButton : 1 = false;
 	bool _listItem : 1 = false;
+	bool _pageTab : 1 = false;
 
 	Fn<void()> _clickedCallback;
 
