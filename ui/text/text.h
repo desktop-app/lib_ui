@@ -569,6 +569,11 @@ private:
 
 [[nodiscard]] bool IsBad(QChar ch);
 [[nodiscard]] bool IsWordSeparator(QChar ch);
+[[nodiscard]] bool IsWordSeparator(const QString &text, int position);
+[[nodiscard]] bool IsWordSeparator(
+	Fn<QChar(int)> at,
+	int length,
+	int position);
 [[nodiscard]] bool IsAlmostLinkEnd(QChar ch);
 [[nodiscard]] bool IsLinkEnd(QChar ch);
 [[nodiscard]] bool IsNewline(QChar ch);

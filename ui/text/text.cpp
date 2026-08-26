@@ -1519,16 +1519,16 @@ TextSelection String::adjustSelection(TextSelection selection, TextSelectType se
 				}
 			}
 		} else if (selectType == TextSelectType::Words) {
-			if (!IsWordSeparator(_text.at(from))) {
-				while (from > 0 && !IsWordSeparator(_text.at(from - 1))) {
+			if (!IsWordSeparator(_text, from)) {
+				while (from > 0 && !IsWordSeparator(_text, from - 1)) {
 					--from;
 				}
 			}
 			if (to < _text.size()) {
-				if (IsWordSeparator(_text.at(to))) {
+				if (IsWordSeparator(_text, to)) {
 					++to;
 				} else {
-					while (to < _text.size() && !IsWordSeparator(_text.at(to))) {
+					while (to < _text.size() && !IsWordSeparator(_text, to)) {
 						++to;
 					}
 				}
@@ -2308,6 +2308,48 @@ bool IsWordSeparator(QChar ch) {
 		break;
 	}
 	return false;
+}
+
+// Given the neighbours, unlike the one above, an apostrophe can be seen for
+// what it is: a part of the word it stands in, so that "don't" is one word,
+// and a separator only when it is doubled or stands at the edge of a word -
+// the same rule the patched Qt applies in QTextEngine::toEdge().
+template <typename At>
+[[nodiscard]] bool IsWordSeparatorWith(At &&at, int length, int position) {
+	if (position < 0 || position >= length) {
+		return true;
+	}
+	const auto ch = at(position);
+	const auto unicode = ch.unicode();
+	const auto apostrophe = (unicode == '\'')
+		|| (unicode == 0x2018) // left single quotation mark
+		|| (unicode == 0x2019); // right single quotation mark
+	if (!apostrophe) {
+		return IsWordSeparator(ch);
+	}
+
+	// A doubled apostrophe is just the case of the neighbour being one, and
+	// the list above already calls an apostrophe a separator, so both that
+	// and the edge of a word are the same question asked to the sides.
+	const auto edge = [&](int index) {
+		return (index < 0)
+			|| (index >= length)
+			|| IsWordSeparator(at(index));
+	};
+	return edge(position - 1) || edge(position + 1);
+}
+
+bool IsWordSeparator(const QString &text, int position) {
+	return IsWordSeparatorWith(
+		[&](int index) { return text.at(index); },
+		int(text.size()),
+		position);
+}
+
+// For the text that is not in a string of its own - a block of a document is
+// read a character at a time instead of being copied for every question.
+bool IsWordSeparator(Fn<QChar(int)> at, int length, int position) {
+	return IsWordSeparatorWith(at, length, position);
 }
 
 bool IsAlmostLinkEnd(QChar ch) {
