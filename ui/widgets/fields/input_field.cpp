@@ -2232,10 +2232,29 @@ void InputField::setTagMimeProcessor(Fn<QString(QStringView)> processor) {
 	_tagMimeProcessor = std::move(processor);
 }
 
+void InputField::refreshSpoilerOverlay() {
+	if (_spoilerRangesText.empty() && _spoilerRangesEmoji.empty()) {
+		_spoilerOverlay = nullptr;
+	} else if (_customObject) {
+		if (!_spoilerOverlay) {
+			_spoilerOverlay = _customObject->createSpoilerOverlay();
+			_spoilerOverlay->setGeometry(_inner->rect());
+		}
+		const auto cursor = textCursor();
+		_customObject->refreshSpoilerShown({
+			cursor.selectionStart(),
+			cursor.selectionEnd(),
+		});
+	}
+}
+
 void InputField::setCustomTextContext(
 		Text::MarkedContext context,
 		Fn<bool()> pausedEmoji,
 		Fn<bool()> pausedSpoiler) {
+	// The overlay's shown callback captures the CustomFieldObject raw, so it
+	// must not outlive the one it was created for.
+	_spoilerOverlay = nullptr;
 	_customObject = std::make_unique<CustomFieldObject>(
 		this,
 		std::move(context),
@@ -2247,6 +2266,7 @@ void InputField::setCustomTextContext(
 	_inner->document()->documentLayout()->registerHandler(
 		kCollapsedQuoteFormat,
 		_customObject.get());
+	refreshSpoilerOverlay();
 }
 
 void InputField::customEmojiRepaint() {
@@ -3930,19 +3950,7 @@ void InputField::handleContentsChanged() {
 			: nullptr));
 
 	//highlightMarkdown();
-	if (_spoilerRangesText.empty() && _spoilerRangesEmoji.empty()) {
-		_spoilerOverlay = nullptr;
-	} else if (_customObject) {
-		if (!_spoilerOverlay) {
-			_spoilerOverlay = _customObject->createSpoilerOverlay();
-			_spoilerOverlay->setGeometry(_inner->rect());
-		}
-		const auto cursor = textCursor();
-		_customObject->refreshSpoilerShown({
-			cursor.selectionStart(),
-			cursor.selectionEnd(),
-		});
-	}
+	refreshSpoilerOverlay();
 
 	if (tagsChanged || (_lastTextWithTags.text != currentText)) {
 		_lastTextWithTags.text = currentText;
