@@ -211,6 +211,24 @@ QAccessibleInterface* Widget::focusChild() const {
 	++ReentrancyDepth;
 	struct Guard { ~Guard() { --ReentrancyDepth; } } guard;
 
+	// A container with painted children keeps its own browse position on
+	// them, so a child reporting focus wins over the selected item below:
+	// the container holds real keyboard focus the whole time, and forwarding
+	// to the selection would announce the current item when the screen
+	// reader asked for a different, merely browsed one.
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0 && widget()->hasFocus()) {
+		// Iterate through children to find focused one (Qt standard approach).
+		for (int i = 0; i < count; ++i) {
+			if (const auto iface = rp()->accessibilityChildInterface(i)) {
+				const auto s = iface->state();
+				if (s.focused || s.active) {
+					return iface;
+				}
+			}
+		}
+	}
+
 	// A selection list forwards accessible focus to its current (selected) item,
 	// so focusing the container lands the screen reader on a navigable item
 	// rather than the inert container. Only while the container itself holds
@@ -226,24 +244,9 @@ QAccessibleInterface* Widget::focusChild() const {
 
 	// Only handle focus child for widgets with custom accessibility children.
 	// For other widgets (containers, scroll areas), delegate to Qt immediately.
-	const auto count = rp()->accessibilityChildCount();
 	if (count < 0) {
 		// No custom children - let Qt handle it normally.
 		return QAccessibleWidget::focusChild();
-	}
-
-	if (!widget()->hasFocus()) {
-		return nullptr;
-	}
-
-	// Iterate through children to find focused one (Qt standard approach).
-	for (int i = 0; i < count; ++i) {
-		if (const auto iface = rp()->accessibilityChildInterface(i)) {
-			const auto s = iface->state();
-			if (s.focused || s.active) {
-				return iface;
-			}
-		}
 	}
 
 	// Has custom children but none focused - return null.
