@@ -36,7 +36,12 @@ Menu::Menu(QWidget *parent, QMenu *menu, const style::Menu &st)
 	_wappedMenu->hide();
 }
 
-Menu::~Menu() = default;
+Menu::~Menu() {
+	// Detach before destroying: ~QWidget of a visible item re-enters us
+	// synchronously through sendSyntheticEnterLeave(), and MSVC's vector
+	// keeps its old size() while _Destroy_range nulls the entries.
+	base::take(_actionWidgets);
+}
 
 void Menu::init() {
 	resize(_forceWidth ? _forceWidth : _st.widthMin, _st.skip * 2);
@@ -221,7 +226,8 @@ not_null<QAction*> Menu::addSeparator(const style::MenuSeparator *st) {
 }
 
 void Menu::clearActions() {
-	_actionWidgets.clear();
+	// Detached, not cleared: destroying an item widget can re-enter us.
+	base::take(_actionWidgets);
 	for (auto action : base::take(_actions)) {
 		if (action->parent() == this) {
 			delete action;
