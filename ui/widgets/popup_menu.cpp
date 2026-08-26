@@ -8,6 +8,7 @@
 
 #include "base/platform/base_platform_info.h"
 #include "base/invoke_queued.h"
+#include "base/weak_qptr.h"
 #include "ui/image/image_prepare.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/shadow.h"
@@ -1141,7 +1142,15 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 	if (::Platform::IsWindows()) {
 		ForceFullRepaintSync(this);
 	}
+	// show() goes all the way into the platform window, deep enough for the
+	// owner to destroy this menu from inside it - a QCocoaWindow freed inside
+	// its own setVisible() is the reported shape - so nothing below may touch
+	// the menu without checking that it is still there.
+	const auto weak = base::make_weak(this);
 	show();
+	if (!weak) {
+		return;
+	}
 	Platform::ShowOverAll(this);
 	raise();
 	activateWindow();
