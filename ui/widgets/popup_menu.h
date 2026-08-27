@@ -298,4 +298,19 @@ private:
 
 };
 
+// Where to show a context menu for the given event: at the mouse cursor for
+// a mouse-invoked one, on the anchor for a keyboard-invoked one - the mouse
+// may sit nowhere near the control then (or outside the window altogether),
+// and the position Qt puts into the keyboard event is no help either, it is
+// synthesized from the input method rect, which plain controls leave empty.
+// The rect is in the anchor's coordinates and defaults to its whole area -
+// pass one to anchor on a painted element inside the anchor widget.
+[[nodiscard]] QPoint ContextMenuPosition(
+	not_null<QWidget*> anchor,
+	not_null<QContextMenuEvent*> e);
+[[nodiscard]] QPoint ContextMenuPosition(
+	not_null<QWidget*> anchor,
+	not_null<QContextMenuEvent*> e,
+	QRect rect);
+
 } // namespace Ui
