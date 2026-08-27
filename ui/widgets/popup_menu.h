@@ -13,6 +13,7 @@
 #include "ui/widgets/shadow.h"
 #include "ui/round_rect.h"
 #include "ui/rp_widget.h"
+#include "ui/ui_touch_forward.h"
 #include "base/object_ptr.h"
 #include "base/unique_qptr.h"
 
@@ -263,6 +264,7 @@ private:
 	bool _reactivateParent = true;
 	bool _grabbingForPanelAnimation = false;
 
+	TouchForward _touchForward;
 	int _touchBeginCounter = 0;
 	int _topShift = 0;
 	bool _clearLastSeparator = true;

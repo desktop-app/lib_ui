@@ -326,6 +326,8 @@ PRIVATE
     ui/screen_reader_mode.cpp
     ui/screen_reader_mode.h
     ui/ui_rpl_filter.h
+    ui/ui_touch_forward.cpp
+    ui/ui_touch_forward.h
     ui/ui_utility.cpp
     ui/ui_utility.h
 
