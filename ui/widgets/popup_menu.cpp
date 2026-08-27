@@ -909,7 +909,12 @@ QImage PopupMenu::grabForPanelAnimation() {
 		p.fillRect(_inner, _st.menu.itemBg);
 		for (const auto child : children()) {
 			if (const auto widget = qobject_cast<QWidget*>(child)) {
-				RenderWidget(p, widget, widget->pos());
+				// Submenus are windows of their own, they are not a part
+				// of what this menu paints, and their pos() is meaningless
+				// in our coordinates.
+				if (!widget->isWindow()) {
+					RenderWidget(p, widget, widget->pos());
+				}
 			}
 		}
 		_grabbingForPanelAnimation = false;
