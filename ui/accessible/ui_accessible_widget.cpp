@@ -297,16 +297,18 @@ void Widget::doAction(const QString &actionName) {
 }
 
 // Selection. A selection item is a child with the ListItem (or PageTab, for
-// a strip of tabs) role reporting selected = active; the selected one
-// resolves independently of focus. Plain buttons among the children are
-// excluded, and a locked folder reports selectable = false, so it is never
-// claimed as a successful selection.
+// a strip of tabs, or RadioButton, for a group of exclusive options) role
+// reporting selected = active; the selected one resolves independently of
+// focus. Plain buttons among the children are excluded, and a locked folder
+// reports selectable = false, so it is never claimed as a successful
+// selection.
 
 namespace {
 
 [[nodiscard]] bool IsSelectionItemRole(QAccessible::Role role) {
 	return (role == QAccessible::ListItem)
-		|| (role == QAccessible::PageTab);
+		|| (role == QAccessible::PageTab)
+		|| (role == QAccessible::RadioButton);
 }
 
 } // namespace
