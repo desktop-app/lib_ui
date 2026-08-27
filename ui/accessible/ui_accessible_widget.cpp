@@ -99,6 +99,10 @@ void *Widget::interface_cast(QAccessible::InterfaceType type) {
 		&& rp()->accessibilityOrientation().has_value()) {
 		return static_cast<QAccessibleAttributesInterface*>(this);
 	}
+	if (type == QAccessible::ValueInterface
+		&& rp()->accessibilityValueRange().has_value()) {
+		return static_cast<QAccessibleValueInterface*>(this);
+	}
 	return QAccessibleWidget::interface_cast(type);
 }
 
@@ -389,6 +393,34 @@ QVariant Widget::attributeValue(QAccessible::Attribute key) const {
 		}
 	}
 	return QVariant();
+}
+
+// Value. Reports the numeric range of a slider-like widget. The setter may be
+// invoked by the platform on a background thread, so the widget must hop to
+// the main thread itself before touching any state.
+
+QVariant Widget::currentValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->current) : QVariant();
+}
+
+void Widget::setCurrentValue(const QVariant &value) {
+	rp()->accessibilitySetValue(value.toDouble());
+}
+
+QVariant Widget::maximumValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->maximum) : QVariant();
+}
+
+QVariant Widget::minimumValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->minimum) : QVariant();
+}
+
+QVariant Widget::minimumStepSize() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->step) : QVariant();
 }
 
 } // namespace Ui::Accessible

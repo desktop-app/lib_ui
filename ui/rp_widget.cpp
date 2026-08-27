@@ -521,8 +521,17 @@ QString RpWidget::accessibilityValue() const {
 }
 
 void RpWidget::accessibilityValueChanged() {
+	// A string value routes to the textual Value pattern change, which is
+	// the one a screen reader announces and reads the value back from.
 	QAccessibleValueChangeEvent event(this, accessibilityValue());
 	QAccessible::updateAccessibility(&event);
+}
+
+std::optional<AccessibilityValueRange> RpWidget::accessibilityValueRange() const {
+	return std::nullopt;
+}
+
+void RpWidget::accessibilitySetValue(double value) {
 }
 
 QStringList RpWidget::accessibilityActionNames() {
