@@ -212,11 +212,15 @@ void Menu::removeAction(int position) {
 	// stale-size vector with moved-from entries in it.
 	auto widget = base::take(_actionWidgets[position]);
 	_actionWidgets.erase(begin(_actionWidgets) + position);
+
+	// The widget goes first, like in clearActions() and clearLastSeparator():
+	// an item reads action() while it is being torn down, so the action has
+	// to outlive it.
+	widget = nullptr;
 	if (_actions[position]->parent() == this) {
 		delete _actions[position];
 	}
 	_actions.erase(begin(_actions) + position);
-	widget = nullptr;
 	resizeFromInner(width(), recountHeight());
 }
 
