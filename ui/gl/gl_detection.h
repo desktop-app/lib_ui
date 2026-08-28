@@ -8,10 +8,12 @@
 
 #include "base/flags.h"
 
-// ANGLE is used only on Windows with Qt < 6.
-#if defined Q_OS_WIN && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+// ANGLE is used on Windows with Qt < 6 and with an ANGLE-enabled Qt 6.
+#if defined Q_OS_WIN \
+	&& (QT_VERSION < QT_VERSION_CHECK(6, 0, 0) \
+		|| defined DESKTOP_APP_QT6_ANGLE)
 #define DESKTOP_APP_USE_ANGLE
-#endif // Q_OS_WIN && Qt < 6
+#endif // Q_OS_WIN && (Qt < 6 || DESKTOP_APP_QT6_ANGLE)
 
 class QOpenGLContext;
 

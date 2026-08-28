@@ -383,11 +383,15 @@ Capabilities CheckCapabilities(QWidget *widget) {
 		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
 
 #ifdef DESKTOP_APP_USE_ANGLE
-		auto egllist = QStringList();
-		for (const auto &extension : EGLExtensions(context)) {
-			egllist.append(QString::fromLatin1(extension));
+		// A desktop GL context has no EGL display, asking for one only
+		// makes the platform plugin complain about an invalid key.
+		if (context->isOpenGLES()) {
+			auto egllist = QStringList();
+			for (const auto &extension : EGLExtensions(context)) {
+				egllist.append(QString::fromLatin1(extension));
+			}
+			LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
 		}
-		LOG(("EGL Extensions: %1").arg(egllist.join(", ")));
 #endif // DESKTOP_APP_USE_ANGLE
 
 		return true;
@@ -496,6 +500,7 @@ void ForceDisable(bool disable) {
 #ifdef DESKTOP_APP_USE_ANGLE
 void ConfigureANGLE() {
 	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
+	qunsetenv("QT_ANGLE_PLATFORM");
 	const auto path = Ui::Integration::Instance().angleBackendFilePath();
 	if (path.isEmpty()) {
 		return;
@@ -506,10 +511,18 @@ void ConfigureANGLE() {
 	}
 	auto bytes = f.read(32);
 	const auto check = [&](const char *backend, ANGLE angle) {
-		if (bytes.startsWith(backend)) {
-			ResolvedANGLE = angle;
-			qputenv("DESKTOP_APP_QT_ANGLE_PLATFORM", backend);
+		if (!bytes.startsWith(backend)) {
+			return;
 		}
+		ResolvedANGLE = angle;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+		qputenv("DESKTOP_APP_QT_ANGLE_PLATFORM", backend);
+#else // Qt < 6
+		// Qt 6 switches to GLES by QT_OPENGL and picks the backend by
+		// QT_ANGLE_PLATFORM, both read lazily on first context creation.
+		qputenv("QT_OPENGL", "angle");
+		qputenv("QT_ANGLE_PLATFORM", backend);
+#endif // Qt >= 6
 	};
 	//check("gl", ANGLE::OpenGL);
 	check("d3d9", ANGLE::D3D9);
