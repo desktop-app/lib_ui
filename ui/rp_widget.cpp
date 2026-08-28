@@ -358,6 +358,10 @@ RpWidget::RpWidget(QWidget *parent)
 	[[maybe_unused]] static const auto Once = [] {
 		auto format = QSurfaceFormat::defaultFormat();
 		format.setSwapInterval(::Platform::MetalSupported() ? 1 : 0);
+#ifdef Q_OS_WIN
+		// DirectComposition composites swap chain only with alpha in it.
+		format.setAlphaBufferSize(8);
+#endif // Q_OS_WIN
 #ifdef DESKTOP_APP_USE_ANGLE
 		format.setRedBufferSize(8);
 		format.setGreenBufferSize(8);
