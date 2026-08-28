@@ -225,6 +225,13 @@ void TableLayout::insertRow(
 			labelMargin,
 			valueMargin,
 		});
+		// heightValue() emits at subscribe time, for a row nothing has
+		// positioned yet, so rowVerticalSkip() would measure the new
+		// widgets at their natural width rather than their column width
+		// and publish a short height outward. The pass below positions and
+		// sizes the row, so that one echo is suppressed the way
+		// VerticalLayout::subscribeToWidth() suppresses its own.
+		const auto taken = std::exchange(_inResize, true);
 		if (wlabel) {
 			wlabel->heightValue(
 			) | rpl::on_next_done([=] {
@@ -255,6 +262,9 @@ void TableLayout::insertRow(
 				childNaturalWidthUpdated();
 			}, _rowsLifetime);
 		}
+		_inResize = taken;
+
+		childNaturalWidthUpdated();
 	}
 }
 
@@ -265,7 +275,13 @@ void TableLayout::childHeightUpdated(RpWidget *child) {
 	const auto end = _rows.end();
 	Assert(it != end);
 
-	auto top = it->top;
+	auto top = [&] {
+		if (it == _rows.begin()) {
+			return _st.border;
+		}
+		const auto prev = it - 1;
+		return prev->top + rowVerticalSkip(*prev);
+	}();
 	const auto outer = width();
 	for (; it != end; ++it) {
 		const auto &row = *it;
