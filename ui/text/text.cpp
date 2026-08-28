@@ -1254,9 +1254,11 @@ void String::enumerateLines(
 			paragraphRTL = resolveRTL(static_cast<const NewlineBlock*>(
 				_blocks[block].get())->paragraphDirection());
 			lineStartBlockHint = block + 1;
-			initNextParagraph(index, w->position());
+			initNextParagraph(
+				index,
+				blockPosition(begin(_blocks) + lineStartBlockHint));
 			longWordLine = true;
-			lastWordStart = w;
+			lastWordStart = w + 1;
 			lastWordStart_wLeft = widthLeft;
 			continue;
 		} else if (!qlinesleft) {
@@ -1269,7 +1271,12 @@ void String::enumerateLines(
 		const auto newWidthLeft = widthLeft
 			- last_rBearing
 			- (last_rPadding + w__f_width - w__f_rbearing);
-		if (newWidthLeft >= 0) {
+		// A word starting the line is laid out on it even when it doesn't
+		// fit: rolling it over would leave an empty line that the renderer
+		// never paints. This wrapping must mirror Renderer::enumerate(),
+		// otherwise the counted height diverges from the painted one.
+		if (newWidthLeft >= 0
+			|| (w->position() == lineStart && !lineElided)) {
 			last_rBearing = w__f_rbearing;
 			last_rPadding = w->f_rpadding();
 			widthLeft = newWidthLeft;
