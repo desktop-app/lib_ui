@@ -102,6 +102,10 @@ void RpWindow::setNativeFrame(bool enabled) {
 	_helper->setNativeFrame(enabled);
 }
 
+void RpWindow::setManualFramelessOwned(bool enabled) {
+	_helper->setManualFramelessOwned(enabled);
+}
+
 void RpWindow::setMinimumSize(QSize size) {
 	_helper->setMinimumSize(size);
 }

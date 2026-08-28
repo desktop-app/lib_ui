@@ -31,6 +31,7 @@ public:
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;
 	void setNativeFrame(bool enabled) override;
+	void setManualFramelessOwned(bool enabled) override;
 	void setMinimumSize(QSize size) override;
 	void setFixedSize(QSize size) override;
 	void setGeometry(QRect rect) override;
@@ -85,6 +86,7 @@ private:
 	bool _updatingMargins = false;
 	bool _isFullScreen = false;
 	bool _isMaximizedAndTranslucent = false;
+	bool _manualFramelessOwned = false;
 
 };
 

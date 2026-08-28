@@ -55,6 +55,9 @@ public:
 	virtual void setTitle(const QString &title);
 	virtual void setTitleStyle(const style::WindowTitle &st);
 	virtual void setNativeFrame(bool enabled);
+	// Lets the embedder own Qt::FramelessWindowHint instead of the helper.
+	virtual void setManualFramelessOwned(bool enabled) {
+	}
 	virtual void setMinimumSize(QSize size);
 	virtual void setFixedSize(QSize size);
 	virtual void setStaysOnTop(bool enabled);
