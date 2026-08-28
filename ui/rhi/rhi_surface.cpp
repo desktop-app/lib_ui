@@ -21,6 +21,11 @@
 #include <rhi/qrhi.h>
 #endif // Qt >= 6.7
 
+#ifdef Q_OS_WIN
+#include <QtCore/qt_windows.h>
+#include <commctrl.h>
+#endif // Q_OS_WIN
+
 namespace Ui::GL {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
@@ -57,8 +62,15 @@ protected:
 
 private:
 	[[nodiscard]] Rhi::Renderer *rhiRenderer() const;
+#ifdef Q_OS_WIN
+	void installExStyleFilterWin();
+	void removeExStyleFilterWin();
+#endif // Q_OS_WIN
 
 	const std::unique_ptr<Renderer> _renderer;
+#ifdef Q_OS_WIN
+	HWND _exStyleFilterHwnd = nullptr;
+#endif // Q_OS_WIN
 
 };
 
@@ -78,9 +90,97 @@ SurfaceRhi::~SurfaceRhi() {
 	// deletion is safe. This handles the deleteChildren() teardown
 	// path where Qt doesn't call releaseResources() automatically.
 	releaseResources();
+#ifdef Q_OS_WIN
+	removeExStyleFilterWin();
+#endif // Q_OS_WIN
 }
 
+#ifdef Q_OS_WIN
+namespace {
+
+constexpr UINT_PTR kExStyleSubclassId = 0x51F4C4FA;
+
+LRESULT CALLBACK StripLayeredExStyleSubclass(
+		HWND hwnd,
+		UINT msg,
+		WPARAM wParam,
+		LPARAM lParam,
+		UINT_PTR uIdSubclass,
+		DWORD_PTR /*dwRefData*/) {
+	// WS_EX_LAYERED breaks DirectComposition output: the target and visual
+	// are created fine, but nothing composites through the swap chain.
+	if (msg == WM_STYLECHANGING && wParam == GWL_EXSTYLE && lParam) {
+		auto *ss = reinterpret_cast<STYLESTRUCT*>(lParam);
+		ss->styleNew &= ~LONG(WS_EX_LAYERED);
+	} else if (msg == WM_NCDESTROY) {
+		::RemoveWindowSubclass(
+			hwnd,
+			&StripLayeredExStyleSubclass,
+			uIdSubclass);
+	}
+	return ::DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
+} // namespace
+
+void SurfaceRhi::installExStyleFilterWin() {
+	if (_exStyleFilterHwnd) {
+		return;
+	} else if (!::Platform::IsWindows8OrGreater()) {
+		// DirectComposition is Windows 8+, so on Windows 7 WS_EX_LAYERED
+		// stays the only way a translucent top-level window composites.
+		LOG(("QRhi: Windows 7, keeping WS_EX_LAYERED."));
+		return;
+	}
+	const auto tlw = window();
+	if (!tlw || !tlw->testAttribute(Qt::WA_TranslucentBackground)) {
+		LOG(("QRhi: Not translucent, no ex-style filter."));
+		return;
+	}
+	const auto handle = tlw->windowHandle();
+	if (!handle || handle->surfaceType() != QSurface::Direct3DSurface) {
+		LOG(("QRhi: Surface type %1, no ex-style filter."
+			).arg(handle ? int(handle->surfaceType()) : -1));
+		return;
+	}
+	const auto hwnd = reinterpret_cast<HWND>(handle->winId());
+	if (!hwnd
+		|| !::SetWindowSubclass(
+			hwnd,
+			&StripLayeredExStyleSubclass,
+			kExStyleSubclassId,
+			0)) {
+		return;
+	}
+	_exStyleFilterHwnd = hwnd;
+	// Qt may have set the bit before the subclass was attached.
+	const auto exStyle = ::GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+	LOG(("QRhi: Ex-style filter installed, WS_EX_LAYERED was %1."
+		).arg((exStyle & WS_EX_LAYERED) ? u"set"_q : u"clear"_q));
+	if (exStyle & WS_EX_LAYERED) {
+		::SetWindowLongPtrW(
+			hwnd,
+			GWL_EXSTYLE,
+			exStyle & ~LONG_PTR(WS_EX_LAYERED));
+	}
+}
+
+void SurfaceRhi::removeExStyleFilterWin() {
+	if (!_exStyleFilterHwnd) {
+		return;
+	}
+	::RemoveWindowSubclass(
+		_exStyleFilterHwnd,
+		&StripLayeredExStyleSubclass,
+		kExStyleSubclassId);
+	_exStyleFilterHwnd = nullptr;
+}
+#endif // Q_OS_WIN
+
 void SurfaceRhi::initialize(QRhiCommandBuffer *cb) {
+#ifdef Q_OS_WIN
+	installExStyleFilterWin();
+#endif // Q_OS_WIN
 	if (const auto use = rhi()) {
 		[[maybe_unused]] static const auto logged = [&] {
 			LOG(("QRhi: Surface backend=%1 device=%2."
