@@ -77,6 +77,7 @@ public:
 			? QAccessible::ButtonMenu
 			: QAccessible::Button;
 	}
+	QString accessibilityName() override;
 	AccessibilityState accessibilityState() const override;
 	void accessibilityDoAction(const QString &name) override;
 
