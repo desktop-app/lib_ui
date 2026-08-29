@@ -223,6 +223,10 @@ void AbstractButton::clearState() {
 	onStateChanged(was, StateChangeSource::ByUser);
 }
 
+QString AbstractButton::accessibilityName() {
+	return toolTip();
+}
+
 AccessibilityState AbstractButton::accessibilityState() const {
 	return { .pressed = isDown() };
 }
