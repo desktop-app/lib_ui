@@ -490,6 +490,13 @@ void RpWidget::accessibilityChildSetFocus(quintptr identity) {
 void RpWidget::accessibilityChildActivate(quintptr identity) {
 }
 
+bool RpWidget::accessibilityChildSubItemSupportsActions(int row, int column) const {
+	return false;
+}
+
+void RpWidget::accessibilityChildSubItemActivate(quintptr identity, int column) {
+}
+
 QString RpWidget::accessibilityName() {
 	return QWidget::accessibleName();
 }
