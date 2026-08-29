@@ -63,8 +63,7 @@ base::options::toggle OptionUseQtRhi({
 	.description = "Render the main window on the GPU instead of the CPU.",
 	.defaultValue = true,
 	.scope = [] {
-		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
-			&& QLibraryInfo::version() >= QVersionNumber(6, 7);
+		return QLibraryInfo::version() >= QVersionNumber(6, 7);
 	},
 	.restartRequired = true,
 });
