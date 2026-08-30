@@ -535,7 +535,7 @@ void Renderer::initNextLine() {
 }
 
 void Renderer::initParagraphBidi() {
-	if (!_paragraphLength || !_paragraphAnalysis.isEmpty()) {
+	if (_paragraphLength <= 0 || !_paragraphAnalysis.isEmpty()) {
 		return;
 	}
 
