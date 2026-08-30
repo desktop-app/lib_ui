@@ -29,6 +29,9 @@
 #include <QtWidgets/QApplication>
 #include <qpa/qplatformnativeinterface.h>
 #include <qpa/qwindowsysteminterface.h>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <qpa/qplatformwindow_p.h>
+#endif // Qt >= 6.0.0
 
 #include <dwmapi.h>
 #include <shellapi.h>
@@ -145,6 +148,26 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
 	}
 
 	return bAutoHidden;
+}
+
+// Qt 6 dropped "WindowsCustomMargins" property for native interface.
+void SetCustomMargins(not_null<QWindow*> window, QMargins margins) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	if (window->flags() & Qt::FramelessWindowHint) {
+		return; // Qt refuses custom margins on frameless windows.
+	}
+	using namespace QNativeInterface::Private;
+	if (const auto native = window->nativeInterface<QWindowsWindow>()) {
+		native->setCustomMargins(margins);
+	}
+#else // Qt >= 6.0.0
+	if (const auto native = QGuiApplication::platformNativeInterface()) {
+		native->setWindowProperty(
+			window->handle(),
+			"WindowsCustomMargins",
+			QVariant::fromValue<QMargins>(margins));
+	}
+#endif // Qt >= 6.0.0
 }
 
 void FixAeroSnap(HWND handle) {
@@ -925,12 +948,7 @@ void WindowHelper::updateMargins() {
 			_marginsDelta = QMargins();
 		}
 	}
-	if (const auto native = QGuiApplication::platformNativeInterface()) {
-		native->setWindowProperty(
-			window()->windowHandle()->handle(),
-			"WindowsCustomMargins",
-			QVariant::fromValue<QMargins>(margins));
-	}
+	SetCustomMargins(window()->windowHandle(), margins);
 }
 
 void WindowHelper::fixMaximizedWindow() {
