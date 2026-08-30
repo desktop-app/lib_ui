@@ -29,6 +29,9 @@
 #include <QtWidgets/QApplication>
 #include <qpa/qplatformnativeinterface.h>
 #include <qpa/qwindowsysteminterface.h>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <qpa/qplatformwindow_p.h>
+#endif // Qt >= 6.0.0
 
 #include <dwmapi.h>
 #include <shellapi.h>
@@ -145,6 +148,26 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
 	}
 
 	return bAutoHidden;
+}
+
+// Qt 6 dropped "WindowsCustomMargins" property for native interface.
+void SetCustomMargins(not_null<QWindow*> window, QMargins margins) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	if (window->flags() & Qt::FramelessWindowHint) {
+		return; // Qt refuses custom margins on frameless windows.
+	}
+	using namespace QNativeInterface::Private;
+	if (const auto native = window->nativeInterface<QWindowsWindow>()) {
+		native->setCustomMargins(margins);
+	}
+#else // Qt >= 6.0.0
+	if (const auto native = QGuiApplication::platformNativeInterface()) {
+		native->setWindowProperty(
+			window->handle(),
+			"WindowsCustomMargins",
+			QVariant::fromValue<QMargins>(margins));
+	}
+#endif // Qt >= 6.0.0
 }
 
 void FixAeroSnap(HWND handle) {
@@ -316,7 +339,6 @@ void WindowHelper::setGeometry(QRect rect) {
 void WindowHelper::showFullScreen() {
 	if (!_isFullScreen) {
 		_isFullScreen = true;
-		updateMargins();
 		updateCornersRounding();
 		updateCloaking();
 	}
@@ -483,8 +505,14 @@ bool WindowHelper::filterNativeEvent(
 	} return true;
 
 	case WM_NCCALCSIZE: {
-		if (_title->isHidden() || window()->isFullScreen() || !wParam) {
+		if (_title->isHidden() || !wParam) {
 			return false;
+		}
+		if (window()->isFullScreen()) {
+			// Whole window is client, and Qt must not apply custom
+			// margins of normal state (they stay set in full screen).
+			if (result) *result = 0;
+			return true;
 		}
 		const auto r = &((LPNCCALCSIZE_PARAMS)lParam)->rgrc[0];
 		const auto maximized = [&] {
@@ -853,7 +881,9 @@ void WindowHelper::enableCloakingForHidden() {
 }
 
 void WindowHelper::updateMargins() {
-	if (!_handle || _updatingMargins) {
+	// Full screen keeps margins of normal state, each change makes Qt
+	// resize frame and breaks geometry restored after full screen.
+	if (!_handle || _updatingMargins || _isFullScreen) {
 		return;
 	}
 
@@ -891,40 +921,39 @@ void WindowHelper::updateMargins() {
 			m.right - w.right,
 			m.bottom - w.bottom);
 
-		margins.setLeft(margins.left() - _marginsDelta.left());
-		margins.setRight(margins.right() - _marginsDelta.right());
-		margins.setBottom(margins.bottom() - _marginsDelta.bottom());
-		margins.setTop(margins.top() - _marginsDelta.top());
+		// With native borders Qt already measures maximized frame itself,
+		// shifting custom margins here made it 16px wider than client.
+		if (!nativeResize()) {
+			margins.setLeft(margins.left() - _marginsDelta.left());
+			margins.setRight(margins.right() - _marginsDelta.right());
+			margins.setBottom(margins.bottom() - _marginsDelta.bottom());
+			margins.setTop(margins.top() - _marginsDelta.top());
+		}
 	} else if (!_marginsDelta.isNull()) {
-		RECT w;
-		GetWindowRect(_handle, &w);
-		SetWindowPos(
-			_handle,
-			0,
-			0,
-			0,
-			w.right - w.left - _marginsDelta.left() - _marginsDelta.right(),
-			w.bottom - w.top - _marginsDelta.top() - _marginsDelta.bottom(),
-			(SWP_NOMOVE
-				| SWP_NOSENDCHANGING
-				| SWP_NOZORDER
-				| SWP_NOACTIVATE
-				| SWP_NOREPOSITION));
+		if (!nativeResize()) {
+			RECT w;
+			GetWindowRect(_handle, &w);
+			SetWindowPos(
+				_handle,
+				0,
+				0,
+				0,
+				w.right - w.left - _marginsDelta.left() - _marginsDelta.right(),
+				w.bottom - w.top - _marginsDelta.top() - _marginsDelta.bottom(),
+				(SWP_NOMOVE
+					| SWP_NOSENDCHANGING
+					| SWP_NOZORDER
+					| SWP_NOACTIVATE
+					| SWP_NOREPOSITION));
+		}
 		_marginsDelta = QMargins();
 	}
 
-	if (_isFullScreen || _title->isHidden()) {
+	if (_title->isHidden()) {
 		margins = QMargins();
-		if (_title->isHidden()) {
-			_marginsDelta = QMargins();
-		}
+		_marginsDelta = QMargins();
 	}
-	if (const auto native = QGuiApplication::platformNativeInterface()) {
-		native->setWindowProperty(
-			window()->windowHandle()->handle(),
-			"WindowsCustomMargins",
-			QVariant::fromValue<QMargins>(margins));
-	}
+	SetCustomMargins(window()->windowHandle(), margins);
 }
 
 void WindowHelper::fixMaximizedWindow() {
