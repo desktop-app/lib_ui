@@ -91,7 +91,10 @@ QWindow *Item::window() const {
 
 QAccessible::Role Item::role() const {
 	const auto parent = _parent.get();
-	return parent
+	const auto index = parent ? currentIndex() : -1;
+	return (index >= 0)
+		? parent->accessibilityChildRoleAt(index)
+		: parent
 		? parent->accessibilityChildRole()
 		: QAccessible::Role();
 }

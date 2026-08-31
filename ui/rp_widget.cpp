@@ -402,6 +402,10 @@ QAccessible::Role RpWidget::accessibilityChildRole() const {
 	return QAccessible::Role::NoRole;
 }
 
+QAccessible::Role RpWidget::accessibilityChildRoleAt(int index) const {
+	return accessibilityChildRole();
+}
+
 QString RpWidget::accessibilityChildName(int index) const {
 	return QString();
 }
