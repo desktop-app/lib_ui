@@ -7,6 +7,7 @@
 #include "ui/ui_utility.h"
 
 #include "base/platform/base_platform_info.h"
+#include "base/qt/qt_common_adapters.h"
 #include "ui/integration.h"
 #include "ui/style/style_core.h"
 
@@ -22,6 +23,7 @@ namespace {
 
 constexpr auto kDefaultWheelScrollLines = 3;
 constexpr auto kMagicScrollMultiplier = 2.5;
+constexpr auto kX11SmoothScrollMultiplier = 5.;
 
 class WidgetCreator : public QWidget {
 public:
@@ -272,18 +274,38 @@ QPointF ScrollDeltaF(not_null<QWheelEvent*> e, bool touch) {
 			style::ConvertScaleExact(point.x()),
 			style::ConvertScaleExact(point.y()));
 	};
+	const auto pixelDelta = e->pixelDelta();
+	const auto angleDelta = e->angleDelta();
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 	using QInputDevice::Capability::PixelScroll;
-	if (touch || e->device()->capabilities().testFlag(PixelScroll)) {
+	const auto pixelInput = touch
+		|| e->device()->capabilities().testFlag(PixelScroll);
 #else // Qt >= 6.2.0
-	if (!e->pixelDelta().isNull()) {
+	const auto pixelInput = !pixelDelta.isNull();
 #endif // Qt < 6.2.0
-		return convert(e->pixelDelta())
+	auto x11Touchpad = false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	x11Touchpad = e->device()
+		&& e->device()->type() == base::TouchDevice::TouchPad;
+#endif // Qt >= 6.0.0
+	const auto x11Smooth = !touch
+		&& ::Platform::IsX11()
+		&& (pixelInput || !pixelDelta.isNull() || x11Touchpad);
+	if (x11Smooth && !angleDelta.isNull()) {
+		return (convert(angleDelta)
+			* QApplication::wheelScrollLines()
+			* kX11SmoothScrollMultiplier)
+			/ float64(QWheelEvent::DefaultDeltasPerStep);
+	}
+	if (pixelInput || (x11Smooth && !pixelDelta.isNull())) {
+		return (::Platform::IsX11() && !touch
+			? QPointF(pixelDelta)
+			: convert(pixelDelta))
 			* ((::Platform::IsWayland() && !touch)
 				? kMagicScrollMultiplier
 				: 1.);
 	}
-	return (convert(e->angleDelta()) * QApplication::wheelScrollLines())
+	return (convert(angleDelta) * QApplication::wheelScrollLines())
 		/ float64(kPixelToAngleDelta * kDefaultWheelScrollLines);
 }
 
