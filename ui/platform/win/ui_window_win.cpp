@@ -49,6 +49,10 @@ constexpr auto kDWMWA_WINDOW_CORNER_PREFERENCE = DWORD(33);
 constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
 constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
 
+// Undocumented messages of classic (unthemed) caption painting.
+constexpr auto kWM_NCUAHDRAWCAPTION = UINT(0x00AE);
+constexpr auto kWM_NCUAHDRAWFRAME = UINT(0x00AF);
+
 UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
 
 int(__stdcall *GetSystemMetricsForDpi)(
@@ -170,13 +174,6 @@ void SetCustomMargins(not_null<QWindow*> window, QMargins margins) {
 #endif // Qt >= 6.0.0
 }
 
-void FixAeroSnap(HWND handle) {
-	SetWindowLongPtr(
-		handle,
-		GWL_STYLE,
-		GetWindowLongPtr(handle, GWL_STYLE) | WS_CAPTION | WS_THICKFRAME);
-}
-
 [[nodiscard]] Qt::KeyboardModifiers LookupModifiers() {
 	const auto check = [](int key) {
 		return (GetKeyState(key) & 0x8000) != 0;
@@ -206,9 +203,6 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
 , NativeEventFilter(window)
 , _title(Ui::CreateChild<TitleWidget>(window.get()))
 , _body(Ui::CreateChild<RpWidget>(window.get())) {
-	if (!::Platform::IsWindows8OrGreater()) {
-		window->setWindowFlag(Qt::FramelessWindowHint);
-	}
 	init();
 }
 
@@ -260,12 +254,6 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
 }
 
 void WindowHelper::setNativeFrame(bool enabled) {
-	if (_handle && !::Platform::IsWindows8OrGreater()) {
-		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
-		if (!enabled) {
-			FixAeroSnap(_handle);
-		}
-	}
 	_title->setVisible(!enabled);
 	if (_handle) {
 		updateShadow();
@@ -382,14 +370,6 @@ void WindowHelper::init() {
 	window()->winIdValue() | rpl::on_next([=](WId winId) {
 		_handle = reinterpret_cast<HWND>(winId);
 
-		if (!::Platform::IsWindows8OrGreater()) {
-			const auto native = _title->isHidden();
-			window()->setWindowFlag(Qt::FramelessWindowHint, !native);
-			if (_handle && !native) {
-				FixAeroSnap(_handle);
-			}
-		}
-
 		if (_handle) {
 			_dpi = GetDpiForWindowSupported()
 				? GetDpiForWindow(_handle)
@@ -504,6 +484,28 @@ bool WindowHelper::filterNativeEvent(
 		if (result) *result = 0;
 	} return true;
 
+	case WM_SETTEXT:
+	case WM_SETICON: {
+		if (::Platform::IsWindows8OrGreater() || _title->isHidden()) {
+			return false;
+		}
+		// Classic caption painter reacts to these bypassing WM_NCPAINT,
+		// so hide the window from it while DefWindowProc stores the value.
+		const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
+		SetWindowLongPtr(_handle, GWL_STYLE, style & ~WS_VISIBLE);
+		const auto res = DefWindowProc(_handle, msg, wParam, lParam);
+		SetWindowLongPtr(_handle, GWL_STYLE, style);
+		if (result) *result = res;
+	} return true;
+
+	case kWM_NCUAHDRAWCAPTION:
+	case kWM_NCUAHDRAWFRAME: {
+		if (::Platform::IsWindows8OrGreater() || _title->isHidden()) {
+			return false;
+		}
+		if (result) *result = 0;
+	} return true;
+
 	case WM_NCCALCSIZE: {
 		if (_title->isHidden() || !wParam) {
 			return false;
@@ -577,7 +579,11 @@ bool WindowHelper::filterNativeEvent(
 		if (_title->isHidden()) {
 			return false;
 		}
-		if (IsCompositionEnabled()) {
+		// DWM doesn't manage frames of layered windows, so themed caption
+		// painter ignores lParam == -1 and flashes native caption for a frame.
+		const auto layered = GetWindowLongPtr(_handle, GWL_EXSTYLE)
+			& WS_EX_LAYERED;
+		if (IsCompositionEnabled() && !layered) {
 			const auto res = DefWindowProc(_handle, msg, wParam, -1);
 			if (result) *result = res;
 		} else {
