@@ -28,6 +28,7 @@
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
 #include <private/qapplication_p.h>
+#include <qpa/qplatformwindow.h>
 #include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
@@ -1066,27 +1067,29 @@ bool PopupMenu::prepareGeometryFor(
 	using namespace QNativeInterface::Private;
 	if (const auto native
 			= windowHandle()->nativeInterface<QWaylandWindow>()) {
+		const auto dpr = windowHandle()->devicePixelRatio()
+			/ windowHandle()->handle()->devicePixelRatio();
 		const auto padding = _additionalMenuPadding - _additionalMenuMargins;
 		base::take(r);
 		if (_parent) {
 			// we must have an action to position the submenu around
 			Assert(parentActionWidget != nullptr);
+			const auto rect = QRect(
+				parentActionWidget->mapTo(
+					parentActionWidget->window(),
+					QPoint()),
+				parentActionWidget->size()) + _st.scrollPadding;
 			native->setParentControlGeometry(
-				QRect(
-					parentActionWidget->mapTo(
-						parentActionWidget->window(),
-						QPoint()),
-					parentActionWidget->size())
-				+ _st.scrollPadding);
+				QRect(rect.topLeft() * dpr, rect.size() * dpr));
 		} else if (padding.top()) {
 			// provide the compositor with a range for flip_y so it uses
 			// the cursor point instead of the padding's top point
 			native->setParentControlGeometry(
 				QRect(
-					p
+					(p
 						- parentWidget()->window()->pos()
-						- QPoint(padding.left(), padding.top()),
-					QSize(1, padding.top())));
+						- QPoint(padding.left(), padding.top())) * dpr,
+					QSize(1, qRound(padding.top() * dpr))));
 			windowHandle()->setProperty(
 				"_q_waylandPopupAnchor",
 				QVariant::fromValue(Qt::TopEdge | Qt::LeftEdge));

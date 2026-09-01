@@ -20,6 +20,7 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+#include <qpa/qplatformwindow.h>
 #include <qpa/qplatformwindow_p.h>
 
 namespace Ui {
@@ -123,12 +124,14 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 			= windowHandle()->nativeInterface<QWaylandWindow>()) {
 		// Tooltip::performShow ensures our window is active
 		const auto w = not_null(QApplication::activeWindow())->pos();
+		const auto dpr = windowHandle()->devicePixelRatio()
+			/ windowHandle()->handle()->devicePixelRatio();
 		native->setParentControlGeometry(
 			QRect(
 				QPoint(
 					m.x() - w.x() + _st->shift.x(),
-					m.y() - w.y() - _st->skip),
-				QSize(-_st->shift.x() * 2, _st->shift.y() + _st->skip)));
+					m.y() - w.y() - _st->skip) * dpr,
+				QSize(-_st->shift.x() * 2, _st->shift.y() + _st->skip) * dpr));
 		// even though Qt has tooltip type, our tooltip behaves like a menu
 		// (bottom left origin, no flip_x)
 		native->setExtendedWindowType(QWaylandWindow::Menu);
