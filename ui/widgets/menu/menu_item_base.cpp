@@ -6,8 +6,10 @@
 //
 #include "ui/widgets/menu/menu_item_base.h"
 
+#include "ui/screen_reader_mode.h"
 #include "ui/widgets/menu/menu.h"
 
+#include <QtGui/QAccessible>
 #include <QtGui/QtEvents>
 
 namespace Ui::Menu {
@@ -30,6 +32,14 @@ void ItemBase::setSelected(
 		_lastTriggeredSource = source;
 		_selected = selected;
 		update();
+		if (selected
+			&& focusPolicy() == Qt::NoFocus
+			&& ScreenReaderModeActive()) {
+			// The focus policy is granted when the screen reader first
+			// queries the item. A popup menu is queried as its window
+			// appears, a menu inside the window may not have been yet.
+			QAccessible::queryAccessibleInterface(this);
+		}
 		if (selected && focusPolicy() != Qt::NoFocus) {
 			setFocus();
 			QAccessibleEvent event(this, QAccessible::Focus);

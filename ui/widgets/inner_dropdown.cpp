@@ -121,7 +121,7 @@ void InnerDropdown::paintEvent(QPaintEvent *e) {
 	} else if (_showAnimation) {
 		_showAnimation->paintFrame(p, 0, 0, width(), 1., 1.);
 		_showAnimation.reset();
-		showChildren();
+		showFinished();
 	} else {
 		if (!_cache.isNull()) _cache = QPixmap();
 		const auto inner = rect().marginsRemoved(_st.padding);
@@ -219,12 +219,16 @@ void InnerDropdown::finishAnimating() {
 
 void InnerDropdown::showFast() {
 	_hideTimer.cancel();
+	const auto showing = isHidden() || _hiding || (_showAnimation != nullptr);
 	finishAnimating();
 	if (isHidden()) {
 		showChildren();
 		saveFocusWidgetAndShow();
 	}
 	_hiding = false;
+	if (showing) {
+		showFinished();
+	}
 }
 
 void InnerDropdown::hideFast() {
@@ -367,8 +371,15 @@ void InnerDropdown::opacityAnimationCallback() {
 			_hiding = false;
 			hideFinished();
 		} else if (!_a_show.animating()) {
-			showChildren();
+			showFinished();
 		}
+	}
+}
+
+void InnerDropdown::showFinished() {
+	showChildren();
+	if (const auto onstack = _shownCallback) {
+		onstack();
 	}
 }
 
