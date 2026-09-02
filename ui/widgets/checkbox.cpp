@@ -1036,14 +1036,14 @@ void Radiobutton::trackScreenReaderState() {
 		if (!screenReaderActive || !value.has_value()) {
 			return Qt::NoFocus;
 		} else if (value == _value) {
-			return Qt::StrongFocus;
+			return Qt::TabFocus;
 		}
 		for (const auto &button : _group->_buttons) {
 			if (button->_value == value) {
 				return Qt::NoFocus;
 			}
 		}
-		return Qt::StrongFocus;
+		return Qt::TabFocus;
 	}) | rpl::on_next([=](Qt::FocusPolicy value) {
 		if (focusPolicy() != value) {
 			setFocusPolicy(value);
