@@ -1092,8 +1092,14 @@ void Radiobutton::keyPressEvent(QKeyEvent *e) {
 		? buttons[currentIndex - 1]
 		: buttons[currentIndex + 1];
 
-	const auto deltaY = std::abs(neighbor->y() - y());
-	const auto deltaX = std::abs(neighbor->x() - x());
+	// In global coordinates: the buttons of one group are not always
+	// siblings - each one may sit in a wrap of its own, like the correct
+	// answer buttons of a quiz - and their positions inside those parents
+	// say nothing about how the group is laid out on the screen.
+	const auto position = mapToGlobal(QPoint());
+	const auto neighborPosition = neighbor->mapToGlobal(QPoint());
+	const auto deltaY = std::abs(neighborPosition.y() - position.y());
+	const auto deltaX = std::abs(neighborPosition.x() - position.x());
 	const auto orientation = (deltaY > deltaX)
 		? Qt::Vertical
 		: Qt::Horizontal;
