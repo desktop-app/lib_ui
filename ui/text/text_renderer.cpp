@@ -1515,60 +1515,46 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 				} else if (hasSpoiler && !isElidedItem) {
 					_p->setOpacity(opacity * (1. - _spoilerOpacity));
 				}
+				const auto position = QPointF(
+					x.toReal(),
+					(textY + baselineShift).toReal());
 				if (Q_UNLIKELY(hasSelected)) {
 					if (Q_UNLIKELY(hasNotSelected)) {
-						// There is a bug in retina QPainter clipping stack.
-						// You can see glitches in rendering in such text:
-						// aA
-						// Aa
-						// Where selection is both 'A'-s.
-						// I can't debug it right now, this is a workaround.
-#ifdef Q_OS_MAC
+						// The item is drawn twice, once clipped to the part
+						// that is selected and once to what is left of it.
+						// Both clips intersect into whatever is already set,
+						// so the second one only has to name this item instead
+						// of standing in for everything outside the selection,
+						// and save/restore puts the clip back as it was rather
+						// than rebuilding it from clipRegion().
+						const auto outer = QRect(
+							QPoint(
+								x.toInt() - _lineHeight,
+								_y - _lineHeight),
+							QPoint(
+								(x + itemWidth).toInt() + _lineHeight,
+								_y + 2 * _lineHeight));
+
 						_p->save();
-#endif // Q_OS_MAC
-						const auto clippingEnabled = _p->hasClipping();
-						const auto clippingRegion = _p->clipRegion();
 						_p->setClipRect(selectedRect, Qt::IntersectClip);
 						_p->setPen(*_currentPenSelected);
-						drawGlyphs(QPointF(
-							x.toReal(),
-							(textY + baselineShift).toReal()
-						), gf);
-						const auto externalClipping = clippingEnabled
-							? clippingRegion
-							: QRegion(QRect(
-								(_x - _lineWidth).toInt(),
-								_y - _lineHeight,
-								(_x + 2 * _lineWidth).toInt(),
-								_y + 2 * _lineHeight));
-						_p->setClipRegion(externalClipping - selectedRect);
-						_p->setPen(*_currentPen);
-						drawGlyphs(QPointF(
-							x.toReal(),
-							(textY + baselineShift).toReal()
-						), gf);
-#ifdef Q_OS_MAC
+						drawGlyphs(position, gf);
 						_p->restore();
-#else // Q_OS_MAC
-						if (clippingEnabled) {
-							_p->setClipRegion(clippingRegion);
-						} else {
-							_p->setClipping(false);
-						}
-#endif // Q_OS_MAC
+
+						_p->save();
+						_p->setClipRegion(
+							QRegion(outer) - selectedRect,
+							Qt::IntersectClip);
+						_p->setPen(*_currentPen);
+						drawGlyphs(position, gf);
+						_p->restore();
 					} else {
 						_p->setPen(*_currentPenSelected);
-						drawGlyphs(QPointF(
-							x.toReal(),
-							(textY + baselineShift).toReal()
-						), gf);
+						drawGlyphs(position, gf);
 					}
 				} else {
 					_p->setPen(*_currentPen);
-					drawGlyphs(QPointF(
-						x.toReal(),
-						(textY + baselineShift).toReal()
-					), gf);
+					drawGlyphs(position, gf);
 				}
 				if (complexClipping) {
 					if (complexClippingEnabled) {
