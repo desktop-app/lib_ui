@@ -1111,15 +1111,22 @@ void Radiobutton::keyPressEvent(QKeyEvent *e) {
 	}
 
 	const auto step = (key == Qt::Key_Down || key == Qt::Key_Right) ? 1 : -1;
-	const auto nextIndex = currentIndex + step;
 
-	if (nextIndex >= 0 && nextIndex < buttons.size()) {
+	// Pass over the buttons that are hidden or disabled - the correct
+	// answer button of an empty quiz row is kept hidden until the row is
+	// filled in - or an arrow would check something that is not there.
+	auto nextIndex = currentIndex + step;
+	while (nextIndex >= 0 && nextIndex < buttons.size()) {
 		const auto nextButton = buttons[nextIndex];
-		const auto weak = base::make_weak(nextButton);
-		_group->setValue(nextButton->_value);
-		if (const auto strong = weak.get()) {
-			strong->setFocus(Qt::OtherFocusReason);
+		if (nextButton->isVisible() && nextButton->isEnabled()) {
+			const auto weak = base::make_weak(nextButton);
+			_group->setValue(nextButton->_value);
+			if (const auto strong = weak.get()) {
+				strong->setFocus(Qt::OtherFocusReason);
+			}
+			return;
 		}
+		nextIndex += step;
 	}
 }
 
