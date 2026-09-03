@@ -582,6 +582,10 @@ void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 
 } // namespace
 
+bool IsMaximizedNatively(not_null<QWidget*> window) {
+	return window->isMaximized();
+}
+
 bool IsApplicationActive() {
 	return QApplication::activeWindow() != nullptr;
 }
