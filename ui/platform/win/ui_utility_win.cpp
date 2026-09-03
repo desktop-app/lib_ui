@@ -24,6 +24,13 @@ bool IsApplicationActive() {
 	return QApplication::activeWindow() != nullptr;
 }
 
+bool IsMaximizedNatively(not_null<QWidget*> window) {
+	const auto handle = window->windowHandle();
+	return (handle && handle->handle())
+		? (IsZoomed(reinterpret_cast<HWND>(handle->winId())) != FALSE)
+		: window->isMaximized();
+}
+
 void IgnoreAllActivation(not_null<QWidget*> widget) {
 	widget->createWinId();
 

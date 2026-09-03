@@ -356,6 +356,11 @@ rpl::producer<HitTestResult> WindowHelper::systemButtonDown() const {
 	return _systemButtonDown.events();
 }
 
+auto WindowHelper::systemCommandRequests() const
+-> rpl::producer<not_null<SystemCommandRequest*>> {
+	return _systemCommandRequests.events();
+}
+
 void WindowHelper::overrideSystemButtonOver(HitTestResult button) {
 	_systemButtonOver.fire_copy(button);
 }
@@ -459,6 +464,26 @@ bool WindowHelper::filterNativeEvent(
 	}
 
 	switch (msg) {
+
+	case WM_SYSCOMMAND: {
+		// Win+Up / system menu arrive here before any state change,
+		// so window may replace maximize / restore with its own behavior.
+		const auto command = (wParam & 0xFFF0);
+		if ((command != SC_MAXIMIZE && command != SC_RESTORE)
+			|| IsIconic(_handle)) {
+			return false;
+		}
+		auto request = SystemCommandRequest{
+			.command = (command == SC_MAXIMIZE)
+				? SystemCommand::Maximize
+				: SystemCommand::Restore,
+		};
+		_systemCommandRequests.fire(&request);
+		if (!request.handled) {
+			return false;
+		}
+		if (result) *result = 0;
+	} return true;
 
 	case WM_ACTIVATE: {
 		if (LOWORD(wParam) == WA_CLICKACTIVE) {

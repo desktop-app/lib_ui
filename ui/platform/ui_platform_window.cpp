@@ -152,6 +152,11 @@ rpl::producer<HitTestResult> BasicWindowHelper::systemButtonOver() const {
 	return rpl::never<HitTestResult>();
 }
 
+auto BasicWindowHelper::systemCommandRequests() const
+-> rpl::producer<not_null<SystemCommandRequest*>> {
+	return rpl::never<not_null<SystemCommandRequest*>>();
+}
+
 rpl::producer<HitTestResult> BasicWindowHelper::systemButtonDown() const {
 	return rpl::never<HitTestResult>();
 }
