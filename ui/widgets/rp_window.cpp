@@ -82,6 +82,11 @@ rpl::producer<Platform::HitTestResult> RpWindow::systemButtonDown() const {
 	return _helper->systemButtonDown();
 }
 
+auto RpWindow::systemCommandRequests() const
+-> rpl::producer<not_null<Platform::SystemCommandRequest*>> {
+	return _helper->systemCommandRequests();
+}
+
 void RpWindow::overrideSystemButtonOver(Platform::HitTestResult button) {
 	_helper->overrideSystemButtonOver(button);
 }
