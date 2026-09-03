@@ -40,6 +40,7 @@
 #include <QtWidgets/QTextEdit>
 #include <QShortcut>
 
+#include <private/qaccessiblewidgets_p.h>
 #include <private/qkeymapper_p.h>
 
 #include <crl/crl_async.h>
@@ -1690,6 +1691,118 @@ private:
 	friend class InputField;
 
 };
+
+namespace {
+
+// The text an emoji object in the document stands for, or nothing for
+// another object (a collapsed quote).
+[[nodiscard]] QString EmojiTextAt(
+		not_null<QTextDocument*> document,
+		int position) {
+	const auto block = document->findBlock(position);
+	for (auto i = block.begin(); !i.atEnd(); ++i) {
+		const auto fragment = i.fragment();
+		if (!fragment.isValid() || !fragment.contains(position)) {
+			continue;
+		}
+		const auto format = fragment.charFormat();
+		if (format.isImageFormat()) {
+			const auto name = format.toImageFormat().name();
+			if (const auto emoji = Emoji::FromUrl(name)) {
+				return emoji->text();
+			}
+		}
+		return format.property(kCustomEmojiText).toString();
+	}
+	return QString();
+}
+
+// The emoji in the document are objects, a replacement character each.
+// A screen reader reads the text by document positions, one for every
+// object, and gets the emoji at that position instead of the character
+// that stands in for it - the offsets stay those of the document.
+class InnerAccessible final : public QAccessibleTextEdit {
+public:
+	using QAccessibleTextEdit::QAccessibleTextEdit;
+
+	QString text(QAccessible::Text t) const override {
+		const auto result = QAccessibleTextEdit::text(t);
+		return (t == QAccessible::Value) ? withEmoji(result, 0) : result;
+	}
+	QString text(int startOffset, int endOffset) const override {
+		return withEmoji(
+			QAccessibleTextEdit::text(startOffset, endOffset),
+			startOffset);
+	}
+	QString textBeforeOffset(
+			int offset,
+			QAccessible::TextBoundaryType boundaryType,
+			int *startOffset,
+			int *endOffset) const override {
+		const auto result = QAccessibleTextEdit::textBeforeOffset(
+			offset,
+			boundaryType,
+			startOffset,
+			endOffset);
+		return withEmoji(result, startOffset ? *startOffset : 0);
+	}
+	QString textAfterOffset(
+			int offset,
+			QAccessible::TextBoundaryType boundaryType,
+			int *startOffset,
+			int *endOffset) const override {
+		const auto result = QAccessibleTextEdit::textAfterOffset(
+			offset,
+			boundaryType,
+			startOffset,
+			endOffset);
+		return withEmoji(result, startOffset ? *startOffset : 0);
+	}
+	QString textAtOffset(
+			int offset,
+			QAccessible::TextBoundaryType boundaryType,
+			int *startOffset,
+			int *endOffset) const override {
+		const auto result = QAccessibleTextEdit::textAtOffset(
+			offset,
+			boundaryType,
+			startOffset,
+			endOffset);
+		return withEmoji(result, startOffset ? *startOffset : 0);
+	}
+
+private:
+	[[nodiscard]] QString withEmoji(const QString &text, int offset) const {
+		if (!text.contains(kObjectReplacementCh)) {
+			return text;
+		}
+		const auto document = textDocument();
+		auto result = QString();
+		result.reserve(text.size());
+		for (auto i = 0, size = int(text.size()); i != size; ++i) {
+			const auto ch = text[i];
+			if (ch != kObjectReplacementCh) {
+				result.append(ch);
+				continue;
+			}
+			const auto emoji = document
+				? EmojiTextAt(document, offset + i)
+				: QString();
+			result.append(emoji.isEmpty() ? QString(ch) : emoji);
+		}
+		return result;
+	}
+
+};
+
+} // namespace
+
+QAccessibleInterface *InputField::CreateInnerAccessible(QObject *object) {
+	const auto edit = qobject_cast<QTextEdit*>(object);
+	return (edit && dynamic_cast<InputField*>(edit->parentWidget()))
+		? new InnerAccessible(edit)
+		: nullptr;
+}
 
 void InsertEmojiAtCursor(QTextCursor cursor, EmojiPtr emoji) {
 	const auto currentFormat = cursor.charFormat();
