@@ -25,6 +25,7 @@
 #include "ui/painter.h"
 #include "ui/qt_object_factory.h"
 #include "ui/integration.h"
+#include "ui/screen_reader_mode.h"
 #include "styles/style_widgets.h"
 #include "styles/palette.h"
 
@@ -4378,7 +4379,10 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			e->ignore();
 		} else {
 			const auto forward = (key == Qt::Key_Tab) && !shift;
-			auto request = TabbedRequest{ .backward = !forward };
+			auto request = TabbedRequest{
+				.backward = !forward,
+				.defaultOrder = ScreenReaderModeActive(),
+			};
 			_tabbed.fire(&request);
 			if (!request.handled && !focusNextPrevChild(forward)) {
 				e->ignore();
