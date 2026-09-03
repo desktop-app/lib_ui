@@ -24,6 +24,8 @@
 class QMenu;
 class QShortcut;
 class QTextEdit;
+class QAccessibleEvent;
+class QAccessibleInterface;
 class QContextMenuEvent;
 class Painter;
 
@@ -208,6 +210,21 @@ public:
 	QString accessibilityName() override {
 		return _placeholderFull.current();
 	}
+
+	// The accessible interface of the inner editor of a field, for the
+	// accessibility factory: the emoji in the document are objects, and
+	// a screen reader reading the text would get a replacement character
+	// for each - this one gives it the emoji instead. Null for any other
+	// object.
+	[[nodiscard]] static QAccessibleInterface *CreateInnerAccessible(
+		QObject *object);
+
+	// Qt raises the text events of the inner editor in document
+	// coordinates, while its accessible above exposes translated ones:
+	// the replacement for such an event, null for any other.
+	[[nodiscard]] static auto TranslateInnerAccessibilityEvent(
+		not_null<QAccessibleEvent*> event)
+	-> std::unique_ptr<QAccessibleEvent>;
 
 	[[nodiscard]] const style::InputField &st() const {
 		return _st;
