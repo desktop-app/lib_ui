@@ -43,6 +43,8 @@ public:
 		-> rpl::producer<HitTestResult> override;
 	[[nodiscard]] auto systemButtonDown() const
 		-> rpl::producer<HitTestResult> override;
+	[[nodiscard]] auto systemCommandRequests() const
+		-> rpl::producer<not_null<SystemCommandRequest*>> override;
 	void overrideSystemButtonOver(HitTestResult button) override;
 	void overrideSystemButtonDown(HitTestResult button) override;
 
@@ -78,6 +80,7 @@ private:
 	rpl::event_stream<not_null<HitTestRequest*>> _hitTestRequests;
 	rpl::event_stream<HitTestResult> _systemButtonOver;
 	rpl::event_stream<HitTestResult> _systemButtonDown;
+	rpl::event_stream<not_null<SystemCommandRequest*>> _systemCommandRequests;
 	std::optional<WindowShadow> _shadow;
 	rpl::variable<uint> _dpi;
 	QMargins _marginsDelta;

@@ -50,6 +50,18 @@ struct HitTestRequest {
 	HitTestResult result = HitTestResult::Client;
 };
 
+enum class SystemCommand {
+	Maximize,
+	Restore,
+};
+
+// System maximize / restore request (Win+Up, system menu) before it is
+// applied, handled == true lets window replace it with its own behavior.
+struct SystemCommandRequest {
+	SystemCommand command = SystemCommand::Maximize;
+	bool handled = false;
+};
+
 [[nodiscard]] bool SemiNativeSystemButtonProcessing();
 void SetupSemiNativeSystemButtons(
 	not_null<TitleControls*> controls,

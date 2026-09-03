@@ -25,6 +25,7 @@ using WindowTitleHitTestFlags = base::flags<WindowTitleHitTestFlag>;
 namespace Platform {
 
 struct HitTestRequest;
+struct SystemCommandRequest;
 enum class HitTestResult;
 class DefaultTitleWidget;
 
@@ -50,6 +51,8 @@ public:
 		-> rpl::producer<HitTestResult>;
 	[[nodiscard]] virtual auto systemButtonDown() const
 		-> rpl::producer<HitTestResult>;
+	[[nodiscard]] virtual auto systemCommandRequests() const
+		-> rpl::producer<not_null<SystemCommandRequest*>>;
 	virtual void overrideSystemButtonOver(HitTestResult button);
 	virtual void overrideSystemButtonDown(HitTestResult button);
 	virtual void setTitle(const QString &title);

@@ -24,6 +24,10 @@ void _dispatch_main_queue_callback_4CF(mach_msg_header_t *msg);
 namespace Ui {
 namespace Platform {
 
+bool IsMaximizedNatively(not_null<QWidget*> window) {
+	return window->isMaximized();
+}
+
 bool IsApplicationActive() {
 	return [[NSApplication sharedApplication] isActive];
 }
