@@ -3654,7 +3654,8 @@ QString TextForMimeDataToHtml(const TextForMimeData &text) {
 std::optional<TextWithTags> TextWithTagsFromHtml(
 		QStringView html,
 		bool richFormatting) {
-	auto parsed = ParseFragment(html, {}, nullptr, richFormatting);
+	const auto classes = ParseStyleClasses(html);
+	auto parsed = ParseFragment(html, {}, &classes, richFormatting);
 	if (parsed.text.tags.isEmpty() && !parsed.removedRedundantLinks) {
 		return std::nullopt;
 	}
