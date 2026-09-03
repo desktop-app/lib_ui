@@ -27,6 +27,9 @@ namespace Ui::Platform {
 
 [[nodiscard]] bool IsApplicationActive();
 
+// Native maximized state, true before Qt delivers its (queued) state event.
+[[nodiscard]] bool IsMaximizedNatively(not_null<QWidget*> window);
+
 [[nodiscard]] bool TranslucentWindowsSupported();
 
 void InitOnTopPanel(not_null<QWidget*> panel);
