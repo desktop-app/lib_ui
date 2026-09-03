@@ -7,6 +7,7 @@
 #include "ui/accessible/ui_accessible_factory.h"
 
 #include "ui/rp_widget.h"
+#include "ui/widgets/fields/input_field.h"
 #include "base/screen_reader_state.h"
 #include <QAccessibleWidget>
 
@@ -14,8 +15,11 @@ namespace Ui::Accessible {
 namespace {
 
 [[nodiscard]] QAccessibleInterface *Method(const QString&, QObject *object) {
-	const auto rpWidget = qobject_cast<Ui::RpWidget*>(object);
-	return rpWidget ? rpWidget->accessibilityCreate() : nullptr;
+	if (const auto rpWidget = qobject_cast<Ui::RpWidget*>(object)) {
+		return rpWidget->accessibilityCreate();
+	}
+	// The inner editor of a field is a QTextEdit, not an RpWidget.
+	return InputField::CreateInnerAccessible(object);
 }
 
 } // namespace
