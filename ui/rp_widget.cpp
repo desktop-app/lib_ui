@@ -494,6 +494,9 @@ void RpWidget::accessibilityChildSetFocus(quintptr identity) {
 void RpWidget::accessibilityChildActivate(quintptr identity) {
 }
 
+void RpWidget::accessibilityChildShowMenu(quintptr identity) {
+}
+
 QString RpWidget::accessibilityName() {
 	return QWidget::accessibleName();
 }
