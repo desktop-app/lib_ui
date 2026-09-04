@@ -223,6 +223,18 @@ void AbstractButton::clearState() {
 	onStateChanged(was, StateChangeSource::ByUser);
 }
 
+QString AbstractButton::accessibilityName() {
+	const auto custom = QWidget::accessibleName();
+	if (!custom.isEmpty()) {
+		return custom;
+	}
+	const auto tip = toolTip();
+	if (!tip.isEmpty()) {
+		return tip;
+	}
+	return QString();
+}
+
 AccessibilityState AbstractButton::accessibilityState() const {
 	return { .pressed = isDown() };
 }
