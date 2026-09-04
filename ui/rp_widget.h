@@ -380,6 +380,15 @@ private:
 // Add required fields from QAccessible::State when necessary.
 // Don't forget to amend the AccessibilityState::writeTo implementation.
 // This one allows universal initialization, like { .checkable = true }.
+// The "x of y" of a child of a painted list, reported to a screen reader
+// as PositionInSet / SizeOfSet: the 1-based position of the child within
+// the set of its siblings and the size of that set. A zero position means
+// the child is not one of the set, like a divider row between the items.
+struct AccessibilitySetPosition {
+	int position = 0;
+	int size = 0;
+};
+
 struct AccessibilityState {
 	bool checkable : 1 = false;
 	bool checked : 1 = false;
@@ -458,6 +467,12 @@ public:
 	[[nodiscard]] virtual QAccessible::State accessibilityChildState(int index) const;
 	void accessibilityChildStateChanged(int index, AccessibilityState changes);
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildRole() const;
+
+	// By default every child is one of the set; a list with rows outside
+	// it overrides this to skip them, see AccessibilitySetPosition.
+	[[nodiscard]] virtual AccessibilitySetPosition accessibilityChildSetPosition(
+		int index) const;
+
 	[[nodiscard]] virtual QRect accessibilityChildRect(int index) const;
 	[[nodiscard]] virtual int accessibilityChildColumnCount(int row) const;
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildSubItemRole() const;
