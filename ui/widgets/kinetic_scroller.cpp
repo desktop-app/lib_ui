@@ -20,8 +20,8 @@
 #include <QtGui/QPointingDevice>
 #include <QtGui/QtEvents>
 #include <QtGui/QWindow>
-#include <private/qguiapplication_p.h>
-#include <qpa/qwindowsysteminterface_p.h>
+#include <qpa/qwindowsysteminterface.h>
+#include <qpa/qplatformwindow.h>
 
 #include <algorithm>
 #include <cmath>
@@ -101,7 +101,6 @@ private:
 		not_null<QWindow*> window,
 		not_null<QWheelEvent*> e);
 	void rememberInput(not_null<QWheelEvent*> e);
-	void interrupt(bool force);
 	[[nodiscard]] bool start(
 		not_null<QWindow*> window,
 		not_null<QWheelEvent*> e);
@@ -118,7 +117,6 @@ private:
 	State _state = Inactive;
 	uint64 _generation = 0;
 	std::vector<DragSample> _history;
-	Qt::KeyboardModifiers _modifiers;
 	bool _inverted = false;
 	ulong _inputTimestamp = 0;
 	crl::time _inputReceivedAt = 0;
@@ -177,7 +175,7 @@ bool KineticScroller::handleWheelEvent(
 			if (_window == window) {
 				_state = Inactive;
 			} else {
-				interrupt(true);
+				end(true);
 			}
 		}
 		break;
@@ -189,24 +187,9 @@ bool KineticScroller::handleWheelEvent(
 
 void KineticScroller::rememberInput(not_null<QWheelEvent*> e) {
 	_device = e->pointingDevice();
-	_modifiers = e->modifiers();
 	_inverted = e->inverted();
 	_inputTimestamp = ulong(e->timestamp());
 	_inputReceivedAt = crl::now();
-}
-
-void KineticScroller::interrupt(bool force) {
-	if (_state == Inactive) {
-		return;
-	}
-	const auto generation = _generation;
-	const auto previous = _modifiers;
-	const auto current = QGuiApplicationPrivate::modifier_buttons;
-	end(force);
-	if (generation == _generation
-		&& QGuiApplicationPrivate::modifier_buttons == previous) {
-		QGuiApplicationPrivate::modifier_buttons = current;
-	}
 }
 
 bool KineticScroller::start(
@@ -214,7 +197,7 @@ bool KineticScroller::start(
 		not_null<QWheelEvent*> e) {
 	const auto generation = _generation;
 	const auto guardedWindow = QPointer<QWindow>(window.get());
-	interrupt(true);
+	end(true);
 	if (!guardedWindow || generation != _generation) {
 		return false;
 	}
@@ -325,32 +308,28 @@ bool KineticScroller::sendWheel(
 		_state = Inactive;
 		return false;
 	}
-	const auto globalPosition = QPointF(QCursor::pos());
-	const auto position = window->mapFromGlobal(globalPosition);
+	const auto dpr = window->devicePixelRatio()
+		/ window->handle()->devicePixelRatio();
+	const auto origin = QPointF(window->screen()->geometry().topLeft());
+	const auto logicalPosition = QPointF(QCursor::pos());
+	const auto globalPosition = (logicalPosition - origin) * dpr + origin;
+	const auto position = window->handle()->mapFromGlobalF(globalPosition);
 	const auto generation = _generation;
 	const auto was = _state;
-	const auto horizontal = !angle.y() && angle.x();
-	auto event = QWindowSystemInterfacePrivate::WheelEvent(
+	QWindowSystemInterface::handleWheelEvent(
 		window.data(),
 		_inputTimestamp + ulong(std::max(
 			crl::time(0),
 			crl::now() - _inputReceivedAt)),
+		device,
 		position,
 		globalPosition,
 		pixel,
 		angle,
-		horizontal ? angle.x() : angle.y(),
-		horizontal ? Qt::Horizontal : Qt::Vertical,
-		_modifiers,
+		QGuiApplication::keyboardModifiers(),
 		phase,
 		Qt::MouseEventSynthesizedByApplication,
-		_inverted,
-		device);
-	if (const auto handler = QWindowSystemInterfacePrivate::eventHandler) {
-		handler->sendEvent(&event);
-	} else {
-		QGuiApplicationPrivate::processWindowSystemEvent(&event);
-	}
+		_inverted);
 	if (_state != was
 		|| generation != _generation) {
 		return false;
@@ -382,7 +361,7 @@ bool KineticScroller::eventFilter(
 		const auto guardedWindow = QPointer<QWindow>(window);
 		if (e->phase() == Qt::NoScrollPhase) {
 			const auto generation = ++_generation;
-			interrupt(true);
+			end(true);
 			return !guardedWindow || generation != _generation;
 		} else if (e->source() == Qt::MouseEventSynthesizedByApplication) {
 			return false;
@@ -423,7 +402,7 @@ bool KineticScroller::eventFilter(
 		}
 		const auto generation = _generation;
 		const auto guardedWindow = _window;
-		interrupt(false);
+		end(false);
 		return !guardedWindow || generation != _generation;
 	}
 	return false;
