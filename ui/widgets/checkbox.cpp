@@ -1036,14 +1036,14 @@ void Radiobutton::trackScreenReaderState() {
 		if (!screenReaderActive || !value.has_value()) {
 			return Qt::NoFocus;
 		} else if (value == _value) {
-			return Qt::StrongFocus;
+			return Qt::TabFocus;
 		}
 		for (const auto &button : _group->_buttons) {
 			if (button->_value == value) {
 				return Qt::NoFocus;
 			}
 		}
-		return Qt::StrongFocus;
+		return Qt::TabFocus;
 	}) | rpl::on_next([=](Qt::FocusPolicy value) {
 		if (focusPolicy() != value) {
 			setFocusPolicy(value);
@@ -1092,8 +1092,14 @@ void Radiobutton::keyPressEvent(QKeyEvent *e) {
 		? buttons[currentIndex - 1]
 		: buttons[currentIndex + 1];
 
-	const auto deltaY = std::abs(neighbor->y() - y());
-	const auto deltaX = std::abs(neighbor->x() - x());
+	// In global coordinates: the buttons of one group are not always
+	// siblings - each one may sit in a wrap of its own, like the correct
+	// answer buttons of a quiz - and their positions inside those parents
+	// say nothing about how the group is laid out on the screen.
+	const auto position = mapToGlobal(QPoint());
+	const auto neighborPosition = neighbor->mapToGlobal(QPoint());
+	const auto deltaY = std::abs(neighborPosition.y() - position.y());
+	const auto deltaX = std::abs(neighborPosition.x() - position.x());
 	const auto orientation = (deltaY > deltaX)
 		? Qt::Vertical
 		: Qt::Horizontal;
@@ -1105,15 +1111,22 @@ void Radiobutton::keyPressEvent(QKeyEvent *e) {
 	}
 
 	const auto step = (key == Qt::Key_Down || key == Qt::Key_Right) ? 1 : -1;
-	const auto nextIndex = currentIndex + step;
 
-	if (nextIndex >= 0 && nextIndex < buttons.size()) {
+	// Pass over the buttons that are hidden or disabled - the correct
+	// answer button of an empty quiz row is kept hidden until the row is
+	// filled in - or an arrow would check something that is not there.
+	auto nextIndex = currentIndex + step;
+	while (nextIndex >= 0 && nextIndex < buttons.size()) {
 		const auto nextButton = buttons[nextIndex];
-		const auto weak = base::make_weak(nextButton);
-		_group->setValue(nextButton->_value);
-		if (const auto strong = weak.get()) {
-			strong->setFocus(Qt::OtherFocusReason);
+		if (nextButton->isVisible() && nextButton->isEnabled()) {
+			const auto weak = base::make_weak(nextButton);
+			_group->setValue(nextButton->_value);
+			if (const auto strong = weak.get()) {
+				strong->setFocus(Qt::OtherFocusReason);
+			}
+			return;
 		}
+		nextIndex += step;
 	}
 }
 
