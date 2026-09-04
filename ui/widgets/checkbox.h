@@ -209,7 +209,11 @@ public:
 		return QAccessible::Role::CheckBox;
 	}
 	QString accessibilityName() override {
-		return _text.toString();
+		// A checkbox with no label of its own - beside a poll answer, in a
+		// list row - is named by what stands for it, through the widget's
+		// accessible name.
+		const auto text = _text.toString();
+		return text.isEmpty() ? RpWidget::accessibilityName() : text;
 	}
 	AccessibilityState accessibilityState() const override;
 	void accessibilityDoAction(const QString &name) override;
