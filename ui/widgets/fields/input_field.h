@@ -23,6 +23,7 @@
 class QMenu;
 class QShortcut;
 class QTextEdit;
+class QAccessibleInterface;
 class QContextMenuEvent;
 class Painter;
 
@@ -198,6 +199,14 @@ public:
 	QString accessibilityName() override {
 		return _placeholderFull.current();
 	}
+
+	// The accessible interface of the inner editor of a field, for the
+	// accessibility factory: the emoji in the document are objects, and
+	// a screen reader reading the text would get a replacement character
+	// for each - this one gives it the emoji instead. Null for any other
+	// object.
+	[[nodiscard]] static QAccessibleInterface *CreateInnerAccessible(
+		QObject *object);
 
 	[[nodiscard]] const style::InputField &st() const {
 		return _st;
