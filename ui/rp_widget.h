@@ -458,6 +458,13 @@ public:
 	[[nodiscard]] virtual QAccessible::State accessibilityChildState(int index) const;
 	void accessibilityChildStateChanged(int index, AccessibilityState changes);
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildRole() const;
+
+	// The role of one child where it differs from the list-wide one above:
+	// a divider row between the items of a list is a Separator, not one
+	// more item. Defaults to accessibilityChildRole().
+	[[nodiscard]] virtual QAccessible::Role accessibilityChildRoleAt(
+		int index) const;
+
 	[[nodiscard]] virtual QRect accessibilityChildRect(int index) const;
 	[[nodiscard]] virtual int accessibilityChildColumnCount(int row) const;
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildSubItemRole() const;
