@@ -99,6 +99,10 @@ void *Widget::interface_cast(QAccessible::InterfaceType type) {
 		&& rp()->accessibilityOrientation().has_value()) {
 		return static_cast<QAccessibleAttributesInterface*>(this);
 	}
+	if (type == QAccessible::ValueInterface
+		&& rp()->accessibilityValueRange().has_value()) {
+		return static_cast<QAccessibleValueInterface*>(this);
+	}
 	return QAccessibleWidget::interface_cast(type);
 }
 
@@ -211,6 +215,24 @@ QAccessibleInterface* Widget::focusChild() const {
 	++ReentrancyDepth;
 	struct Guard { ~Guard() { --ReentrancyDepth; } } guard;
 
+	// A container with painted children keeps its own browse position on
+	// them, so a child reporting focus wins over the selected item below:
+	// the container holds real keyboard focus the whole time, and forwarding
+	// to the selection would announce the current item when the screen
+	// reader asked for a different, merely browsed one.
+	const auto count = rp()->accessibilityChildCount();
+	if (count >= 0 && widget()->hasFocus()) {
+		// Iterate through children to find focused one (Qt standard approach).
+		for (int i = 0; i < count; ++i) {
+			if (const auto iface = rp()->accessibilityChildInterface(i)) {
+				const auto s = iface->state();
+				if (s.focused || s.active) {
+					return iface;
+				}
+			}
+		}
+	}
+
 	// A selection list forwards accessible focus to its current (selected) item,
 	// so focusing the container lands the screen reader on a navigable item
 	// rather than the inert container. Only while the container itself holds
@@ -226,24 +248,9 @@ QAccessibleInterface* Widget::focusChild() const {
 
 	// Only handle focus child for widgets with custom accessibility children.
 	// For other widgets (containers, scroll areas), delegate to Qt immediately.
-	const auto count = rp()->accessibilityChildCount();
 	if (count < 0) {
 		// No custom children - let Qt handle it normally.
 		return QAccessibleWidget::focusChild();
-	}
-
-	if (!widget()->hasFocus()) {
-		return nullptr;
-	}
-
-	// Iterate through children to find focused one (Qt standard approach).
-	for (int i = 0; i < count; ++i) {
-		if (const auto iface = rp()->accessibilityChildInterface(i)) {
-			const auto s = iface->state();
-			if (s.focused || s.active) {
-				return iface;
-			}
-		}
 	}
 
 	// Has custom children but none focused - return null.
@@ -289,10 +296,22 @@ void Widget::doAction(const QString &actionName) {
 	});
 }
 
-// Selection. A selection item is a child with the ListItem role reporting
-// selected = active; the selected one resolves independently of focus. Plain
-// buttons among the children are excluded, and a locked folder reports
-// selectable = false, so it is never claimed as a successful selection.
+// Selection. A selection item is a child with the ListItem (or PageTab, for
+// a strip of tabs, or RadioButton, for a group of exclusive options) role
+// reporting selected = active; the selected one resolves independently of
+// focus. Plain buttons among the children are excluded, and a locked folder
+// reports selectable = false, so it is never claimed as a successful
+// selection.
+
+namespace {
+
+[[nodiscard]] bool IsSelectionItemRole(QAccessible::Role role) {
+	return (role == QAccessible::ListItem)
+		|| (role == QAccessible::PageTab)
+		|| (role == QAccessible::RadioButton);
+}
+
+} // namespace
 
 int Widget::selectedItemCount() const {
 	return int(selectedItems().size());
@@ -304,7 +323,7 @@ QList<QAccessibleInterface*> Widget::selectedItems() const {
 	for (auto i = 0; i != count; ++i) {
 		const auto item = child(i);
 		if (item
-			&& item->role() == QAccessible::ListItem
+			&& IsSelectionItemRole(item->role())
 			&& item->state().selected) {
 			result.append(item);
 		}
@@ -320,7 +339,7 @@ QAccessibleInterface *Widget::selectedItem(int selectionIndex) const {
 bool Widget::isSelected(QAccessibleInterface *childItem) const {
 	return childItem
 		&& indexOfChild(childItem) >= 0
-		&& childItem->role() == QAccessible::ListItem
+		&& IsSelectionItemRole(childItem->role())
 		&& childItem->state().selected;
 }
 
@@ -331,7 +350,7 @@ bool Widget::select(QAccessibleInterface *childItem) {
 	// item only implements pressAction, so invoke that rather than toggleAction.
 	if (!childItem
 		|| indexOfChild(childItem) < 0
-		|| childItem->role() != QAccessible::ListItem
+		|| !IsSelectionItemRole(childItem->role())
 		|| childItem->state().disabled
 		|| !childItem->state().selectable) {
 		return false;
@@ -376,6 +395,34 @@ QVariant Widget::attributeValue(QAccessible::Attribute key) const {
 		}
 	}
 	return QVariant();
+}
+
+// Value. Reports the numeric range of a slider-like widget. The setter may be
+// invoked by the platform on a background thread, so the widget must hop to
+// the main thread itself before touching any state.
+
+QVariant Widget::currentValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->current) : QVariant();
+}
+
+void Widget::setCurrentValue(const QVariant &value) {
+	rp()->accessibilitySetValue(value.toDouble());
+}
+
+QVariant Widget::maximumValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->maximum) : QVariant();
+}
+
+QVariant Widget::minimumValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->minimum) : QVariant();
+}
+
+QVariant Widget::minimumStepSize() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->step) : QVariant();
 }
 
 } // namespace Ui::Accessible
