@@ -490,6 +490,12 @@ public:
 	virtual void accessibilityChildSetFocus(quintptr identity);
 	virtual void accessibilityChildActivate(quintptr identity);
 
+	// The showMenu action of a child that reports itself expandable: the
+	// assistive technology expands it with it when collapsed, and
+	// collapses it when expanded - a picker of variants opened over an
+	// item, say. Advertised only with the expandable state.
+	virtual void accessibilityChildShowMenu(quintptr identity);
+
 	// Keep this widget's Tab-focusable children ordered in the focus chain
 	// by visual position (row bands top-to-bottom, left-to-right within a
 	// band, mirrored in RTL) instead of widget creation order. The chain is

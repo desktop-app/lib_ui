@@ -233,6 +233,11 @@ QStringList Item::actionNames() const {
 	if (childState.selectable) {
 		names.append(QAccessibleActionInterface::toggleAction());
 	}
+	// An expandable item opens something of its own: the Windows bridge
+	// expands and collapses it through the showMenu action.
+	if (childState.expandable) {
+		names.append(QAccessibleActionInterface::showMenuAction());
+	}
 	return names;
 }
 
@@ -253,6 +258,8 @@ void Item::doAction(const QString &actionName) {
 		parent->accessibilityChildSetFocus(identity);
 	} else if (actionName == QAccessibleActionInterface::pressAction()) {
 		parent->accessibilityChildActivate(identity);
+	} else if (actionName == QAccessibleActionInterface::showMenuAction()) {
+		parent->accessibilityChildShowMenu(identity);
 	}
 }
 
