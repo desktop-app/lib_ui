@@ -23,6 +23,7 @@
 #include "ui/ui_utility.h"
 
 #include <QtGui/QtEvents>
+#include <QtGui/QAccessible>
 #include <QtGui/QPainter>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
@@ -1157,6 +1158,8 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 	activateWindow();
 	if (Ui::ScreenReaderModeActive()) {
 		_menu->setShowSource(TriggeredSource::Keyboard);
+		QAccessibleEvent event(this, QAccessible::Focus);
+		QAccessible::updateAccessibility(&event);
 	} else {
 		_menu->setShowSource(source);
 	}
