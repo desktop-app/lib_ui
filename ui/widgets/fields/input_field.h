@@ -153,6 +153,14 @@ public:
 	struct TabbedRequest {
 		bool backward = false;
 		bool handled = false;
+
+		// Set when Tab should follow the default focus order instead: in
+		// screen reader mode the buttons and settings around the fields
+		// are Tab stops, and a handler that would only pass the focus on
+		// to another field is expected to leave the request alone. One
+		// that uses Tab for something else - accepting a suggestion -
+		// goes ahead as usual.
+		bool defaultOrder = false;
 	};
 	static const QString kTagBold;
 	static const QString kTagItalic;
