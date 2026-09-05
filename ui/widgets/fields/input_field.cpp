@@ -2336,6 +2336,7 @@ void InputField::paintMisspelled(QPaintEvent *e) {
 	const auto shift = QPoint(
 		-_inner->horizontalScrollBar()->value(),
 		-_inner->verticalScrollBar()->value());
+	const auto color = st::spellUnderline->c;
 	auto p = std::optional<QPainter>();
 	for (auto block = document->begin(); block.isValid(); block = block.next()) {
 		const auto layout = block.layout();
@@ -2358,7 +2359,6 @@ void InputField::paintMisspelled(QPaintEvent *e) {
 			if (!range.format.property(kMisspelledProperty).toBool()) {
 				continue;
 			}
-			const auto color = range.format.underlineColor();
 			const auto pixelSize = range.format.font().pixelSize();
 			const auto factor = std::max(pixelSize, 1) / 10.;
 			for (auto i = 0; i != lines; ++i) {
