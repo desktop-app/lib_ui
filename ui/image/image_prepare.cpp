@@ -797,8 +797,9 @@ void Pass(
 	const auto divider = StackBlur::MakeDivider(radius);
 	constexpr auto kLanes = StackBlur::kLanes;
 
-	auto stack = std::vector<StackBlur::Quad>(
+	auto storage = std::vector<StackBlur::QuadStorage>(
 		size_t(2 * radius + 1) * kLanes);
+	const auto stack = reinterpret_cast<StackBlur::Quad*>(storage.data());
 	auto ahead = std::vector<int>(std::max(width, height));
 	auto middle = std::make_unique_for_overwrite<uchar[]>(
 		size_t(width) * height * 4);
@@ -818,7 +819,7 @@ void Pass(
 			stride,
 			radius,
 			divider,
-			stack.data(),
+			stack,
 			ahead.data());
 	}
 	for (; y != height; ++y) {
@@ -830,7 +831,7 @@ void Pass(
 			stride,
 			radius,
 			divider,
-			stack.data(),
+			stack,
 			ahead.data());
 	}
 
@@ -848,7 +849,7 @@ void Pass(
 			4,
 			radius,
 			divider,
-			stack.data(),
+			stack,
 			ahead.data());
 	}
 	for (; x != width; ++x) {
@@ -860,7 +861,7 @@ void Pass(
 			4,
 			radius,
 			divider,
-			stack.data(),
+			stack,
 			ahead.data());
 	}
 

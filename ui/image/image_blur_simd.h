@@ -28,3 +28,12 @@ constexpr auto kLanes = 4;
 #else // __aarch64__ || _M_ARM64 || __SSE2__ || _M_X64 || _M_IX86_FP >= 2
 #include "ui/image/image_blur_simd_generic.h"
 #endif // else for __aarch64__ || _M_ARM64 || __SSE2__ || _M_X64 || _M_IX86_FP
+
+namespace Images::StackBlur {
+
+// GCC ignores vector type attributes in a template argument.
+struct QuadStorage {
+	alignas(Quad) uchar bytes[sizeof(Quad)];
+};
+
+} // namespace Images::StackBlur
