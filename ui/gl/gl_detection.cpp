@@ -151,8 +151,53 @@ void CrashCheckStart(CrashCheckStage stage) {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN) && QT_CONFIG(vulkan)
+// Before 545 NVIDIA presents Vulkan via egl-wayland, crashing on first frame.
+constexpr auto kNvidiaNativeWaylandWsiSince = 545;
+
+[[nodiscard]] int NvidiaDriverMajor(
+		const VkPhysicalDeviceDriverProperties &driver,
+		uint32 packedVersion) {
+	auto major = 0;
+	for (const auto ch : driver.driverInfo) {
+		if (ch < '0' || ch > '9') {
+			break;
+		}
+		major = major * 10 + (ch - '0');
+	}
+	return major ? major : int(packedVersion >> 22);
+}
+
+[[nodiscard]] bool VulkanPresentsThroughEglWayland(
+		QVulkanInstance &instance,
+		VkPhysicalDevice device) {
+	const auto getProperties2 = reinterpret_cast<
+		PFN_vkGetPhysicalDeviceProperties2>(
+			instance.getInstanceProcAddr("vkGetPhysicalDeviceProperties2"));
+	if (!getProperties2) {
+		return false;
+	}
+	auto driver = VkPhysicalDeviceDriverProperties{
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
+	};
+	auto properties = VkPhysicalDeviceProperties2{
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+		.pNext = &driver,
+	};
+	getProperties2(device, &properties);
+	LOG(("RHI: Vulkan driver %1 %2."
+		).arg(QString::fromUtf8(driver.driverName)
+		).arg(QString::fromUtf8(driver.driverInfo)));
+	return Platform::IsWayland()
+		&& (driver.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
+		&& (NvidiaDriverMajor(driver, properties.properties.driverVersion)
+			< kNvidiaNativeWaylandWsiSince);
+}
+
 [[nodiscard]] std::optional<RhiCapabilities> ProbeVulkanCapabilities() {
 	auto instance = QVulkanInstance();
+	if (instance.supportedApiVersion() >= QVersionNumber(1, 1)) {
+		instance.setApiVersion(QVersionNumber(1, 1));
+	}
 	if (!instance.create()) {
 		LOG(("RHI: Vulkan instance not available."));
 		return std::nullopt;
@@ -174,6 +219,12 @@ void CrashCheckStart(CrashCheckStage stage) {
 		).arg(compute ? "yes" : "no"));
 	if (software) {
 		LOG(("RHI: Vulkan not chosen, software device."));
+		return std::nullopt;
+	}
+	const auto native = static_cast<const QRhiVulkanNativeHandles*>(
+		rhi->nativeHandles());
+	if (native && VulkanPresentsThroughEglWayland(instance, native->physDev)) {
+		LOG(("RHI: Vulkan not chosen, driver presents through egl-wayland."));
 		return std::nullopt;
 	}
 	return RhiCapabilities{
