@@ -1348,7 +1348,9 @@ LineShaper::Backend::Backend(
 	// Neutral descriptions of the items, with the geometry left until they
 	// are shaped.
 	list.reserve(items.size());
-	for (const auto &piece : items) {
+	auto kept = 0;
+	for (auto i = 0, count = int(items.size()); i != count; ++i) {
+		const auto &piece = items[i];
 		const auto item = piece.item;
 		const auto position = itemPosition(piece);
 		const auto length = itemLength(piece);
@@ -1366,6 +1368,22 @@ LineShaper::Backend::Backend(
 			&& (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji
 				|| type == TextBlockType::Skip);
+
+		// A shape attribute keeps the itemizer out of the block, not out of
+		// what the block holds: an emoji written as a sequence is cut where
+		// no single font covers all of it, and every piece of it would paint
+		// the block once more and take its width once more. A block holds one
+		// object, so the pieces of it are one item here - nothing is shaped
+		// for them anyway.
+		if (object
+			&& !list.empty()
+			&& list.back().object
+			&& (list.back().blockIndex == block)) {
+			list.back().length += length;
+			pango_item_free(item);
+			continue;
+		}
+		items[kept++] = piece;
 		list.push_back(Item{
 			.position = position,
 			.length = length,
@@ -1375,6 +1393,7 @@ LineShaper::Backend::Backend(
 			.newline = !piece.own && (type == TextBlockType::Newline),
 		});
 	}
+	items.resize(kept);
 }
 
 const Text &LineShaper::Backend::pieceText(const Piece &piece) const {
