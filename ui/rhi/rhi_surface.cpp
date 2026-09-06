@@ -138,6 +138,7 @@ void EnsureWindowRhi(not_null<QWidget*> window) {
 	primer->setGeometry(0, 0, 1, 1);
 	primer->hide();
 	LOG(("QRhi: backing store primed for window"));
+	CrashCheckFirstFrame(window);
 #endif // Qt >= 6.7
 }
 

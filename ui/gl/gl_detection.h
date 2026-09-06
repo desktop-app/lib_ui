@@ -14,6 +14,7 @@
 #endif // Q_OS_WIN && Qt < 6
 
 class QOpenGLContext;
+class QWidget;
 
 namespace Ui::GL {
 
@@ -50,6 +51,7 @@ void ForceDisable(bool disable);
 void DetectLastCheckCrash();
 [[nodiscard]] bool LastCrashCheckFailed();
 void CrashCheckFinish();
+void CrashCheckFirstFrame(not_null<QWidget*> window);
 
 #ifdef DESKTOP_APP_USE_ANGLE
 enum class ANGLE {
