@@ -632,13 +632,23 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		trimmedLineEnd = startBlockEnd;
 	}
 
-	const auto extendLeft = (startBlock->position() < _lineStart)
+	auto extendLeft = (startBlock->position() < _lineStart)
 		? qMin(_lineStart - startBlock->position(), 2)
 		: 0;
+	if (extendLeft
+		&& _t->_text.at(_lineStart - extendLeft).isLowSurrogate()) {
+		--extendLeft;
+	}
 	_localFrom = _lineStart - extendLeft;
-	const auto extendedLineEnd = (endBlock && endBlock->position() < trimmedLineEnd && !_elidedLine)
-		? qMin(uint16(trimmedLineEnd + 2), _t->blockEnd(blocksEnd))
-		: trimmedLineEnd;
+	auto extendedLineEnd = (endBlock
+		&& endBlock->position() < trimmedLineEnd
+		&& !_elidedLine)
+		? qMin(int(trimmedLineEnd) + 2, int(_t->blockEnd(blocksEnd)))
+		: int(trimmedLineEnd);
+	if (extendedLineEnd > trimmedLineEnd
+		&& _t->_text.at(extendedLineEnd - 1).isHighSurrogate()) {
+		--extendedLineEnd;
+	}
 
 	auto lineText = QString::fromRawData(
 		_t->_text.constData() + _localFrom,

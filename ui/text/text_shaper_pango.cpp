@@ -83,6 +83,10 @@ public:
 	}
 
 private:
+	// Both tables out of what is in _utf8 and _utf16, or false if the text
+	// holds a surrogate with nothing to pair with.
+	[[nodiscard]] bool fill(QStringView text);
+
 	QString _utf16;
 	QByteArray _utf8;
 
@@ -95,6 +99,33 @@ private:
 Text::Text(QStringView text) {
 	_utf16 = text.toString();
 	_utf8 = text.toUtf8();
+	if (fill(text)) {
+		return;
+	}
+
+	// The tables predict what the conversion gives for every unit, and a
+	// surrogate with nothing to pair with is the one thing the two do not
+	// agree on: Qt 6.9 drops it, the versions before wrote a byte for it.
+	// So none reaches the conversion - each is replaced by U+FFFD, which is
+	// three bytes anywhere - and the tables are made once more. Only text
+	// that was cut apart between the two halves of a pair gets here, and
+	// the lines of the engine are not cut there, so this is rare.
+	for (auto i = 0, count = int(_utf16.size()); i != count; ++i) {
+		const auto ch = _utf16.at(i);
+		if (ch.isHighSurrogate()
+			&& i + 1 < count
+			&& _utf16.at(i + 1).isLowSurrogate()) {
+			++i;
+		} else if (ch.isSurrogate()) {
+			_utf16[i] = QChar::ReplacementCharacter;
+		}
+	}
+	_utf8 = _utf16.toUtf8();
+	const auto filled = fill(_utf16);
+	Ensures(filled);
+}
+
+bool Text::fill(QStringView text) {
 	_toUtf8.resize(text.size() + 1);
 	_toUtf16.resize(_utf8.size() + 1);
 
@@ -102,12 +133,18 @@ Text::Text(QStringView text) {
 	for (auto i = 0, count = int(text.size()); i != count; ++i) {
 		const auto ch = text.at(i);
 		if (ch.isLowSurrogate()) {
+			if (!i || !text.at(i - 1).isHighSurrogate()) {
+				return false;
+			}
 			// Counted already, with the high surrogate that came before it,
 			// and pointed at the start of the pair: nothing may be cut apart
 			// between the two, and a cut that lands here must not reach past
 			// what the pair takes.
-			_toUtf8[i] = (i > 0) ? _toUtf8[i - 1] : byte;
+			_toUtf8[i] = _toUtf8[i - 1];
 			continue;
+		} else if (ch.isHighSurrogate()
+			&& (i + 1 == count || !text.at(i + 1).isLowSurrogate())) {
+			return false;
 		}
 		_toUtf8[i] = byte;
 		const auto length = ch.isHighSurrogate()
@@ -124,6 +161,7 @@ Text::Text(QStringView text) {
 	}
 	_toUtf8[text.size()] = byte;
 	_toUtf16[_utf8.size()] = int(text.size());
+	return true;
 }
 
 // Only what shaping needs: the decorations are drawn by the painter, not
