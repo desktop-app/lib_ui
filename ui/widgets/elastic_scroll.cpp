@@ -415,6 +415,9 @@ ElasticScroll::ElasticScroll(
 , _touchTimer([=] { _touchRightButton = true; })
 , _touchScrollTimer([=] { touchScrollTimer(); })
 , _vertical(orientation == Qt::Vertical)
+, _smoothScroll(
+	[=] { return _state.visibleFrom; },
+	[=](int to) { tryScrollTo(to); })
 , _position(Position{ 0, 0 })
 , _movement(Movement::None) {
 	setAttribute(Qt::WA_AcceptTouchEvents);
@@ -938,7 +941,14 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			if (!weak) {
 				return true;
 			}
-			tryScrollTo(_state.visibleFrom + delta);
+			if (_disabled
+				|| !_smoothScroll.wheelEvent(
+					e,
+					delta,
+					scrollToMin(),
+					scrollToMax())) {
+				tryScrollTo(_state.visibleFrom + delta);
+			}
 			_movement = Movement::None;
 		} else if (!_overscrollReturnAnimation.animating()) {
 			overscrollReturn();
@@ -1476,14 +1486,18 @@ void ElasticScroll::updateBarState() {
 	_bar->updateState(state);
 }
 
+int ElasticScroll::scrollToMin() const {
+	return std::min(_state.visibleFrom, 0);
+}
+
+int ElasticScroll::scrollToMax() const {
+	return std::max(
+		_state.visibleFrom,
+		_state.visibleFrom + (_state.fullSize - _state.visibleTill));
+}
+
 int ElasticScroll::willScrollTo(int position) const {
-	return std::clamp(
-		position,
-		std::min(_state.visibleFrom, 0),
-		std::max(
-			_state.visibleFrom,
-			(_state.visibleFrom
-				+ (_state.fullSize - _state.visibleTill))));
+	return std::clamp(position, scrollToMin(), scrollToMax());
 }
 
 void ElasticScroll::tryScrollTo(int position, bool synthMouseMove) {
