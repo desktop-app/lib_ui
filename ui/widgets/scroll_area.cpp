@@ -9,6 +9,7 @@
 #include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
+#include "base/event_filter.h"
 #include "base/debug_log.h"
 
 #include <QtWidgets/QScrollBar>
@@ -55,6 +56,19 @@ namespace {
 		scToFrom = toFrom;
 	}
 	return scToFrom;
+}
+
+[[nodiscard]] int WheelScrollDelta(
+		not_null<QScrollBar*> bar,
+		not_null<QWheelEvent*> e) {
+	// The position change QAbstractSlider would have applied at once,
+	// so that taking the event over changes how the scroll travels and
+	// not where it arrives.
+	const auto lines = QApplication::wheelScrollLines();
+	const auto page = bar->pageStep();
+	const auto delta = -e->angleDelta().y() * lines * bar->singleStep()
+		/ 120;
+	return std::clamp(delta, -page, page);
 }
 
 } // namespace
@@ -414,7 +428,10 @@ ScrollArea::ScrollArea(
 , _verticalBar(this, true, &_st)
 , _topShadow(this, &_st)
 , _bottomShadow(this, &_st)
-, _touchEnabled(handleTouch) {
+, _touchEnabled(handleTouch)
+, _smoothScroll(
+	[=] { return verticalScrollBar()->value(); },
+	[=](int to) { verticalScrollBar()->setValue(to); }) {
 	setLayoutDirection(style::LayoutDirection());
 	setFocusPolicy(Qt::NoFocus);
 
@@ -444,6 +461,28 @@ ScrollArea::ScrollArea(
 		_touchTimer.setCallback([=] { _touchRightButton = true; });
 		_touchScrollTimer.setCallback([=] { touchScrollTimer(); });
 	}
+
+	// Qt hands a wheel event to the scroll bar, and that is where a
+	// scroll that wants the notch for itself filters it out. Filters
+	// are activated in reverse order of installation and this one is
+	// installed with the bar, before the scroll exists for anyone to
+	// filter, so every such handler is offered the notch first and
+	// the animation only ever takes what is left.
+	base::install_event_filter(verticalScrollBar(), [=](
+			not_null<QEvent*> e) {
+		if (e->type() != QEvent::Wheel || _disabled) {
+			return base::EventFilterResult::Continue;
+		}
+		const auto bar = verticalScrollBar();
+		const auto wheel = static_cast<QWheelEvent*>(e.get());
+		return _smoothScroll.wheelEvent(
+			wheel,
+			WheelScrollDelta(bar, wheel),
+			bar->minimum(),
+			bar->maximum())
+			? base::EventFilterResult::Cancel
+			: base::EventFilterResult::Continue;
+	});
 }
 
 void ScrollArea::touchDeaccelerate(int32 elapsed) {

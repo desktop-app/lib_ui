@@ -9,6 +9,7 @@
 #include "ui/rp_widget.h"
 #include "ui/ui_utility.h"
 #include "ui/effects/animations.h"
+#include "ui/widgets/smooth_scroll.h"
 #include "base/object_ptr.h"
 #include "base/timer.h"
 #include "styles/style_widgets.h"
@@ -267,6 +268,7 @@ private:
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 	Fn<bool(QPoint, Qt::ScrollPhase)> _crossAxisWheelProcess;
 	ScrollDirectionLock _wheelDirectionLock;
+	SmoothScroll _smoothScroll;
 	bool _wheelDirectionLocked = false;
 	bool _widgetAcceptsTouch = false;
 
