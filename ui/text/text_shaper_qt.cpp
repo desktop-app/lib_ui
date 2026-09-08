@@ -75,6 +75,12 @@ struct ShapeEntry {
 	QTextEngine *engine = nullptr;
 	const QScriptItem *si = nullptr;
 
+	// The one this item was shaped with, kept because the engine moves its
+	// font on to the next block and would hand out a different one later.
+	// A glyph of a font that merges fallbacks carries the index of the one it
+	// came from, and that index means nothing to any other font's engine.
+	QExplicitlySharedDataPointer<QFontEngine> fontEngine;
+
 	// Both are shifted so that index zero is the first character of the item.
 	const unsigned short *logClusters = nullptr;
 	const QCharAttributes *attributes = nullptr;
@@ -244,11 +250,11 @@ Fixed ShapedItem::rightBearingBefore(int offset) const {
 		return {};
 	}
 	const auto glyph = entry.logClusters[offset - 1];
-	if (glyph >= entry.si->num_glyphs) {
+	if (glyph >= entry.si->num_glyphs || !entry.fontEngine) {
 		return {};
 	}
 	auto bearing = qreal();
-	entry.engine->fontEngine(*entry.si)->getGlyphBearings(
+	entry.fontEngine->getGlyphBearings(
 		entry.glyphs.glyphs[glyph],
 		0,
 		&bearing);
@@ -439,6 +445,14 @@ void LineShaper::shapeRange(int firstItem, int lastItem) {
 			.newline = (si.analysis.flags
 				== QScriptAnalysis::LineOrParagraphSeparator),
 		};
+		if (_backend->items[i].object) {
+			// Never shaped, so there is no glyph of it to measure.
+			_backend->entries[i].fontEngine.reset();
+		} else {
+			// Taken now, while shaping this item has left its block's font
+			// on the engine: after the loop only the last one of them is.
+			_backend->entries[i].fontEngine = e.fontEngine(si);
+		}
 	}
 
 	_backend->visualOrder.resize(count);
