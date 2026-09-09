@@ -901,12 +901,12 @@ bool Paragraph::ready() const {
 
 namespace {
 
-// What a resolved paragraph was made from. A string that was given other text
-// keeps its address, so where its text lives and how long it is are a part of
-// this too.
+// What a resolved paragraph was made from: the text, and which part of it was
+// laid out how.
 struct ResolvedKey {
-	const void *owner = nullptr;
-	uint version = 0;
+	// The text itself, not the string that holds it and not its address:
+	// both are given to another text soon enough.
+	uint layoutId = 0;
 	int position = 0;
 	int length = 0;
 
@@ -978,15 +978,12 @@ void Paragraph::resolve(
 	// The engine resolves a paragraph for every question it is asked about a
 	// point, and there is one question per pixel of a hit test - while the
 	// answer depends on nothing that changes in between. So the last one is
-	// kept and handed out again: what it was made from is remembered with it,
-	// down to where the text of the string lives, because a string that was
-	// given other text is another paragraph.
-	// The address of a string is not enough to tell one text from another: a
-	// string keeps it while the text in it is replaced, and a string that is
-	// gone leaves it to the next one. What it counts its own changes with is.
+	// kept and handed out again, remembered by what it was made from - which
+	// is a text, not a string: a string is given other text, gives its
+	// address to the next string when it is gone, and takes the text of
+	// another when one is moved into it.
 	const auto key = ResolvedKey{
-		.owner = t.get(),
-		.version = t->_version,
+		.layoutId = t->_layoutId,
 		.position = position,
 		.length = length,
 		.ratio = RatioKey(ratio),

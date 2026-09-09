@@ -545,9 +545,14 @@ private:
 	QString _text;
 	std::vector<Block> _blocks;
 
-	// Bumped by everything that changes what is laid out, so that anything
-	// keeping a result of laying it out can tell that its own is stale.
-	uint _version = 0;
+	// Taken anew from a counter of the library by everything that changes
+	// what is laid out, so that anything keeping a result of laying it out
+	// can tell whether that result is of what is here now. A number of its
+	// own is not enough for that: a string keeps its address while the text
+	// in it is replaced, hands that address to the next string when it is
+	// gone, and takes the count of another string when one is moved into it -
+	// so what tells one text from another must not be counted per string.
+	uint _layoutId = 0;
 	std::vector<Word> _words;
 	ExtendedWrap _extended;
 

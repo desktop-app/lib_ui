@@ -36,6 +36,18 @@ namespace {
 
 constexpr auto kDefaultSpoilerCacheCapacity = 24;
 
+// A number no other text carries, for whatever keeps a result of laying one
+// out to tell whether that result is of the text it is looking at.
+//
+// It wraps, and that is not a hole: a number comes back only after four
+// billion texts were given to strings, and nothing worked out for a text
+// lives that long - what keeps such results keeps a handful of them and
+// throws the rest away, long before the count comes around.
+[[nodiscard]] uint NextLayoutId() {
+	static auto counter = uint(0);
+	return ++counter;
+}
+
 [[nodiscard]] Qt::LayoutDirection StringDirection(
 		const QString &str,
 		int from,
@@ -896,7 +908,7 @@ bool String::blockquoteExpanded(int index) const {
 }
 
 void String::setBlockquoteExpanded(int index, bool expanded) {
-	++_version;
+	_layoutId = NextLayoutId();
 	Expects(_extended && _extended->quotes);
 	Expects(index > 0 && index <= _extended->quotes->list.size());
 
@@ -920,7 +932,7 @@ bool String::updateSkipBlock(int width, int height) {
 	if (!width || !height) {
 		return removeSkipBlock();
 	}
-	++_version;
+	_layoutId = NextLayoutId();
 	if (!_blocks.empty() && _blocks.back()->type() == TextBlockType::Skip) {
 		const auto &block = _blocks.back().unsafe<SkipBlock>();
 		if (block.width() == width && block.height() == height) {
@@ -962,7 +974,7 @@ bool String::removeSkipBlock() {
 	if (_blocks.empty() || _blocks.back()->type() != TextBlockType::Skip) {
 		return false;
 	}
-	++_version;
+	_layoutId = NextLayoutId();
 	if (_skipBlockAddedNewline) {
 		const auto size = _blocks.back()->position() - 1;
 		_text.resize(size);
@@ -2239,7 +2251,7 @@ int String::lineHeight() const {
 }
 
 void String::clear() {
-	++_version;
+	_layoutId = NextLayoutId();
 	_text.clear();
 	_blocks.clear();
 	_extended = nullptr;
