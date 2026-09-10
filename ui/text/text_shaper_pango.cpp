@@ -841,9 +841,10 @@ void ShowGlyphs(
 	return true;
 }
 
-} // namespace
-
-struct Paragraph::State {
+// What the itemizer worked out for a paragraph. It belongs to the text and
+// not to whoever asked for it, so it is kept aside and lent out again - see
+// the ring below.
+struct Itemized {
 	Text text;
 	int position = 0;
 
@@ -861,26 +862,54 @@ struct Paragraph::State {
 
 	qreal ratio = 1.;
 
-	// In characters, of the text that was itemized - which is not the same as
-	// the levels below once an ellipsis was added past its end.
+	// In characters of the text that was itemized.
 	int length = 0;
 
-	// Where a line put an ellipsis, in characters of the paragraph. Beyond it
-	// the text of a line is its own and no longer the paragraph's, however
-	// short that line is.
-	int elideAt = -1;
-
-	// One per character, for the ellipsis a line may add past the end of the
-	// paragraph, which was never itemized with it.
+	// One per character.
 	std::vector<uchar> levels;
 
-	~State() {
+	// How many paragraphs are reading it right now: the ring lends it out
+	// and must not write over a slot while a line is laid out from it.
+	int borrowers = 0;
+
+	~Itemized() {
 		if (items) {
 			g_list_free_full(items, [](gpointer item) {
 				pango_item_free(static_cast<PangoItem*>(item));
 			});
 		}
 	}
+};
+
+} // namespace
+
+// A paragraph of the engine is a use of what the itemizer worked out: the
+// same answer serves every line of it and every question about a point in
+// it, and the ellipsis one line may add belongs to the use and not to the
+// text, so it is kept here and not there.
+struct Paragraph::State {
+	void point(Itemized *to) {
+		if (itemized == to) {
+			return;
+		} else if (itemized) {
+			--itemized->borrowers;
+		}
+		itemized = to;
+		elideAt = -1;
+		if (itemized) {
+			++itemized->borrowers;
+		}
+	}
+	~State() {
+		point(nullptr);
+	}
+
+	Itemized *itemized = nullptr;
+
+	// Where a line put an ellipsis, in characters of the paragraph. Beyond it
+	// the text of a line is its own and no longer the paragraph's, however
+	// short that line is.
+	int elideAt = -1;
 };
 
 Paragraph::Paragraph() = default;
@@ -892,11 +921,13 @@ Paragraph &Paragraph::operator=(Paragraph &&other) = default;
 Paragraph::~Paragraph() = default;
 
 void Paragraph::clear() {
-	_state = nullptr;
+	if (_state) {
+		_state->point(nullptr);
+	}
 }
 
 bool Paragraph::ready() const {
-	return _state != nullptr;
+	return _state && _state->itemized;
 }
 
 namespace {
@@ -930,35 +961,62 @@ struct ResolvedKey {
 // paragraph before it was ever asked for again.
 constexpr auto kKeptParagraphs = 4;
 
-// Kept without a type of its own: what a paragraph is made of belongs to it
-// and is not named outside of it.
 struct Resolved {
 	ResolvedKey key;
-	std::shared_ptr<void> state;
+	std::unique_ptr<Itemized> itemized;
 };
-std::array<Resolved, kKeptParagraphs> Kept;
+
+// Four of them, and for a while more than four: a paragraph that is being
+// read from cannot be written over, so when every slot is busy the ring grows
+// rather than take one away - and gives the room back as soon as it can.
+std::vector<Resolved> Kept(kKeptParagraphs);
 int KeptNext/* = 0*/;
 
-[[nodiscard]] std::shared_ptr<void> KeptFor(const ResolvedKey &key) {
+[[nodiscard]] Itemized *KeptFor(const ResolvedKey &key) {
 	for (const auto &entry : Kept) {
-		if (entry.state && entry.key == key) {
-			return entry.state;
+		if (entry.itemized && entry.key == key) {
+			return entry.itemized.get();
 		}
 	}
 	return nullptr;
 }
 
-void Keep(const ResolvedKey &key, std::shared_ptr<void> state) {
-	Kept[KeptNext] = { key, std::move(state) };
-	KeptNext = (KeptNext + 1) % kKeptParagraphs;
-}
-
-void Forget(const void *state) {
-	for (auto &entry : Kept) {
-		if (entry.state.get() == state) {
-			entry = {};
+// Takes the paragraph into the slot that waited the longest and answers with
+// where it now lives. The ring owns every paragraph it was given until it can
+// let go of it, so nothing it lent out is ever taken from under a line.
+[[nodiscard]] Itemized *Keep(
+		const ResolvedKey &key,
+		std::unique_ptr<Itemized> itemized) {
+	// First the room the ring took while everything was being read from,
+	// given back now that something may not be.
+	for (auto i = int(Kept.size()); i > kKeptParagraphs;) {
+		--i;
+		if (!Kept[i].itemized || !Kept[i].itemized->borrowers) {
+			Kept.erase(begin(Kept) + i);
+			if (KeptNext > i) {
+				--KeptNext;
+			}
 		}
 	}
+	if (KeptNext >= int(Kept.size())) {
+		KeptNext = 0;
+	}
+
+	const auto result = itemized.get();
+	const auto count = int(Kept.size());
+	for (auto i = 0; i != count; ++i) {
+		const auto at = (KeptNext + i) % count;
+		if (Kept[at].itemized && Kept[at].itemized->borrowers) {
+			continue;
+		}
+		Kept[at] = { key, std::move(itemized) };
+		KeptNext = (at + 1) % count;
+		return result;
+	}
+
+	// Everything is being read from, so the ring holds one more for now.
+	Kept.push_back({ key, std::move(itemized) });
+	return result;
 }
 
 } // namespace
@@ -991,21 +1049,30 @@ void Paragraph::resolve(
 		.blockIndexLimit = blockIndexLimit,
 		.baseRtl = baseRtl,
 	};
-	if (auto kept = KeptFor(key)) {
-		_state = std::static_pointer_cast<State>(std::move(kept));
+	if (!_state) {
+		_state = std::make_unique<State>();
+	}
+	if (const auto kept = KeptFor(key)) {
+		_state->point(kept);
 		return;
 	}
-	_state = std::make_shared<State>(State{
+
+	// Built here and handed to the ring below, which lends it back.
+	auto itemized = std::make_unique<Itemized>(Itemized{
 		.text = Text(QStringView(t->_text).mid(position, length)),
 		.position = position,
 		.ratio = ratio,
 		.length = length,
 	});
+	const auto raw = itemized.get();
+	const auto keep = [&] {
+		_state->point(Keep(key, std::move(itemized)));
+	};
 	if (!length) {
-		Keep(key, _state);
+		keep();
 		return;
 	}
-	_state->levels.resize(length, uchar(baseRtl ? 1 : 0));
+	raw->levels.resize(length, uchar(baseRtl ? 1 : 0));
 
 	const auto attributes = pango_attr_list_new();
 
@@ -1024,8 +1091,8 @@ void Paragraph::resolve(
 		if (till <= from) {
 			continue;
 		}
-		const auto start = _state->text.toUtf8(from);
-		const auto end = _state->text.toUtf8(till);
+		const auto start = raw->text.toUtf8(from);
+		const auto end = raw->text.toUtf8(till);
 		const auto font = WithFlags(t->_st->font, block->flags());
 
 		// An object block is not text at all: it takes the width its own
@@ -1069,27 +1136,27 @@ void Paragraph::resolve(
 		pango_font_description_free(description);
 	}
 
-	_state->items = pango_itemize_with_base_dir(
+	raw->items = pango_itemize_with_base_dir(
 		Context(),
 		baseRtl ? PANGO_DIRECTION_RTL : PANGO_DIRECTION_LTR,
-		_state->text.data(),
+		raw->text.data(),
 		0,
-		_state->text.size(),
+		raw->text.size(),
 		attributes,
 		nullptr); // cached_iter
 	pango_attr_list_unref(attributes);
 
-	for (auto i = _state->items; i != nullptr; i = i->next) {
+	for (auto i = raw->items; i != nullptr; i = i->next) {
 		const auto item = static_cast<PangoItem*>(i->data);
-		_state->list.push_back(item);
-		const auto from = _state->text.toUtf16(item->offset);
-		const auto till = _state->text.toUtf16(item->offset + item->length);
+		raw->list.push_back(item);
+		const auto from = raw->text.toUtf16(item->offset);
+		const auto till = raw->text.toUtf16(item->offset + item->length);
 		for (auto j = from; j != till; ++j) {
-			_state->levels[j] = uchar(item->analysis.level);
+			raw->levels[j] = uchar(item->analysis.level);
 		}
 	}
 
-	Keep(key, _state);
+	keep();
 }
 
 void Paragraph::elide(int position, int count, bool baseRtl) {
@@ -1097,22 +1164,12 @@ void Paragraph::elide(int position, int count, bool baseRtl) {
 		return;
 	}
 
-	// The ellipsis goes into the paragraph itself, so what is kept aside must
-	// not be handed to anyone expecting a paragraph without one.
-	Forget(_state.get());
-
+	// Only where it begins is remembered, and here rather than with what the
+	// itemizer worked out: the ellipsis is of this line and not of the text,
+	// which is laid out without one and stays worth keeping for the next
+	// question about it. The way the ellipsis goes is taken from the letter
+	// before it when a line is shaped.
 	_state->elideAt = position;
-	const auto length = position + count;
-	if (length > int(_state->levels.size())) {
-		_state->levels.resize(length, uchar(baseRtl ? 1 : 0));
-	}
-	// The ellipsis goes the way the text before it goes.
-	const auto level = (length > count)
-		? _state->levels[length - count - 1]
-		: uchar(baseRtl ? 1 : 0);
-	for (auto i = count; i > 0; --i) {
-		_state->levels[length - i] = level;
-	}
 }
 
 // Line breaks and caret positions of one line, which Pango works out in a
@@ -1249,7 +1306,12 @@ struct LineShaper::Backend {
 	[[nodiscard]] int blockIndexAt(int position) const;
 
 	const not_null<const String*> t;
-	Paragraph::State &paragraph;
+	// What the itemizer worked out for the paragraph this line is in, lent
+	// by whoever keeps it - and borrowed here on its own, because a line is
+	// laid out from it directly and must not depend on the paragraph holding
+	// on to it meanwhile. And where a line before this one put an ellipsis.
+	Itemized &paragraph;
+	int elideAt = -1;
 
 	// The line's own text, which the paragraph does not hold when an ellipsis
 	// was added to it.
@@ -1279,9 +1341,12 @@ LineShaper::Backend::Backend(
 	int blockIndexHint,
 	int blockIndexLimit)
 : t(t)
-, paragraph(*paragraph._state)
+, paragraph(*paragraph._state->itemized)
+, elideAt(paragraph._state->elideAt)
 , text(text)
 , offset(offset) {
+	++this->paragraph.borrowers;
+
 	const auto &state = this->paragraph;
 	const auto from = offset - state.position;
 	const auto till = from + int(text.size());
@@ -1290,7 +1355,7 @@ LineShaper::Backend::Backend(
 	// its part of the line is itemized on its own and put at the end.
 	const auto inParagraph = std::min(
 		till,
-		(state.elideAt >= 0) ? state.elideAt : state.length);
+		(elideAt >= 0) ? elideAt : state.length);
 	// The items of a paragraph follow each other, so the ones of a line are a
 	// range out of them: the first is the one the line starts in, and the walk
 	// stops as soon as an item begins past where the line ends.
@@ -1459,6 +1524,7 @@ int LineShaper::Backend::blockIndexAt(int position) const {
 }
 
 LineShaper::Backend::~Backend() {
+	--paragraph.borrowers;
 	for (const auto &piece : items) {
 		pango_item_free(piece.item);
 	}

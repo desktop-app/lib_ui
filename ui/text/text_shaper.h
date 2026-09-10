@@ -152,10 +152,7 @@ private:
 
 	struct State;
 
-	// Shared, because the same one is kept aside and handed out again: the
-	// engine resolves a paragraph for every question it is asked about a
-	// point, and the answer depends on nothing that changes between them.
-	std::shared_ptr<State> _state;
+	std::unique_ptr<State> _state;
 
 };
 
