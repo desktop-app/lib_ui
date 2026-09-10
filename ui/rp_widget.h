@@ -393,6 +393,14 @@ struct AccessibilityState {
 	void writeTo(QAccessible::State &state);
 };
 
+// Numeric value of a control that picks a point on a range (e.g. a slider).
+struct AccessibilityValueRange {
+	double current = 0.;
+	double minimum = 0.;
+	double maximum = 0.;
+	double step = 1.;
+};
+
 class RpWidget : public RpWidgetBase<QWidget> {
 	// The Q_OBJECT meta info is used for qobject_cast above!
 	Q_OBJECT
@@ -426,6 +434,14 @@ public:
 	void accessibilityStateChanged(AccessibilityState changes);
 	[[nodiscard]] virtual QString accessibilityValue() const;
 	void accessibilityValueChanged();
+
+	// Numeric range value of a slider-like control. nullopt (the default)
+	// means the widget exposes no range; a widget returning one gets
+	// QAccessibleValueInterface, which the platform maps to a range value
+	// pattern so a screen reader can read and change the number.
+	[[nodiscard]] virtual std::optional<AccessibilityValueRange> accessibilityValueRange() const;
+	// The platform may deliver the new value on a background thread.
+	virtual void accessibilitySetValue(double value);
 	[[nodiscard]] virtual QStringList accessibilityActionNames();
 	virtual void accessibilityDoAction(const QString &name);
 	[[nodiscard]] virtual int accessibilityChildCount() const;
@@ -457,6 +473,16 @@ public:
 	void accessibilityChildValueChanged(int index);
 	[[nodiscard]] virtual QAccessible::State accessibilityChildState(int index) const;
 	void accessibilityChildStateChanged(int index, AccessibilityState changes);
+
+	// Announces that a child was selected or deselected. A state change does
+	// not cover it: the Windows bridge looks at the checked flag there and
+	// ignores the selected one. Both directions raise the same event, the one
+	// that bridge forwards (SelectionRemove reaches no one) - a screen reader
+	// reads the new value off the child and announces the difference, so it
+	// only needs telling that the selection changed. SideBarButton does the
+	// same for the folders that are real widgets.
+	void accessibilityChildSelectionChanged(int index);
+
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildRole() const;
 	[[nodiscard]] virtual QRect accessibilityChildRect(int index) const;
 	[[nodiscard]] virtual int accessibilityChildColumnCount(int row) const;

@@ -23,6 +23,7 @@
 #include "ui/ui_utility.h"
 
 #include <QtGui/QtEvents>
+#include <QtGui/QCursor>
 #include <QtGui/QPainter>
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
@@ -1508,6 +1509,21 @@ PopupMenu::~PopupMenu() {
 	if (_destroyedCallback) {
 		_destroyedCallback();
 	}
+}
+
+QPoint ContextMenuPosition(
+		not_null<QWidget*> anchor,
+		not_null<QContextMenuEvent*> e) {
+	return ContextMenuPosition(anchor, e, anchor->rect());
+}
+
+QPoint ContextMenuPosition(
+		not_null<QWidget*> anchor,
+		not_null<QContextMenuEvent*> e,
+		QRect rect) {
+	return (e->reason() == QContextMenuEvent::Keyboard)
+		? anchor->mapToGlobal(rect.center())
+		: QCursor::pos();
 }
 
 } // namespace Ui
