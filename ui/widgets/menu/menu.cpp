@@ -16,6 +16,37 @@
 #include <QtWidgets/QApplication>
 
 namespace Ui::Menu {
+namespace {
+
+constexpr auto kFluidStiffness = 600. * 10.;
+constexpr auto kFluidDamping = 38. * 3.;
+constexpr auto kFluidSubstep = 0.004;
+constexpr auto kFluidMaxFrame = crl::time(64);
+constexpr auto kFluidShowDuration = crl::time(120);
+constexpr auto kFluidHideDuration = crl::time(80);
+
+} // namespace
+
+void Menu::FluidSpring::snap() {
+	value = target;
+	velocity = 0.;
+}
+
+bool Menu::FluidSpring::step(float64 seconds) {
+	while (seconds > 0.) {
+		const auto h = std::min(seconds, kFluidSubstep);
+		const auto force = -kFluidStiffness * (value - target)
+			- kFluidDamping * velocity;
+		velocity += force * h;
+		value += velocity * h;
+		seconds -= h;
+	}
+	if (std::abs(value - target) < 0.1 && std::abs(velocity) < 1.) {
+		snap();
+		return true;
+	}
+	return false;
+}
 
 Menu::Menu(QWidget *parent, const style::Menu &st)
 : RpWidget(parent)
@@ -54,8 +85,14 @@ void Menu::init() {
 
 	paintRequest(
 	) | rpl::on_next([=](const QRect &clip) {
-		QPainter(this).fillRect(clip, _st.itemBg);
+		auto p = QPainter(this);
+		p.fillRect(clip, _st.itemBg);
+		paintFluidHighlight(p);
 	}, lifetime());
+
+	_fluidAnimation.init([=](crl::time now) {
+		return fluidStep(now);
+	});
 
 	positionValue(
 	) | rpl::on_next([=] {
@@ -130,6 +167,7 @@ not_null<QAction*> Menu::insertAction(
 				const auto widget = _actionWidgets[data.index].get();
 				widget->setSelected(true, widget->lastTriggeredSource());
 			}
+			updateFluidHighlight();
 			return;
 		}
 		_lastSelectedByMouse = (data.source == TriggeredSource::Mouse);
@@ -138,6 +176,7 @@ not_null<QAction*> Menu::insertAction(
 				_actionWidgets[i]->setSelected(false);
 			}
 		}
+		updateFluidHighlight();
 		if (_activatedCallback) {
 			_activatedCallback(data);
 		}
@@ -353,11 +392,128 @@ void Menu::setForceWidth(int forceWidth) {
 	resizeFromInner(_forceWidth, height());
 }
 
+bool Menu::fluidHover() const {
+	return _st.fluidHover;
+}
+
+ItemBase *Menu::nearestItem(QPoint p) const {
+	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
+	const auto inner = rect().marginsRemoved(margins).intersected(
+		visibleRect());
+	if (!inner.contains(p)) {
+		return nullptr;
+	}
+	auto result = (ItemBase*)nullptr;
+	auto best = std::numeric_limits<int>::max();
+	for (const auto &widget : _actionWidgets) {
+		if (!widget->isEnabled() || widget->action()->isSeparator()) {
+			continue;
+		}
+		const auto top = widget->y();
+		const auto bottom = top + widget->height();
+		const auto distance = (p.y() < top)
+			? (top - p.y())
+			: (p.y() >= bottom)
+			? (p.y() - bottom + 1)
+			: 0;
+		if (distance < best && distance <= _st.fluidHoverDistance) {
+			best = distance;
+			result = widget.get();
+		}
+	}
+	return result;
+}
+
+void Menu::updateFluidHighlight() {
+	if (!fluidHover()) {
+		return;
+	}
+	const auto selected = findSelectedAction();
+	if (!selected) {
+		if (_fluidShown) {
+			_fluidShown = false;
+			_fluidAnimation.stop();
+			_fluidOpacity.start(
+				[=] { repaintFluidRect(); },
+				_fluidOpacity.value(1.),
+				0.,
+				kFluidHideDuration);
+		}
+		return;
+	}
+	_fluidTop.target = selected->y();
+	_fluidHeight.target = selected->height();
+	if (!_fluidShown) {
+		_fluidShown = true;
+		_fluidAnimation.stop();
+		_fluidTop.snap();
+		_fluidHeight.snap();
+		_fluidOpacity.start(
+			[=] { repaintFluidRect(); },
+			_fluidOpacity.value(0.),
+			1.,
+			kFluidShowDuration);
+	} else if (anim::Disabled()) {
+		_fluidTop.snap();
+		_fluidHeight.snap();
+	} else if (!_fluidAnimation.animating()) {
+		_fluidLastTime = crl::now();
+		_fluidAnimation.start();
+	}
+	repaintFluidRect();
+}
+
+bool Menu::fluidStep(crl::time now) {
+	const auto passed = std::min(now - _fluidLastTime, kFluidMaxFrame);
+	_fluidLastTime = now;
+	const auto seconds = passed / 1000.;
+	const auto topSettled = _fluidTop.step(seconds);
+	const auto heightSettled = _fluidHeight.step(seconds);
+	repaintFluidRect();
+	return !topSettled || !heightSettled;
+}
+
+QRect Menu::fluidRect() const {
+	return QRect(
+		0,
+		int(base::SafeRound(_fluidTop.value)),
+		width(),
+		int(base::SafeRound(_fluidHeight.value)));
+}
+
+void Menu::repaintFluidRect() {
+	const auto now = fluidRect();
+	update(_fluidPainted.united(now));
+	_fluidPainted = now;
+}
+
+void Menu::paintFluidHighlight(QPainter &p) {
+	if (!fluidHover()) {
+		return;
+	}
+	const auto opacity = _fluidOpacity.value(_fluidShown ? 1. : 0.);
+	if (opacity <= 0.) {
+		return;
+	}
+	p.setOpacity(opacity);
+	p.fillRect(fluidRect(), _st.itemBgOver);
+	p.setOpacity(1.);
+}
+
 void Menu::updateSelected(QPoint globalPosition) {
 	if (_mouseSelectionFrozen) {
 		return;
 	}
 	const auto p = mapFromGlobal(globalPosition) - QPoint(0, _st.skip);
+	if (fluidHover()) {
+		if (const auto widget = nearestItem(p)) {
+			_lastSelectedByMouse = true;
+			widget->setSelected(true);
+		} else {
+			clearMouseSelection();
+		}
+		return;
+	}
 	for (const auto &widget : _actionWidgets) {
 		const auto widgetRect = QRect(widget->pos(), widget->size());
 		if (widgetRect.contains(p)) {
@@ -452,8 +608,9 @@ void Menu::setSelected(int selected, bool isMouseSelection) {
 	if (const auto selectedItem = findSelectedAction()) {
 		if (selectedItem->index() == selected) {
 			return;
+		} else if (selected < 0) {
+			selectedItem->setSelected(false, source);
 		}
-		selectedItem->setSelected(false, source);
 	}
 	if (selected >= 0) {
 		_actionWidgets[selected].get()->setSelected(true, source);

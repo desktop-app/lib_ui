@@ -82,7 +82,7 @@ int MultilineAction::contentHeight() const {
 void MultilineAction::paintEvent(QPaintEvent *e) {
 	auto p = QPainter(this);
 	const auto selected = isSelected();
-	p.fillRect(rect(), selected ? _st.itemBgOver : _st.itemBg);
+	paintBackground(p, rect(), selected);
 	RippleButton::paintRipple(p, 0, 0);
 	if (const auto icon = (selected ? _iconOver : _icon)) {
 		icon->paint(p, _st.itemIconPosition, width());

@@ -20,7 +20,6 @@ Separator::Separator(
 , _lineWidth(separator.width)
 , _padding(separator.padding)
 , _fg(separator.fg)
-, _bg(st.itemBg)
 , _height(_padding.top() + _lineWidth + _padding.bottom())
 , _action(action) {
 	setEnabled(false);
@@ -29,7 +28,7 @@ Separator::Separator(
 	) | rpl::on_next([=] {
 		Painter p(this);
 
-		p.fillRect(0, 0, width(), _height, _bg);
+		paintBackground(p, QRect(0, 0, width(), _height), false);
 		p.fillRect(
 			_padding.left(),
 			_padding.top(),

@@ -16,7 +16,22 @@ ItemBase::ItemBase(
 	not_null<Menu*> parent,
 	const style::Menu &st)
 : RippleButton(parent, st.ripple)
-, _menu(parent) {
+, _menu(parent)
+, _menuStyle(st) {
+}
+
+void ItemBase::paintBackground(
+		QPainter &p,
+		const QRect &rect,
+		bool selected) {
+	if (_menu->fluidHover()) {
+		return;
+	}
+	const auto &st = _menuStyle;
+	if (selected && st.itemBgOver->c.alpha() < 255) {
+		p.fillRect(rect, st.itemBg);
+	}
+	p.fillRect(rect, selected ? st.itemBgOver : st.itemBg);
 }
 
 void ItemBase::setSelected(
@@ -133,21 +148,30 @@ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
 	widget->events(
 	) | rpl::on_next([=](not_null<QEvent*> e) {
 		const auto type = e->type();
+		const auto fluid = _menu->fluidHover();
 		if (((type == QEvent::Leave)
 			|| (type == QEvent::Enter)
-			|| (type == QEvent::MouseMove)) && action()->isEnabled()) {
+			|| (type == QEvent::MouseMove))
+			&& (fluid || action()->isEnabled())) {
 			const auto leave = (type == QEvent::Leave);
-			if (!leave) {
+			const auto global = leave
+				? QCursor::pos()
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-				_menu->setLastMouseGlobal(static_cast<QSinglePointEvent*>(
-					e.get())->globalPosition().toPoint());
+				: static_cast<QSinglePointEvent*>(
+					e.get())->globalPosition().toPoint();
 #else // Qt >= 6.0.0
-				_menu->setLastMouseGlobal((type == QEvent::Enter)
-					? static_cast<QEnterEvent*>(e.get())->globalPos()
-					: static_cast<QMouseEvent*>(e.get())->globalPos());
+				: (type == QEvent::Enter)
+				? static_cast<QEnterEvent*>(e.get())->globalPos()
+				: static_cast<QMouseEvent*>(e.get())->globalPos();
 #endif // Qt < 6.0.0
+			if (!leave) {
+				_menu->setLastMouseGlobal(global);
 			}
-			if (!_menu->mouseSelectionFrozen()) {
+			if (_menu->mouseSelectionFrozen()) {
+				return;
+			} else if (fluid) {
+				_menu->handleMouseMove(global);
+			} else {
 				setSelected(!leave);
 			}
 		} else if ((type == QEvent::MouseButtonRelease)

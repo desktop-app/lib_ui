@@ -7,6 +7,7 @@
 #pragma once
 
 #include "base/unique_qptr.h"
+#include "ui/effects/animations.h"
 #include "ui/rp_widget.h"
 #include "ui/widgets/menu/menu_common.h"
 
@@ -39,6 +40,8 @@ public:
 	[[nodiscard]] const style::Menu &st() const {
 		return _st;
 	}
+
+	[[nodiscard]] bool fluidHover() const;
 
 	not_null<QAction*> addAction(base::unique_qptr<ItemBase> widget);
 	not_null<QAction*> addAction(
@@ -135,8 +138,24 @@ protected:
 	void mouseReleaseEvent(QMouseEvent *e) override;
 
 private:
+	struct FluidSpring {
+		float64 value = 0.;
+		float64 velocity = 0.;
+		float64 target = 0.;
+
+		void snap();
+		[[nodiscard]] bool step(float64 seconds);
+	};
+
 	void updateSelected(QPoint globalPosition);
+	[[nodiscard]] ItemBase *nearestItem(QPoint p) const;
 	void init();
+
+	void updateFluidHighlight();
+	[[nodiscard]] bool fluidStep(crl::time now);
+	[[nodiscard]] QRect fluidRect() const;
+	void repaintFluidRect();
+	void paintFluidHighlight(QPainter &p);
 
 	not_null<QAction*> addAction(
 		not_null<QAction*> action,
@@ -182,6 +201,14 @@ private:
 	QPoint _mousePopupPosition;
 
 	QPointer<QAction> _childShownAction;
+
+	FluidSpring _fluidTop;
+	FluidSpring _fluidHeight;
+	Animations::Basic _fluidAnimation;
+	Animations::Simple _fluidOpacity;
+	crl::time _fluidLastTime = 0;
+	QRect _fluidPainted;
+	bool _fluidShown = false;
 
 	rpl::event_stream<> _resizesFromInner;
 	rpl::event_stream<ScrollToRequest> _scrollToRequests;

@@ -35,6 +35,12 @@ public:
 	int index() const;
 	void setIndex(int index);
 
+	[[nodiscard]] not_null<Menu*> menu() const {
+		return _menu;
+	}
+
+	void paintBackground(QPainter &p, const QRect &rect, bool selected);
+
 	void setClicked(TriggeredSource source = TriggeredSource::Mouse);
 
 	rpl::producer<CallbackData> clicks() const;
@@ -87,6 +93,7 @@ private:
 	base::qt_connection _connection;
 
 	Menu *_menu = nullptr;
+	const style::Menu &_menuStyle;
 
 };
 

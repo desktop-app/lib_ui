@@ -263,6 +263,9 @@ Menu {
 	widthMax: pixels;
 
 	ripple: RippleAnimation;
+
+	fluidHover: bool;
+	fluidHoverDistance: pixels;
 }
 
 PopupMenu {
@@ -974,6 +977,9 @@ defaultMenu: Menu {
 	separator: defaultMenuSeparator;
 
 	arrow: defaultMenuArrow;
+
+	fluidHover: true;
+	fluidHoverDistance: 16px;
 
 	widthMin: 156px;
 	widthMax: 300px;
