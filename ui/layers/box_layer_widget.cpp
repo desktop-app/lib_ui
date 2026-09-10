@@ -418,18 +418,20 @@ void BoxLayerWidget::setDimensions(
 			resize(newWidth, countRealHeight());
 			auto newGeometry = geometry();
 			auto parentHeight = parent->height();
+			const auto newLeft = (parent->width() - newGeometry.width()) / 2;
+			auto newTop = newGeometry.top();
 			const auto bottomMargin = st().margin.bottom();
 			if (newGeometry.top() + newGeometry.height() + bottomMargin > parentHeight
 				|| forceCenterPosition) {
 				const auto top1 = parentHeight - bottomMargin - newGeometry.height();
 				const auto top2 = (parentHeight - newGeometry.height()) / 2;
-				const auto newTop = forceCenterPosition
+				newTop = forceCenterPosition
 					? std::min(top1, top2)
 					: std::max(top1, top2);
-				if (newTop != newGeometry.top()) {
-					move(newGeometry.left(), newTop);
-					resizeEvent(0);
-				}
+			}
+			if (newLeft != newGeometry.left() || newTop != newGeometry.top()) {
+				move(newLeft, newTop);
+				resizeEvent(0);
 			}
 			parent->update(oldGeometry.united(geometry()).marginsAdded(st::boxRoundShadow.extend));
 		} else {
