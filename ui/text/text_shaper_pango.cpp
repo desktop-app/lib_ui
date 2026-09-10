@@ -1584,6 +1584,11 @@ int LineShaper::itemLength(int index) const {
 }
 
 void LineShaper::shapeRange(int firstItem, int lastItem) {
+	Expects(_backend->entries.empty());
+
+	// Shaped once for a line, which is what everything shaped counts on: the
+	// glyphs of a second call would leave the ones of the first behind, and
+	// what was handed out about them points into a list this would replace.
 	auto &backend = *_backend;
 	const auto count = lastItem - firstItem + 1;
 	backend.first = firstItem;
