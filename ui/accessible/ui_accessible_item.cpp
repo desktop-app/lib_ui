@@ -198,18 +198,47 @@ QAccessibleInterface *Item::parent() const {
 }
 
 void *Item::interface_cast(QAccessible::InterfaceType type) {
+	const auto parent = _parent.get();
+	const auto index = parent ? currentIndex() : -1;
 	if (type == QAccessible::ActionInterface) {
 		// Expose the action interface only when the owner opted in for this
 		// child. Otherwise the Windows UIA bridge would advertise Invoke /
 		// SetFocus / SelectionItem and report success while doing nothing.
-		const auto parent = _parent.get();
-		const auto index = parent ? currentIndex() : -1;
 		if (index >= 0
 			&& parent->accessibilityChildSupportsActions(index)) {
 			return static_cast<QAccessibleActionInterface*>(this);
 		}
+	} else if (type == QAccessible::AttributesInterface) {
+		// Only a row that is one of the set reports a position, a divider
+		// between the rows has none - see accessibilityChildSetPosition.
+		if (index >= 0
+			&& parent->accessibilityChildSetPosition(index).position > 0) {
+			return static_cast<QAccessibleAttributesInterface*>(this);
+		}
 	}
 	return nullptr;
+}
+
+QList<QAccessible::Attribute> Item::attributeKeys() const {
+	return {
+		QAccessible::Attribute::PositionInSet,
+		QAccessible::Attribute::SizeOfSet,
+	};
+}
+
+QVariant Item::attributeValue(QAccessible::Attribute key) const {
+	const auto parent = _parent.get();
+	const auto index = parent ? currentIndex() : -1;
+	if (index < 0) {
+		return QVariant();
+	}
+	const auto position = parent->accessibilityChildSetPosition(index);
+	if (key == QAccessible::Attribute::PositionInSet) {
+		return position.position;
+	} else if (key == QAccessible::Attribute::SizeOfSet) {
+		return position.size;
+	}
+	return QVariant();
 }
 
 QStringList Item::actionNames() const {

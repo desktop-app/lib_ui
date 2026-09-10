@@ -86,7 +86,8 @@ struct SubItems {
 
 class Item final
 	: public QAccessibleInterface
-	, public QAccessibleActionInterface {
+	, public QAccessibleActionInterface
+	, public QAccessibleAttributesInterface {
 public:
 	Item(not_null<RpWidget*> parent, int index);
 
@@ -130,6 +131,10 @@ public:
 	void doAction(const QString &actionName) override;
 	QStringList keyBindingsForAction(
 		const QString &actionName) const override;
+
+	// QAccessibleAttributesInterface.
+	QList<QAccessible::Attribute> attributeKeys() const override;
+	QVariant attributeValue(QAccessible::Attribute key) const override;
 
 private:
 	base::weak_qptr<RpWidget> _parent;
