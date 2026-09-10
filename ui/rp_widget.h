@@ -457,6 +457,16 @@ public:
 	void accessibilityChildValueChanged(int index);
 	[[nodiscard]] virtual QAccessible::State accessibilityChildState(int index) const;
 	void accessibilityChildStateChanged(int index, AccessibilityState changes);
+
+	// Announces that a child was selected or deselected. A state change does
+	// not cover it: the Windows bridge looks at the checked flag there and
+	// ignores the selected one. Both directions raise the same event, the one
+	// that bridge forwards (SelectionRemove reaches no one) - a screen reader
+	// reads the new value off the child and announces the difference, so it
+	// only needs telling that the selection changed. SideBarButton does the
+	// same for the folders that are real widgets.
+	void accessibilityChildSelectionChanged(int index);
+
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildRole() const;
 	[[nodiscard]] virtual QRect accessibilityChildRect(int index) const;
 	[[nodiscard]] virtual int accessibilityChildColumnCount(int row) const;
