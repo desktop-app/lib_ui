@@ -276,6 +276,8 @@ PRIVATE
     ui/widgets/side_bar_button.h
     ui/widgets/shadow.cpp
     ui/widgets/shadow.h
+    ui/widgets/smooth_scroll.cpp
+    ui/widgets/smooth_scroll.h
     ui/widgets/time_input.cpp
     ui/widgets/time_input.h
     ui/widgets/tooltip.cpp
