@@ -486,7 +486,9 @@ private:
 	void updateInnerInputMethodHints();
 	void paintEventInner(QPaintEvent *e);
 	void paintQuotes(QPaintEvent *e);
+#ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 	void paintMisspelled(QPaintEvent *e);
+#endif // !QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 
 	void mousePressEventInner(QMouseEvent *e);
 	void mouseReleaseEventInner(QMouseEvent *e);
