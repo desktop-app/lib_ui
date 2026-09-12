@@ -269,11 +269,11 @@ QStringList Widget::actionNames() const {
 }
 
 void Widget::doAction(const QString &actionName) {
-	// On Qt 5 the Windows UIA bridge redirects a container's SetFocus to
-	// focusChild() only for an element exposing a table interface, not for a
-	// List - so focus would land on the inert container. Forward SetFocus to
-	// the selected item's widget directly instead (no extra Qt patch needed).
-	// Opt-in, so only a selection list (the folder strip) is affected.
+	// The items of a selection list are real widgets and it is they, not the
+	// container, that keep the keyboard focus: they handle the arrow keys and
+	// carry the list's single Tab-stop. So a container SetFocus has to land on
+	// the selected item - taking focus there announces it by itself. Opt-in,
+	// so only a selection list (the folder strip) is affected.
 	if (actionName == QAccessibleActionInterface::setFocusAction()
 		&& rp()->accessibilitySelectionList()) {
 		if (const auto selected = selectedItem(0)) {
