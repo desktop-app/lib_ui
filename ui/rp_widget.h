@@ -489,6 +489,10 @@ public:
 	// on a replacement row.
 	virtual void accessibilityChildSetFocus(quintptr identity);
 	virtual void accessibilityChildActivate(quintptr identity);
+	[[nodiscard]] virtual bool accessibilityChildSubItemSupportsActions(
+		int row,
+		int column) const;
+	virtual void accessibilityChildSubItemActivate(quintptr identity, int column);
 
 	// Keep this widget's Tab-focusable children ordered in the focus chain
 	// by visual position (row bands top-to-bottom, left-to-right within a

@@ -384,4 +384,42 @@ QAccessibleInterface *SubItem::parent() const {
 	return iface;
 }
 
+void *SubItem::interface_cast(QAccessible::InterfaceType type) {
+	if (type == QAccessible::ActionInterface) {
+		const auto parent = _parent.get();
+		const auto row = currentRow();
+		// Only advertise actions for sub-items the owner opted into, so
+		// the Windows UIA bridge does not report Invoke for static cells.
+		if (row >= 0 && parent
+			&& parent->accessibilityChildSubItemSupportsActions(row, _column)) {
+			return static_cast<QAccessibleActionInterface*>(this);
+		}
+	}
+	return nullptr;
+}
+
+QStringList SubItem::actionNames() const {
+	const auto parent = _parent.get();
+	const auto row = currentRow();
+	if (row < 0 || !parent
+		|| !parent->accessibilityChildSubItemSupportsActions(row, _column)) {
+		return {};
+	}
+	return QStringList{ QAccessibleActionInterface::pressAction() };
+}
+
+void SubItem::doAction(const QString &actionName) {
+	const auto parent = _parent.get();
+	if (!parent) {
+		return;
+	}
+	if (actionName == QAccessibleActionInterface::pressAction()) {
+		parent->accessibilityChildSubItemActivate(_identity, _column);
+	}
+}
+
+QStringList SubItem::keyBindingsForAction(const QString &actionName) const {
+	return {};
+}
+
 } // namespace Ui::Accessible
