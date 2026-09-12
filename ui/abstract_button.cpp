@@ -224,15 +224,7 @@ void AbstractButton::clearState() {
 }
 
 QString AbstractButton::accessibilityName() {
-	const auto custom = QWidget::accessibleName();
-	if (!custom.isEmpty()) {
-		return custom;
-	}
-	const auto tip = toolTip();
-	if (!tip.isEmpty()) {
-		return tip;
-	}
-	return QString();
+	return toolTip();
 }
 
 AccessibilityState AbstractButton::accessibilityState() const {

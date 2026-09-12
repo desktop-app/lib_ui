@@ -239,7 +239,6 @@ FlatButton::FlatButton(
 
 void FlatButton::setText(const QString &text) {
 	_text = text;
-	setAccessibleName(text);
 	accessibilityNameChanged();
 	update();
 }
@@ -1057,7 +1056,6 @@ void SettingsButton::onStateChanged(
 
 void SettingsButton::setText(TextWithEntities &&text) {
 	_text.setMarkedText(_st.style, text, kMarkupTextOptions, _context);
-	setAccessibleName(_text.toString());
 	accessibilityNameChanged();
 	update();
 }
