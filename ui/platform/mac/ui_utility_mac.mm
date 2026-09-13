@@ -107,6 +107,13 @@ void AcceptAllMouseInput(not_null<QWidget*> widget) {
 	[window setIgnoresMouseEvents:NO];
 }
 
+void KeepOnCurrentSpace(not_null<QWidget*> widget) {
+	NSWindow *window = [reinterpret_cast<NSView*>(widget->winId()) window];
+	[window setCollectionBehavior:(([window collectionBehavior]
+		& ~NSWindowCollectionBehaviorMoveToActiveSpace)
+		| NSWindowCollectionBehaviorManaged)];
+}
+
 void DrainMainQueue() {
 #ifndef OS_MAC_STORE
 	_dispatch_main_queue_callback_4CF(nullptr);

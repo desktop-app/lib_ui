@@ -35,6 +35,9 @@ inline void ShowOverAll(not_null<QWidget*> widget, bool canFocus) {
 inline void AcceptAllMouseInput(not_null<QWidget*> widget) {
 }
 
+inline void KeepOnCurrentSpace(not_null<QWidget*> widget) {
+}
+
 inline void ClearTransientParent(not_null<QWidget*> widget) {
 }
 
