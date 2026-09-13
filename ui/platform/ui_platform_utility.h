@@ -56,6 +56,7 @@ void SetForeignTransientParent(
 	not_null<QWidget*> widget,
 	const ForeignParent &parent);
 void AcceptAllMouseInput(not_null<QWidget*> widget);
+void KeepOnCurrentSpace(not_null<QWidget*> widget);
 
 void DisableSystemWindowResize(not_null<QWidget*> widget, QSize ratio);
 

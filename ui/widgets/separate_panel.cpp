@@ -605,6 +605,7 @@ void SeparatePanel::initFullScreenButton(not_null<QWidget*> button) {
 	button->windowHandle()->setScreen(windowHandle()->screen());
 #endif
 	button->show();
+	Platform::KeepOnCurrentSpace(button);
 }
 
 void SeparatePanel::updateTitleButtonColors(not_null<IconButton*> button) {
