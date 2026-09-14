@@ -395,7 +395,7 @@ void MonoIcon::ensureColorizedImage(QColor color) const {
 }
 
 void MonoIcon::createCachedPixmap() const {
-	auto key = qMakePair(_mask, ColorKey(_color->c));
+	auto key = std::make_pair(_mask, ColorKey(_color->c));
 	auto j = iconPixmaps.find(key);
 	if (j == end(iconPixmaps)) {
 		auto image = colorizeImage(_maskImage, _color);

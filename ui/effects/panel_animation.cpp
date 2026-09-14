@@ -381,7 +381,7 @@ auto PanelAnimation::paintFrame(
 	if (_origin == Origin::BottomLeft || _origin == Origin::BottomRight) {
 		fadeTop = frameHeight - fadeTop;
 		fadeBottom = frameHeight - fadeBottom;
-		qSwap(fadeTop, fadeBottom);
+		std::swap(fadeTop, fadeBottom);
 		fadeSkipLines = fadeTop + _fadeHeight - fadeBottom;
 	}
 	fadeTop += frameTop;
