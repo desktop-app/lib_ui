@@ -47,11 +47,12 @@ namespace {
 //
 // Pango counts in 1/1024 of a pixel, this engine in 1/64 of one.
 [[nodiscard]] Fixed FromPango(int units, qreal ratio) {
-	return Fixed::FromRaw(qRound(units / ((PANGO_SCALE / 64) * ratio)));
+	const auto raw = units / ((PANGO_SCALE / 64) * ratio);
+	return Fixed::FromRaw(int(base::SafeRound(raw)));
 }
 
 [[nodiscard]] int ToPango(Fixed value, qreal ratio) {
-	return qRound(value.raw() * (PANGO_SCALE / 64) * ratio);
+	return int(base::SafeRound(value.raw() * (PANGO_SCALE / 64) * ratio));
 }
 
 } // namespace
@@ -243,7 +244,7 @@ bool Text::fill(QStringView text) {
 	} else {
 		pango_font_description_set_size(
 			result,
-			qRound(font.pointSizeF() * PANGO_SCALE * ratio));
+			int(base::SafeRound(font.pointSizeF() * PANGO_SCALE * ratio)));
 	}
 	if (resolved & QFont::WeightResolved) {
 		pango_font_description_set_weight(
@@ -953,7 +954,7 @@ struct ResolvedKey {
 };
 
 [[nodiscard]] int RatioKey(qreal ratio) {
-	return qRound(ratio * 65536.);
+	return int(base::SafeRound(ratio * 65536.));
 }
 
 // A few of them, because a question about a point walks the paragraphs of the

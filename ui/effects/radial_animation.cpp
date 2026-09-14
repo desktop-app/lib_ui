@@ -21,15 +21,18 @@ const int RadialState::kFull = kFullArcLength;
 
 void RadialAnimation::start(float64 prg) {
 	_firstStart = _lastStart = _lastTime = crl::now();
-	const auto iprg = qRound(std::max(prg, 0.0001) * arc::kAlmostFullLength);
-	const auto iprgstrict = qRound(prg * arc::kAlmostFullLength);
+	const auto safe = std::max(prg, 0.0001) * arc::kAlmostFullLength;
+	const auto iprg = int(base::SafeRound(safe));
+	const auto strict = prg * arc::kAlmostFullLength;
+	const auto iprgstrict = int(base::SafeRound(strict));
 	_arcEnd = anim::value(iprgstrict, iprg);
 	_animation.start();
 }
 
 bool RadialAnimation::update(float64 prg, bool finished, crl::time ms) {
-	const auto iprg = qRound(std::max(prg, 0.0001) * arc::kAlmostFullLength);
-	const auto result = (iprg != qRound(_arcEnd.to()))
+	const auto safe = std::max(prg, 0.0001) * arc::kAlmostFullLength;
+	const auto iprg = int(base::SafeRound(safe));
+	const auto result = (iprg != int(base::SafeRound(_arcEnd.to())))
 		|| (_finished != finished);
 	if (_finished != finished) {
 		_arcEnd.start(iprg);
@@ -99,10 +102,10 @@ void RadialAnimation::draw(
 }
 
 RadialState RadialAnimation::computeState() const {
-	auto length = arc::kMinLength + qRound(_arcEnd.current());
+	auto length = arc::kMinLength + int(base::SafeRound(_arcEnd.current()));
 	auto from = arc::kQuarterLength
 		- length
-		- (anim::Disabled() ? 0 : qRound(_arcStart.current()));
+		- (anim::Disabled() ? 0 : int(base::SafeRound(_arcStart.current())));
 	if (style::RightToLeft()) {
 		from = arc::kQuarterLength - (from - arc::kQuarterLength) - length;
 		if (from < 0) from += arc::kFullLength;

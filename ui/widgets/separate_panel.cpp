@@ -1511,8 +1511,8 @@ void SeparatePanel::paintEvent(QPaintEvent *e) {
 
 			PainterHighQualityEnabler hq(p);
 			auto marginRatio = (1. - opacity) / 5;
-			auto marginWidth = qRound(width() * marginRatio);
-			auto marginHeight = qRound(height() * marginRatio);
+			auto marginWidth = int(base::SafeRound(width() * marginRatio));
+			auto marginHeight = int(base::SafeRound(height() * marginRatio));
 			p.drawPixmap(
 				rect().marginsRemoved(
 					QMargins(

@@ -1071,7 +1071,7 @@ bool PopupMenu::prepareGeometryFor(
 					(p
 						- parentWidget()->window()->pos()
 						- QPoint(padding.left(), padding.top())) * dpr,
-					QSize(1, qRound(padding.top() * dpr))));
+					QSize(1, int(base::SafeRound(padding.top() * dpr)))));
 			windowHandle()->setProperty(
 				"_q_waylandPopupAnchor",
 				QVariant::fromValue(Qt::TopEdge | Qt::LeftEdge));

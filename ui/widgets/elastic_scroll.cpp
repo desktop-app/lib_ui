@@ -912,8 +912,8 @@ bool ElasticScroll::handleWheelEvent(not_null<QWheelEvent*> e, bool touch) {
 			return _crossAxisWheelProcess
 				&& _crossAxisWheelProcess(
 					(_vertical
-						? QPoint(qRound(lockDelta.x()), 0)
-						: QPoint(0, qRound(lockDelta.y()))),
+						? QPoint(int(base::SafeRound(lockDelta.x())), 0)
+						: QPoint(0, int(base::SafeRound(lockDelta.y())))),
 					phase);
 		} else {
 			ownAxisLocked = locked.has_value();

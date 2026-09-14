@@ -645,7 +645,7 @@ bool ScrollArea::viewportEvent(QEvent *e) {
 				// cursor (like swipe handlers) of the ScrollUpdate stream.
 				return _crossAxisWheelProcess
 					&& _crossAxisWheelProcess(
-						{ qRound(delta.x()), 0 },
+						{ int(base::SafeRound(delta.x())), 0 },
 						phase);
 			}
 		}

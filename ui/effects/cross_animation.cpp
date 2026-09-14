@@ -153,7 +153,8 @@ void CrossAnimation::paint(
 		transformLoadingCross(loading, pathDelete, pathDeleteSize);
 
 		auto loadingArc = (loading >= 0.5) ? (loading - 1.) : loading;
-		loadingArcLength = qRound(-loadingArc * 2 * arc::kFullLength);
+		const auto length = -loadingArc * 2 * arc::kFullLength;
+		loadingArcLength = int(base::SafeRound(length));
 	}
 
 	if (!staticLoading) {
@@ -186,7 +187,8 @@ void CrossAnimation::paint(
 		} else {
 			auto loadingArcStart = arc::kQuarterLength / 2;
 			if (shown < 1.) {
-				loadingArcStart -= qRound(-(shown - 1.) * arc::kQuarterLength);
+				const auto delta = -(shown - 1.) * arc::kQuarterLength;
+				loadingArcStart -= int(base::SafeRound(delta));
 			}
 			if (loadingArcLength < 0) {
 				loadingArcStart += loadingArcLength;

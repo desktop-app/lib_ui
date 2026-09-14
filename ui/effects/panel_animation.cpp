@@ -42,7 +42,7 @@ void RoundShadowAnimation::setShadow(
 	_shadow.cornerR = grid.cornerR;
 	_shadow.cornerB = grid.cornerB;
 	_shadow.middle = grid.middle;
-	_shadow.opacity256 = qRound(boxShadow.opacity() * 256);
+	_shadow.opacity256 = int(base::SafeRound(boxShadow.opacity() * 256));
 }
 
 void RoundShadowAnimation::setCornerMasks(
@@ -233,30 +233,32 @@ void PanelAnimation::setFinalImage(
 }
 
 void PanelAnimation::setStartWidth() {
-	_startWidth = qRound(_st.startWidth * _finalInnerWidth);
+	_startWidth = int(base::SafeRound(_st.startWidth * _finalInnerWidth));
 	if (_startWidth >= 0) Assert(_startWidth <= _finalInnerWidth);
 }
 
 void PanelAnimation::setStartHeight() {
-	_startHeight = qRound(_st.startHeight * _finalInnerHeight);
+	_startHeight = int(base::SafeRound(_st.startHeight * _finalInnerHeight));
 	if (_startHeight >= 0) Assert(_startHeight <= _finalInnerHeight);
 }
 
 void PanelAnimation::setStartAlpha() {
-	_startAlpha = qRound(_st.startOpacity * 255);
+	_startAlpha = int(base::SafeRound(_st.startOpacity * 255));
 	Assert(_startAlpha >= 0 && _startAlpha < 256);
 }
 
 void PanelAnimation::setStartFadeTop() {
-	_startFadeTop = qRound(_st.startFadeTop * _finalInnerHeight);
+	const auto fadeTop = _st.startFadeTop * _finalInnerHeight;
+	_startFadeTop = int(base::SafeRound(fadeTop));
 }
 
 void PanelAnimation::createFadeMask() {
-	auto resultHeight = qRound(_finalImage.height() * _st.fadeHeight);
+	const auto fadeHeight = _finalImage.height() * _st.fadeHeight;
+	auto resultHeight = int(base::SafeRound(fadeHeight));
 	if (auto remove = (resultHeight % style::DevicePixelRatio())) {
 		resultHeight -= remove;
 	}
-	auto finalAlpha = qRound(_st.fadeOpacity * 255);
+	auto finalAlpha = int(base::SafeRound(_st.fadeOpacity * 255));
 	Assert(finalAlpha >= 0 && finalAlpha < 256);
 	auto result = QImage(style::DevicePixelRatio(), resultHeight, QImage::Format_ARGB32_Premultiplied);
 	auto ints = reinterpret_cast<uint32*>(result.bits());

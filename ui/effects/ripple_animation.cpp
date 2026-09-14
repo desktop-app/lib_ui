@@ -81,7 +81,7 @@ RippleAnimation::Ripple::Ripple(
 			_radiusTo,
 			style::point::dotProduct(_origin - point, _origin - point));
 	}
-	_radiusTo = qRound(sqrt(_radiusTo));
+	_radiusTo = int(base::SafeRound(sqrt(_radiusTo)));
 
 	_show.start(_update, 0., 1., _st.showDuration, anim::easeOutQuint);
 }
