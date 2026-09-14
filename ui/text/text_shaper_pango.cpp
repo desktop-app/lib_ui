@@ -2012,8 +2012,8 @@ void ShapedItem::draw(
 			PANGO_PIXELS_CEIL(ink.y + ink.height) - PANGO_PIXELS_FLOOR(ink.y)));
 		const auto left = qFloor(inked.x());
 		const auto top = qFloor(inked.y());
-		const auto width = qCeil(inked.x() + inked.width()) - left;
-		const auto height = qCeil(inked.y() + inked.height()) - top;
+		const auto width = int(std::ceil(inked.x() + inked.width())) - left;
+		const auto height = int(std::ceil(inked.y() + inked.height())) - top;
 
 		// In pixels of the device, which is what Pango was asked in.
 		auto image = QImage(width, height, QImage::Format_ARGB32_Premultiplied);

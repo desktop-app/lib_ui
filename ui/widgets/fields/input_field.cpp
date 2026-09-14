@@ -1671,7 +1671,7 @@ private:
 		const auto height = kMarkerHeight * factor;
 		const auto width = height + 1;
 		result = QPixmap(
-			(QSizeF(qCeil(width), qFloor(height)) * ratio).toSize());
+			(QSizeF(int(std::ceil(width)), qFloor(height)) * ratio).toSize());
 		result.setDevicePixelRatio(ratio);
 		result.fill(Qt::transparent);
 		{
