@@ -2010,8 +2010,8 @@ void ShapedItem::draw(
 			PANGO_PIXELS_FLOOR(ink.y),
 			PANGO_PIXELS_CEIL(ink.x + ink.width) - PANGO_PIXELS_FLOOR(ink.x),
 			PANGO_PIXELS_CEIL(ink.y + ink.height) - PANGO_PIXELS_FLOOR(ink.y)));
-		const auto left = qFloor(inked.x());
-		const auto top = qFloor(inked.y());
+		const auto left = int(std::floor(inked.x()));
+		const auto top = int(std::floor(inked.y()));
 		const auto width = int(std::ceil(inked.x() + inked.width())) - left;
 		const auto height = int(std::ceil(inked.y() + inked.height())) - top;
 

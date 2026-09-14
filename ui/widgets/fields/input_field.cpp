@@ -1670,8 +1670,10 @@ private:
 
 		const auto height = kMarkerHeight * factor;
 		const auto width = height + 1;
-		result = QPixmap(
-			(QSizeF(int(std::ceil(width)), qFloor(height)) * ratio).toSize());
+		const auto size = QSizeF(
+			int(std::ceil(width)),
+			int(std::floor(height)));
+		result = QPixmap((size * ratio).toSize());
 		result.setDevicePixelRatio(ratio);
 		result.fill(Qt::transparent);
 		{
@@ -1680,7 +1682,8 @@ private:
 			p.setBrush(color);
 			p.setRenderHints(
 				QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-			p.drawEllipse(0, 0, qFloor(height), qFloor(height));
+			const auto side = int(std::floor(height));
+			p.drawEllipse(0, 0, side, side);
 		}
 		return result;
 	}
