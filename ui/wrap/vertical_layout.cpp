@@ -18,17 +18,17 @@ QMargins VerticalLayout::getMargins() const {
 		auto &top = _rows.front();
 		auto topMargin = top.widget->getMargins().top();
 		result.setTop(
-			qMax(topMargin - top.margin.top(), 0));
+			std::max(topMargin - top.margin.top(), 0));
 		auto &bottom = _rows.back();
 		auto bottomMargin = bottom.widget->getMargins().bottom();
 		result.setBottom(
-			qMax(bottomMargin - bottom.margin.bottom(), 0));
+			std::max(bottomMargin - bottom.margin.bottom(), 0));
 		for (auto &row : _rows) {
 			auto margins = row.widget->getMargins();
-			result.setLeft(qMax(
+			result.setLeft(std::max(
 				margins.left() - row.margin.left(),
 				result.left()));
-			result.setRight(qMax(
+			result.setRight(std::max(
 				margins.right() - row.margin.right(),
 				result.right()));
 		}

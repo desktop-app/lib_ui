@@ -261,7 +261,8 @@ Fixed ShapedItem::rightBearingBefore(int offset) const {
 	// Right bearing is negative when a glyph sticks out to the right, and
 	// only that case is interesting: nothing is gained by a glyph that ends
 	// before its advance does.
-	return Fixed::FromRaw(qMin(QFixed::fromReal(bearing), QFixed(0)).value());
+	return Fixed::FromRaw(
+		std::min(QFixed::fromReal(bearing), QFixed(0)).value());
 }
 
 struct Paragraph::State {

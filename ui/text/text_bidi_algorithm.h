@@ -771,8 +771,12 @@ public:
 				++after;
 		}
 		int level_after = (after == runs.size()) ? baseLevel : runs.at(after).level;
-		QChar::Direction sos = (qMax(level_before, level) & 1) ? QChar::DirR : QChar::DirL;
-		QChar::Direction eos = (qMax(level_after, level) & 1) ? QChar::DirR : QChar::DirL;
+		QChar::Direction sos = (std::max(level_before, level) & 1)
+			? QChar::DirR
+			: QChar::DirL;
+		QChar::Direction eos = (std::max(level_after, level) & 1)
+			? QChar::DirR
+			: QChar::DirL;
 
 		if (BidiDebugEnabled) {
 			BIDI_DEBUG() << "Isolated run starting at" << i << "sos/eos" << sos << eos;

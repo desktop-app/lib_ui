@@ -633,7 +633,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	}
 
 	auto extendLeft = (startBlock->position() < _lineStart)
-		? qMin(_lineStart - startBlock->position(), 2)
+		? std::min(_lineStart - startBlock->position(), 2)
 		: 0;
 	if (extendLeft
 		&& _t->_text.at(_lineStart - extendLeft).isLowSurrogate()) {
@@ -643,7 +643,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	auto extendedLineEnd = (endBlock
 		&& endBlock->position() < trimmedLineEnd
 		&& !_elidedLine)
-		? qMin(int(trimmedLineEnd) + 2, int(_t->blockEnd(blocksEnd)))
+		? std::min(int(trimmedLineEnd) + 2, int(_t->blockEnd(blocksEnd)))
 		: int(trimmedLineEnd);
 	if (extendedLineEnd > trimmedLineEnd
 		&& _t->_text.at(extendedLineEnd - 1).isHighSurrogate()) {
@@ -1085,7 +1085,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 
 		const auto &shaped = shaper.shape(index);
 
-		const auto itemStart = qMax(lineStart, item.position);
+		const auto itemStart = std::max(lineStart, item.position);
 		const auto itemEnd = (lineStart + lineLength
 			< item.position + item.length)
 			? (lineStart + lineLength)
@@ -1707,7 +1707,7 @@ void Renderer::prepareElidedLine(
 			_wLeft -= item.width;
 		} else if (_type == TextBlockType::Text) {
 			const auto &shaped = shaper.shape(i);
-			const auto itemStart = qMax(lineStart, item.position);
+			const auto itemStart = std::max(lineStart, item.position);
 			const auto itemEnd = (lineStart + lineLength
 				< item.position + item.length)
 				? (lineStart + lineLength)
@@ -1771,7 +1771,7 @@ void Renderer::prepareElisionAt(
 		uint16 position) {
 	lineText = lineText.mid(0, position - _localFrom) + kQEllipsis;
 	lineLength = position + kQEllipsis.size() - _lineStart;
-	_selection.to = qMin(_selection.to, position);
+	_selection.to = std::min(_selection.to, position);
 	setElideBidi(position);
 }
 

@@ -1680,7 +1680,11 @@ void ParseEntities(TextWithEntities &result, int32 flags) {
 		auto mDomain = qthelp::RegExpDomain().match(result.text, matchOffset);
 		auto mExplicitDomain = qthelp::RegExpDomainExplicit().match(result.text, matchOffset);
 		auto mHashtag = withHashtags ? RegExpHashtag(true).match(result.text, matchOffset) : QRegularExpressionMatch();
-		auto mMention = withMentions ? RegExpMention().match(result.text, qMax(mentionSkip, matchOffset)) : QRegularExpressionMatch();
+		auto mMention = withMentions
+			? RegExpMention().match(
+				result.text,
+				std::max(mentionSkip, matchOffset))
+			: QRegularExpressionMatch();
 		auto mBotCommand = withBotCommands ? RegExpBotCommand().match(result.text, matchOffset) : QRegularExpressionMatch();
 
 		auto lnkType = EntityType::Url;
@@ -1725,7 +1729,9 @@ void ParseEntities(TextWithEntities &result, int32 flags) {
 					&& (start + mentionSkip)->isLowSurrogate()) {
 					++mentionSkip;
 				}
-				mMention = RegExpMention().match(result.text, qMax(mentionSkip, matchOffset));
+				mMention = RegExpMention().match(
+					result.text,
+					std::max(mentionSkip, matchOffset));
 				if (mMention.hasMatch()) {
 					mentionStart = mMention.capturedStart();
 					mentionEnd = mMention.capturedEnd();

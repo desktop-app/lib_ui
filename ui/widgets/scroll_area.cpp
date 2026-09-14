@@ -449,8 +449,16 @@ ScrollArea::ScrollArea(
 void ScrollArea::touchDeaccelerate(int32 elapsed) {
 	int32 x = _touchSpeed.x();
 	int32 y = _touchSpeed.y();
-	_touchSpeed.setX((x == 0) ? x : (x > 0) ? qMax(0, x - elapsed) : qMin(0, x + elapsed));
-	_touchSpeed.setY((y == 0) ? y : (y > 0) ? qMax(0, y - elapsed) : qMin(0, y + elapsed));
+	_touchSpeed.setX((x == 0)
+		? x
+		: (x > 0)
+		? std::max(0, x - elapsed)
+		: std::min(0, x + elapsed));
+	_touchSpeed.setY((y == 0)
+		? y
+		: (y > 0)
+		? std::max(0, y - elapsed)
+		: std::min(0, y + elapsed));
 }
 
 void ScrollArea::scrolled() {
@@ -498,12 +506,12 @@ void ScrollArea::innerResized() {
 
 int ScrollArea::scrollWidth() const {
 	QWidget *w(widget());
-	return w ? qMax(w->width(), width()) : width();
+	return w ? std::max(w->width(), width()) : width();
 }
 
 int ScrollArea::scrollHeight() const {
 	QWidget *w(widget());
-	return w ? qMax(w->height(), height()) : height();
+	return w ? std::max(w->height(), height()) : height();
 }
 
 int ScrollArea::scrollLeftMax() const {
@@ -553,8 +561,14 @@ void ScrollArea::touchUpdateSpeed() {
 
 			// fingers are inacurates, we ignore small changes to avoid stopping the autoscroll because
 			// of a small horizontal offset when scrolling vertically
-			const int newSpeedY = (qAbs(pixelsPerSecond.y()) > kFingerAccuracyThreshold) ? pixelsPerSecond.y() : 0;
-			const int newSpeedX = (qAbs(pixelsPerSecond.x()) > kFingerAccuracyThreshold) ? pixelsPerSecond.x() : 0;
+			const int newSpeedY = (std::abs(pixelsPerSecond.y())
+				> kFingerAccuracyThreshold)
+				? pixelsPerSecond.y()
+				: 0;
+			const int newSpeedX = (std::abs(pixelsPerSecond.x())
+				> kFingerAccuracyThreshold)
+				? pixelsPerSecond.x()
+				: 0;
 			if (_touchScrollState == TouchScrollState::Auto) {
 				const int oldSpeedY = _touchSpeed.y();
 				const int oldSpeedX = _touchSpeed.x();
@@ -782,8 +796,8 @@ bool ScrollArea::touchScroll(const QPoint &delta) {
 	const auto topMax = scrollTopMax();
 	const auto left = scrollLeft();
 	const auto leftMax = scrollLeftMax();
-	const auto xAbs = qAbs(delta.x());
-	const auto yAbs = qAbs(delta.y());
+	const auto xAbs = std::abs(delta.x());
+	const auto yAbs = std::abs(delta.y());
 	const auto direction = (leftMax <= 0 || yAbs > xAbs)
 		? Qt::Vertical
 		: Qt::Horizontal;
@@ -805,8 +819,12 @@ void ScrollArea::resizeEvent(QResizeEvent *e) {
 	QScrollArea::resizeEvent(e);
 	_horizontalBar->recountSize();
 	_verticalBar->recountSize();
-	_topShadow->setGeometry(QRect(0, 0, width(), qAbs(_st.topsh)));
-	_bottomShadow->setGeometry(QRect(0, height() - qAbs(_st.bottomsh), width(), qAbs(_st.bottomsh)));
+	_topShadow->setGeometry(QRect(0, 0, width(), std::abs(_st.topsh)));
+	_bottomShadow->setGeometry(QRect(
+		0,
+		height() - std::abs(_st.bottomsh),
+		width(),
+		std::abs(_st.bottomsh)));
 	_geometryChanged.fire({});
 }
 

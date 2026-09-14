@@ -1836,8 +1836,8 @@ void String::enumerateText(
 		}();
 		if (blockLinkIndex != linkIndex) {
 			if (linkIndex) {
-				auto rangeFrom = qMax(selection.from, linkPosition);
-				auto rangeTo = qMin(selection.to, blockPosition);
+				auto rangeFrom = std::max(selection.from, linkPosition);
+				auto rangeTo = std::min(selection.to, blockPosition);
 				if (rangeTo > rangeFrom) { // handle click handler
 					const auto r = base::StringViewMid(
 						_text,
@@ -1891,8 +1891,8 @@ void String::enumerateText(
 			continue;
 		}
 
-		auto rangeFrom = qMax(selection.from, blockPosition);
-		auto rangeTo = qMin(
+		auto rangeFrom = std::max(selection.from, blockPosition);
+		auto rangeTo = std::min(
 			selection.to,
 			uint16(blockPosition + blockLength(i)));
 		if (rangeTo > rangeFrom) {

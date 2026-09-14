@@ -21,14 +21,14 @@ const int RadialState::kFull = kFullArcLength;
 
 void RadialAnimation::start(float64 prg) {
 	_firstStart = _lastStart = _lastTime = crl::now();
-	const auto iprg = qRound(qMax(prg, 0.0001) * arc::kAlmostFullLength);
+	const auto iprg = qRound(std::max(prg, 0.0001) * arc::kAlmostFullLength);
 	const auto iprgstrict = qRound(prg * arc::kAlmostFullLength);
 	_arcEnd = anim::value(iprgstrict, iprg);
 	_animation.start();
 }
 
 bool RadialAnimation::update(float64 prg, bool finished, crl::time ms) {
-	const auto iprg = qRound(qMax(prg, 0.0001) * arc::kAlmostFullLength);
+	const auto iprg = qRound(std::max(prg, 0.0001) * arc::kAlmostFullLength);
 	const auto result = (iprg != qRound(_arcEnd.to()))
 		|| (_finished != finished);
 	if (_finished != finished) {
@@ -46,7 +46,7 @@ bool RadialAnimation::update(float64 prg, bool finished, crl::time ms) {
 	const auto opacitydt = _finished
 		? (_lastStart - _firstStart)
 		: fulldt;
-	_opacity = qMin(opacitydt / st::radialDuration, 1.);
+	_opacity = std::min(opacitydt / st::radialDuration, 1.);
 	if (anim::Disabled()) {
 		_arcEnd.update(1., anim::linear);
 		if (finished) {

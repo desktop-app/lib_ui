@@ -404,7 +404,9 @@ public:
 	// Resize to minimum of natural width and available width.
 	void resizeToNaturalWidth(int newWidth) {
 		const auto natural = naturalWidth();
-		resizeToWidth((natural >= 0) ? qMin(newWidth, natural) : newWidth);
+		resizeToWidth((natural >= 0)
+			? std::min(newWidth, natural)
+			: newWidth);
 	}
 
 	// Updates the area that is visible inside the scroll container.

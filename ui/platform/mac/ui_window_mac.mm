@@ -382,7 +382,9 @@ void WindowHelper::Private::initCustomTitle() {
 
 	auto inner = [_nativeWindow contentLayoutRect];
 	auto full = [_nativeView frame];
-	_customTitleHeight = qMax(qRound(full.size.height - inner.size.height), 0);
+	_customTitleHeight = std::max(
+		qRound(full.size.height - inner.size.height),
+		0);
 
 	// Qt still has some bug with layer-backed widgets containing QOpenGLWidgets.
 	// See https://github.com/telegramdesktop/tdesktop/issues/4150
