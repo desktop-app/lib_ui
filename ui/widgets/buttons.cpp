@@ -304,7 +304,8 @@ RoundButton::RoundButton(
 , _textFull(std::move(text) | rpl::map(Text::WithEntities))
 , _st(st)
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
-, _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
+, _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver)
+, _fullRadius(st.fullRadius) {
 	_textFull.value(
 	) | rpl::on_next([=](const TextWithEntities &text) {
 		accessibilityNameChanged();
@@ -586,7 +587,11 @@ QImage RoundButton::prepareRippleMask() const {
 	if (_fullWidthOverride < 0) {
 		rounded = QRect(0, rounded.top(), innerWidth - _fullWidthOverride, rounded.height());
 	}
-	if (_cornerRadii) {
+	if (_fullRadius) {
+		return RippleAnimation::RoundRectMask(
+			rounded.size(),
+			rounded.height() / 2);
+	} else if (_cornerRadii) {
 		const auto &r = *_cornerRadii;
 		return RippleAnimation::MaskByDrawer(rounded.size(), false, [&](
 				QPainter &p) {
@@ -601,11 +606,7 @@ QImage RoundButton::prepareRippleMask() const {
 	}
 	return RippleAnimation::RoundRectMask(
 		rounded.size(),
-		(_fullRadius
-			? (rounded.height() / 2)
-			: _st.radius
-			? _st.radius
-			: st::buttonRadius));
+		_st.radius ? _st.radius : st::buttonRadius);
 }
 
 QPoint RoundButton::prepareRippleStartPosition() const {
