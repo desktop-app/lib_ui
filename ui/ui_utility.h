@@ -159,4 +159,20 @@ private:
 
 [[nodiscard]] QColor BlendColors(QColor color1, QColor color2, float64 ratio);
 
+struct RowsRange {
+	int from = 0;
+	int till = 0;
+};
+
+[[nodiscard]] inline RowsRange RowsInRange(
+		int top,
+		int bottom,
+		int rowHeight,
+		int count) {
+	return {
+		.from = std::clamp(top / rowHeight, 0, count),
+		.till = std::clamp((bottom + rowHeight - 1) / rowHeight, 0, count),
+	};
+}
+
 } // namespace Ui
