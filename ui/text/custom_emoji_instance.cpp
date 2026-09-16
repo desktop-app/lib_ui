@@ -21,7 +21,7 @@ namespace Ui::CustomEmoji {
 namespace {
 
 constexpr auto kMaxFrames = 180;
-constexpr auto kCacheVersion = 1;
+constexpr auto kCacheVersion = 2;
 constexpr auto kPreloadFrames = 3;
 
 struct CacheHeader {
@@ -174,7 +174,8 @@ std::optional<Cache> Cache::FromSerialized(
 	auto header = CacheHeader();
 	memcpy(&header, serialized.data(), sizeof(header));
 	const auto size = header.size;
-	if (size != requestedSize
+	if (header.version != kCacheVersion
+		|| size != requestedSize
 		|| header.frames <= 0
 		|| header.frames >= kMaxFrames
 		|| header.length <= 0
