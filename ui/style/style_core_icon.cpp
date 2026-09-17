@@ -29,7 +29,7 @@ namespace {
 base::flat_map<const IconMask*, QImage> IconMasks;
 QMutex IconMasksMutex;
 
-base::flat_map<QPair<const IconMask*, uint32>, QPixmap> iconPixmaps;
+base::flat_map<std::pair<const IconMask*, uint32>, QPixmap> iconPixmaps;
 base::flat_set<IconData*> iconData;
 
 [[nodiscard]] QImage CreateIconMask(
