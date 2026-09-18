@@ -9,6 +9,7 @@
 #include "styles/style_widgets.h"
 #include "ui/rp_widget.h"
 #include "ui/round_rect.h"
+#include "ui/widgets/shadow.h"
 #include "ui/effects/animations.h"
 #include "ui/effects/panel_animation.h"
 #include "base/object_ptr.h"
@@ -109,6 +110,7 @@ private:
 	const style::InnerDropdown &_st;
 
 	RoundRect _roundRect;
+	BoxShadow _boxShadow;
 	PanelAnimation::Origin _origin = PanelAnimation::Origin::TopLeft;
 	std::unique_ptr<PanelAnimation> _showAnimation;
 	Animations::Simple _a_show;

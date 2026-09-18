@@ -20,6 +20,7 @@ InnerDropdown::InnerDropdown(
 : RpWidget(parent)
 , _st(st)
 , _roundRect(st::innerDropdownRadius, _st.bg)
+, _boxShadow(_st.animation.shadow)
 , _hideTimer([=] { hideAnimated(); })
 , _scroll(this, _st.scroll) {
 	_scroll->scrolls(
@@ -125,7 +126,7 @@ void InnerDropdown::paintEvent(QPaintEvent *e) {
 	} else {
 		if (!_cache.isNull()) _cache = QPixmap();
 		const auto inner = rect().marginsRemoved(_st.padding);
-		Shadow::paint(p, inner, width(), _st.shadow);
+		_boxShadow.paint(p, inner, st::innerDropdownRadius);
 		_roundRect.paint(p, inner);
 	}
 }
