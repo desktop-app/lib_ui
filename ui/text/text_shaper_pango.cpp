@@ -496,6 +496,14 @@ void NotifyFontOptionsChanged() {
 		&& !hinting) {
 		return true;
 	}
+	// WHY: a glyph asked for without antialiasing is loaded for the monochrome
+	// target, and that one knows no light hinting - it fits the outline to the
+	// grid in full (_cairo_ft_options_merge of cairo-ft-font.c).
+	auto antialias = FcTrue;
+	const auto fitsForMonochrome = pattern
+		&& (FcPatternGetBool(pattern, FC_ANTIALIAS, 0, &antialias)
+			== FcResultMatch)
+		&& !antialias;
 	const auto scaled = PANGO_IS_CAIRO_FONT(font)
 		? pango_cairo_font_get_scaled_font(PANGO_CAIRO_FONT(font))
 		: nullptr;
@@ -505,10 +513,14 @@ void NotifyFontOptionsChanged() {
 			cairo_font_options_destroy(options);
 		});
 		cairo_scaled_font_get_font_options(scaled, options);
+		const auto monochrome = fitsForMonochrome
+			|| (cairo_font_options_get_antialias(options)
+				== CAIRO_ANTIALIAS_NONE);
 		switch (cairo_font_options_get_hint_style(options)) {
 		case CAIRO_HINT_STYLE_NONE:
-		case CAIRO_HINT_STYLE_SLIGHT:
 			return true;
+		case CAIRO_HINT_STYLE_SLIGHT:
+			return !monochrome;
 		case CAIRO_HINT_STYLE_MEDIUM:
 		case CAIRO_HINT_STYLE_FULL:
 			return false;
@@ -524,7 +536,8 @@ void NotifyFontOptionsChanged() {
 		!= FcResultMatch) {
 		style = FC_HINT_FULL;
 	}
-	return (style == FC_HINT_NONE) || (style == FC_HINT_SLIGHT);
+	return (style == FC_HINT_NONE)
+		|| ((style == FC_HINT_SLIGHT) && !fitsForMonochrome);
 #else // LIB_UI_PANGO_OVER_FONTCONFIG
 	return false;
 #endif // !LIB_UI_PANGO_OVER_FONTCONFIG
