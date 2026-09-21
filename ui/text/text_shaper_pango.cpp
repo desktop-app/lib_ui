@@ -488,6 +488,12 @@ void NotifyFontOptionsChanged() {
 // style in it at all is hinted in full, which is what Qt does with a pattern it
 // can not read either.
 [[nodiscard]] bool SupportsSubpixelPositions(PangoFont *font) {
+	// WHY: a glyph is rasterized per quarter of a pixel only since cairo 1.17.4
+	// (PHASE in cairo-image-compositor.c), and an older one snaps it to a whole
+	// pixel instead - where a fraction kept in the advances makes the gaps jump.
+	if (cairo_version() < CAIRO_VERSION_ENCODE(1, 17, 4)) {
+		return false;
+	}
 #ifdef LIB_UI_PANGO_OVER_FONTCONFIG
 	const auto pattern = FontPattern(font);
 	auto hinting = FcTrue;
