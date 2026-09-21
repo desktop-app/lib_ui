@@ -140,7 +140,9 @@ private:
 
 };
 
-class SubItem final : public QAccessibleInterface {
+class SubItem final
+: public QAccessibleInterface
+, public QAccessibleActionInterface {
 public:
 	SubItem(
 		not_null<RpWidget*> parent,
@@ -175,6 +177,11 @@ public:
 	QAccessibleInterface *childAt(int x, int y) const override;
 
 	QAccessibleInterface *parent() const override;
+
+	void *interface_cast(QAccessible::InterfaceType type) override;
+	QStringList actionNames() const override;
+	void doAction(const QString &actionName) override;
+	QStringList keyBindingsForAction(const QString &actionName) const override;
 
 private:
 	// The row this cell currently belongs to, resolved from the parent row
