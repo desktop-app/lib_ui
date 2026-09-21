@@ -488,12 +488,6 @@ void NotifyFontOptionsChanged() {
 // style in it at all is hinted in full, which is what Qt does with a pattern it
 // can not read either.
 [[nodiscard]] bool SupportsSubpixelPositions(PangoFont *font) {
-	// WHY: a glyph is rasterized per quarter of a pixel only since cairo 1.17.4
-	// (PHASE in cairo-image-compositor.c), and an older one snaps it to a whole
-	// pixel instead - where a fraction kept in the advances makes the gaps jump.
-	if (cairo_version() < CAIRO_VERSION_ENCODE(1, 17, 4)) {
-		return false;
-	}
 #ifdef LIB_UI_PANGO_OVER_FONTCONFIG
 	const auto pattern = FontPattern(font);
 	auto hinting = FcTrue;
@@ -536,26 +530,110 @@ void NotifyFontOptionsChanged() {
 #endif // !LIB_UI_PANGO_OVER_FONTCONFIG
 }
 
-// Shaped the way the layout of Pango shapes it: the geometry of the glyphs of
-// a font that was fitted to whole pixels is put on whole pixels as well, and
-// the glyphs of one that was not keep their fractions. Without this the glyphs
-// of a hinted font come out on whole pixels anyway, because cairo rounds where
-// it puts them, while the step to the next one keeps a fraction - and the gaps
-// between the letters jump by a pixel.
-//
-// Saying so appeared in 1.44. That may be later than the headers this was
-// built against while the library that ends up loaded is newer, as it is
-// wherever Pango comes from the system - so when the headers are too old the
-// loader is asked instead. Where even that is not available, an older Pango
-// shapes the way it always did.
-void Shape(
+// What fitting a glyph to the grid adds to its width, the same on every use.
+struct FittingWidths {
+	cairo_scaled_font_t *designed = nullptr;
+	base::flat_map<PangoGlyph, double> added;
+};
+
+// WHY: the same font with nothing fitted, to keep what the shaping added of its
+// own - kept on the fitted one, so that an item pays for making it only once.
+[[nodiscard]] FittingWidths *FittingWidthsOf(cairo_scaled_font_t *fitted) {
+	static const auto key = cairo_user_data_key_t();
+	const auto already = cairo_scaled_font_get_user_data(fitted, &key);
+	if (already) {
+		return static_cast<FittingWidths*>(already);
+	}
+	auto matrix = cairo_matrix_t();
+	auto ctm = cairo_matrix_t();
+	cairo_scaled_font_get_font_matrix(fitted, &matrix);
+	cairo_scaled_font_get_ctm(fitted, &ctm);
+	const auto options = cairo_font_options_create();
+	const auto guard = gsl::finally([&] {
+		cairo_font_options_destroy(options);
+	});
+	cairo_scaled_font_get_font_options(fitted, options);
+	cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_OFF);
+	const auto designed = cairo_scaled_font_create(
+		cairo_scaled_font_get_font_face(fitted),
+		&matrix,
+		&ctm,
+		options);
+	if (cairo_scaled_font_status(designed) != CAIRO_STATUS_SUCCESS) {
+		cairo_scaled_font_destroy(designed);
+		return nullptr;
+	}
+	const auto result = new FittingWidths{ .designed = designed };
+	const auto destroy = [](void *data) {
+		const auto widths = static_cast<FittingWidths*>(data);
+		cairo_scaled_font_destroy(widths->designed);
+		delete widths;
+	};
+	if (cairo_scaled_font_set_user_data(fitted, &key, result, destroy)
+		!= CAIRO_STATUS_SUCCESS) {
+		destroy(result);
+		return nullptr;
+	}
+	return result;
+}
+
+// WHY: since 1.44 Pango measures a glyph by the tables of the font, so one
+// fitted to the pixel grid still gets the step of the unfitted outline - and
+// hinted letters come out tighter than the ink drawn for them (GNOME/pango#404).
+[[nodiscard]] bool FitAdvancesToHinting(
+		const PangoAnalysis *analysis,
+		PangoGlyphString *glyphs) {
+	const auto font = analysis->font;
+	if (!PANGO_IS_CAIRO_FONT(font)) {
+		return false;
+	}
+	const auto fitted = pango_cairo_font_get_scaled_font(
+		PANGO_CAIRO_FONT(font));
+	if (!fitted || cairo_scaled_font_status(fitted) != CAIRO_STATUS_SUCCESS) {
+		return false;
+	}
+	const auto widths = FittingWidthsOf(fitted);
+	if (!widths) {
+		return false;
+	}
+	for (auto i = 0; i != glyphs->num_glyphs; ++i) {
+		auto &geometry = glyphs->glyphs[i].geometry;
+		const auto index = glyphs->glyphs[i].glyph;
+		auto j = widths->added.find(index);
+		if (j == end(widths->added)) {
+			const auto glyph = cairo_glyph_t{ .index = index };
+			auto fittedExtents = cairo_text_extents_t();
+			auto designedExtents = cairo_text_extents_t();
+			cairo_scaled_font_glyph_extents(fitted, &glyph, 1, &fittedExtents);
+			cairo_scaled_font_glyph_extents(
+				widths->designed,
+				&glyph,
+				1,
+				&designedExtents);
+			j = widths->added.emplace(
+				index,
+				fittedExtents.x_advance - designedExtents.x_advance).first;
+		}
+		const auto shaped = geometry.width / double(PANGO_SCALE);
+		const auto width = shaped + j->second;
+		geometry.width = int(std::round(width)) * PANGO_SCALE;
+		geometry.x_offset = PANGO_UNITS_ROUND(geometry.x_offset);
+		geometry.y_offset = PANGO_UNITS_ROUND(geometry.y_offset);
+	}
+	return true;
+}
+
+// WHY: saying whether to round appeared in 1.44, and the headers this was built
+// against can be older than the library that ends up loaded - so the loader is
+// asked instead, and an older Pango is left to shape the way it always did.
+void ShapeItem(
 		const char *itemText,
 		int itemLength,
 		const char *paragraphText,
 		int paragraphLength,
 		const PangoAnalysis *analysis,
-		PangoGlyphString *glyphs) {
-	const auto rounds = !SupportsSubpixelPositions(analysis->font);
+		PangoGlyphString *glyphs,
+		bool rounds) {
 #if PANGO_VERSION_CHECK(1, 44, 0)
 	pango_shape_with_flags(
 		itemText,
@@ -597,6 +675,43 @@ void Shape(
 		analysis,
 		glyphs);
 #endif // Pango < 1.44.0
+}
+
+void Shape(
+		const char *itemText,
+		int itemLength,
+		const char *paragraphText,
+		int paragraphLength,
+		const PangoAnalysis *analysis,
+		PangoGlyphString *glyphs) {
+	// WHY: a glyph is rasterized per quarter of a pixel only since cairo 1.17.4
+	// (PHASE in cairo-image-compositor.c), and an older one snaps it to a whole
+	// pixel instead - where a fraction kept in the advances makes the gaps jump.
+	const auto fits = !SupportsSubpixelPositions(analysis->font);
+	const auto rounds = !fits
+		&& (cairo_version() < CAIRO_VERSION_ENCODE(1, 17, 4));
+	ShapeItem(
+		itemText,
+		itemLength,
+		paragraphText,
+		paragraphLength,
+		analysis,
+		glyphs,
+		rounds);
+
+	// An older Pango has no flags and fits the advances itself, as we do here.
+	if (!fits || pango_version() < PANGO_VERSION_ENCODE(1, 44, 0)) {
+		return;
+	} else if (!FitAdvancesToHinting(analysis, glyphs)) {
+		ShapeItem(
+			itemText,
+			itemLength,
+			paragraphText,
+			paragraphLength,
+			analysis,
+			glyphs,
+			true);
+	}
 }
 
 // The glyphs of a shaped item, drawn the way the font itself was loaded where
