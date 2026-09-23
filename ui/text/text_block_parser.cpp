@@ -478,6 +478,7 @@ bool BlockParser::checkEntities() {
 		|| entityType == EntityType::Email
 		|| entityType == EntityType::Phone
 		|| entityType == EntityType::BankCard
+		|| entityType == EntityType::TonAddress
 		|| entityType == EntityType::Mention
 		|| entityType == EntityType::Hashtag
 		|| entityType == EntityType::Cashtag
@@ -708,6 +709,7 @@ bool BlockParser::isLinkEntity(const EntityInText &entity) const {
 		EntityType::MentionName,
 		EntityType::Phone,
 		EntityType::BankCard,
+		EntityType::TonAddress,
 		EntityType::BotCommand
 	};
 	return ranges::find(urls, type) != std::end(urls);
