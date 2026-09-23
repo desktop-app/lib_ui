@@ -44,7 +44,7 @@ constexpr auto kDefaultSpoilerCacheCapacity = 24;
 // lives that long - what keeps such results keeps a handful of them and
 // throws the rest away, long before the count comes around.
 [[nodiscard]] uint NextLayoutId() {
-	static auto counter = uint(0);
+	static auto counter = std::atomic<uint>();
 	return ++counter;
 }
 
