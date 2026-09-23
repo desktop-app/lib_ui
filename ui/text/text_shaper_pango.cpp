@@ -469,75 +469,56 @@ void NotifyFontOptionsChanged() {
 }
 #endif // LIB_UI_PANGO_OVER_FONTCONFIG
 
-// Whether the glyphs of this font may sit at a fraction of a pixel, and their
-// advances keep one: hinting puts a stem on the grid, and text made of glyphs
-// that were fitted to it is counted in whole pixels too. Qt keeps the fraction
-// for light hinting and for none, and takes whole pixels otherwise - both in
-// supportsHorizontalSubPixelPositions() and in shouldUseDesignMetrics(), of
-// qfontengine_ft_p.h and qfontengine_ft.cpp - and the same is answered here,
-// so that a hinted font is laid out the same by either backend.
-//
-// The question is about the font that will rasterize the glyphs, so the font
-// itself is asked, and the two answers it has are put together the way cairo
-// puts them - _cairo_ft_options_merge() in cairo-ft-font.c. One is what the
-// font was loaded with, which is everything the context of ours was given; the
-// other is the pattern fontconfig matched, read the way cairo reads it in
-// _get_pattern_ft_options(). What the font was loaded with wins, except that a
-// pattern with the hinting turned off leaves the glyphs unhinted whatever else
-// says - the one rule of the merge that goes the other way. A pattern with no
-// style in it at all is hinted in full, which is what Qt does with a pattern it
-// can not read either.
+// WHY: a glyph keeps a fraction of a pixel only where cairo hints it lightly
+// or not at all (_cairo_ft_options_merge in cairo-ft-font.c), as Qt does - and
+// never without antialiasing, where a fraction changes the shape of the glyph.
 [[nodiscard]] bool SupportsSubpixelPositions(PangoFont *font) {
 #ifdef LIB_UI_PANGO_OVER_FONTCONFIG
 	const auto pattern = FontPattern(font);
-	auto hinting = FcTrue;
-	if (pattern
-		&& FcPatternGetBool(pattern, FC_HINTING, 0, &hinting) == FcResultMatch
-		&& !hinting) {
-		return true;
-	}
-	// WHY: a glyph asked for without antialiasing is loaded for the monochrome
-	// target, and that one knows no light hinting - it fits the outline to the
-	// grid in full (_cairo_ft_options_merge of cairo-ft-font.c).
-	auto antialias = FcTrue;
-	const auto fitsForMonochrome = pattern
-		&& (FcPatternGetBool(pattern, FC_ANTIALIAS, 0, &antialias)
-			== FcResultMatch)
-		&& !antialias;
 	const auto scaled = PANGO_IS_CAIRO_FONT(font)
 		? pango_cairo_font_get_scaled_font(PANGO_CAIRO_FONT(font))
 		: nullptr;
+	const auto options = cairo_font_options_create();
+	const auto guard = gsl::finally([&] {
+		cairo_font_options_destroy(options);
+	});
 	if (scaled && cairo_scaled_font_status(scaled) == CAIRO_STATUS_SUCCESS) {
-		const auto options = cairo_font_options_create();
-		const auto guard = gsl::finally([&] {
-			cairo_font_options_destroy(options);
-		});
 		cairo_scaled_font_get_font_options(scaled, options);
-		const auto monochrome = fitsForMonochrome
-			|| (cairo_font_options_get_antialias(options)
-				== CAIRO_ANTIALIAS_NONE);
-		switch (cairo_font_options_get_hint_style(options)) {
-		case CAIRO_HINT_STYLE_NONE:
-			return true;
-		case CAIRO_HINT_STYLE_SLIGHT:
-			return !monochrome;
-		case CAIRO_HINT_STYLE_MEDIUM:
-		case CAIRO_HINT_STYLE_FULL:
-			return false;
-		case CAIRO_HINT_STYLE_DEFAULT:
-			break; // Nothing was said, so the pattern is what is left.
-		}
 	}
-	if (!pattern) {
+	auto antialias = FcTrue;
+	if ((pattern
+			&& FcPatternGetBool(pattern, FC_ANTIALIAS, 0, &antialias)
+				== FcResultMatch
+			&& !antialias)
+		|| (cairo_font_options_get_antialias(options)
+			== CAIRO_ANTIALIAS_NONE)) {
 		return false;
 	}
+	auto hinting = FcTrue;
 	auto style = FC_HINT_FULL;
-	if (FcPatternGetInteger(pattern, FC_HINT_STYLE, 0, &style)
-		!= FcResultMatch) {
+	if (pattern
+		&& FcPatternGetInteger(pattern, FC_HINT_STYLE, 0, &style)
+			!= FcResultMatch) {
 		style = FC_HINT_FULL;
 	}
-	return (style == FC_HINT_NONE)
-		|| ((style == FC_HINT_SLIGHT) && !fitsForMonochrome);
+	if ((style == FC_HINT_NONE)
+		|| (pattern
+			&& FcPatternGetBool(pattern, FC_HINTING, 0, &hinting)
+				== FcResultMatch
+			&& !hinting)) {
+		return true;
+	}
+	switch (cairo_font_options_get_hint_style(options)) {
+	case CAIRO_HINT_STYLE_NONE:
+	case CAIRO_HINT_STYLE_SLIGHT:
+		return true;
+	case CAIRO_HINT_STYLE_MEDIUM:
+	case CAIRO_HINT_STYLE_FULL:
+		return false;
+	case CAIRO_HINT_STYLE_DEFAULT:
+		break; // Nothing was said, so the pattern is what is left.
+	}
+	return (style == FC_HINT_SLIGHT);
 #else // LIB_UI_PANGO_OVER_FONTCONFIG
 	return false;
 #endif // !LIB_UI_PANGO_OVER_FONTCONFIG
