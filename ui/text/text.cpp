@@ -2105,6 +2105,7 @@ TextForMimeData String::toText(
 		const auto plainUrl = (entity.type == EntityType::Url)
 			|| (entity.type == EntityType::Email)
 			|| (entity.type == EntityType::BankCard)
+			|| (entity.type == EntityType::TonAddress)
 			|| (entity.type == EntityType::Phone);
 		const auto inText = QStringView(result.rich.text).mid(linkStart);
 		const auto full = plainUrl
