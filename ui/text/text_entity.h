@@ -43,6 +43,7 @@ enum class EntityType : uchar {
 	Colorized, // Senders in chat list, attachments in chat list, etc.
 	Phone,
 	BankCard,
+	TonAddress,
 
 	Bold,
 	Semibold,
