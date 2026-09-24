@@ -391,7 +391,7 @@ Qt::FocusPolicy RpWidget::accessibilityFocusPolicy() {
 		|| (role == QAccessible::Role::ButtonMenu)
 		|| (role == QAccessible::Role::Link)
 		|| (role == QAccessible::Role::CheckBox)
-#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) || defined(QT_ACCESSIBLE_SWITCH_ROLE)
 		|| (role == QAccessible::Role::Switch)
 #endif
 		|| (role == QAccessible::Role::Slider);
