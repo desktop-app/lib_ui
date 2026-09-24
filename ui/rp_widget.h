@@ -459,6 +459,8 @@ public:
 	void accessibilityChildValueChanged(int index);
 	[[nodiscard]] virtual QAccessible::State accessibilityChildState(int index) const;
 	void accessibilityChildStateChanged(int index, AccessibilityState changes);
+	// Replaces the selected-state notification after the owner updates its state.
+	void accessibilityChildSelectionChanged(int index);
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildRole() const;
 
 	// The role of one child where it differs from the list-wide one above:
