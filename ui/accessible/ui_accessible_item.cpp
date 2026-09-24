@@ -211,7 +211,9 @@ void *Item::interface_cast(QAccessible::InterfaceType type) {
 			&& parent->accessibilityChildSupportsActions(index)) {
 			return static_cast<QAccessibleActionInterface*>(this);
 		}
-	} else if (type == QAccessible::AttributesInterface) {
+	}
+#if QT_VERSION >= QT_VERSION_CHECK(6, 13, 0) || defined(QT_ACCESSIBLE_SET_POSITION_ATTRIBUTES)
+	if (type == QAccessible::AttributesInterface) {
 		// Only a row that is one of the set reports a position, a divider
 		// between the rows has none - see accessibilityChildSetPosition.
 		if (index >= 0
@@ -219,17 +221,23 @@ void *Item::interface_cast(QAccessible::InterfaceType type) {
 			return static_cast<QAccessibleAttributesInterface*>(this);
 		}
 	}
+#endif
 	return nullptr;
 }
 
 QList<QAccessible::Attribute> Item::attributeKeys() const {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 13, 0) || defined(QT_ACCESSIBLE_SET_POSITION_ATTRIBUTES)
 	return {
 		QAccessible::Attribute::PositionInSet,
 		QAccessible::Attribute::SizeOfSet,
 	};
+#else
+	return {};
+#endif
 }
 
 QVariant Item::attributeValue(QAccessible::Attribute key) const {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 13, 0) || defined(QT_ACCESSIBLE_SET_POSITION_ATTRIBUTES)
 	const auto parent = _parent.get();
 	const auto index = parent ? currentIndex() : -1;
 	if (index < 0) {
@@ -241,6 +249,7 @@ QVariant Item::attributeValue(QAccessible::Attribute key) const {
 	} else if (key == QAccessible::Attribute::SizeOfSet) {
 		return position.size;
 	}
+#endif
 	return QVariant();
 }
 
