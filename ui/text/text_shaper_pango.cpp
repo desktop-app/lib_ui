@@ -761,7 +761,9 @@ void ShowGlyphs(
 
 	// Glyphs that go into an image of ours can not keep subpixel antialiasing:
 	// what lies under them there is not the screen - see the notes there.
-	if (!subpixelAllowed) {
+	if (!subpixelAllowed
+		&& (cairo_font_options_get_antialias(options)
+			!= CAIRO_ANTIALIAS_NONE)) {
 		cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
 		cairo_font_options_set_subpixel_order(
 			options,
