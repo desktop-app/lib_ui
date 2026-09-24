@@ -470,6 +470,18 @@ void RpWidget::accessibilityChildStateChanged(
 	QAccessible::updateAccessibility(&event);
 }
 
+void RpWidget::accessibilityChildSelectionChanged(int index) {
+	if constexpr (Platform::IsLinux()) {
+		QAccessibleEvent event(this, accessibilityChildState(index).selected
+			? QAccessible::SelectionAdd
+			: QAccessible::SelectionRemove);
+		event.setChild(index);
+		QAccessible::updateAccessibility(&event);
+	} else {
+		accessibilityChildStateChanged(index, { .selected = true });
+	}
+}
+
 void RpWidget::accessibilityChildFocused(int index) {
 	QAccessibleEvent event(this, QAccessible::Focus);
 	event.setChild(index);
