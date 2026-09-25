@@ -547,6 +547,19 @@ void RpWidget::accessibilityValueChanged() {
 	// the one a screen reader announces and reads the value back from.
 	QAccessibleValueChangeEvent event(this, accessibilityValue());
 	QAccessible::updateAccessibility(&event);
+	if constexpr (::Platform::IsWindows()) {
+		// The UIA bridge raises only one property per event, by the type of
+		// the value: the textual one above for a string, the numeric
+		// RangeValue one for a number, read off the value interface. A
+		// control with a range supports RangeValue, so it must raise that
+		// change as well. AT-SPI and Cocoa ignore the payload and notify
+		// once per event from the interface, so there the first event
+		// already covers the range and a second would only repeat it.
+		if (const auto range = accessibilityValueRange()) {
+			QAccessibleValueChangeEvent numeric(this, QVariant(range->current));
+			QAccessible::updateAccessibility(&numeric);
+		}
+	}
 }
 
 std::optional<AccessibilityValueRange> RpWidget::accessibilityValueRange() const {

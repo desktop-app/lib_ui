@@ -435,6 +435,8 @@ public:
 	[[nodiscard]] virtual AccessibilityState accessibilityState() const;
 	void accessibilityStateChanged(AccessibilityState changes);
 	[[nodiscard]] virtual QString accessibilityValue() const;
+	// Announces a new value: the text, and on Windows also the number of a
+	// control that reports an accessibilityValueRange().
 	void accessibilityValueChanged();
 
 	// Numeric range value of a slider-like control. nullopt (the default)
