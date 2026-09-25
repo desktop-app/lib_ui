@@ -103,6 +103,7 @@ private:
 	void showAnimationCallback();
 	void opacityAnimationCallback();
 
+	void saveFocusWidget();
 	void saveFocusWidgetAndShow();
 	void maybeReturnFocus();
 	void hideFinished();
@@ -120,6 +121,7 @@ private:
 
 	bool _autoHiding = true;
 	bool _hiding = false;
+	bool _showPending = false;
 	QPixmap _cache;
 	Animations::Simple _a_opacity;
 

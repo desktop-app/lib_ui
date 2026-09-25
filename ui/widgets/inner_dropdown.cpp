@@ -209,7 +209,7 @@ void InnerDropdown::finishAnimating() {
 	}
 	if (_showAnimation) {
 		_showAnimation.reset();
-		showChildren();
+		showFinished();
 	}
 	if (_a_opacity.animating()) {
 		_a_opacity.stop();
@@ -219,16 +219,13 @@ void InnerDropdown::finishAnimating() {
 
 void InnerDropdown::showFast() {
 	_hideTimer.cancel();
-	const auto showing = isHidden() || _hiding || (_showAnimation != nullptr);
 	finishAnimating();
 	if (isHidden()) {
-		showChildren();
 		saveFocusWidgetAndShow();
+		_showPending = true;
 	}
 	_hiding = false;
-	if (showing) {
-		showFinished();
-	}
+	showFinished();
 }
 
 void InnerDropdown::hideFast() {
@@ -236,13 +233,18 @@ void InnerDropdown::hideFast() {
 		return;
 	}
 	_hideTimer.cancel();
+	_showPending = false;
 	finishAnimating();
 	_hiding = false;
 	hideFinished();
 }
 
-void InnerDropdown::saveFocusWidgetAndShow() {
+void InnerDropdown::saveFocusWidget() {
 	_savedFocusWidget = window()->focusWidget();
+}
+
+void InnerDropdown::saveFocusWidgetAndShow() {
+	saveFocusWidget();
 	show();
 }
 
@@ -255,6 +257,7 @@ void InnerDropdown::maybeReturnFocus() {
 }
 
 void InnerDropdown::hideFinished() {
+	_showPending = false;
 	_a_show.stop();
 	_showAnimation.reset();
 	_cache = QPixmap();
@@ -289,6 +292,7 @@ void InnerDropdown::prepareCache() {
 void InnerDropdown::startOpacityAnimation(bool hiding) {
 	const auto weak = base::make_weak(this);
 	if (hiding) {
+		_showPending = false;
 		maybeReturnFocus();
 		if (const auto onstack = weak ? _hideStartCallback : nullptr) {
 			onstack();
@@ -316,11 +320,16 @@ void InnerDropdown::showStarted() {
 		return;
 	} else if (isHidden()) {
 		saveFocusWidgetAndShow();
+		_showPending = true;
 		startShowAnimation();
 		return;
 	} else if (!_hiding) {
 		return;
 	}
+	// The hide that is being reversed already gave the focus back and
+	// forgot where to return it; take note of where it is now.
+	saveFocusWidget();
+	_showPending = true;
 	startOpacityAnimation(false);
 }
 
@@ -378,6 +387,13 @@ void InnerDropdown::opacityAnimationCallback() {
 
 void InnerDropdown::showFinished() {
 	showChildren();
+	// The show animation ends on the last painted frame, in the opacity
+	// callback of a reopen or in finishAnimating(); whichever comes first
+	// reports the transition, and a hide that took over reports nothing.
+	if (!_showPending) {
+		return;
+	}
+	_showPending = false;
 	if (const auto onstack = _shownCallback) {
 		onstack();
 	}

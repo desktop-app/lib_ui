@@ -40,11 +40,17 @@ void ItemBase::setSelected(
 			// appears, a menu inside the window may not have been yet.
 			QAccessible::queryAccessibleInterface(this);
 		}
-		if (selected && focusPolicy() != Qt::NoFocus) {
-			setFocus();
-			QAccessibleEvent event(this, QAccessible::Focus);
-			QAccessible::updateAccessibility(&event);
+		if (selected) {
+			takeAccessibilityFocus();
 		}
+	}
+}
+
+void ItemBase::takeAccessibilityFocus() {
+	if (focusPolicy() != Qt::NoFocus) {
+		setFocus();
+		QAccessibleEvent event(this, QAccessible::Focus);
+		QAccessible::updateAccessibility(&event);
 	}
 }
 
