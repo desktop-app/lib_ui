@@ -16,6 +16,7 @@
 #include <QtCore/QDir>
 #include <QtGui/QFontInfo>
 #include <QtGui/QFontDatabase>
+#include <QtGui/QGuiApplication>
 
 #if __has_include(<glib.h>)
 #include <glib.h>
@@ -354,6 +355,20 @@ struct Metrics {
 		font.setPixelSize(
 			int(base::SafeRound(metrics.pixelSize * kSubSuperMultiplier)));
 	}
+#ifdef Q_OS_WIN
+	// Qt's DirectWrite backend (determineHinting) evaluates fontDef.pixelSize
+	// against 16.0 without multiplying by the device pixel ratio when DPR != 1,
+	// forcing PreferVerticalHinting on HiDPI text whose physical size > 16 ppem.
+	// Note: size (and thus font.pixelSize()) already includes style::Scale().
+	if (qGuiApp) {
+		const auto dpr = qGuiApp->devicePixelRatio();
+		if (!qFuzzyCompare(dpr, 1.0)
+			&& (font.pixelSize() <= 16)
+			&& (font.pixelSize() * dpr > 16.0)) {
+			font.setHintingPreference(QFont::PreferNoHinting);
+		}
+	}
+#endif // Q_OS_WIN
 	if (!monospace) {
 		font.setWeight((flags & FontFlag::Bold)
 			? QFont::DemiBold
