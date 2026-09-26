@@ -5,6 +5,7 @@
 // https://github.com/desktop-app/legal/blob/master/LEGAL
 //
 #include "ui/style/style_core_font.h"
+#include "ui/style/style_core_scale.h"
 
 #include "base/algorithm.h"
 #include "base/debug_log.h"
@@ -354,6 +355,21 @@ struct Metrics {
 		font.setPixelSize(
 			int(base::SafeRound(metrics.pixelSize * kSubSuperMultiplier)));
 	}
+#if defined Q_OS_WIN
+	// DirectWrite guidelines recommend NATURAL_SYMMETRIC (PreferNoHinting)
+	// when the rasterized physical size on screen is > 16 ppem, and NATURAL
+	// (vertical hinting) for micro-text <= 16 ppem to prevent blurriness.
+	// Qt's internal DirectWrite backend mistakenly evaluates unscaled size
+	// against 16.0 without multiplying the UI scale factor, constraining
+	// standard HiDPI text to Mode 4 with jagged vertical contours.
+	// Restore the intended 16 ppem physical threshold:
+	const auto physicalSize = (font.pixelSize() * style::Scale()) / 100.0;
+	if (physicalSize > 16.0) {
+		font.setHintingPreference(QFont::PreferNoHinting);
+	} else {
+		font.setHintingPreference(QFont::PreferVerticalHinting);
+	}
+#endif
 	if (!monospace) {
 		font.setWeight((flags & FontFlag::Bold)
 			? QFont::DemiBold
