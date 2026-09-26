@@ -10,6 +10,8 @@
 #include "ui/ui_utility.h"
 #include "base/qt/qt_common_adapters.h"
 #include "base/debug_log.h"
+#include "base/invoke_queued.h"
+#include "base/weak_qptr.h"
 
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QApplication>
@@ -444,6 +446,40 @@ ScrollArea::ScrollArea(
 		_touchTimer.setCallback([=] { _touchRightButton = true; });
 		_touchScrollTimer.setCallback([=] { touchScrollTimer(); });
 	}
+
+	// Keep the widget that takes the focus in view - by Tab, by a click or
+	// by an assistive tool - the way a native scroll area does.
+	QObject::connect(qApp, &QApplication::focusChanged, this, [=](
+			QWidget *was,
+			QWidget *now) {
+		if (now) {
+			checkFocusedInView(now);
+		}
+	});
+}
+
+void ScrollArea::checkFocusedInView(not_null<QWidget*> focused) {
+	const auto inner = widget();
+	if (!inner || focused == inner || !inner->isAncestorOf(focused)) {
+		return;
+	}
+	// Deferred by a turn: the focus may arrive before the layout is
+	// through, and it may move on right away. A widget taller than the
+	// viewport is left alone: a long list keeps its own focused row in
+	// view, and would only be thrown to its top.
+	const auto weak = base::weak_qptr<QWidget>(focused);
+	InvokeQueued(this, [=] {
+		const auto inner = widget();
+		if (!weak
+			|| !weak->hasFocus()
+			|| !isVisible()
+			|| !inner
+			|| !inner->isAncestorOf(weak.get())
+			|| weak->height() > height()) {
+			return;
+		}
+		scrollToWidget(weak.get());
+	});
 }
 
 void ScrollArea::touchDeaccelerate(int32 elapsed) {

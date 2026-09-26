@@ -238,6 +238,8 @@ private:
 	void touchUpdateSpeed();
 	void touchDeaccelerate(int32 elapsed);
 
+	void checkFocusedInView(not_null<QWidget*> focused);
+
 	bool _disabled = false;
 	bool _movingByScrollBar = false;
 
