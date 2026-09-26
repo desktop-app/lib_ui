@@ -953,9 +953,16 @@ void WindowHelper::updateMargins() {
 			m.right - w.right,
 			m.bottom - w.bottom);
 
-		const auto normal = margins;
-		margins = QMargins(r.left, r.top, -r.right, -r.bottom) - _rcWorkDelta;
-		_marginsDelta = normal - margins;
+		_marginsDelta = _rcWorkDelta;
+
+		// With native borders Qt already measures maximized frame itself,
+		// shifting custom margins here made it 16px wider than client.
+		if (!nativeResize()) {
+			margins.setLeft(margins.left() - _rcWorkDelta.left());
+			margins.setRight(margins.right() - _rcWorkDelta.right());
+			margins.setBottom(margins.bottom() - _rcWorkDelta.bottom());
+			margins.setTop(margins.top() - _rcWorkDelta.top());
+		}
 	} else if (!_marginsDelta.isNull()) {
 		if (!nativeResize()) {
 			RECT w;
