@@ -547,6 +547,16 @@ void RpWidget::accessibilityValueChanged() {
 	QAccessible::updateAccessibility(&event);
 }
 
+void RpWidget::accessibilityAnnounce(const QString &message, bool assertive) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0) || defined(QT_ACCESSIBLE_ANNOUNCEMENT_EVENT)
+	QAccessibleAnnouncementEvent event(this, message);
+	if (assertive) {
+		event.setPoliteness(QAccessible::AnnouncementPoliteness::Assertive);
+	}
+	QAccessible::updateAccessibility(&event);
+#endif // Qt >= 6.8 || QT_ACCESSIBLE_ANNOUNCEMENT_EVENT
+}
+
 QStringList RpWidget::accessibilityActionNames() {
 	return QStringList();
 }
