@@ -13,6 +13,10 @@ namespace style {
 
 struct colorizer;
 
+namespace main_palette {
+class Override;
+} // namespace main_palette
+
 class palette : public palette_data {
 public:
 	palette();
@@ -46,9 +50,11 @@ private:
 	struct FinalizeHelper;
 	struct TempColorData { uchar r, g, b, a; };
 	friend class palette_data;
+	friend class main_palette::Override;
 
 	[[nodiscard]] static auto PrepareFinalizeHelper(const colorizer &with)
 		-> std::unique_ptr<FinalizeHelper>;
+	static void SwitchMainOverride(const palette *target);
 
 	void clear();
 	void compute(int index, int fallbackIndex, TempColorData value);
@@ -70,6 +76,20 @@ void apply(const palette &other);
 void reset();
 void reset(const colorizer &with);
 int indexOfColor(color c);
+
+class Override final {
+public:
+	explicit Override(const palette *with);
+	Override(const Override &) = delete;
+	Override &operator=(const Override &) = delete;
+	~Override();
+
+private:
+	const palette *_was = nullptr;
+
+};
+
+[[nodiscard]] const palette *CurrentOverride();
 
 } // namespace main_palette
 } // namespace style

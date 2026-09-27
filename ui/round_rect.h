@@ -45,8 +45,11 @@ public:
 		RectParts corners) const;
 
 private:
+	void validate() const;
+
 	style::color _color;
-	std::array<QImage, 4> _corners;
+	mutable std::array<QImage, 4> _corners;
+	mutable QColor _cornersColor;
 	Fn<void()> _refresh;
 
 	rpl::lifetime _lifetime;
