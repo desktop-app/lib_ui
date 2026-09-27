@@ -470,6 +470,7 @@ private:
 	bool viewportEventInner(QEvent *e);
 
 	void updatePalette();
+	void applyPaletteColors(bool onlyIfChanged);
 	void refreshPlaceholder(const QString &text);
 	int placeholderSkipWidth() const;
 	[[nodiscard]] QMargins placeholderPaintMargins() const;
