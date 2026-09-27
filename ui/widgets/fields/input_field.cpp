@@ -2334,6 +2334,40 @@ void InputField::paintEventInner(QPaintEvent *e) {
 #ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 	paintMisspelled(e);
 #endif // !QT_SPELLCHECK_UNDERLINE_FROM_CHROME
+	paintSlimCaret(e);
+}
+
+
+void InputField::restartCaretBlink() {
+	_caretBlinkOn = true;
+	_caretBlinkTimer.setCallback([=] {
+		_caretBlinkOn = !_caretBlinkOn;
+		_inner->update();
+	});
+	_caretBlinkTimer.callEach(
+		std::max(QApplication::cursorFlashTime() / 2, 100));
+}
+
+void InputField::paintSlimCaret(QPaintEvent *e) {
+	// Stock Qt draws the caret at the full font line height (ascent +
+	// descent), which towers over the visible glyphs and, on multi-line
+	// input, merges visually with the line above (tdesktop#31358).
+	// Erase the default caret and draw one that starts at the cap height.
+	const auto cursor = _inner->textCursor();
+	const auto rect = _inner->cursorRect(cursor);
+	const auto pad = int(std::ceil(_inner->devicePixelRatioF())) + 1;
+	auto p = QPainter(_inner->viewport());
+	p.fillRect(
+		rect.adjusted(-pad, -1, pad, 1),
+		_inner->viewport()->palette().color(QPalette::Base));
+	if (!_caretBlinkOn || !_inner->hasFocus()) {
+		return;
+	}
+	const auto metrics = QFontMetrics(_inner->font());
+	const auto trim = metrics.ascent() - metrics.capHeight();
+	p.fillRect(
+		rect.adjusted(0, trim, 0, 0),
+		_inner->viewport()->palette().color(QPalette::Text));
 }
 
 #ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
@@ -3270,12 +3304,15 @@ void InputField::focusInEventInner(QFocusEvent *e) {
 	setFocused(true);
 	_inner->QTextEdit::focusInEvent(e);
 	_focusedChanges.fire(true);
+	restartCaretBlink();
 }
 
 void InputField::focusOutEventInner(QFocusEvent *e) {
 	setFocused(false);
 	_inner->QTextEdit::focusOutEvent(e);
 	_focusedChanges.fire(false);
+	_caretBlinkTimer.cancel();
+	_caretBlinkOn = false;
 }
 
 void InputField::setFocused(bool focused) {
