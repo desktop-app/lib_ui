@@ -742,12 +742,8 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 #if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	using namespace QNativeInterface::Private;
 	const auto window = not_null(widget->windowHandle());
-	const auto platformWindow = not_null(window->handle());
 	if (const auto native = window->nativeInterface<QWaylandWindow>()) {
-		native->setCustomMargins(
-			margins
-				* window->devicePixelRatio()
-				/ platformWindow->devicePixelRatio());
+		native->setCustomMargins(margins);
 		return;
 	}
 #endif // wayland
