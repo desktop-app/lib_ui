@@ -207,7 +207,7 @@ void MonoIcon::paint(QPainter &p, const QPoint &pos, int outerw) const {
 		: (pos.x() + _padding.left());
 	const auto partPosY = pos.y() + _padding.top();
 
-	ensureLoaded();
+	ensureColorized();
 	if (_pixmap.isNull()) {
 		p.fillRect(QRect(QPoint(partPosX, partPosY), inner()), _color);
 	} else {
@@ -218,7 +218,7 @@ void MonoIcon::paint(QPainter &p, const QPoint &pos, int outerw) const {
 void MonoIcon::fill(QPainter &p, const QRect &rect) const {
 	Expects(_padding.isNull());
 
-	ensureLoaded();
+	ensureColorized();
 	if (_pixmap.isNull()) {
 		p.fillRect(rect, _color);
 	} else {
@@ -385,6 +385,13 @@ void MonoIcon::ensureLoaded() const {
 	}
 }
 
+void MonoIcon::ensureColorized() const {
+	ensureLoaded();
+	if (!_pixmap.isNull() && ColorKey(_color->c) != _pixmapColorKey) {
+		createCachedPixmap();
+	}
+}
+
 void MonoIcon::ensureColorizedImage(QColor color) const {
 	if (_colorizedImage.isNull()) {
 		_colorizedImage = QImage(
@@ -396,6 +403,7 @@ void MonoIcon::ensureColorizedImage(QColor color) const {
 
 void MonoIcon::createCachedPixmap() const {
 	auto key = std::make_pair(_mask, ColorKey(_color->c));
+	_pixmapColorKey = key.second;
 	auto j = iconPixmaps.find(key);
 	if (j == end(iconPixmaps)) {
 		auto image = colorizeImage(_maskImage, _color);

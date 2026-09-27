@@ -9,6 +9,28 @@
 #include "ui/style/style_palette_colorizer.h"
 
 namespace style {
+namespace {
+
+struct MainOverrideState {
+	const palette *active = nullptr;
+	const palette *shadowFor = nullptr;
+	int shadowVersion = -1;
+	std::vector<int> carried;
+	std::unique_ptr<palette> shadow;
+};
+
+[[nodiscard]] MainOverrideState &MainOverride() {
+	static auto result = MainOverrideState(); // main thread only
+	return result;
+}
+
+void InvalidateMainOverride() {
+	Expects(!MainOverride().active);
+
+	MainOverride().shadowFor = nullptr;
+}
+
+} // namespace
 
 struct palette::FinalizeHelper {
 	not_null<const colorizer*> with;
@@ -211,6 +233,50 @@ auto palette::PrepareFinalizeHelper(const colorizer &with)
 	return result;
 }
 
+void palette::SwitchMainOverride(const palette *target) {
+	auto &state = MainOverride();
+	if (state.active == target) {
+		return;
+	}
+	auto &main = const_cast<palette&>(*main_palette::get());
+	const auto exchange = [&] {
+		auto &shadow = *state.shadow;
+		for (const auto index : state.carried) {
+			auto &slot = *main.data(index);
+			auto &other = *shadow.data(index);
+			std::swap(slot.c, other.c);
+			slot.p.swap(other.p);
+			slot.b.swap(other.b);
+		}
+	};
+	if (state.active) {
+		exchange();
+		state.active = nullptr;
+	}
+	if (!target) {
+		return;
+	}
+	Expects(target->_ready);
+
+	const auto version = PaletteVersion();
+	if (state.shadowFor != target || state.shadowVersion != version) {
+		if (!state.shadow) {
+			state.shadow = std::make_unique<palette>();
+		}
+		state.carried.clear();
+		for (auto i = 0; i != kCount; ++i) {
+			if (main.data(i)->c != target->data(i)->c) {
+				state.carried.push_back(i);
+				state.shadow->setData(i, *target->data(i));
+			}
+		}
+		state.shadowFor = target;
+		state.shadowVersion = version;
+	}
+	exchange();
+	state.active = target;
+}
+
 namespace main_palette {
 namespace {
 
@@ -225,6 +291,7 @@ QByteArray save() {
 }
 
 bool load(const QByteArray &cache) {
+	InvalidateMainOverride();
 	if (GetMutable().load(cache)) {
 		style::internal::ResetIcons();
 		return true;
@@ -233,30 +300,48 @@ bool load(const QByteArray &cache) {
 }
 
 palette::SetResult setColor(QLatin1String name, uchar r, uchar g, uchar b, uchar a) {
+	InvalidateMainOverride();
 	return GetMutable().setColor(name, r, g, b, a);
 }
 
 palette::SetResult setColor(QLatin1String name, QLatin1String from) {
+	InvalidateMainOverride();
 	return GetMutable().setColor(name, from);
 }
 
 void apply(const palette &other) {
+	InvalidateMainOverride();
 	GetMutable() = other;
 	style::internal::ResetIcons();
 }
 
 void reset() {
+	InvalidateMainOverride();
 	GetMutable().reset();
 	style::internal::ResetIcons();
 }
 
 void reset(const colorizer &with) {
+	InvalidateMainOverride();
 	GetMutable().reset(with);
 	style::internal::ResetIcons();
 }
 
 int indexOfColor(color c) {
 	return GetMutable().indexOfColor(c);
+}
+
+Override::Override(const palette *with)
+: _was(MainOverride().active) {
+	palette::SwitchMainOverride(with);
+}
+
+Override::~Override() {
+	palette::SwitchMainOverride(_was);
+}
+
+const palette *CurrentOverride() {
+	return MainOverride().active;
 }
 
 } // namespace main_palette
