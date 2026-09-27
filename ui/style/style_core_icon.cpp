@@ -167,7 +167,8 @@ MonoIcon::MonoIcon(const MonoIcon &other, const style::palette &palette)
 , _color(
 	palette.colorAtIndex(
 		style::main_palette::indexOfColor(other._color)))
-, _padding(other._padding) {
+, _padding(other._padding)
+, _ownPixmap(true) {
 }
 
 MonoIcon::MonoIcon(const IconMask *mask, Color color, QMargins padding)
@@ -402,16 +403,21 @@ void MonoIcon::ensureColorizedImage(QColor color) const {
 }
 
 void MonoIcon::createCachedPixmap() const {
-	auto key = std::make_pair(_mask, ColorKey(_color->c));
-	_pixmapColorKey = key.second;
-	auto j = iconPixmaps.find(key);
-	if (j == end(iconPixmaps)) {
-		auto image = colorizeImage(_maskImage, _color);
-		j = iconPixmaps.emplace(
-			key,
-			QPixmap::fromImage(std::move(image))).first;
+	const auto colorKey = ColorKey(_color->c);
+	_pixmapColorKey = colorKey;
+	if (_ownPixmap) {
+		_pixmap = QPixmap::fromImage(colorizeImage(_maskImage, _color));
+	} else {
+		const auto key = std::make_pair(_mask, colorKey);
+		auto j = iconPixmaps.find(key);
+		if (j == end(iconPixmaps)) {
+			auto image = colorizeImage(_maskImage, _color);
+			j = iconPixmaps.emplace(
+				key,
+				QPixmap::fromImage(std::move(image))).first;
+		}
+		_pixmap = j->second;
 	}
-	_pixmap = j->second;
 	_size = (_pixmap.size() / DevicePixelRatio()).grownBy(_padding);
 }
 
@@ -419,6 +425,7 @@ IconData::IconData(const IconData &other, const style::palette &palette) {
 	// Deliberately not created(): this copy belongs to that one palette copy,
 	// which resets it itself. Registering it would put a background thread
 	// building an isolated palette into the process-wide icon registry.
+	// The parts keep out of the pixmap cache too, see MonoIcon::_ownPixmap.
 	_parts.reserve(other._parts.size());
 	for (const auto &part : other._parts) {
 		_parts.push_back(MonoIcon(part, palette));
