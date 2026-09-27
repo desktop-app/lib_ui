@@ -7,6 +7,7 @@
 #include "ui/text/text_custom_emoji.h"
 
 #include "ui/style/style_core.h"
+#include "ui/style/style_core_palette.h"
 #include "ui/text/text.h"
 #include "ui/text/text_utilities.h"
 #include "ui/emoji_config.h"
@@ -280,8 +281,12 @@ bool PaletteDependentCustomEmoji::readyInDefaultState() {
 
 void PaletteDependentCustomEmoji::validateFrame() {
 	const auto version = style::PaletteVersion();
-	if (_frame.isNull() || _paletteVersion != version) {
+	const auto overridden = style::main_palette::CurrentOverride();
+	if (_frame.isNull()
+		|| _paletteVersion != version
+		|| _paletteOverride != overridden) {
 		_paletteVersion = version;
+		_paletteOverride = overridden;
 		_frame = _factory();
 	}
 }
