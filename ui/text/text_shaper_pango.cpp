@@ -994,7 +994,17 @@ void ShowGlyphs(
 		.y0 = rest.dy(),
 	};
 	cairo_set_matrix(context, &turn);
-	const auto position = at * ratio;
+
+	// WHY: cairo draws a glyph anew for each quarter pixel it is moved by, and
+	// what hinting fitted to the grid smears off it - so the baseline goes to
+	// whole pixels of the device, as in Qt, and x too where advances are whole.
+	auto position = at * ratio;
+	if (rest.type() <= QTransform::TxTranslate) {
+		position.setY(std::round(position.y() + turn.y0) - turn.y0);
+		if (!SupportsSubpixelPositions(font)) {
+			position.setX(std::round(position.x() + turn.x0) - turn.x0);
+		}
+	}
 
 	// Coverage per colour channel comes back as a tint from a pixel that is
 	// composited again, so the glyphs are asked for grey everywhere but the
