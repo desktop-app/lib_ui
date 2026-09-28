@@ -738,6 +738,16 @@ void ShapeItem(
 #endif // Pango < 1.44.0
 }
 
+// WHY: vertically every glyph sits on whole pixels of the device, as in Qt
+// and Skia - a mark moved by a fraction of one is drawn anew by cairo, and
+// what hinting fitted to the grid smears off it, as it did off the baseline.
+void RoundVerticalOffsets(PangoGlyphString *glyphs) {
+	for (auto i = 0; i != glyphs->num_glyphs; ++i) {
+		auto &geometry = glyphs->glyphs[i].geometry;
+		geometry.y_offset = PANGO_UNITS_ROUND(geometry.y_offset);
+	}
+}
+
 void Shape(
 		const char *itemText,
 		int itemLength,
@@ -762,6 +772,7 @@ void Shape(
 
 	// An older Pango has no flags and fits the advances itself, as we do here.
 	if (!fits || pango_version() < PANGO_VERSION_ENCODE(1, 44, 0)) {
+		RoundVerticalOffsets(glyphs);
 		return;
 	} else if (!FitAdvancesToHinting(analysis, glyphs)) {
 		ShapeItem(
@@ -772,6 +783,7 @@ void Shape(
 			analysis,
 			glyphs,
 			true);
+		RoundVerticalOffsets(glyphs);
 	}
 }
 
