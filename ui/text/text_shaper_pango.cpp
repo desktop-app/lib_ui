@@ -910,6 +910,24 @@ void ShowGlyphs(
 	}
 }
 
+// Lines over the glyphs, in the units of Pango from where the glyphs start.
+using Lines = QVarLengthArray<QRect, 2>;
+
+void FillLines(cairo_t *context, QPointF from, const Lines &lines) {
+	if (lines.isEmpty()) {
+		return;
+	}
+	for (const auto &line : lines) {
+		cairo_rectangle(
+			context,
+			from.x() + line.x() / double(PANGO_SCALE),
+			from.y() + line.y() / double(PANGO_SCALE),
+			line.width() / double(PANGO_SCALE),
+			line.height() / double(PANGO_SCALE));
+	}
+	cairo_fill(context);
+}
+
 // Straight into the buffer the painter draws to, so that cairo blends the
 // glyphs against the real background and the subpixel antialiasing of the
 // system survives. Answers whether it could.
@@ -917,7 +935,8 @@ void ShowGlyphs(
 		QPainter &p,
 		QPointF at,
 		PangoFont *font,
-		PangoGlyphString *glyphs) {
+		PangoGlyphString *glyphs,
+		const Lines &lines) {
 	// Painting a widget, the device of the painter is the widget itself and
 	// the pixels live in the buffer of the window behind it - which the engine
 	// is given and the painter is not.
@@ -1044,6 +1063,7 @@ void ShowGlyphs(
 
 	cairo_move_to(context, position.x(), position.y());
 	ShowGlyphs(context, font, glyphs, onScreen);
+	FillLines(context, position, lines);
 
 	return true;
 }
@@ -2218,10 +2238,36 @@ void ShapedItem::draw(
 	// and there the antialiasing has to be plain grey.
 	const auto ratio = entry.ratio;
 
-	// Straight into the buffer of the painter where that is possible, and
-	// through an image of ours where it is not - and either way what the
-	// font asks to be drawn over the letters comes after, below.
-	if (!drawInPlace(p, at, item->analysis.font, part)) {
+	// WHY: the lines go where the glyphs go - onto the baseline on whole pixels
+	// and through the same turn - so cairo fills them right after the glyphs, as
+	// GTK does, rather than the painter from the point the glyphs were asked at.
+	auto lines = Lines();
+	if (font.underline() || font.strikeOut()) {
+		const auto metrics = pango_font_get_metrics(item->analysis.font, nullptr);
+		const auto guardMetrics = gsl::finally([&] {
+			pango_font_metrics_unref(metrics);
+		});
+		const auto advance = XAt(entry, tillOffset) - XAt(entry, fromOffset);
+		const auto line = [&](int position, int thickness) {
+			lines.push_back(QRect(
+				std::min(0, _rtl ? -advance : 0),
+				-position,
+				std::abs(advance),
+				std::max(thickness, PANGO_SCALE)));
+		};
+		if (font.underline()) {
+			line(
+				pango_font_metrics_get_underline_position(metrics),
+				pango_font_metrics_get_underline_thickness(metrics));
+		}
+		if (font.strikeOut()) {
+			line(
+				pango_font_metrics_get_strikethrough_position(metrics),
+				pango_font_metrics_get_strikethrough_thickness(metrics));
+		}
+	}
+
+	if (!drawInPlace(p, at, item->analysis.font, part, lines)) {
 		// What the painter turns the text by, without the scale by the ratio
 		// of the device that the glyphs were shaped in - the glyphs go through
 		// it here as well, because an image given to the painter would be
@@ -2235,6 +2281,11 @@ void ShapedItem::draw(
 
 		// A glyph may reach outside its advance in every direction, so the
 		// ink is what the image has to hold, and where it sits places it.
+		for (const auto &line : lines) {
+			const auto united = QRect(ink.x, ink.y, ink.width, ink.height)
+				.united(line);
+			ink = { united.x(), united.y(), united.width(), united.height() };
+		}
 		const auto inked = turn.mapRect(QRectF(
 			PANGO_PIXELS_FLOOR(ink.x),
 			PANGO_PIXELS_FLOOR(ink.y),
@@ -2280,6 +2331,7 @@ void ShapedItem::draw(
 		cairo_transform(context, &turning);
 		cairo_move_to(context, 0, 0);
 		ShowGlyphs(context, item->analysis.font, part, false);
+		FillLines(context, QPointF(), lines);
 		cairo_destroy(context);
 		cairo_surface_destroy(surface);
 		image.setDevicePixelRatio(ratio);
@@ -2296,43 +2348,6 @@ void ShapedItem::draw(
 			p.drawImage(base.map(place), image);
 		}
 		p.restore();
-
-		// Straight lines, drawn by the painter rather than rasterized: there is no
-		// glyph in them, so nothing about them belongs to a font engine, and where
-		// they go is what the font says.
-	}
-
-	if (!font.underline() && !font.strikeOut()) {
-		return;
-	}
-	const auto metrics = pango_font_get_metrics(item->analysis.font, nullptr);
-	const auto guardMetrics = gsl::finally([&] {
-		pango_font_metrics_unref(metrics);
-	});
-	const auto advance = FromPango(
-		XAt(entry, tillOffset) - XAt(entry, fromOffset),
-		ratio);
-	const auto line = [&](int position, int thickness) {
-		const auto height = std::max(
-			FromPango(thickness, ratio).toReal(),
-			1. / ratio);
-		p.fillRect(
-			QRectF(
-				at.x() + std::min(0., _rtl ? -advance.toReal() : 0.),
-				at.y() - FromPango(position, ratio).toReal(),
-				std::abs(advance.toReal()),
-				height),
-			p.pen().brush());
-	};
-	if (font.underline()) {
-		line(
-			pango_font_metrics_get_underline_position(metrics),
-			pango_font_metrics_get_underline_thickness(metrics));
-	}
-	if (font.strikeOut()) {
-		line(
-			pango_font_metrics_get_strikethrough_position(metrics),
-			pango_font_metrics_get_strikethrough_thickness(metrics));
 	}
 }
 
