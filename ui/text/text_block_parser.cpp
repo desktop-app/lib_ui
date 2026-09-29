@@ -20,6 +20,11 @@ namespace {
 constexpr auto kStringLinkIndexShift = uint16(0x8000);
 constexpr auto kMaxDiacAfterSymbol = 2;
 
+[[nodiscard]] bool IsIndexedLinkData(const QString &data) {
+	const auto prefix = u"internal:index"_q;
+	return (data.size() == prefix.size() + 1) && data.startsWith(prefix);
+}
+
 [[nodiscard]] TextWithEntities PrepareRichFromRich(
 		const TextWithEntities &text,
 		const TextParseOptions &options) {
@@ -202,6 +207,9 @@ void BlockParser::createBlock(int skipBack) {
 			custom->width());
 	}
 	const auto push = [&](auto &&factory, auto &&...args) {
+		if (_internalIndex) {
+			_internalBlocks.push_back(int(_tBlocks.size()));
+		}
 		_tBlocks.push_back(factory({
 			.position = uint16(_blockStart),
 			.flags = _flags,
@@ -417,13 +425,11 @@ bool BlockParser::checkEntities() {
 				formatted.size());
 			_tText.append(formatted);
 			_ptr = entityEnd;
-			_internals.push_back({
+			_internalIndex = pushInternal({
 				.text = formatted,
 				.data = entityData,
 				.type = EntityType::FormattedDate,
 			});
-
-			_internalIndex = _internals.size();
 			_flags |= TextBlockFlag::FormattedDate;
 			createBlock();
 			_internalIndex = 0;
@@ -431,12 +437,11 @@ bool BlockParser::checkEntities() {
 		} else {
 			flags = TextBlockFlag::FormattedDate;
 
-			_internals.push_back({
+			internalIndex = pushInternal({
 				.text = QString(entityBegin, entityLength),
 				.data = entityData,
 				.type = EntityType::FormattedDate,
 			});
-			internalIndex = _internals.size();
 		}
 	} else if ((entityType == EntityType::Code) // #TODO entities
 		|| (entityType == EntityType::Pre)) {
@@ -458,8 +463,10 @@ bool BlockParser::checkEntities() {
 
 		// TODO: remove trimming.
 		if (isSingleLine && (entityType == EntityType::Code)) {
-			_internals.push_back({ .text = text, .type = entityType });
-			internalIndex = _internals.size();
+			internalIndex = pushInternal({
+				.text = text,
+				.type = entityType,
+			});
 		}
 	} else if (entityType == EntityType::Blockquote) {
 		flags = TextBlockFlag::Blockquote;
@@ -479,7 +486,8 @@ bool BlockParser::checkEntities() {
 	} else if (entityType == EntityType::CustomUrl) {
 		const auto url = _waitingEntity->data();
 		const auto text = QString(entityBegin, entityLength);
-		if (url == text) {
+		// An indexed link stays custom even when it shows its own data.
+		if (url == text && !IsIndexedLinkData(url)) {
 			pushSimpleUrl(EntityType::Url);
 		} else {
 			pushComplexUrl();
@@ -532,19 +540,28 @@ bool BlockParser::checkEntities() {
 }
 
 bool BlockParser::processCustomIndex(uint16 index) {
-	auto &url = _links[index - 1].data;
-	if (url.isEmpty()) {
+	auto &link = _links[index - 1];
+
+	// Only a link built by the app, not a plain url that displays
+	// "internal:index" as its text, may choose its own index.
+	if (link.type != EntityType::CustomUrl
+		|| !IsIndexedLinkData(link.data)) {
 		return false;
 	}
-	if (url.startsWith("internal:index")) {
-		const auto customIndex = uint16(url.back().unicode());
-		// if (customIndex != index) {
-			url = QString();
-			_linksIndexes.push_back(customIndex);
-			return true;
-		// }
+	const auto customIndex = uint16(link.data.back().unicode());
+	link.data = QString();
+	_linksIndexes.push_back(customIndex);
+	_customLinkIndices.emplace(index, customIndex);
+	return true;
+}
+
+uint16 BlockParser::pushInternal(EntityLinkData &&data) {
+	// Blocks keep the index in uint16, where zero means no link.
+	if (_internals.size() >= 0xFFFF) {
+		return 0;
 	}
-	return false;
+	_internals.push_back(std::move(data));
+	return uint16(_internals.size());
 }
 
 void BlockParser::skipPassedEntities() {
@@ -756,12 +773,23 @@ void BlockParser::finalize(const TextParseOptions &options) {
 	if (links) {
 		links->resize(_maxLinkIndex + _maxShiftedLinkIndex);
 	}
-	auto counterCustomIndex = uint16(0);
 	auto currentIndex = uint16(0); // Current the latest index of _t->_links.
 	struct {
 		uint16 internal = 0;
+		uint16 internalUsed = 0;
 		uint16 lnk = 0;
+		uint16 lnkUsed = 0;
 	} lastHandlerIndex;
+	const auto ensureLinksSize = [&](uint16 size) {
+		if (!links) {
+			links = &_t->ensureExtended()->links;
+		}
+		// Never shrink: blocks before this one may already hold larger
+		// indices, for example custom ones from "internal:index" links.
+		if (links->size() < size) {
+			links->resize(size);
+		}
+	};
 	const auto avoidIntersectionsWithCustom = [&] {
 		while (ranges::contains(_linksIndexes, currentIndex)) {
 			currentIndex++;
@@ -788,7 +816,14 @@ void BlockParser::finalize(const TextParseOptions &options) {
 		}
 		spacesCheckFrom = uint16(-1);
 	};
-	for (auto &block : _tBlocks) {
+	auto internalBlock = begin(_internalBlocks);
+	for (auto blockIndex = 0; blockIndex != int(_tBlocks.size()); ++blockIndex) {
+		auto &block = _tBlocks[blockIndex];
+		const auto isInternal = (internalBlock != end(_internalBlocks))
+			&& (*internalBlock == blockIndex);
+		if (isInternal) {
+			++internalBlock;
+		}
 		const auto type = block->type();
 		const auto custom = (type == TextBlockType::CustomEmoji)
 			? static_cast<CustomEmoji*>(
@@ -836,62 +871,57 @@ void BlockParser::finalize(const TextParseOptions &options) {
 			}
 		}
 		const auto shiftedIndex = block->linkIndex();
-		auto useCustomIndex = false;
-		if (shiftedIndex <= kStringLinkIndexShift) {
-			const auto isInternal = shiftedIndex
-				&& (IsMono(block->flags())
-					|| (block->flags() & TextBlockFlag::FormattedDate));
-			if (isInternal) {
-				const auto internalIndex = shiftedIndex;
+		if (isInternal) {
+			// Recorded when the block was created: the flags alone can't
+			// tell, a Pre block inside a custom link has a link index.
+			const auto internalIndex = shiftedIndex;
 
-				if (lastHandlerIndex.internal == internalIndex) {
-					block->setLinkIndex(currentIndex);
-					continue;
-				} else {
-					currentIndex++;
-				}
-				avoidIntersectionsWithCustom();
-				block->setLinkIndex(currentIndex);
-				const auto handler = Integration::Instance().createLinkHandler(
-					_internals[internalIndex - 1],
-					_context);
-				if (!links) {
-					links = &_t->ensureExtended()->links;
-				}
-				links->resize(currentIndex);
-				if (handler) {
-					_t->setLink(currentIndex, handler);
-				}
-				lastHandlerIndex.internal = internalIndex;
+			if (lastHandlerIndex.internal == internalIndex) {
+				block->setLinkIndex(lastHandlerIndex.internalUsed);
 				continue;
-			} else if (shiftedIndex) {
-				useCustomIndex = true;
 			} else {
-				continue;
+				currentIndex++;
 			}
+			avoidIntersectionsWithCustom();
+			block->setLinkIndex(currentIndex);
+			const auto handler = Integration::Instance().createLinkHandler(
+				_internals[internalIndex - 1],
+				_context);
+			ensureLinksSize(currentIndex);
+			if (handler) {
+				_t->setLink(currentIndex, handler);
+			}
+			lastHandlerIndex.internal = internalIndex;
+			lastHandlerIndex.internalUsed = currentIndex;
+			continue;
+		} else if (!shiftedIndex) {
+			continue;
 		}
-		const auto usedIndex = [&] {
-			return useCustomIndex
-				? _linksIndexes[counterCustomIndex - 1]
-				: currentIndex;
-		};
+		const auto useCustomIndex = (shiftedIndex <= kStringLinkIndexShift);
 		const auto realIndex = useCustomIndex
 			? shiftedIndex
-			: (shiftedIndex - kStringLinkIndexShift);
+			: uint16(shiftedIndex - kStringLinkIndexShift);
 		if (lastHandlerIndex.lnk == realIndex) {
-			block->setLinkIndex(usedIndex());
+			// Not currentIndex: an internal block in between moves it on.
+			block->setLinkIndex(lastHandlerIndex.lnkUsed);
 			continue; // Optimization.
-		} else {
-			(useCustomIndex ? counterCustomIndex : currentIndex)++;
 		}
 		if (!useCustomIndex) {
+			currentIndex++;
 			avoidIntersectionsWithCustom();
 		}
+		const auto usedIndex = [&] {
+			if (!useCustomIndex) {
+				return currentIndex;
+			}
+			// Looked up by the link, not counted: a custom link that got
+			// no block of its own would shift all the following ones.
+			const auto i = _customLinkIndices.find(realIndex);
+			return (i != end(_customLinkIndices)) ? i->second : uint16(0);
+		};
 		block->setLinkIndex(usedIndex());
 
-		if (links) {
-			links->resize(std::max(usedIndex(), uint16(links->size())));
-		}
+		ensureLinksSize(usedIndex());
 		const auto handler = Integration::Instance().createLinkHandler(
 			_links[realIndex - 1],
 			_context);
@@ -899,6 +929,7 @@ void BlockParser::finalize(const TextParseOptions &options) {
 			_t->setLink(usedIndex(), handler);
 		}
 		lastHandlerIndex.lnk = realIndex;
+		lastHandlerIndex.lnkUsed = usedIndex();
 	}
 	const auto hasSpoiler = (_t->_extended && _t->_extended->spoiler);
 	if (!_t->_hasCustomEmoji || hasSpoiler) {

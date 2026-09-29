@@ -794,6 +794,15 @@ void String::setLink(uint16 index, const ClickHandlerPtr &link) {
 	}
 }
 
+const ClickHandlerPtr &String::linkByIndex(uint16 index) const {
+	// A block with a link index past the end is a parser bug, but it
+	// should cost a dead link and not a read of whatever lies there.
+	static const auto kEmpty = ClickHandlerPtr();
+	return (_extended && index > 0 && index <= _extended->links.size())
+		? _extended->links[index - 1]
+		: kEmpty;
+}
+
 TextSelection String::linkRangeFor(const ClickHandlerPtr &link) const {
 	if (!_extended || !link) {
 		return {};
@@ -1830,9 +1839,7 @@ void String::enumerateText(
 				return 0;
 			}
 			const auto result = (*i)->linkIndex();
-			return (result && _extended && _extended->links[result - 1])
-				? result
-				: 0;
+			return linkByIndex(result) ? result : 0;
 		}();
 		if (blockLinkIndex != linkIndex) {
 			if (linkIndex) {
@@ -1845,10 +1852,9 @@ void String::enumerateText(
 						rangeTo - rangeFrom);
 					// Ignore links that are partially copied.
 					const auto handler = (linkPosition != rangeFrom
-						|| blockPosition != rangeTo
-						|| !_extended)
+						|| blockPosition != rangeTo)
 						? nullptr
-						: _extended->links[linkIndex - 1];
+						: linkByIndex(linkIndex);
 					const auto type = handler
 						? handler->getTextEntity().type
 						: EntityType::Invalid;
@@ -1858,9 +1864,7 @@ void String::enumerateText(
 			linkIndex = blockLinkIndex;
 			if (linkIndex) {
 				linkPosition = blockPosition;
-				const auto handler = _extended
-					? _extended->links[linkIndex - 1]
-					: nullptr;
+				const auto &handler = linkByIndex(linkIndex);
 				clickHandlerStartCallback(handler
 					? handler->getTextEntity().type
 					: EntityType::Invalid);

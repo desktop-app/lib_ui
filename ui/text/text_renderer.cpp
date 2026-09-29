@@ -1778,6 +1778,7 @@ void Renderer::prepareElisionAt(
 void Renderer::restoreAfterElided() {
 	if (_elideSavedBlock) {
 		const_cast<String*>(_t)->_blocks[_elideSavedIndex] = std::move(*_elideSavedBlock);
+		_elideSavedBlock.reset();
 	}
 }
 
@@ -1791,9 +1792,7 @@ void Renderer::applyBlockProperties(
 				? false
 				: (underline == st::kLinkUnderlineActive)
 				? ((_palette && _palette->linkAlwaysActive)
-					|| ClickHandler::showAsActive(_t->_extended
-						? _t->_extended->links[index - 1]
-						: nullptr))
+					|| ClickHandler::showAsActive(_t->linkByIndex(index)))
 				: true;
 			return underlined ? _t->_st->font->underline() : _t->_st->font;
 		}
@@ -1817,9 +1816,8 @@ void Renderer::applyBlockProperties(
 		if (isMono
 			&& block->linkIndex()
 			&& (!_background.spoiler || _spoiler->revealed)) {
-			const auto pressed = ClickHandler::showAsPressed(_t->_extended
-				? _t->_extended->links[block->linkIndex() - 1]
-				: nullptr);
+			const auto pressed = ClickHandler::showAsPressed(
+				_t->linkByIndex(block->linkIndex()));
 			_background.selectActiveBlock = pressed;
 		}
 
@@ -1907,9 +1905,7 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
 		}
 		return customEmoji->link;
 	}
-	return _t->_extended
-		? _t->_extended->links[block->linkIndex() - 1]
-		: nullptr;
+	return _t->linkByIndex(block->linkIndex());
 }
 
 } // namespace Ui::Text

@@ -90,6 +90,7 @@ private:
 	bool isLinkEntity(const EntityInText &entity) const;
 
 	bool processCustomIndex(uint16 index);
+	[[nodiscard]] uint16 pushInternal(EntityLinkData &&data);
 
 	void parse(const TextParseOptions &options);
 	void computeLinkText(
@@ -111,6 +112,8 @@ private:
 	const bool _multiline = false;
 
 	std::vector<uint16> _linksIndexes;
+	base::flat_map<uint16, uint16> _customLinkIndices; // _links -> custom.
+	std::vector<int> _internalBlocks; // Blocks with _internals indices.
 
 	std::vector<EntityLinkData> _links;
 	std::vector<EntityLinkData> _internals;

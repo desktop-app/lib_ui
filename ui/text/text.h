@@ -483,6 +483,7 @@ private:
 		int fullLengthOverride = -1) const;
 
 	[[nodiscard]] QuoteDetails *quoteByIndex(int index) const;
+	[[nodiscard]] const ClickHandlerPtr &linkByIndex(uint16 index) const;
 	[[nodiscard]] const style::QuoteStyle &quoteStyle(
 		not_null<QuoteDetails*> quote) const;
 	[[nodiscard]] QMargins quotePadding(QuoteDetails *quote) const;
