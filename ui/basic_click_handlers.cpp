@@ -17,6 +17,48 @@
 #include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
 
+namespace {
+
+[[nodiscard]] bool IsAsciiLetter(uint ch) {
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+}
+
+[[nodiscard]] bool IsAsciiDigitOrHyphen(uint ch) {
+	return (ch >= '0' && ch <= '9') || (ch == '-');
+}
+
+[[nodiscard]] bool IsAscii(QStringView text) {
+	return ranges::all_of(text, [](QChar ch) { return ch.unicode() < 0x80; });
+}
+
+[[nodiscard]] bool IsPlainAsciiLabel(QStringView label) {
+	return ranges::all_of(label, [](QChar ch) {
+		return IsAsciiLetter(ch.unicode())
+			|| IsAsciiDigitOrHyphen(ch.unicode());
+	});
+}
+
+// Script_Common for a label without letters, Script_Unknown if mixed.
+[[nodiscard]] QChar::Script DomainLabelScript(QStringView label) {
+	auto result = QChar::Script_Common;
+	for (const auto ch : label.toUcs4()) {
+		if (IsAsciiDigitOrHyphen(ch)) {
+			continue;
+		}
+		const auto script = QChar::script(ch);
+		if (script == QChar::Script_Common
+			|| script == QChar::Script_Inherited
+			|| script == QChar::Script_Unknown
+			|| (result != QChar::Script_Common && result != script)) {
+			return QChar::Script_Unknown;
+		}
+		result = script;
+	}
+	return result;
+}
+
+} // namespace
+
 QString TextClickHandler::readable() const {
 	const auto result = url();
 	const auto external = UrlClickHandler::ExternalUrlFromInternalUrl(result);
@@ -112,22 +154,62 @@ void UrlClickHandler::Open(QString url, QVariant context) {
 }
 
 bool UrlClickHandler::IsSuspicious(const QString &url) {
+	return !SuspiciousRanges(url).empty();
+}
+
+auto UrlClickHandler::SuspiciousRanges(const QString &url)
+-> std::vector<SuspiciousRange> {
 	static const auto Check1 = QRegularExpression(
 		"^((https?|s?ftp)://)?([^/#\\:\\?]+)([/#\\:\\?]|$)",
 		QRegularExpression::CaseInsensitiveOption);
 	const auto match1 = Check1.match(url);
 	if (!match1.hasMatch()) {
-		return false;
+		return {};
 	}
 	const auto domain = match1.capturedView(3);
 	static const auto Check2 = QRegularExpression("^(.*)\\.[a-zA-Z]+$");
-	const auto match2 = Check2.match(domain);
-	if (!match2.hasMatch()) {
-		return false;
+	const auto latinTld = Check2.match(domain).hasMatch();
+	if (!latinTld && IsAscii(domain)) {
+		return {};
 	}
-	const auto part = match2.capturedView(1);
-	static const auto Check3 = QRegularExpression("[^a-zA-Z0-9\\.\\-]");
-	return Check3.match(part).hasMatch();
+	const auto script = latinTld
+		? QChar::Script_Latin
+		: DomainLabelScript(domain.mid(domain.lastIndexOf('.') + 1));
+	const auto asciiOnly = (script == QChar::Script_Latin)
+		|| (script == QChar::Script_Common)
+		|| (script == QChar::Script_Unknown);
+	const auto allowed = [&](uint ch) {
+		return IsAsciiDigitOrHyphen(ch)
+			|| (asciiOnly ? IsAsciiLetter(ch) : (QChar::script(ch) == script));
+	};
+	auto result = std::vector<SuspiciousRange>();
+	const auto offset = int(match1.capturedStart(3));
+	for (const auto &label : domain.split(QChar('.'))) {
+		if (!asciiOnly && IsPlainAsciiLabel(label)) {
+			continue;
+		}
+		const auto start = offset + int(label.data() - domain.data());
+		for (auto i = 0, size = int(label.size()); i != size;) {
+			const auto pair = label[i].isHighSurrogate()
+				&& (i + 1 < size)
+				&& label[i + 1].isLowSurrogate();
+			const auto length = pair ? 2 : 1;
+			const auto ch = pair
+				? uint(QChar::surrogateToUcs4(label[i], label[i + 1]))
+				: uint(label[i].unicode());
+			if (!allowed(ch)) {
+				const auto from = start + i;
+				if (!result.empty()
+					&& (result.back().from + result.back().length == from)) {
+					result.back().length += length;
+				} else {
+					result.push_back({ .from = from, .length = length });
+				}
+			}
+			i += length;
+		}
+	}
+	return result;
 }
 
 

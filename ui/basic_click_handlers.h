@@ -68,7 +68,13 @@ public:
 		const QString &extraQuery = QString());
 	[[nodiscard]] static QString ExternalUrlFromInternalUrl(
 		const QString &url);
+	struct SuspiciousRange {
+		int from = 0;
+		int length = 0;
+	};
 	[[nodiscard]] static bool IsSuspicious(const QString &url);
+	[[nodiscard]] static std::vector<SuspiciousRange> SuspiciousRanges(
+		const QString &url);
 	[[nodiscard]] static QString ShowEncoded(const QString &url);
 
 protected:
