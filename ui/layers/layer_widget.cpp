@@ -446,6 +446,12 @@ void LayerStackWidget::hideLayers(anim::type animated) {
 }
 
 void LayerStackWidget::hideAll(anim::type animated) {
+	if (animated == anim::type::normal
+		&& !layerShown()
+		&& _background->animating()) {
+		// Already hiding, new cache images would lose the hiding ones.
+		return;
+	}
 	const auto duration = (animated == anim::type::normal)
 		? currentLayer()
 			? currentLayer()->animationDuration()
