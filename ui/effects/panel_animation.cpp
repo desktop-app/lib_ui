@@ -446,6 +446,16 @@ auto PanelAnimation::paintFrame(
 		}
 	}
 
+	// The shadow extent may exceed the widget padding, never paint outside.
+	const auto shadowLeft = outerLeft;
+	const auto shadowTop = outerTop;
+	const auto shadowRight = outerRight;
+	const auto shadowBottom = outerBottom;
+	outerLeft = std::max(outerLeft, 0);
+	outerTop = std::max(outerTop, 0);
+	outerRight = std::min(outerRight, _frameWidth);
+	outerBottom = std::min(outerBottom, _frameHeight);
+
 	if (opacity == 1.) {
 		// Fill above the frame top with transparent.
 		auto fillTopInts = (_frameInts + outerTop * _frameIntsPerLine + outerLeft);
@@ -476,7 +486,7 @@ auto PanelAnimation::paintFrame(
 	}
 
 	if (_shadow.valid()) {
-		paintShadow(outerLeft, outerTop, outerRight, outerBottom);
+		paintShadow(shadowLeft, shadowTop, shadowRight, shadowBottom);
 	}
 
 	// Debug
