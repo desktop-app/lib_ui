@@ -24,7 +24,7 @@
 void style_InitFontsResource() {
 #ifdef Q_OS_MAC // Use resources from the .app bundle on macOS.
 
-	base::RegisterBundledResources(u"lib_ui.rcc"_q);
+	base::RegisterResourceArchive(u"lib_ui.rcc"_q);
 
 #else // Q_OS_MAC
 
