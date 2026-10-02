@@ -497,6 +497,8 @@ private:
 #ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 	void paintMisspelled(QPaintEvent *e);
 #endif // !QT_SPELLCHECK_UNDERLINE_FROM_CHROME
+	void paintSlimCaret(QPaintEvent *e);
+	void restartCaretBlink();
 
 	void mousePressEventInner(QMouseEvent *e);
 	void mouseReleaseEventInner(QMouseEvent *e);
@@ -660,6 +662,8 @@ private:
 	bool _forcePlaceholderHidden = false;
 	bool _reverseMarkdownReplacement = false;
 	bool _customEmojiRepaintScheduled = false;
+	base::Timer _caretBlinkTimer;
+	bool _caretBlinkOn = false;
 	bool _settingDocumentMargin = false;
 
 	// Tags list which we should apply while setText() call or insert from mime data.
