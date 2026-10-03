@@ -69,10 +69,11 @@ public:
 	QVariant attributeValue(QAccessible::Attribute key) const override;
 
 private:
-	// The "x of y" of this widget among the real child widgets of its
-	// accessibility parent, when that parent orders them itself
-	// (RpWidget::accessibilityChildWidgets), like the folder tabs or the
-	// items of a menu. A zero position means the widget is not one of a set.
+	// The "x of y" of this widget, see RpWidget::accessibilitySetPosition:
+	// among the real child widgets of its accessibility parent when that
+	// parent orders them itself, like the folder tabs or the items of a menu,
+	// or among the buttons of its radio group. A zero position means the
+	// widget is not one of a set.
 	[[nodiscard]] AccessibilitySetPosition setPosition() const;
 
 };

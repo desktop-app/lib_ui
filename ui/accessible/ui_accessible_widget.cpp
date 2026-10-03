@@ -379,23 +379,9 @@ bool Widget::clear() {
 // of a widget that is one of a set, like a folder tab among the folder tabs.
 
 AccessibilitySetPosition Widget::setPosition() const {
-	// Only a container that orders its real child widgets itself forms a
-	// set of them - the folder tabs, the items of a menu; a box full of
-	// controls does not. The container needs no accessible role of its
-	// own for that, so it is reached as a widget, not as an interface.
-	const auto container = rp()->accessibilityParent()
-		? rp()->accessibilityParent()
-		: qobject_cast<RpWidget*>(widget()->parentWidget());
-	if (!container) {
-		return {};
-	}
-	const auto widgets = container->accessibilityChildWidgets();
-	for (auto i = 0; i != int(widgets.size()); ++i) {
-		if (widgets[i].get() == widget()) {
-			return container->accessibilityChildSetPosition(i);
-		}
-	}
-	return {};
+	// The widget knows its set: by default the real child widgets its owner
+	// lists, for a radio button the buttons of its group.
+	return rp()->accessibilitySetPosition();
 }
 
 QList<QAccessible::Attribute> Widget::attributeKeys() const {

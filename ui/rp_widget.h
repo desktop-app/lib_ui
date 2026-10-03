@@ -486,6 +486,12 @@ public:
 	[[nodiscard]] virtual AccessibilitySetPosition accessibilityChildSetPosition(
 		int index) const;
 
+	// The "x of y" of this widget itself. By default it is placed by the
+	// owner that lists it among its real child widgets (see above); a widget
+	// whose set is not the children of one owner, like a radio button of a
+	// group, overrides this.
+	[[nodiscard]] virtual AccessibilitySetPosition accessibilitySetPosition() const;
+
 	[[nodiscard]] virtual QRect accessibilityChildRect(int index) const;
 	[[nodiscard]] virtual int accessibilityChildColumnCount(int row) const;
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildSubItemRole() const;

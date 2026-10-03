@@ -416,6 +416,25 @@ AccessibilitySetPosition RpWidget::accessibilityChildSetPosition(
 	};
 }
 
+AccessibilitySetPosition RpWidget::accessibilitySetPosition() const {
+	// Only an owner that orders its real child widgets itself forms a set
+	// of them - the folder tabs, the items of a menu; a box full of controls
+	// does not. The owner needs no accessible role of its own for that.
+	const auto owner = accessibilityParent()
+		? accessibilityParent()
+		: qobject_cast<RpWidget*>(parentWidget());
+	if (!owner) {
+		return {};
+	}
+	const auto widgets = owner->accessibilityChildWidgets();
+	for (auto i = 0; i != int(widgets.size()); ++i) {
+		if (widgets[i].get() == this) {
+			return owner->accessibilityChildSetPosition(i);
+		}
+	}
+	return {};
+}
+
 QString RpWidget::accessibilityChildName(int index) const {
 	return QString();
 }
