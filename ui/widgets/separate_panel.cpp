@@ -112,26 +112,11 @@ private:
 			uchar(value.alpha()));
 	};
 
-	const auto contrast = 2.5;
-	const auto luminance = 0.2126 * color.redF()
-		+ 0.7152 * color.greenF()
-		+ 0.0722 * color.blueF();
-	const auto textColor = (luminance > 0.5)
-		? QColor(0, 0, 0)
-		: QColor(255, 255, 255);
-	const auto textLuminance = (luminance > 0.5) ? 0 : 1;
-	const auto adaptiveOpacity = (luminance - textLuminance + contrast)
-		/ contrast;
-	const auto opacity = std::clamp(adaptiveOpacity, 0.5, 0.64);
-	auto buttonColor = textColor;
-	buttonColor.setAlphaF(opacity);
-	auto rippleColor = textColor;
-	rippleColor.setAlphaF(opacity * 0.1);
-
-	set(result->windowFg(), textColor);
-	set(result->boxTitleCloseFg(), buttonColor);
-	set(result->boxTitleCloseFgOver(), buttonColor);
-	set(result->windowBgOver(), rippleColor);
+	const auto colors = ComputeContrastColors(color);
+	set(result->windowFg(), colors.text);
+	set(result->boxTitleCloseFg(), colors.control);
+	set(result->boxTitleCloseFgOver(), colors.control);
+	set(result->windowBgOver(), colors.ripple);
 
 	result->finalize();
 	return result;
@@ -181,6 +166,25 @@ PanelShow::operator bool() const {
 }
 
 } // namespace
+
+ContrastColors ComputeContrastColors(QColor background) {
+	const auto contrast = 2.5;
+	const auto luminance = 0.2126 * background.redF()
+		+ 0.7152 * background.greenF()
+		+ 0.0722 * background.blueF();
+	const auto text = (luminance > 0.5)
+		? QColor(0, 0, 0)
+		: QColor(255, 255, 255);
+	const auto textLuminance = (luminance > 0.5) ? 0 : 1;
+	const auto adaptiveOpacity = (luminance - textLuminance + contrast)
+		/ contrast;
+	const auto opacity = std::clamp(adaptiveOpacity, 0.5, 0.64);
+	auto control = text;
+	control.setAlphaF(opacity);
+	auto ripple = text;
+	ripple.setAlphaF(opacity * 0.1);
+	return { text, control, ripple };
+}
 
 class SeparatePanel::FullScreenButton : public RippleButton {
 public:

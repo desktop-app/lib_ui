@@ -62,6 +62,13 @@ struct TitleBadgeDescriptor {
 	Fn<void(QPainter &p, QSize size)> paint;
 };
 
+struct ContrastColors {
+	QColor text;
+	QColor control;
+	QColor ripple;
+};
+[[nodiscard]] ContrastColors ComputeContrastColors(QColor background);
+
 class SeparatePanel final : public RpWidget {
 public:
 	explicit SeparatePanel(SeparatePanelArgs &&args = {});
