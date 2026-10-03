@@ -418,7 +418,6 @@ void SeparatePanel::ResizeEdge::updateFromResize(QPoint delta) {
 
 SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 : RpWidget(args.parent)
-, _anchorGeometry(std::move(args.anchorGeometry))
 , _transientParent(std::move(args.transientParent))
 , _menuSt(args.menuSt ? *args.menuSt : st::popupMenuWithIcons)
 , _close(this, st::separatePanelClose)
@@ -1002,10 +1001,7 @@ void SeparatePanel::setHideOnDeactivate(bool hideOnDeactivate) {
 	}
 }
 
-void SeparatePanel::setAnchorData(
-		std::optional<QRect> geometry,
-		Platform::ForeignParent transientParent) {
-	_anchorGeometry = std::move(geometry);
+void SeparatePanel::setAnchorData(Platform::ForeignParent transientParent) {
 	if (!SameForeignParent(_transientParent, transientParent)) {
 		_transientParent = std::move(transientParent);
 		Platform::SetForeignTransientParent(this, _transientParent);
@@ -1019,26 +1015,12 @@ void SeparatePanel::showAndActivate() {
 				break;
 			}
 		}
-		moveToAnchorGeometry();
 	}
 	toggleOpacityAnimation(true);
 	raise();
 	setWindowState(windowState() | Qt::WindowActive);
 	activateWindow();
 	setFocus();
-}
-
-void SeparatePanel::moveToAnchorGeometry() {
-	if (!_anchorGeometry || _anchorGeometry->isEmpty()) {
-		return;
-	}
-	const auto screen = QGuiApplication::screenAt(_anchorGeometry->center())
-		? QGuiApplication::screenAt(_anchorGeometry->center())
-		: QGuiApplication::primaryScreen();
-	const auto available = screen ? screen->availableGeometry() : QRect();
-	auto geometry = QRect(QPoint(), size());
-	geometry.moveCenter(_anchorGeometry->center());
-	Ui::SetGeometryAndScreen(this, ClampToAvailable(geometry, available));
 }
 
 void SeparatePanel::keyPressEvent(QKeyEvent *e) {
@@ -1404,24 +1386,15 @@ QMargins SeparatePanel::computePadding() const {
 
 void SeparatePanel::initGeometry(QSize size) {
 	const auto active = QApplication::activeWindow();
-	const auto anchor = (_anchorGeometry && !_anchorGeometry->isEmpty())
-		? _anchorGeometry
-		: std::optional<QRect>();
-	const auto screen = anchor
-		? ([&] {
-			if (const auto result = QGuiApplication::screenAt(
-					anchor->center())) {
-				return result;
-			}
-			return QGuiApplication::primaryScreen();
-		}())
-		: (active ? active->screen() : QGuiApplication::primaryScreen());
+	const auto screen = active
+		? active->screen()
+		: QGuiApplication::primaryScreen();
 	const auto available = screen ? screen->availableGeometry() : QRect();
-	const auto parentGeometry = anchor
-		? *anchor
-		: ((active && active->isVisible() && active->isActiveWindow())
-			? active->geometry()
-			: available);
+	const auto parentGeometry = (active
+			&& active->isVisible()
+			&& active->isActiveWindow())
+		? active->geometry()
+		: available;
 	_useTransparency = Platform::TranslucentWindowsSupported();
 	_padding = _useTransparency
 		? st::callShadow.extend
@@ -1449,7 +1422,7 @@ void SeparatePanel::initGeometry(QSize size) {
 		} else {
 			setFixedSize(rect.size());
 		}
-		if (!anchor && _transientParent) {
+		if (_transientParent) {
 			// Don't set the position, so that the WM/compositor itself
 			// places us relative to the transient parent (on X11 that
 			// requires not setting the position hint). WA_Moved is already

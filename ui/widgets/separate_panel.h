@@ -51,7 +51,6 @@ class FadeWrap;
 
 struct SeparatePanelArgs {
 	QWidget *parent = nullptr;
-	std::optional<QRect> anchorGeometry;
 	Platform::ForeignParent transientParent;
 	bool onAllSpaces = false;
 	Fn<bool(int zorder)> animationsPaused;
@@ -80,9 +79,7 @@ public:
 	[[nodiscard]] QMargins computePadding() const;
 
 	void setHideOnDeactivate(bool hideOnDeactivate);
-	void setAnchorData(
-		std::optional<QRect> geometry,
-		Platform::ForeignParent transientParent);
+	void setAnchorData(Platform::ForeignParent transientParent);
 	void showAndActivate();
 	int hideGetDuration();
 
@@ -182,7 +179,6 @@ private:
 
 	void showMenu(Fn<void(const Menu::MenuCallback&)> fill);
 	[[nodiscard]] bool createMenu(not_null<IconButton*> button);
-	void moveToAnchorGeometry();
 
 	void createFullScreenButtons();
 	void initFullScreenButton(not_null<QWidget*> button);
@@ -195,7 +191,6 @@ private:
 	[[nodiscard]] rpl::producer<> allBackRequests() const;
 	[[nodiscard]] rpl::producer<> allCloseRequests() const;
 
-	std::optional<QRect> _anchorGeometry;
 	Platform::ForeignParent _transientParent;
 	bool _exposed = false;
 
