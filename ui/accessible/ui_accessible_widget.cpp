@@ -99,6 +99,12 @@ void *Widget::interface_cast(QAccessible::InterfaceType type) {
 		&& rp()->accessibilityOrientation().has_value()) {
 		return static_cast<QAccessibleAttributesInterface*>(this);
 	}
+#if QT_VERSION >= QT_VERSION_CHECK(6, 13, 0) || defined(QT_ACCESSIBLE_SET_POSITION_ATTRIBUTES)
+	if (type == QAccessible::AttributesInterface
+		&& setPosition().position > 0) {
+		return static_cast<QAccessibleAttributesInterface*>(this);
+	}
+#endif
 	return QAccessibleWidget::interface_cast(type);
 }
 
@@ -369,13 +375,40 @@ bool Widget::clear() {
 }
 
 // Attributes. Reports the container's orientation (e.g. a vertical list) so UI
-// Automation can describe a horizontal/vertical orientation.
+// Automation can describe a horizontal/vertical orientation, and the "x of y"
+// of a widget that is one of a set, like a folder tab among the folder tabs.
+
+AccessibilitySetPosition Widget::setPosition() const {
+	// Only a container that orders its real child widgets itself forms a
+	// set of them; the folder tabs are one, a box full of controls is not.
+	const auto container = dynamic_cast<Widget*>(parent());
+	if (!container) {
+		return {};
+	}
+	const auto role = container->rp()->accessibilityRole();
+	if (role != QAccessible::PageTabList && role != QAccessible::List) {
+		return {};
+	}
+	const auto widgets = container->rp()->accessibilityChildWidgets();
+	for (auto i = 0; i != int(widgets.size()); ++i) {
+		if (widgets[i].get() == widget()) {
+			return { i + 1, int(widgets.size()) };
+		}
+	}
+	return {};
+}
 
 QList<QAccessible::Attribute> Widget::attributeKeys() const {
 	auto result = QList<QAccessible::Attribute>();
 	if (rp()->accessibilityOrientation().has_value()) {
 		result.append(QAccessible::Attribute::Orientation);
 	}
+#if QT_VERSION >= QT_VERSION_CHECK(6, 13, 0) || defined(QT_ACCESSIBLE_SET_POSITION_ATTRIBUTES)
+	if (setPosition().position > 0) {
+		result.append(QAccessible::Attribute::PositionInSet);
+		result.append(QAccessible::Attribute::SizeOfSet);
+	}
+#endif
 	return result;
 }
 
@@ -388,6 +421,17 @@ QVariant Widget::attributeValue(QAccessible::Attribute key) const {
 			return int(*orientation);
 		}
 	}
+#if QT_VERSION >= QT_VERSION_CHECK(6, 13, 0) || defined(QT_ACCESSIBLE_SET_POSITION_ATTRIBUTES)
+	if (key == QAccessible::Attribute::PositionInSet
+		|| key == QAccessible::Attribute::SizeOfSet) {
+		const auto position = setPosition();
+		if (position.position > 0) {
+			return (key == QAccessible::Attribute::PositionInSet)
+				? position.position
+				: position.size;
+		}
+	}
+#endif
 	return QVariant();
 }
 

@@ -10,6 +10,7 @@
 
 namespace Ui {
 class RpWidget;
+struct AccessibilitySetPosition;
 } // namespace Ui
 
 namespace Ui::Accessible {
@@ -62,9 +63,17 @@ public:
 
 	// Attributes. Exposed (via interface_cast) only when the widget reports an
 	// accessibilityOrientation(), so UI Automation can announce a horizontal or
-	// vertical orientation.
+	// vertical orientation, or when it is one of a set (see setPosition), so
+	// a screen reader says "2 of 5" on a tab.
 	QList<QAccessible::Attribute> attributeKeys() const override;
 	QVariant attributeValue(QAccessible::Attribute key) const override;
+
+private:
+	// The "x of y" of this widget among the real child widgets of its
+	// accessibility parent, when that parent is a tab list or a list which
+	// orders them (RpWidget::accessibilityChildWidgets), like the folder
+	// tabs. A zero position means the widget is not one of a set.
+	[[nodiscard]] AccessibilitySetPosition setPosition() const;
 
 };
 
