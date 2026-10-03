@@ -408,7 +408,12 @@ QAccessible::Role RpWidget::accessibilityChildRoleAt(int index) const {
 
 AccessibilitySetPosition RpWidget::accessibilityChildSetPosition(
 		int index) const {
-	return { index + 1, accessibilityChildCount() };
+	// The children are either painted (counted) or real widgets (listed).
+	const auto count = accessibilityChildCount();
+	return {
+		index + 1,
+		(count >= 0) ? count : int(accessibilityChildWidgets().size()),
+	};
 }
 
 QString RpWidget::accessibilityChildName(int index) const {

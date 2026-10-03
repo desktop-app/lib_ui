@@ -380,19 +380,19 @@ bool Widget::clear() {
 
 AccessibilitySetPosition Widget::setPosition() const {
 	// Only a container that orders its real child widgets itself forms a
-	// set of them; the folder tabs are one, a box full of controls is not.
-	const auto container = dynamic_cast<Widget*>(parent());
+	// set of them - the folder tabs, the items of a menu; a box full of
+	// controls does not. The container needs no accessible role of its
+	// own for that, so it is reached as a widget, not as an interface.
+	const auto container = rp()->accessibilityParent()
+		? rp()->accessibilityParent()
+		: qobject_cast<RpWidget*>(widget()->parentWidget());
 	if (!container) {
 		return {};
 	}
-	const auto role = container->rp()->accessibilityRole();
-	if (role != QAccessible::PageTabList && role != QAccessible::List) {
-		return {};
-	}
-	const auto widgets = container->rp()->accessibilityChildWidgets();
+	const auto widgets = container->accessibilityChildWidgets();
 	for (auto i = 0; i != int(widgets.size()); ++i) {
 		if (widgets[i].get() == widget()) {
-			return { i + 1, int(widgets.size()) };
+			return container->accessibilityChildSetPosition(i);
 		}
 	}
 	return {};

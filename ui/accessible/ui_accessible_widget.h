@@ -70,9 +70,9 @@ public:
 
 private:
 	// The "x of y" of this widget among the real child widgets of its
-	// accessibility parent, when that parent is a tab list or a list which
-	// orders them (RpWidget::accessibilityChildWidgets), like the folder
-	// tabs. A zero position means the widget is not one of a set.
+	// accessibility parent, when that parent orders them itself
+	// (RpWidget::accessibilityChildWidgets), like the folder tabs or the
+	// items of a menu. A zero position means the widget is not one of a set.
 	[[nodiscard]] AccessibilitySetPosition setPosition() const;
 
 };
