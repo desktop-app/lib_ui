@@ -488,6 +488,18 @@ void RpWidget::accessibilityChildFocused(int index) {
 	QAccessible::updateAccessibility(&event);
 }
 
+void RpWidget::accessibilityChildFocusedByEntry(int index) {
+	if constexpr (Platform::IsLinux()) {
+		// Qt raises the focus event of the widget itself once the focus
+		// change is through, after focus-in; the child comes after that.
+		InvokeQueued(this, [=] {
+			if (hasFocus()) {
+				accessibilityChildFocused(index);
+			}
+		});
+	}
+}
+
 bool RpWidget::accessibilityChildSupportsActions(int index) const {
 	return false;
 }
