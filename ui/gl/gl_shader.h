@@ -23,8 +23,8 @@ struct ShaderPart {
 
 [[nodiscard]] ShaderPart VertexPassTextureCoord(char prefix = 'v');
 [[nodiscard]] ShaderPart FragmentSampleARGB32Texture();
-[[nodiscard]] ShaderPart FragmentSampleYUV420Texture();
-[[nodiscard]] ShaderPart FragmentSampleNV12Texture();
+[[nodiscard]] ShaderPart FragmentSampleYUV420Texture(bool colorMatrix = false);
+[[nodiscard]] ShaderPart FragmentSampleNV12Texture(bool colorMatrix = false);
 [[nodiscard]] ShaderPart FragmentGlobalOpacity();
 [[nodiscard]] ShaderPart VertexViewportTransform();
 [[nodiscard]] ShaderPart FragmentRoundCorners();
