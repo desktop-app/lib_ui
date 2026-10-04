@@ -80,8 +80,15 @@ uniform sampler2D s_texture;
 	};
 }
 
-QString FragmentYUV2RGB() {
-	return R"(
+QString FragmentYUV2RGB(bool colorMatrix) {
+	return colorMatrix
+		? R"(
+	result = yuvToRgb * vec4(y, u, v, 1.);
+)"
+		: R"(
+	y -= 0.0625;
+	u -= 0.5;
+	v -= 0.5;
 	result = vec4(
 		1.164 * y + 1.596 * v,
 		1.164 * y - 0.392 * u - 0.813 * v,
@@ -90,23 +97,24 @@ QString FragmentYUV2RGB() {
 )";
 }
 
-ShaderPart FragmentSampleYUV420Texture() {
+ShaderPart FragmentSampleYUV420Texture(bool colorMatrix) {
 	return {
 		.header = R"(
 varying vec2 v_texcoord;
 uniform sampler2D y_texture;
 uniform sampler2D u_texture;
 uniform sampler2D v_texture;
-)",
+)" + (colorMatrix ? R"(uniform mat4 yuvToRgb;
+)" : QString()),
 		.body = R"(
-	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
-	float u = texture2D(u_texture, v_texcoord).a - 0.5;
-	float v = texture2D(v_texture, v_texcoord).a - 0.5;
-)" + FragmentYUV2RGB(),
+	float y = texture2D(y_texture, v_texcoord).a;
+	float u = texture2D(u_texture, v_texcoord).a;
+	float v = texture2D(v_texture, v_texcoord).a;
+)" + FragmentYUV2RGB(colorMatrix),
 	};
 }
 
-ShaderPart FragmentSampleNV12Texture(GLenum chromaFormat) {
+ShaderPart FragmentSampleNV12Texture(GLenum chromaFormat, bool colorMatrix) {
 	Expects(chromaFormat == GL_RG || chromaFormat == GL_LUMINANCE_ALPHA);
 
 	const auto channels = (chromaFormat == GL_RG) ? u"rg"_q : u"ra"_q;
@@ -115,13 +123,14 @@ ShaderPart FragmentSampleNV12Texture(GLenum chromaFormat) {
 varying vec2 v_texcoord;
 uniform sampler2D y_texture;
 uniform sampler2D uv_texture;
-)",
+)" + (colorMatrix ? R"(uniform mat4 yuvToRgb;
+)" : QString()),
 		.body = R"(
-	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
-	vec2 uv = texture2D(uv_texture, v_texcoord).)" + channels + R"( - vec2(0.5, 0.5);
+	float y = texture2D(y_texture, v_texcoord).a;
+	vec2 uv = texture2D(uv_texture, v_texcoord).)" + channels + R"(;
 	float u = uv.x;
 	float v = uv.y;
-)" + FragmentYUV2RGB(),
+)" + FragmentYUV2RGB(colorMatrix),
 	};
 }
 
