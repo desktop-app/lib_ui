@@ -55,6 +55,13 @@ public:
 	virtual not_null<QAction*> action() const = 0;
 	virtual bool isEnabled() const = 0;
 
+	// A command that is in the menu but can't be chosen now: its action is
+	// disabled. The keyboard still stops on it, like in a system menu, and
+	// a screen reader says it is unavailable.
+	[[nodiscard]] bool isUnavailable() const;
+
+	AccessibilityState accessibilityState() const override;
+
 	virtual void finishAnimating();
 
 protected:
