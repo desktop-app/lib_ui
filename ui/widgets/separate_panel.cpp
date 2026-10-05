@@ -1390,14 +1390,14 @@ QMargins SeparatePanel::computePadding() const {
 
 void SeparatePanel::initGeometry(QSize size) {
 	const auto active = QApplication::activeWindow();
-	const auto screen = active
-		? active->screen()
+	const auto window = parentWidget() ? parentWidget()->window() : nullptr;
+	const auto parent = (window && window->isVisible()) ? window : active;
+	const auto screen = parent
+		? parent->screen()
 		: QGuiApplication::primaryScreen();
 	const auto available = screen ? screen->availableGeometry() : QRect();
-	const auto parentGeometry = (active
-			&& active->isVisible()
-			&& active->isActiveWindow())
-		? active->geometry()
+	const auto parentGeometry = (parent && parent->isVisible())
+		? parent->geometry()
 		: available;
 	_useTransparency = Platform::TranslucentWindowsSupported();
 	_padding = _useTransparency
