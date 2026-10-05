@@ -2374,6 +2374,15 @@ void ShapedItem::draw(
 		const auto turn = (full.type() < QTransform::TxProject)
 			? QTransform(rest.m11(), rest.m12(), rest.m21(), rest.m22(), 0, 0)
 			: QTransform();
+		auto origin = full.map(at);
+		if (rest.type() <= QTransform::TxTranslate) {
+			// The grid of drawInPlace().
+			origin.setY(std::round(origin.y()));
+			if (!SupportsSubpixelPositions(item->analysis.font)) {
+				origin.setX(std::round(origin.x()));
+			}
+		}
+		const auto whole = QPointF(std::floor(origin.x()), std::floor(origin.y()));
 
 		// WHY: a font asked for again under a scale is hinted at that size, so the
 		// ink of Pango does not hold its glyphs - they are recorded first, and the
@@ -2402,6 +2411,8 @@ void ShapedItem::draw(
 			.xy = turn.m21(),
 			.yy = turn.m22(),
 		};
+		// Qt may antialias the edges of an image off whole pixels.
+		cairo_translate(record, origin.x() - whole.x(), origin.y() - whole.y());
 		cairo_transform(record, &turning);
 		cairo_move_to(record, 0, 0);
 		ShowGlyphs(record, item->analysis.font, part, ink, false);
@@ -2448,7 +2459,7 @@ void ShapedItem::draw(
 		// Where the image goes is counted in the pixels of the device, because
 		// the turn of the painter is in the glyphs already - so it is put there
 		// with only what places the painter itself left in the way.
-		const auto place = QPointF(full.map(at)) + QPointF(left, top);
+		const auto place = whole + QPointF(left, top);
 		auto invertible = false;
 		p.save();
 		p.setWorldTransform(QTransform());
