@@ -2375,22 +2375,56 @@ void ShapedItem::draw(
 			? QTransform(rest.m11(), rest.m12(), rest.m21(), rest.m22(), 0, 0)
 			: QTransform();
 
-		// A glyph may reach outside its advance in every direction, so the
-		// ink is what the image has to hold, and where it sits places it.
-		for (const auto &line : lines) {
-			const auto united = QRect(ink.x, ink.y, ink.width, ink.height)
-				.united(line);
-			ink = { united.x(), united.y(), united.width(), united.height() };
+		// WHY: a font asked for again under a scale is hinted at that size, so the
+		// ink of Pango does not hold its glyphs - they are recorded first, and the
+		// ink of what was drawn is what the image has to hold.
+		const auto recording = cairo_recording_surface_create(
+			CAIRO_CONTENT_COLOR_ALPHA,
+			nullptr);
+		const auto record = cairo_create(recording);
+
+		// Subpixel antialiasing measures coverage per colour channel, and an image
+		// keeping one alpha per pixel has nowhere to hold that: put somewhere else
+		// afterwards, what was measured per channel turns into a tint. Drawing
+		// straight into the buffer of the painter is what it takes to keep it, so
+		// here the glyphs are asked for grey - of the font, because that is where
+		// the answer is kept.
+		const auto color = p.pen().color();
+		cairo_set_source_rgba(
+			record,
+			color.redF(),
+			color.greenF(),
+			color.blueF(),
+			color.alphaF());
+		const auto turning = cairo_matrix_t{
+			.xx = turn.m11(),
+			.yx = turn.m12(),
+			.xy = turn.m21(),
+			.yy = turn.m22(),
+		};
+		cairo_transform(record, &turning);
+		cairo_move_to(record, 0, 0);
+		ShowGlyphs(record, item->analysis.font, part, ink, false);
+		FillLines(record, QPointF(), lines);
+		cairo_destroy(record);
+		auto inkX = 0.;
+		auto inkY = 0.;
+		auto inkWidth = 0.;
+		auto inkHeight = 0.;
+		cairo_recording_surface_ink_extents(
+			recording,
+			&inkX,
+			&inkY,
+			&inkWidth,
+			&inkHeight);
+		const auto left = int(std::floor(inkX));
+		const auto top = int(std::floor(inkY));
+		const auto width = int(std::ceil(inkX + inkWidth)) - left;
+		const auto height = int(std::ceil(inkY + inkHeight)) - top;
+		if (width <= 0 || height <= 0) {
+			cairo_surface_destroy(recording);
+			return;
 		}
-		const auto inked = turn.mapRect(QRectF(
-			PANGO_PIXELS_FLOOR(ink.x),
-			PANGO_PIXELS_FLOOR(ink.y),
-			PANGO_PIXELS_CEIL(ink.x + ink.width) - PANGO_PIXELS_FLOOR(ink.x),
-			PANGO_PIXELS_CEIL(ink.y + ink.height) - PANGO_PIXELS_FLOOR(ink.y)));
-		const auto left = int(std::floor(inked.x()));
-		const auto top = int(std::floor(inked.y()));
-		const auto width = int(std::ceil(inked.x() + inked.width())) - left;
-		const auto height = int(std::ceil(inked.y() + inked.height())) - top;
 
 		// In pixels of the device, which is what Pango was asked in.
 		auto image = QImage(width, height, QImage::Format_ARGB32_Premultiplied);
@@ -2403,33 +2437,12 @@ void ShapedItem::draw(
 			height,
 			int(image.bytesPerLine()));
 		const auto context = cairo_create(surface);
-
-		// Subpixel antialiasing measures coverage per colour channel, and an image
-		// keeping one alpha per pixel has nowhere to hold that: put somewhere else
-		// afterwards, what was measured per channel turns into a tint. Drawing
-		// straight into the buffer of the painter is what it takes to keep it, so
-		// here the glyphs are asked for grey - of the font, because that is where
-		// the answer is kept.
-		const auto color = p.pen().color();
-		cairo_set_source_rgba(
-			context,
-			color.redF(),
-			color.greenF(),
-			color.blueF(),
-			color.alphaF());
-		cairo_translate(context, -left, -top);
-		const auto turning = cairo_matrix_t{
-			.xx = turn.m11(),
-			.yx = turn.m12(),
-			.xy = turn.m21(),
-			.yy = turn.m22(),
-		};
-		cairo_transform(context, &turning);
-		cairo_move_to(context, 0, 0);
-		ShowGlyphs(context, item->analysis.font, part, ink, false);
-		FillLines(context, QPointF(), lines);
+		cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
+		cairo_set_source_surface(context, recording, -left, -top);
+		cairo_paint(context);
 		cairo_destroy(context);
 		cairo_surface_destroy(surface);
+		cairo_surface_destroy(recording);
 		image.setDevicePixelRatio(ratio);
 
 		// Where the image goes is counted in the pixels of the device, because
