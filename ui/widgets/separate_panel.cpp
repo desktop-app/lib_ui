@@ -958,7 +958,9 @@ void SeparatePanel::toggleSearch(bool shown) {
 }
 
 void SeparatePanel::showMenu(Fn<void(const Menu::MenuCallback&)> fill) {
-	const auto created = createMenu(_menuToggle);
+	const auto created = createMenu(_fsMenuToggle
+		? not_null<RippleButton*>(_fsMenuToggle.get())
+		: not_null<RippleButton*>(_menuToggle.data()));
 	if (!created) {
 		return;
 	}
@@ -976,7 +978,7 @@ void SeparatePanel::showMenu(Fn<void(const Menu::MenuCallback&)> fill) {
 	}
 }
 
-bool SeparatePanel::createMenu(not_null<IconButton*> button) {
+bool SeparatePanel::createMenu(not_null<RippleButton*> button) {
 	if (_menu) {
 		return false;
 	}

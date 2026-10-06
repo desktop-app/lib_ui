@@ -39,6 +39,7 @@ namespace Ui {
 class Show;
 class BoxContent;
 class IconButton;
+class RippleButton;
 class PopupMenu;
 class LayerStackWidget;
 class LayerWidget;
@@ -185,7 +186,7 @@ private:
 	void finishClose();
 
 	void showMenu(Fn<void(const Menu::MenuCallback&)> fill);
-	[[nodiscard]] bool createMenu(not_null<IconButton*> button);
+	[[nodiscard]] bool createMenu(not_null<RippleButton*> button);
 
 	void createFullScreenButtons();
 	void initFullScreenButton(not_null<QWidget*> button);
