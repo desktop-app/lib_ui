@@ -450,13 +450,18 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
 		Platform::SetForeignTransientParent(this, _transientParent);
 	}, lifetime());
 
+	events(
+	) | rpl::filter([=](not_null<QEvent*> e) {
+		return (e->type() == QEvent::WindowStateChange);
+	}) | rpl::on_next([=] {
+		_fullscreen = isFullScreen();
+	}, lifetime());
+
 	Platform::FullScreenEvents(
 		this
 	) | rpl::on_next([=](Platform::FullScreenEvent event) {
 		if (event == Platform::FullScreenEvent::DidEnter) {
 			createFullScreenButtons();
-		} else if (event == Platform::FullScreenEvent::WillExit) {
-			_fullscreen = false;
 		}
 	}, lifetime());
 }
@@ -519,6 +524,7 @@ void SeparatePanel::initControls() {
 		} else if (!_fsClose) {
 			createFullScreenButtons();
 		}
+		updateControlsGeometry();
 	}, lifetime());
 
 	rpl::combine(
@@ -1364,7 +1370,6 @@ QRect SeparatePanel::innerGeometry() const {
 }
 
 void SeparatePanel::toggleFullScreen(bool fullscreen) {
-	_fullscreen = fullscreen;
 	if (fullscreen) {
 		showFullScreen();
 	} else {
