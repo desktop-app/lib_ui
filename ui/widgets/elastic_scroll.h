@@ -7,6 +7,7 @@
 #pragma once
 
 #include "ui/widgets/scroll_area.h" // For helpers, like ScrollToRequest.
+#include "ui/widgets/smooth_scroll.h"
 #include "ui/effects/animations.h"
 #include "ui/rp_widget.h"
 #include "base/object_ptr.h"
@@ -269,6 +270,8 @@ private:
 
 	void updateState();
 	void setState(ScrollState state);
+	[[nodiscard]] int scrollToMin() const;
+	[[nodiscard]] int scrollToMax() const;
 	[[nodiscard]] int willScrollTo(int position) const;
 	void tryScrollTo(int position, bool synthMouseMove = true);
 	void applyScrollTo(int position, bool synthMouseMove = true);
@@ -357,6 +360,7 @@ private:
 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 	Fn<bool(QPoint, Qt::ScrollPhase)> _crossAxisWheelProcess;
 	ScrollDirectionLock _wheelDirectionLock;
+	SmoothScroll _smoothScroll;
 	int _overscroll = 0;
 	int _overscrollDefaultFrom = 0;
 	int _overscrollDefaultTill = 0;
