@@ -18,6 +18,7 @@
 #include "ui/basic_click_handlers.h"
 #include "ui/text/text_renderer.h" // kQuoteCollapsedLines
 #include "ui/widgets/fields/custom_field_object.h"
+#include "ui/effects/ripple_animation.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/emoji_config.h"
@@ -33,6 +34,7 @@
 #include <QtCore/QMimeData>
 #include <QtCore/QRegularExpression>
 #include <QtGui/QClipboard>
+#include <QtGui/QDrag>
 #include <QtGui/QTextBlock>
 #include <QtGui/QTextDocumentFragment>
 #include <QtGui/QPixmapCache>
@@ -392,6 +394,18 @@ void TrimFullCoverageTags(TextWithTags &parsed) {
 		|| InputField::IsCustomDateLink(tag)
 		|| (instantViewEditorTagsEnabled
 			&& InputField::IsInstantViewAnchorLink(tag));
+}
+
+[[nodiscard]] bool IsOpenableLinkTag(QStringView tag) {
+	return TextUtilities::IsMentionLink(tag)
+		|| (InputField::IsValidMarkdownLink(tag)
+			&& !InputField::IsInstantViewAnchorLink(tag));
+}
+
+[[nodiscard]] bool IsParsedLinkBarrierTag(QStringView tag) {
+	return (tag == kTagCode)
+		|| IsTagPre(tag)
+		|| InputField::IsValidMarkdownLink(tag);
 }
 
 [[nodiscard]] QString TagWithoutInstantViewMath(QStringView tag) {
@@ -1600,6 +1614,9 @@ protected:
 	void keyPressEvent(QKeyEvent *e) override {
 		return outer()->keyPressEventInner(e);
 	}
+	void keyReleaseEvent(QKeyEvent *e) override {
+		return outer()->keyReleaseEventInner(e);
+	}
 	void contextMenuEvent(QContextMenuEvent *e) override {
 		return outer()->contextMenuEventInner(e);
 	}
@@ -1974,6 +1991,12 @@ InputField::InputField(
 		documentContentsChanged(position, removed, added);
 	}, lifetime());
 	base::qt_signal_producer(
+		_inner->document(),
+		&QTextDocument::contentsChanged
+	) | rpl::on_next([=] {
+		refreshSelectedLink();
+	}, lifetime());
+	base::qt_signal_producer(
 		_inner.get(),
 		&QTextEdit::undoAvailable
 	) | rpl::on_next([=](bool undoAvailable) {
@@ -2022,7 +2045,12 @@ InputField::InputField(
 	_scrollTop = bar->value();
 	connect(bar, &QScrollBar::valueChanged, [=] {
 		_scrollTop = bar->value();
+		refreshSelectedLink();
 	});
+	connect(
+		_inner->horizontalScrollBar(),
+		&QScrollBar::valueChanged,
+		[=] { refreshSelectedLink(); });
 
 	setCursor(style::cur_text);
 	heightAutoupdated();
@@ -2344,6 +2372,7 @@ void InputField::paintEventInner(QPaintEvent *e) {
 	applyPaletteColors(true);
 	_customEmojiRepaintScheduled = false;
 	paintQuotes(e);
+	paintLinkRipple();
 	_inner->QTextEdit::paintEvent(e);
 #ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 	paintMisspelled(e);
@@ -3052,8 +3081,21 @@ void InputField::mousePressEvent(QMouseEvent *e) {
 void InputField::mousePressEventInner(QMouseEvent *e) {
 	_selectedActionQuoteId = lookupActionQuoteId(e->pos());
 	_pressedActionQuoteId = _selectedActionQuoteId;
+	const auto linkClick = (_pressedActionQuoteId <= 0)
+		&& (e->button() == Qt::LeftButton)
+		&& e->modifiers().testFlag(Qt::ControlModifier);
+	_pressedLink = linkClick ? lookupLink(e->pos()) : LinkRange();
+	if (_pressedLink) {
+		const auto cursor = _inner->textCursor();
+		const auto position = _inner->cursorForPosition(e->pos()).position();
+		_pressedLinkPoint = e->pos();
+		_pressedLinkInSelection = cursor.hasSelection()
+			&& (position >= cursor.selectionStart())
+			&& (position <= cursor.selectionEnd());
+		startLinkRipple(e->pos());
+	}
 	updateCursorShape();
-	if (_pressedActionQuoteId <= 0) {
+	if (_pressedActionQuoteId <= 0 && !_pressedLink) {
 		_inner->QTextEdit::mousePressEvent(e);
 	}
 }
@@ -3184,14 +3226,31 @@ void InputField::mouseReleaseEventInner(QMouseEvent *e) {
 	if (taken > 0 && taken == _selectedActionQuoteId) {
 		blockActionClicked(taken);
 	}
-	updateCursorShape();
-	_inner->QTextEdit::mouseReleaseEvent(e);
+	const auto link = base::take(_pressedLink);
+	if (link && _linkRipple) {
+		_linkRipple->lastStop();
+	}
+	updateSelectedLink(e->pos(), e->modifiers());
+	if (!link) {
+		_inner->QTextEdit::mouseReleaseEvent(e);
+	} else if (lookupLink(e->pos()) == link) {
+		_openLinkCallback(link.data, OpenLinkAction::Open);
+	}
 }
 
 void InputField::mouseMoveEventInner(QMouseEvent *e) {
 	_selectedActionQuoteId = lookupActionQuoteId(e->pos());
-	updateCursorShape();
-	_inner->QTextEdit::mouseMoveEvent(e);
+	if (_pressedLink
+		&& (e->buttons() & Qt::LeftButton)
+		&& ((e->pos() - _pressedLinkPoint).manhattanLength()
+			>= QApplication::startDragDistance())) {
+		startLinkDrag();
+		return;
+	}
+	updateSelectedLink(e->pos(), e->modifiers());
+	if (!_pressedLink) {
+		_inner->QTextEdit::mouseMoveEvent(e);
+	}
 }
 
 int InputField::lookupActionQuoteId(QPoint point) const {
@@ -3249,17 +3308,375 @@ int InputField::lookupActionQuoteId(QPoint point) const {
 	return 0;
 }
 
+auto InputField::lookupLink(QPoint point) -> LinkRange {
+	if (!_openLinkCallback) {
+		return {};
+	}
+	const auto document = _inner->document();
+	const auto position = document->documentLayout()->hitTest(
+		point + QPoint(
+			_inner->horizontalScrollBar()->value(),
+			_inner->verticalScrollBar()->value()),
+		Qt::ExactHit);
+	if (position < 0) {
+		return {};
+	}
+	if (_linkCache.revision != document->revision()) {
+		_linkCache = { .revision = document->revision() };
+	}
+	auto cursor = QTextCursor(document);
+	cursor.setPosition(position + 1);
+	const auto format = cursor.charFormat();
+	if (format.objectType() == kCollapsedQuoteFormat) {
+		return {};
+	}
+	const auto tag = format.property(kTagProperty).toString();
+	const auto block = document->findBlock(position);
+	for (const auto &part : TextUtilities::SplitTags(tag)) {
+		if (IsOpenableLinkTag(part)) {
+			return lookupTagLink(block, position, part);
+		}
+	}
+	return lookupParsedLink(block, position);
+}
+
+auto InputField::lookupTagLink(
+		const QTextBlock &block,
+		int position,
+		QStringView link) -> LinkRange {
+	auto &cache = _linkCache;
+	if (cache.tag != link
+		|| position < cache.tagLink.from
+		|| position >= cache.tagLink.till) {
+		cache.tag = link.toString();
+		cache.tagLink = computeTagLink(block, position, cache.tag);
+		cache.tagOpenable = cache.tagLink
+			&& _openLinkCallback(cache.tagLink.data, OpenLinkAction::Check);
+	}
+	return cache.tagOpenable ? cache.tagLink : LinkRange();
+}
+
+auto InputField::lookupParsedLink(
+		const QTextBlock &block,
+		int position) -> LinkRange {
+	auto &cache = _linkCache;
+	if (cache.parsedBlock != block.position()) {
+		cache.parsedBlock = block.position();
+		cache.parsed = computeParsedLinks(block);
+		cache.parsedOpenable.assign(cache.parsed.size(), std::nullopt);
+	}
+	const auto i = ranges::upper_bound(
+		cache.parsed,
+		position,
+		ranges::less(),
+		&LinkRange::from);
+	if (i == begin(cache.parsed) || position >= (i - 1)->till) {
+		return {};
+	}
+	const auto index = int(i - begin(cache.parsed)) - 1;
+	const auto &link = cache.parsed[index];
+	auto &openable = cache.parsedOpenable[index];
+	if (!openable) {
+		openable = _openLinkCallback(link.data, OpenLinkAction::Check);
+	}
+	return *openable ? link : LinkRange();
+}
+
+auto InputField::computeTagLink(
+		const QTextBlock &block,
+		int position,
+		const QString &link) const -> LinkRange {
+	const auto linked = [&](const QTextFragment &fragment) {
+		const auto tag = fragment.charFormat().property(
+			kTagProperty
+		).toString();
+		return ranges::contains(
+			TextUtilities::SplitTags(tag),
+			QStringView(link));
+	};
+	auto from = -1;
+	auto till = -1;
+	for (auto i = block.begin(); !i.atEnd(); ++i) {
+		const auto fragment = i.fragment();
+		if (!linked(fragment)) {
+			if (till > position) {
+				break;
+			}
+			from = -1;
+			continue;
+		} else if (from < 0) {
+			from = fragment.position();
+		}
+		till = fragment.position() + fragment.length();
+	}
+	if (from < 0 || from > position || till <= position) {
+		return {};
+	}
+	const auto text = getTextWithTagsPart(from, till).text;
+	if (TextUtilities::IsMentionLink(link)) {
+		const auto data = TextUtilities::MentionEntityData(link);
+		if (data.isEmpty()) {
+			return {};
+		}
+		return {
+			.data = {
+				.text = text,
+				.data = data,
+				.type = EntityType::MentionName,
+			},
+			.from = from,
+			.till = till,
+		};
+	}
+	return {
+		.data = {
+			.text = text,
+			.data = link,
+			.type = (text == link) ? EntityType::Url : EntityType::CustomUrl,
+		},
+		.from = from,
+		.till = till,
+	};
+}
+
+auto InputField::computeParsedLinks(
+		const QTextBlock &block) const -> std::vector<LinkRange> {
+	constexpr auto kTypes = std::array{
+		EntityType::Url,
+		EntityType::Email,
+		EntityType::Mention,
+		EntityType::Hashtag,
+	};
+	const auto start = block.position();
+	auto tags = TagList();
+	auto tagsChanged = false;
+	auto objects = std::vector<ReplacedObject>();
+	const auto text = getTextPart(
+		start,
+		start + block.length() - 1,
+		tags,
+		tagsChanged,
+		nullptr,
+		&objects);
+	const auto position = [&](int offset) {
+		const auto i = ranges::upper_bound(
+			objects,
+			offset,
+			ranges::less(),
+			&ReplacedObject::offset);
+		if (i == begin(objects)) {
+			return start + offset;
+		}
+		const auto &object = *(i - 1);
+		return (offset < object.offset + object.length)
+			? object.position
+			: (object.position + 1 + offset - object.offset - object.length);
+	};
+	const auto barrier = [&](int from, int till) {
+		return ranges::any_of(tags, [&](const TextWithTags::Tag &tag) {
+			return (tag.offset < till)
+				&& (tag.offset + tag.length > from)
+				&& ranges::any_of(
+					TextUtilities::SplitTags(tag.id),
+					IsParsedLinkBarrierTag);
+		});
+	};
+	const auto parsed = TextUtilities::ParseEntities(
+		text,
+		TextParseLinks | TextParseMentions | TextParseHashtags);
+	auto result = std::vector<LinkRange>();
+	for (const auto &entity : parsed.entities) {
+		const auto from = entity.offset();
+		const auto length = entity.length();
+		if (!ranges::contains(kTypes, entity.type())
+			|| barrier(from, from + length)) {
+			continue;
+		}
+		const auto value = text.mid(from, length);
+		result.push_back({
+			.data = {
+				.text = value,
+				.data = value,
+				.type = entity.type(),
+			},
+			.from = position(from),
+			.till = position(from + length - 1) + 1,
+		});
+	}
+	return result;
+}
+
+void InputField::updateSelectedLink(
+		QPoint point,
+		Qt::KeyboardModifiers modifiers) {
+	const auto check = modifiers.testFlag(Qt::ControlModifier)
+		&& _inner->viewport()->rect().contains(point);
+	setSelectedLink((check || _pressedLink) ? lookupLink(point) : LinkRange());
+	updateCursorShape();
+}
+
+void InputField::setSelectedLink(LinkRange link) {
+	const auto revision = document()->revision();
+	if (_selectedLink == link
+		&& (!link || _selectedLinkRevision == revision)) {
+		return;
+	}
+	_selectedLink = std::move(link);
+	_selectedLinkRevision = revision;
+	auto selections = QList<QTextEdit::ExtraSelection>();
+	if (_selectedLink) {
+		auto cursor = QTextCursor(document());
+		cursor.setPosition(_selectedLink.from);
+		cursor.setPosition(_selectedLink.till, QTextCursor::KeepAnchor);
+		auto format = QTextCharFormat();
+		format.setFontUnderline(true);
+		selections.push_back({ cursor, format });
+	}
+	_inner->setExtraSelections(selections);
+}
+
+void InputField::refreshSelectedLink() {
+	if (_selectedLink) {
+		updateSelectedLink(
+			_inner->viewport()->mapFromGlobal(QCursor::pos()),
+			QGuiApplication::keyboardModifiers());
+	}
+}
+
 void InputField::updateCursorShape() {
 	const auto check = (_pressedActionQuoteId < 0)
 		? _selectedActionQuoteId
 		: _pressedActionQuoteId;
-	_inner->viewport()->setCursor(check > 0
+	const auto pointer = (check > 0) || _selectedLink || _pressedLink;
+	_inner->viewport()->setCursor(pointer
 		? style::cur_pointer
 		: style::cur_text);
 }
 
+std::vector<QRect> InputField::linkRects(const LinkRange &link) const {
+	auto result = std::vector<QRect>();
+	const auto document = _inner->document();
+	const auto documentLayout = document->documentLayout();
+	for (auto block = document->findBlock(link.from);
+			block.isValid() && block.position() < link.till;
+			block = block.next()) {
+		const auto layout = block.layout();
+		if (!layout) {
+			continue;
+		}
+		const auto position = block.position();
+		const auto origin = documentLayout->blockBoundingRect(
+			block).topLeft();
+		for (auto i = 0; i != layout->lineCount(); ++i) {
+			const auto line = layout->lineAt(i);
+			const auto from = std::max(
+				link.from - position,
+				line.textStart());
+			const auto till = std::min(
+				link.till - position,
+				line.textStart() + line.textLength());
+			if (from >= till) {
+				continue;
+			}
+			const auto left = line.cursorToX(from);
+			const auto right = line.cursorToX(till);
+			result.push_back(QRectF(
+				origin.x() + std::min(left, right),
+				origin.y() + line.y(),
+				std::abs(right - left),
+				line.height()).toAlignedRect());
+		}
+	}
+	return result;
+}
+
+void InputField::startLinkRipple(QPoint point) {
+	auto rects = linkRects(_pressedLink);
+	auto bounding = QRect();
+	for (auto &rect : rects) {
+		rect = rect.marginsAdded(st::inputFieldLinkRipplePadding);
+		bounding = bounding.united(rect);
+	}
+	if (bounding.isEmpty()) {
+		_linkRipple = nullptr;
+		return;
+	}
+	const auto radius = st::inputFieldLinkRippleRadius;
+	auto mask = RippleAnimation::MaskByDrawer(
+		bounding.size(),
+		false,
+		[&](QPainter &p) {
+			for (const auto &rect : rects) {
+				p.drawRoundedRect(
+					rect.translated(-bounding.topLeft()),
+					radius,
+					radius);
+			}
+		});
+	_linkRippleOrigin = bounding.topLeft();
+	_linkRipple = std::make_unique<RippleAnimation>(
+		st::defaultRippleAnimation,
+		std::move(mask),
+		[=] { _inner->viewport()->update(); });
+	const auto scroll = QPoint(
+		_inner->horizontalScrollBar()->value(),
+		_inner->verticalScrollBar()->value());
+	_linkRipple->add(point + scroll - _linkRippleOrigin);
+}
+
+void InputField::paintLinkRipple() {
+	if (!_linkRipple) {
+		return;
+	}
+	auto p = QPainter(_inner->viewport());
+	auto color = st::defaultTextPalette.linkFg->c;
+	color.setAlpha(25);
+	_linkRipple->paint(
+		p,
+		_linkRippleOrigin.x() - _inner->horizontalScrollBar()->value(),
+		_linkRippleOrigin.y() - _inner->verticalScrollBar()->value(),
+		_inner->viewport()->width(),
+		&color);
+	if (_linkRipple->empty()) {
+		_linkRipple = nullptr;
+	}
+}
+
+void InputField::startLinkDrag() {
+	const auto link = base::take(_pressedLink);
+	if (_linkRipple) {
+		_linkRipple->lastStop();
+	}
+	setSelectedLink(LinkRange());
+	updateCursorShape();
+	const auto was = _inner->textCursor();
+	if (!_pressedLinkInSelection) {
+		auto selection = QTextCursor(document());
+		selection.setPosition(link.from);
+		selection.setPosition(link.till, QTextCursor::KeepAnchor);
+		_inner->setTextCursor(selection);
+	}
+	const auto from = _inner->textCursor().selectionStart();
+	const auto till = _inner->textCursor().selectionEnd();
+	auto mime = TextUtilities::MimeDataFromText(
+		getTextWithTagsPart(from, till));
+	if (link.data.type == EntityType::CustomUrl
+		&& from == link.from
+		&& till == link.till) {
+		mime->setText(link.data.data);
+	}
+	const auto weak = base::make_weak(this);
+	const auto drag = new QDrag(_inner->viewport());
+	drag->setMimeData(mime.release());
+	drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::MoveAction);
+	if (weak && (drag->target() != _inner->viewport())) {
+		_inner->setTextCursor(was);
+	}
+}
+
 void InputField::leaveEventInner(QEvent *e) {
 	_selectedActionQuoteId = 0;
+	setSelectedLink(LinkRange());
 	_inner->viewport()->setCursor(style::cur_text);
 	_inner->QTextEdit::leaveEvent(e);
 }
@@ -3289,6 +3706,8 @@ void InputField::focusInEventInner(QFocusEvent *e) {
 
 void InputField::focusOutEventInner(QFocusEvent *e) {
 	setFocused(false);
+	setSelectedLink(LinkRange());
+	updateCursorShape();
 	_inner->QTextEdit::focusOutEvent(e);
 	_focusedChanges.fire(false);
 }
@@ -3335,7 +3754,8 @@ QString InputField::getTextPart(
 		int end,
 		TagList &outTagsList,
 		bool &outTagsChanged,
-		std::vector<MarkdownTag> *outMarkdownTags) const {
+		std::vector<MarkdownTag> *outMarkdownTags,
+		std::vector<ReplacedObject> *outReplacedObjects) const {
 	Expects((start == 0 && end < 0) || outMarkdownTags == nullptr);
 
 	if (end >= 0 && end <= start) {
@@ -3455,6 +3875,16 @@ QString InputField::getTextPart(
 					if (ch > begin) {
 						result.append(begin, ch - begin);
 					}
+					const auto replaced = [&](int length) {
+						if (outReplacedObjects) {
+							outReplacedObjects->push_back({
+								.position = std::max(fragment.position(), start)
+									+ int(ch - text.constData()),
+								.offset = int(result.size()),
+								.length = length,
+							});
+						}
+					};
 					const auto tag = blockFormat.property(kQuoteFormatId);
 					const auto quote = FindBlockTag(tag.toString());
 					if (quote == kTagBlockquoteCollapsed) {
@@ -3475,6 +3905,7 @@ QString InputField::getTextPart(
 								kTagBlockquoteCollapsed,
 								from + tag.offset + tag.length);
 						}
+						replaced(collapsed.text.size());
 						result.append(collapsed.text);
 					} else {
 						const auto replacement = !emojiText.isEmpty()
@@ -3483,6 +3914,7 @@ QString InputField::getTextPart(
 							? kObjectReplacement
 							: QString();
 						adjustedLength += replacement.size() - 1;
+						replaced(replacement.size());
 						if (!replacement.isEmpty()) {
 							result.append(replacement);
 						}
@@ -4499,6 +4931,11 @@ bool InputField::ShouldSubmit(
 }
 
 void InputField::keyPressEventInner(QKeyEvent *e) {
+	if (e->key() == Qt::Key_Control && !e->isAutoRepeat()) {
+		updateSelectedLink(
+			_inner->viewport()->mapFromGlobal(QCursor::pos()),
+			e->modifiers() | Qt::ControlModifier);
+	}
 	const auto shift = e->modifiers().testFlag(Qt::ShiftModifier);
 	const auto alt = e->modifiers().testFlag(Qt::AltModifier);
 	const auto macmeta = ::Platform::IsMac()
@@ -4676,6 +5113,15 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			processSystemTextReplaces(text);
 		}
 	}
+}
+
+void InputField::keyReleaseEventInner(QKeyEvent *e) {
+	if (e->key() == Qt::Key_Control && !e->isAutoRepeat()) {
+		updateSelectedLink(
+			_inner->viewport()->mapFromGlobal(QCursor::pos()),
+			e->modifiers() & ~Qt::ControlModifier);
+	}
+	_inner->QTextEdit::keyReleaseEvent(e);
 }
 
 bool InputField::exitQuoteWithNewBlock(int key) {
@@ -6355,6 +6801,12 @@ void InputField::setEditLinkCallback(
 void InputField::setEditLanguageCallback(
 		Fn<void(QString now, Fn<void(QString)> save)> callback) {
 	_editLanguageCallback = std::move(callback);
+}
+
+void InputField::setOpenLinkCallback(
+		Fn<bool(EntityLinkData link, OpenLinkAction action)> callback) {
+	_openLinkCallback = std::move(callback);
+	_linkCache = LinkCache();
 }
 
 void InputField::showError() {
