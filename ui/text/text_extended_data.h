@@ -8,6 +8,7 @@
 
 #include "ui/effects/animations.h"
 #include "ui/effects/spoiler_mess.h"
+#include "ui/text/text.h"
 #include "ui/click_handler.h"
 
 namespace Ui::Text {
@@ -102,9 +103,16 @@ public:
 		const std::shared_ptr<CustomEmojiData> &data,
 		QString entityData);
 
+	[[nodiscard]] const QString &entityData() const;
+
 	void onClick(ClickContext context) const override;
+	QString tooltip() const override;
+	QString copyToClipboardText() const override;
+	QString copyToClipboardContextItemText() const override;
 
 private:
+	[[nodiscard]] CustomEmojiLinkTexts texts() const;
+
 	const std::weak_ptr<CustomEmojiData> _data;
 	const QString _entityData;
 
@@ -116,6 +124,7 @@ struct CustomEmojiData {
 	QString entityData;
 	Fn<bool(QStringView)> predicate;
 	Fn<void(QStringView, ClickContext)> callback;
+	Fn<CustomEmojiLinkTexts(QStringView)> texts;
 
 };
 

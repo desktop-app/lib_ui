@@ -119,5 +119,28 @@ void CustomEmojiClickHandler::onClick(ClickContext context) const {
 	}
 }
 
+const QString &CustomEmojiClickHandler::entityData() const {
+	return _entityData;
+}
+
+QString CustomEmojiClickHandler::tooltip() const {
+	return texts().tooltip;
+}
+
+QString CustomEmojiClickHandler::copyToClipboardText() const {
+	return texts().copyText;
+}
+
+QString CustomEmojiClickHandler::copyToClipboardContextItemText() const {
+	return texts().copyContextItemText;
+}
+
+CustomEmojiLinkTexts CustomEmojiClickHandler::texts() const {
+	const auto data = _data.lock();
+	return (data && data->texts)
+		? data->texts(_entityData)
+		: CustomEmojiLinkTexts();
+}
+
 } // namespace Ui::Text
 

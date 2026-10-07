@@ -147,6 +147,12 @@ struct StateRequestElided : StateRequest {
 	int removeFromEnd = 0;
 };
 
+struct CustomEmojiLinkTexts {
+	QString tooltip;
+	QString copyText;
+	QString copyContextItemText;
+};
+
 class SpoilerMessCache {
 public:
 	explicit SpoilerMessCache(int capacity);
@@ -356,7 +362,8 @@ public:
 	[[nodiscard]] bool hasCustomEmoji() const;
 	void setCustomEmojiClickHandler(
 		Fn<bool(QStringView)> predicate,
-		Fn<void(QStringView, ClickContext)> callback);
+		Fn<void(QStringView, ClickContext)> callback,
+		Fn<CustomEmojiLinkTexts(QStringView)> texts = nullptr);
 
 	[[nodiscard]] bool hasCollapsedBlockquots() const;
 	[[nodiscard]] bool blockquoteCollapsed(int index) const;

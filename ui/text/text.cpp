@@ -873,12 +873,14 @@ bool String::hasCustomEmoji() const {
 
 void String::setCustomEmojiClickHandler(
 		Fn<bool(QStringView)> predicate,
-		Fn<void(QStringView, ClickContext)> callback) {
+		Fn<void(QStringView, ClickContext)> callback,
+		Fn<CustomEmojiLinkTexts(QStringView)> texts) {
 	const auto extended = ensureExtended();
 	extended->customEmoji = std::make_shared<CustomEmojiData>();
 	const auto &data = extended->customEmoji;
 	data->predicate = std::move(predicate);
 	data->callback = std::move(callback);
+	data->texts = std::move(texts);
 }
 
 void String::setBlockquoteExpandCallback(
