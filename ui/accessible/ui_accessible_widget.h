@@ -17,7 +17,8 @@ namespace Ui::Accessible {
 class Widget
 	: public QAccessibleWidget
 	, public QAccessibleSelectionInterface
-	, public QAccessibleAttributesInterface {
+	, public QAccessibleAttributesInterface
+	, public QAccessibleValueInterface {
 public:
 	explicit Widget(not_null<RpWidget*> widget);
 
@@ -65,6 +66,15 @@ public:
 	// vertical orientation.
 	QList<QAccessible::Attribute> attributeKeys() const override;
 	QVariant attributeValue(QAccessible::Attribute key) const override;
+
+	// Value. Exposed (via interface_cast) only when the widget reports an
+	// accessibilityValueRange(), so UI Automation maps it to the RangeValue
+	// pattern and a screen reader reads and changes the numeric value.
+	QVariant currentValue() const override;
+	void setCurrentValue(const QVariant &value) override;
+	QVariant maximumValue() const override;
+	QVariant minimumValue() const override;
+	QVariant minimumStepSize() const override;
 
 };
 

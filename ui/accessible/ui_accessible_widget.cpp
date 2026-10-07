@@ -99,6 +99,10 @@ void *Widget::interface_cast(QAccessible::InterfaceType type) {
 		&& rp()->accessibilityOrientation().has_value()) {
 		return static_cast<QAccessibleAttributesInterface*>(this);
 	}
+	if (type == QAccessible::ValueInterface
+		&& rp()->accessibilityValueRange().has_value()) {
+		return static_cast<QAccessibleValueInterface*>(this);
+	}
 	return QAccessibleWidget::interface_cast(type);
 }
 
@@ -293,16 +297,18 @@ void Widget::doAction(const QString &actionName) {
 }
 
 // Selection. A selection item is a child with the ListItem (or PageTab, for
-// a strip of tabs) role reporting selected = active; the selected one
-// resolves independently of focus. Plain buttons among the children are
-// excluded, and a locked folder reports selectable = false, so it is never
-// claimed as a successful selection.
+// a strip of tabs, or RadioButton, for a group of exclusive options) role
+// reporting selected = active; the selected one resolves independently of
+// focus. Plain buttons among the children are excluded, and a locked folder
+// reports selectable = false, so it is never claimed as a successful
+// selection.
 
 namespace {
 
 [[nodiscard]] bool IsSelectionItemRole(QAccessible::Role role) {
 	return (role == QAccessible::ListItem)
-		|| (role == QAccessible::PageTab);
+		|| (role == QAccessible::PageTab)
+		|| (role == QAccessible::RadioButton);
 }
 
 } // namespace
@@ -389,6 +395,34 @@ QVariant Widget::attributeValue(QAccessible::Attribute key) const {
 		}
 	}
 	return QVariant();
+}
+
+// Value. Reports the numeric range of a slider-like widget. The setter may be
+// invoked by the platform on a background thread, so the widget must hop to
+// the main thread itself before touching any state.
+
+QVariant Widget::currentValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->current) : QVariant();
+}
+
+void Widget::setCurrentValue(const QVariant &value) {
+	rp()->accessibilitySetValue(value.toDouble());
+}
+
+QVariant Widget::maximumValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->maximum) : QVariant();
+}
+
+QVariant Widget::minimumValue() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->minimum) : QVariant();
+}
+
+QVariant Widget::minimumStepSize() const {
+	const auto range = rp()->accessibilityValueRange();
+	return range ? QVariant(range->step) : QVariant();
 }
 
 } // namespace Ui::Accessible
