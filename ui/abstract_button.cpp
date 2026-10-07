@@ -223,15 +223,43 @@ void AbstractButton::clearState() {
 	onStateChanged(was, StateChangeSource::ByUser);
 }
 
+void AbstractButton::setAccessibilityExpanded(std::optional<bool> expanded) {
+	if (_accessibilityExpanded == expanded) {
+		return;
+	}
+	const auto wasExpandable = _accessibilityExpanded.has_value();
+	_accessibilityExpanded = expanded;
+	// The state change is what a screen reader announces while the
+	// button keeps the focus; becoming expandable at all is not a change
+	// of the open state.
+	if (wasExpandable && expanded.has_value()) {
+		accessibilityStateChanged({ .expanded = true });
+	}
+}
+
 AccessibilityState AbstractButton::accessibilityState() const {
-	return { .pressed = isDown() };
+	return {
+		.expandable = _accessibilityExpanded.has_value(),
+		.expanded = _accessibilityExpanded.value_or(false),
+		.pressed = isDown(),
+	};
+}
+
+QStringList AbstractButton::accessibilityActionNames() {
+	auto result = RpWidget::accessibilityActionNames();
+	if (_accessibilityExpanded.has_value()) {
+		// What the expand and collapse of an expandable element map to.
+		result.push_back(QAccessibleActionInterface::showMenuAction());
+	}
+	return result;
 }
 
 void AbstractButton::accessibilityDoAction(const QString &name) {
-	if (name == QAccessibleActionInterface::pressAction()) {
-		if (!isDisabled()) {
-			clicked(Qt::NoModifier, Qt::LeftButton);
-		}
+	const auto press = (name == QAccessibleActionInterface::pressAction())
+		|| (name == QAccessibleActionInterface::showMenuAction()
+			&& _accessibilityExpanded.has_value());
+	if (press && !isDisabled()) {
+		clicked(Qt::NoModifier, Qt::LeftButton);
 	}
 }
 

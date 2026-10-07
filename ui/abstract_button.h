@@ -63,6 +63,10 @@ public:
 	void setIsMenuButton(bool value) {
 		_menuButton = value;
 	}
+	// A button that shows and hides something reports whether it is
+	// open: a screen reader hears "collapsed" / "expanded" and toggles it
+	// through the expand and collapse actions. Reset with nullopt.
+	void setAccessibilityExpanded(std::optional<bool> expanded);
 	void setIsListItem(bool value) {
 		_listItem = value;
 	}
@@ -86,6 +90,7 @@ public:
 			: QAccessible::Button;
 	}
 	AccessibilityState accessibilityState() const override;
+	QStringList accessibilityActionNames() override;
 	void accessibilityDoAction(const QString &name) override;
 
 protected:
@@ -138,6 +143,7 @@ private:
 	bool _pointerCursor : 1 = false;
 	bool _acceptBoth : 1 = false;
 	bool _triggerOnPress : 1 = false;
+	std::optional<bool> _accessibilityExpanded;
 	bool _menuButton : 1 = false;
 	bool _listItem : 1 = false;
 	bool _pageTab : 1 = false;
