@@ -70,7 +70,7 @@ private:
 		const MarkedContext &context,
 		ReadyToken);
 
-	void trimSourceRange();
+	void trimSourceRange(const TextParseOptions &options);
 	void createBlock(int skipBack = 0);
 	void createNewlineBlock(bool fromOriginalText);
 	void ensureAtNewline(QuoteDetails quote);
