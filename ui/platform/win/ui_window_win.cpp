@@ -894,8 +894,11 @@ void WindowHelper::updateMargins() {
 
 		const auto normal = margins;
 		margins = QMargins(r.left, r.top, -r.right, -r.bottom) - _rcWorkDelta;
-		_marginsDelta = normal - margins;
-	} else if (!_marginsDelta.isNull()) {
+		// WHY: Qt owns the frame while full screen and restores the
+		// pre-maximize one on showNormal(), so the delta is taken from the
+		// zero full-screen margins and applied only after full screen ends.
+		_marginsDelta = normal - (_isFullScreen ? QMargins() : margins);
+	} else if (!_isFullScreen && !_marginsDelta.isNull()) {
 		RECT w;
 		GetWindowRect(_handle, &w);
 		SetWindowPos(
