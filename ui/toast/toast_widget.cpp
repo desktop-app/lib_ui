@@ -182,12 +182,12 @@ public:
 		not_null<RpWidget*> parent,
 		style::align align,
 		std::optional<style::margins> iconPadding,
-		QMargins staticPadding,
-		Fn<void()> relayoutShell);
+		QMargins staticPadding);
 
 	void setBody(object_ptr<RpWidget> body);
 	void setIcon(object_ptr<RpWidget> icon);
 	void setExtraPaddingSource(rpl::producer<QMargins> extraPadding);
+	void setRelayoutShellCallback(Fn<void()> callback);
 
 	int resizeGetHeight(int newWidth) override;
 
@@ -212,14 +212,12 @@ Content::Content(
 	not_null<RpWidget*> parent,
 	style::align align,
 	std::optional<style::margins> iconPadding,
-	QMargins staticPadding,
-	Fn<void()> relayoutShell)
+	QMargins staticPadding)
 : RpWidget(parent)
 , _align(NormalizeToastIconAlign(align))
 , _iconPadding(std::move(iconPadding))
 , _staticPadding(staticPadding)
-, _extraPadding(QMargins())
-, _relayoutShell(std::move(relayoutShell)) {
+, _extraPadding(QMargins()) {
 	show();
 }
 
@@ -244,18 +242,18 @@ void Content::setIcon(object_ptr<RpWidget> icon) {
 }
 
 void Content::setExtraPaddingSource(rpl::producer<QMargins> extraPadding) {
-	auto first = true;
 	(extraPadding
 		? std::move(extraPadding)
 		: rpl::single(QMargins())
-	) | rpl::on_next([=](const QMargins &padding) mutable {
+	) | rpl::on_next([=](const QMargins &padding) {
 		_extraPadding = padding;
 		refreshNaturalWidth();
-		if (std::exchange(first, false)) {
-			return;
-		}
 		requestShellRelayout();
 	}, lifetime());
+}
+
+void Content::setRelayoutShellCallback(Fn<void()> callback) {
+	_relayoutShell = std::move(callback);
 }
 
 int Content::resizeGetHeight(int newWidth) {
@@ -324,12 +322,8 @@ void Content::subscribeToBody() {
 	if (!body) {
 		return;
 	}
-	auto firstNatural = true;
-	body->naturalWidthValue() | rpl::on_next([=]() mutable {
+	body->naturalWidthValue() | rpl::on_next([=]() {
 		refreshNaturalWidth();
-		if (std::exchange(firstNatural, false)) {
-			return;
-		}
 		requestShellRelayout();
 	}, lifetime());
 	body->sizeValue() | rpl::on_next([=]() {
@@ -342,20 +336,11 @@ void Content::subscribeToIcon() {
 	if (!icon) {
 		return;
 	}
-	auto firstNatural = true;
-	icon->naturalWidthValue() | rpl::on_next([=]() mutable {
+	rpl::merge(
+		icon->naturalWidthValue() | rpl::to_empty,
+		icon->sizeValue() | rpl::to_empty
+	) | rpl::on_next([=] {
 		refreshNaturalWidth();
-		if (std::exchange(firstNatural, false)) {
-			return;
-		}
-		requestShellRelayout();
-	}, lifetime());
-	auto firstSize = true;
-	icon->sizeValue() | rpl::on_next([=]() mutable {
-		refreshNaturalWidth();
-		if (std::exchange(firstSize, false)) {
-			return;
-		}
 		requestShellRelayout();
 	}, lifetime());
 }
@@ -397,14 +382,15 @@ ContentLayoutMetrics Content::layoutMetrics() const {
 		parent,
 		config.iconAlign,
 		std::move(config.iconPadding),
-		config.st->padding,
-		[parent] {
-			parent->parentResized();
-		});
+		config.st->padding);
 	const auto raw = result.data();
 	raw->setBody(MakeBodyContent(raw, config));
 	raw->setIcon(MakeIconContent(raw, config));
 	raw->setExtraPaddingSource(std::move(config.padding));
+	// Last: a relayout reads Widget::_content, set when we return.
+	raw->setRelayoutShellCallback([parent] {
+		parent->parentResized();
+	});
 	return result;
 }
 
