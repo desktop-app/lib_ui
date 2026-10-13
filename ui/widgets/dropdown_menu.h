@@ -65,6 +65,7 @@ private:
 	void childHiding(DropdownMenu *child);
 
 	void init();
+	void showFinish();
 	void hideFinish();
 
 	using TriggeredSource = Menu::TriggeredSource;
