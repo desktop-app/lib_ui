@@ -31,12 +31,17 @@
 
 #include <QtCore/QtMath>
 #include <QtCore/QMimeData>
+#include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
+#include <QtGui/QAccessible>
 #include <QtGui/QClipboard>
+#include <QtGui/QAbstractTextDocumentLayout>
 #include <QtGui/QTextBlock>
+#include <QtGui/QTextLayout>
 #include <QtGui/QTextDocumentFragment>
 #include <QtGui/QPixmapCache>
 #include <QtGui/QRawFont>
+#include <QtWidgets/QAccessibleWidget>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCommonStyle>
 #include <QtWidgets/QScrollBar>
@@ -1643,6 +1648,798 @@ private:
 	friend class InputField;
 
 };
+
+namespace {
+
+// The text an emoji object in the document stands for, or nothing for
+// another object (a collapsed quote).
+[[nodiscard]] QString EmojiTextAt(
+		not_null<QTextDocument*> document,
+		int position) {
+	const auto block = document->findBlock(position);
+	for (auto i = block.begin(); !i.atEnd(); ++i) {
+		const auto fragment = i.fragment();
+		if (!fragment.isValid() || !fragment.contains(position)) {
+			continue;
+		}
+		const auto format = fragment.charFormat();
+		if (format.isImageFormat()) {
+			const auto name = format.toImageFormat().name();
+			if (const auto emoji = Emoji::FromUrl(name)) {
+				return emoji->text();
+			}
+		}
+		return format.property(kCustomEmojiText).toString();
+	}
+	return QString();
+}
+
+// An emoji object in the document and the length of the text exposed for it.
+struct EmojiSpan {
+	int position = 0;
+	int length = 0;
+};
+
+// The emoji in the document are objects, a replacement character each,
+// while a screen reader wants the emoji's own text there. The text this
+// interface exposes has that substitution made, and its offsets are those
+// of the exposed text - an emoji of two code units takes two offsets -
+// so the caret, the selection and the word boundaries a platform derives
+// from the text all line up. Every offset coming in is mapped back to a
+// document position and every position going out is mapped to an offset,
+// the text events Qt raises for the editor included, see translate().
+//
+// Qt's own interface for a QTextEdit lives in a private header, so the
+// text interface is implemented here on the public document API, the
+// way Qt's does it.
+class InnerAccessible final
+	: public QAccessibleWidget
+	, public QAccessibleTextInterface
+	, public QAccessibleEditableTextInterface {
+public:
+	explicit InnerAccessible(not_null<QTextEdit*> edit);
+	~InnerAccessible();
+
+	// The replacement for a text event Qt's text control raised for the
+	// editor in document coordinates, null for any other event.
+	[[nodiscard]] std::unique_ptr<QAccessibleEvent> translate(
+		not_null<QAccessibleEvent*> event) const;
+
+	void *interface_cast(QAccessible::InterfaceType t) override;
+	QAccessible::State state() const override;
+	QString text(QAccessible::Text t) const override;
+	void setText(QAccessible::Text t, const QString &text) override;
+
+	// QAccessibleTextInterface.
+	void selection(
+		int selectionIndex,
+		int *startOffset,
+		int *endOffset) const override;
+	int selectionCount() const override;
+	void addSelection(int startOffset, int endOffset) override;
+	void removeSelection(int selectionIndex) override;
+	void setSelection(
+		int selectionIndex,
+		int startOffset,
+		int endOffset) override;
+	int cursorPosition() const override;
+	void setCursorPosition(int position) override;
+	QString text(int startOffset, int endOffset) const override;
+	QString textBeforeOffset(
+		int offset,
+		QAccessible::TextBoundaryType boundaryType,
+		int *startOffset,
+		int *endOffset) const override;
+	QString textAfterOffset(
+		int offset,
+		QAccessible::TextBoundaryType boundaryType,
+		int *startOffset,
+		int *endOffset) const override;
+	QString textAtOffset(
+		int offset,
+		QAccessible::TextBoundaryType boundaryType,
+		int *startOffset,
+		int *endOffset) const override;
+	int characterCount() const override;
+	QRect characterRect(int offset) const override;
+	int offsetAtPoint(const QPoint &point) const override;
+	void scrollToSubstring(int startIndex, int endIndex) override;
+	QString attributes(
+		int offset,
+		int *startOffset,
+		int *endOffset) const override;
+
+	// QAccessibleEditableTextInterface.
+	void deleteText(int startOffset, int endOffset) override;
+	void insertText(int offset, const QString &text) override;
+	void replaceText(
+		int startOffset,
+		int endOffset,
+		const QString &text) override;
+
+private:
+	struct DocumentRange {
+		int start = 0;
+		int end = 0;
+	};
+
+	[[nodiscard]] QTextEdit *edit() const;
+	[[nodiscard]] QTextDocument *document() const;
+	[[nodiscard]] QWidget *viewport() const;
+	[[nodiscard]] int documentLength() const;
+	[[nodiscard]] QPoint scrollBarPosition() const;
+	[[nodiscard]] QTextCursor cursorForRange(int start, int end) const;
+
+	[[nodiscard]] const std::vector<EmojiSpan> &spans() const;
+	void refreshSpans() const;
+	[[nodiscard]] int toOffset(int position) const;
+	[[nodiscard]] int toPosition(int offset, bool rangeEnd = false) const;
+	[[nodiscard]] DocumentRange toRange(
+		int startOffset,
+		int endOffset) const;
+	[[nodiscard]] int expandedLength(int position, int length) const;
+	[[nodiscard]] QString textBetween(int start, int end) const;
+	[[nodiscard]] QString textAt(
+		QPair<int, int> boundaries,
+		int *startOffset,
+		int *endOffset) const;
+	[[nodiscard]] QString withEmoji(
+		const QString &text,
+		int position) const;
+
+	// The emoji objects of the document, in order, refreshed when the
+	// document reports it is done changing (contentsChanged), see spans().
+	// Qt's text control raises its text events from contentsChange, which
+	// comes first, so a removal event is translated while this still
+	// describes the document before it. The field corrects a change from
+	// within contentsChange (a typed emoji becomes an object), which the
+	// document does not report as another contentsChange but does follow
+	// with contentsChanged.
+	mutable std::vector<EmojiSpan> _spans;
+	mutable QPointer<QTextDocument> _spansDocument;
+	mutable QMetaObject::Connection _spansConnection;
+
+};
+
+InnerAccessible::InnerAccessible(not_null<QTextEdit*> edit)
+: QAccessibleWidget(edit, QAccessible::EditableText) {
+}
+
+InnerAccessible::~InnerAccessible() {
+	QObject::disconnect(_spansConnection);
+}
+
+std::unique_ptr<QAccessibleEvent> InnerAccessible::translate(
+		not_null<QAccessibleEvent*> event) const {
+	const auto object = event->object();
+	switch (event->type()) {
+	case QAccessible::TextInserted: {
+		const auto insert = static_cast<QAccessibleTextInsertEvent*>(
+			event.get());
+		const auto position = insert->changePosition();
+		return std::make_unique<QAccessibleTextInsertEvent>(
+			object,
+			toOffset(position),
+			withEmoji(insert->textInserted(), position));
+	}
+	case QAccessible::TextRemoved: {
+		// Qt does not know the removed text and sends a space per removed
+		// document character; the count is what the event carries.
+		const auto remove = static_cast<QAccessibleTextRemoveEvent*>(
+			event.get());
+		const auto position = remove->changePosition();
+		const auto length = int(remove->textRemoved().size());
+		return std::make_unique<QAccessibleTextRemoveEvent>(
+			object,
+			toOffset(position),
+			QString(expandedLength(position, length), QChar(' ')));
+	}
+	case QAccessible::TextUpdated: {
+		const auto update = static_cast<QAccessibleTextUpdateEvent*>(
+			event.get());
+		const auto position = update->changePosition();
+		const auto length = int(update->textRemoved().size());
+		return std::make_unique<QAccessibleTextUpdateEvent>(
+			object,
+			toOffset(position),
+			QString(expandedLength(position, length), QChar(' ')),
+			withEmoji(update->textInserted(), position));
+	}
+	case QAccessible::TextCaretMoved: {
+		const auto caret = static_cast<QAccessibleTextCursorEvent*>(
+			event.get());
+		return std::make_unique<QAccessibleTextCursorEvent>(
+			object,
+			toOffset(caret->cursorPosition()));
+	}
+	case QAccessible::TextSelectionChanged: {
+		const auto selection = static_cast<QAccessibleTextSelectionEvent*>(
+			event.get());
+		return std::make_unique<QAccessibleTextSelectionEvent>(
+			object,
+			toOffset(selection->selectionStart()),
+			toOffset(selection->selectionEnd()));
+	}
+	default: return nullptr;
+	}
+}
+
+void *InnerAccessible::interface_cast(QAccessible::InterfaceType t) {
+	if (t == QAccessible::TextInterface) {
+		return static_cast<QAccessibleTextInterface*>(this);
+	} else if (t == QAccessible::EditableTextInterface) {
+		return static_cast<QAccessibleEditableTextInterface*>(this);
+	}
+	return QAccessibleWidget::interface_cast(t);
+}
+
+QAccessible::State InnerAccessible::state() const {
+	auto result = QAccessibleWidget::state();
+	result.selectableText = true;
+	result.multiLine = true;
+	if (edit()->isReadOnly()) {
+		result.readOnly = true;
+	} else {
+		result.editable = true;
+	}
+	return result;
+}
+
+QString InnerAccessible::text(QAccessible::Text t) const {
+	return (t == QAccessible::Value)
+		? withEmoji(edit()->toPlainText(), 0)
+		: QAccessibleWidget::text(t);
+}
+
+void InnerAccessible::setText(QAccessible::Text t, const QString &text) {
+	if (t != QAccessible::Value) {
+		QAccessibleWidget::setText(t, text);
+	} else if (!edit()->isReadOnly()) {
+		edit()->setPlainText(text);
+	}
+}
+
+void InnerAccessible::selection(
+		int selectionIndex,
+		int *startOffset,
+		int *endOffset) const {
+	*startOffset = *endOffset = 0;
+	const auto cursor = edit()->textCursor();
+	if (selectionIndex != 0 || !cursor.hasSelection()) {
+		return;
+	}
+	*startOffset = toOffset(cursor.selectionStart());
+	*endOffset = toOffset(cursor.selectionEnd());
+}
+
+int InnerAccessible::selectionCount() const {
+	return edit()->textCursor().hasSelection() ? 1 : 0;
+}
+
+void InnerAccessible::addSelection(int startOffset, int endOffset) {
+	setSelection(0, startOffset, endOffset);
+}
+
+void InnerAccessible::removeSelection(int selectionIndex) {
+	if (selectionIndex != 0) {
+		return;
+	}
+	auto cursor = edit()->textCursor();
+	cursor.clearSelection();
+	edit()->setTextCursor(cursor);
+}
+
+void InnerAccessible::setSelection(
+		int selectionIndex,
+		int startOffset,
+		int endOffset) {
+	if (selectionIndex != 0) {
+		return;
+	}
+	const auto range = toRange(startOffset, endOffset);
+	edit()->setTextCursor(cursorForRange(range.start, range.end));
+}
+
+int InnerAccessible::cursorPosition() const {
+	return toOffset(edit()->textCursor().position());
+}
+
+void InnerAccessible::setCursorPosition(int position) {
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(toPosition(position));
+	edit()->setTextCursor(cursor);
+}
+
+QString InnerAccessible::text(int startOffset, int endOffset) const {
+	const auto range = toRange(
+		std::min(startOffset, endOffset),
+		std::max(startOffset, endOffset));
+	return textBetween(range.start, range.end);
+}
+
+QString InnerAccessible::textBeforeOffset(
+		int offset,
+		QAccessible::TextBoundaryType boundaryType,
+		int *startOffset,
+		int *endOffset) const {
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(toPosition(offset));
+	auto boundaries = QAccessible::qAccessibleTextBoundaryHelper(
+		cursor,
+		boundaryType);
+	cursor.setPosition(boundaries.first - 1);
+	boundaries = QAccessible::qAccessibleTextBoundaryHelper(
+		cursor,
+		boundaryType);
+	return textAt(boundaries, startOffset, endOffset);
+}
+
+QString InnerAccessible::textAfterOffset(
+		int offset,
+		QAccessible::TextBoundaryType boundaryType,
+		int *startOffset,
+		int *endOffset) const {
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(toPosition(offset));
+	auto boundaries = QAccessible::qAccessibleTextBoundaryHelper(
+		cursor,
+		boundaryType);
+	cursor.setPosition(boundaries.second);
+	boundaries = QAccessible::qAccessibleTextBoundaryHelper(
+		cursor,
+		boundaryType);
+	return textAt(boundaries, startOffset, endOffset);
+}
+
+QString InnerAccessible::textAtOffset(
+		int offset,
+		QAccessible::TextBoundaryType boundaryType,
+		int *startOffset,
+		int *endOffset) const {
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(toPosition(offset));
+	const auto boundaries = QAccessible::qAccessibleTextBoundaryHelper(
+		cursor,
+		boundaryType);
+	return textAt(boundaries, startOffset, endOffset);
+}
+
+int InnerAccessible::characterCount() const {
+	return toOffset(documentLength());
+}
+
+QRect InnerAccessible::characterRect(int offset) const {
+	const auto position = toPosition(offset);
+	const auto block = document()->findBlock(position);
+	if (!block.isValid()) {
+		return QRect();
+	}
+	const auto layout = block.layout();
+	const auto relative = position - block.position();
+	const auto line = layout->lineForTextPosition(relative);
+	if (!line.isValid()) {
+		return QRect();
+	}
+	auto format = QTextCharFormat();
+	auto i = block.begin();
+	if (i.atEnd()) {
+		format = block.charFormat();
+	} else {
+		while (!i.atEnd() && !i.fragment().contains(position)) {
+			++i;
+		}
+		if (i.atEnd()) {
+			--i;
+		}
+		format = i.fragment().charFormat();
+	}
+	const auto metrics = QFontMetrics(format.font());
+	const auto ch = textBetween(position, position + 1);
+	if (ch.isEmpty()) {
+		return QRect();
+	}
+	const auto origin = layout->position();
+	const auto x = line.cursorToX(relative);
+	const auto width = metrics.horizontalAdvance(ch);
+	const auto height = metrics.height();
+	auto result = QRect(
+		int(origin.x() + x),
+		int(origin.y() + line.y() + line.ascent() + metrics.descent()
+			- height),
+		width,
+		height);
+	result.moveTo(viewport()->mapToGlobal(result.topLeft()));
+	result.translate(-scrollBarPosition());
+	return result;
+}
+
+int InnerAccessible::offsetAtPoint(const QPoint &point) const {
+	const auto local = viewport()->mapFromGlobal(point)
+		+ scrollBarPosition();
+	const auto position = document()->documentLayout()->hitTest(
+		local,
+		Qt::ExactHit);
+	return (position < 0) ? position : toOffset(position);
+}
+
+void InnerAccessible::scrollToSubstring(int startIndex, int endIndex) {
+	const auto range = toRange(
+		std::min(startIndex, endIndex),
+		std::max(startIndex, endIndex));
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(range.start);
+	auto rect = edit()->cursorRect(cursor);
+	cursor.setPosition(range.end);
+	rect = rect.united(edit()->cursorRect(cursor));
+
+	// The rect is in viewport coordinates; the part of it outside the
+	// viewport is how far each scroll bar has to move.
+	const auto size = viewport()->size();
+	const auto dx = (rect.left() < 0)
+		? rect.left()
+		: (rect.right() > size.width())
+		? (rect.right() - size.width())
+		: 0;
+	const auto dy = (rect.top() < 0)
+		? rect.top()
+		: (rect.bottom() > size.height())
+		? (rect.bottom() - size.height())
+		: 0;
+	if (dy) {
+		const auto bar = edit()->verticalScrollBar();
+		bar->setValue(bar->value() + dy);
+	}
+	if (dx) {
+		// A right-to-left editor is laid out from the right: its content
+		// offset is the maximum of the bar minus its value.
+		const auto bar = edit()->horizontalScrollBar();
+		bar->setValue(bar->value() + (edit()->isRightToLeft() ? -dx : dx));
+	}
+}
+
+QString InnerAccessible::attributes(
+		int offset,
+		int *startOffset,
+		int *endOffset) const {
+	if (offset < 0 || offset > characterCount()) {
+		*startOffset = *endOffset = -1;
+		return QString();
+	}
+	// The run is the fragment holding the offset, within its block, the
+	// way Qt's text edit accessible reports it; a block without fragments
+	// or an offset past the last one reports the block's own format.
+	const auto position = toPosition(offset);
+	const auto block = document()->findBlock(position);
+	const auto blockStart = block.position();
+	const auto blockEnd = blockStart + block.length();
+	auto charFormat = block.charFormat();
+	auto start = blockStart;
+	auto end = blockEnd;
+	for (auto i = block.begin(); !i.atEnd(); ++i) {
+		const auto fragment = i.fragment();
+		if (fragment.contains(position)) {
+			charFormat = fragment.charFormat();
+			start = std::max(fragment.position(), blockStart);
+			end = std::min(fragment.position() + fragment.length(), blockEnd);
+			break;
+		}
+		start = fragment.position() + fragment.length();
+	}
+	*startOffset = toOffset(start);
+	*endOffset = toOffset(end);
+
+	// The IAccessible2 text attributes Qt reports for a text edit, from
+	// the public formats.
+	auto result = QString();
+	const auto add = [&](const QString &key, const QString &value) {
+		result += key + QChar(':') + value + QChar(';');
+	};
+	const auto font = charFormat.font();
+	if (const auto family = font.family(); !family.isEmpty()) {
+		add(u"font-family"_q, QChar('"') + family + QChar('"'));
+	}
+	if (const auto size = int(font.pointSize()); size > 0) {
+		add(u"font-size"_q, QString::number(size) + u"pt"_q);
+	}
+	add(u"font-weight"_q, (font.weight() > QFont::Normal)
+		? u"bold"_q
+		: u"normal"_q);
+	add(u"font-style"_q, (font.style() == QFont::StyleItalic)
+		? u"italic"_q
+		: (font.style() == QFont::StyleOblique)
+		? u"oblique"_q
+		: u"normal"_q);
+	auto underline = charFormat.underlineStyle();
+	if (underline == QTextCharFormat::NoUnderline && font.underline()) {
+		underline = QTextCharFormat::SingleUnderline;
+	}
+	const auto underlineStyle = [&] {
+		switch (underline) {
+		case QTextCharFormat::SingleUnderline: return u"solid"_q;
+		case QTextCharFormat::DashUnderline: return u"dash"_q;
+		case QTextCharFormat::DotLine: return u"dot"_q;
+		case QTextCharFormat::DashDotLine: return u"dot-dash"_q;
+		case QTextCharFormat::DashDotDotLine: return u"dot-dot-dash"_q;
+		case QTextCharFormat::WaveUnderline: return u"wave"_q;
+		case QTextCharFormat::SpellCheckUnderline: return u"spell-check"_q;
+		default: return QString();
+		}
+	}();
+	if (!underlineStyle.isEmpty()) {
+		add(u"text-underline-style"_q, underlineStyle);
+		add(u"text-underline-type"_q, u"single"_q);
+	}
+	if (font.strikeOut()) {
+		add(u"text-line-through-type"_q, u"single"_q);
+	}
+	const auto blockFormat = block.blockFormat();
+	if (blockFormat.layoutDirection() == Qt::RightToLeft) {
+		add(u"writing-mode"_q, u"rl"_q);
+	}
+	const auto vertical = charFormat.verticalAlignment();
+	add(u"text-position"_q, (vertical == QTextCharFormat::AlignSubScript)
+		? u"sub"_q
+		: (vertical == QTextCharFormat::AlignSuperScript)
+		? u"super"_q
+		: u"baseline"_q);
+	const auto rgb = [](const QColor &color) {
+		return u"rgb(%1,%2,%3)"_q
+			.arg(color.red())
+			.arg(color.green())
+			.arg(color.blue());
+	};
+	if (const auto background = charFormat.background()
+		; background.style() != Qt::NoBrush) {
+		add(u"background-color"_q, rgb(background.color()));
+	}
+	if (const auto foreground = charFormat.foreground()
+		; foreground.style() != Qt::NoBrush) {
+		add(u"color"_q, rgb(foreground.color()));
+	}
+	const auto alignment = blockFormat.alignment() & (Qt::AlignLeft
+		| Qt::AlignRight
+		| Qt::AlignHCenter
+		| Qt::AlignJustify);
+	if (alignment == Qt::AlignLeft) {
+		add(u"text-align"_q, u"left"_q);
+	} else if (alignment == Qt::AlignRight) {
+		add(u"text-align"_q, u"right"_q);
+	} else if (alignment == Qt::AlignHCenter) {
+		add(u"text-align"_q, u"center"_q);
+	} else if (alignment == Qt::AlignJustify) {
+		add(u"text-align"_q, u"justify"_q);
+	}
+	return result;
+}
+
+void InnerAccessible::deleteText(int startOffset, int endOffset) {
+	const auto range = toRange(startOffset, endOffset);
+	if (range.start == range.end) {
+		return;
+	}
+	cursorForRange(range.start, range.end).removeSelectedText();
+}
+
+void InnerAccessible::insertText(int offset, const QString &text) {
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(toPosition(offset));
+	cursor.insertText(text);
+}
+
+void InnerAccessible::replaceText(
+		int startOffset,
+		int endOffset,
+		const QString &text) {
+	const auto range = toRange(startOffset, endOffset);
+	auto cursor = cursorForRange(range.start, range.end);
+	if (range.start != range.end) {
+		cursor.removeSelectedText();
+	}
+	cursor.insertText(text);
+}
+
+QTextEdit *InnerAccessible::edit() const {
+	return static_cast<QTextEdit*>(widget());
+}
+
+QTextDocument *InnerAccessible::document() const {
+	return edit()->document();
+}
+
+QWidget *InnerAccessible::viewport() const {
+	return edit()->viewport();
+}
+
+int InnerAccessible::documentLength() const {
+	auto cursor = edit()->textCursor();
+	cursor.movePosition(QTextCursor::End);
+	return cursor.position();
+}
+
+QPoint InnerAccessible::scrollBarPosition() const {
+	const auto horizontal = edit()->horizontalScrollBar();
+	const auto vertical = edit()->verticalScrollBar();
+	return QPoint(
+		horizontal ? horizontal->sliderPosition() : 0,
+		vertical ? vertical->sliderPosition() : 0);
+}
+
+QTextCursor InnerAccessible::cursorForRange(int start, int end) const {
+	auto cursor = edit()->textCursor();
+	cursor.setPosition(start, QTextCursor::MoveAnchor);
+	cursor.setPosition(end, QTextCursor::KeepAnchor);
+	return cursor;
+}
+
+// The editor may have been given another document since the last look:
+// the field sets its own right after creating the editor, and the first
+// text event, raised while the editor is still being made, can create
+// this accessible before that.
+const std::vector<EmojiSpan> &InnerAccessible::spans() const {
+	if (const auto document = this->document(); document != _spansDocument) {
+		QObject::disconnect(_spansConnection);
+		_spansDocument = document;
+		_spansConnection = QObject::connect(
+			document,
+			&QTextDocument::contentsChanged,
+			edit(),
+			[=] { refreshSpans(); });
+		refreshSpans();
+	}
+	return _spans;
+}
+
+void InnerAccessible::refreshSpans() const {
+	_spans.clear();
+	const auto document = this->document();
+	for (auto block = document->begin()
+		; block.isValid()
+		; block = block.next()) {
+		for (auto i = block.begin(); !i.atEnd(); ++i) {
+			const auto fragment = i.fragment();
+			if (!fragment.isValid()) {
+				continue;
+			}
+			const auto text = fragment.text();
+			for (auto j = 0, size = int(text.size()); j != size; ++j) {
+				if (text[j] != kObjectReplacementCh) {
+					continue;
+				}
+				const auto position = fragment.position() + j;
+				const auto length = int(
+					EmojiTextAt(document, position).size());
+				if (length > 1) {
+					_spans.push_back({ position, length });
+				}
+			}
+		}
+	}
+}
+
+// The offset in the exposed text of a document position.
+int InnerAccessible::toOffset(int position) const {
+	auto result = position;
+	for (const auto &span : spans()) {
+		if (span.position >= position) {
+			break;
+		}
+		result += span.length - 1;
+	}
+	return result;
+}
+
+// The document position of an offset in the exposed text. An offset
+// inside an emoji lands on its start, or past its end when the offset
+// closes a range, so that a range never cuts an emoji in two.
+int InnerAccessible::toPosition(int offset, bool rangeEnd) const {
+	auto shift = 0;
+	for (const auto &span : spans()) {
+		const auto start = span.position + shift;
+		if (offset <= start) {
+			break;
+		} else if (offset < start + span.length) {
+			return rangeEnd ? (span.position + 1) : span.position;
+		}
+		shift += span.length - 1;
+	}
+	return offset - shift;
+}
+
+// The document range of a range of the exposed text, mapped as a whole:
+// an empty range stays empty, at the one position its offset snaps to,
+// a backwards one keeps its direction, and only a range with something
+// in it grows to cover an emoji at either end.
+InnerAccessible::DocumentRange InnerAccessible::toRange(
+		int startOffset,
+		int endOffset) const {
+	if (startOffset == endOffset) {
+		const auto position = toPosition(startOffset);
+		return { position, position };
+	} else if (startOffset > endOffset) {
+		const auto range = toRange(endOffset, startOffset);
+		return { range.end, range.start };
+	}
+	return { toPosition(startOffset), toPosition(endOffset, true) };
+}
+
+// The length in the exposed text of a document span, by the emoji in it.
+int InnerAccessible::expandedLength(int position, int length) const {
+	auto result = length;
+	for (const auto &span : spans()) {
+		if (span.position >= position + length) {
+			break;
+		} else if (span.position >= position) {
+			result += span.length - 1;
+		}
+	}
+	return result;
+}
+
+// The exposed text between two document positions.
+QString InnerAccessible::textBetween(int start, int end) const {
+	const auto raw = cursorForRange(start, end)
+		.selectedText()
+		.replace(QChar(QChar::ParagraphSeparator), QLatin1Char('\n'));
+	return withEmoji(raw, start);
+}
+
+QString InnerAccessible::textAt(
+		QPair<int, int> boundaries,
+		int *startOffset,
+		int *endOffset) const {
+	*startOffset = toOffset(boundaries.first);
+	*endOffset = toOffset(boundaries.second);
+	return textBetween(boundaries.first, boundaries.second);
+}
+
+// The document text from a position, each object replaced by the text
+// of its emoji.
+QString InnerAccessible::withEmoji(const QString &text, int position) const {
+	if (!text.contains(kObjectReplacementCh)) {
+		return text;
+	}
+	const auto document = this->document();
+	auto result = QString();
+	result.reserve(text.size());
+	for (auto i = 0, size = int(text.size()); i != size; ++i) {
+		const auto ch = text[i];
+		if (ch != kObjectReplacementCh) {
+			result.append(ch);
+			continue;
+		}
+		const auto emoji = EmojiTextAt(document, position + i);
+		result.append(emoji.isEmpty() ? QString(ch) : emoji);
+	}
+	return result;
+}
+
+} // namespace
+
+QAccessibleInterface *InputField::CreateInnerAccessible(QObject *object) {
+	const auto edit = qobject_cast<QTextEdit*>(object);
+	return (edit && dynamic_cast<InputField*>(edit->parentWidget()))
+		? new InnerAccessible(edit)
+		: nullptr;
+}
+
+std::unique_ptr<QAccessibleEvent> InputField::TranslateInnerAccessibilityEvent(
+		not_null<QAccessibleEvent*> event) {
+	const auto type = event->type();
+	if (type != QAccessible::TextInserted
+		&& type != QAccessible::TextRemoved
+		&& type != QAccessible::TextUpdated
+		&& type != QAccessible::TextCaretMoved
+		&& type != QAccessible::TextSelectionChanged) {
+		return nullptr;
+	}
+	const auto edit = qobject_cast<QTextEdit*>(event->object());
+	if (!edit || !dynamic_cast<InputField*>(edit->parentWidget())) {
+		return nullptr;
+	}
+	const auto accessible = dynamic_cast<InnerAccessible*>(
+		QAccessible::queryAccessibleInterface(edit));
+	return accessible ? accessible->translate(event) : nullptr;
+}
 
 #ifndef QT_SPELLCHECK_UNDERLINE_FROM_CHROME
 // The mark under a misspelled word, drawn the way Chrome draws it - a wave on
