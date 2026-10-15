@@ -76,6 +76,22 @@ base::options::toggle OptionUseQtRhi({
 	.restartRequired = true,
 });
 
+base::options::toggle OptionForceANGLE({
+	.id = kOptionForceANGLE,
+	.name = "Force ANGLE renderer",
+	.description = "Use ANGLE for accelerated media and calls. "
+		"Render the main window on the CPU.",
+	.defaultValue = false,
+	.scope = [] {
+#if defined DESKTOP_APP_USE_ANGLE && QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		return true;
+#else
+		return false;
+#endif
+	},
+	.restartRequired = true,
+});
+
 [[nodiscard]] bool VulkanRhiAvailable() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && QT_CONFIG(vulkan)
 	return !Platform::IsMac()
@@ -302,6 +318,7 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 } // namespace
 
 const char kOptionUseQtRhi[] = "use-qt-rhi";
+const char kOptionForceANGLE[] = "force-angle";
 const char kOptionEnableVulkanRhi[] = "enable-vulkan-rhi";
 
 Capabilities CheckCapabilities(QWidget *widget) {
@@ -496,7 +513,8 @@ Backend ChooseBackendDefault(Capabilities capabilities) {
 
 bool WidgetsRhiEnabled() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-	if (!OptionUseQtRhi.value()) {
+	if (!OptionUseQtRhi.value()
+		|| (OptionForceANGLE.relevant() && OptionForceANGLE.value())) {
 		return false;
 	} else if (!Platform::IsMac()) {
 		if (ForceDisabled || LastCrashCheckFailed()) {
@@ -626,6 +644,13 @@ void ConfigureANGLE() {
 	if (qEnvironmentVariableIntValue("DESKTOP_APP_QT_OPENGL_DEFAULT")) {
 		qunsetenv("QT_OPENGL");
 		qunsetenv("QT_ANGLE_PLATFORM");
+	}
+	if (OptionForceANGLE.value()) {
+		qputenv("QT_OPENGL", "angle");
+		LOG(("ANGLE: Forced by experimental option, RHI disabled."));
+		if (!qEnvironmentVariableIsEmpty("QT_ANGLE_PLATFORM")) {
+			return;
+		}
 	} else if (!qEnvironmentVariableIsEmpty("QT_OPENGL")
 		|| !qEnvironmentVariableIsEmpty("QT_ANGLE_PLATFORM")) {
 		return;

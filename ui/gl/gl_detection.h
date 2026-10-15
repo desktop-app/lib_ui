@@ -38,6 +38,7 @@ struct RhiCapabilities {
 };
 
 extern const char kOptionUseQtRhi[];
+extern const char kOptionForceANGLE[];
 extern const char kOptionEnableVulkanRhi[];
 
 [[nodiscard]] Capabilities CheckCapabilities(QWidget *widget = nullptr);
