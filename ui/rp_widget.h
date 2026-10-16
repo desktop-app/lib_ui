@@ -380,6 +380,16 @@ private:
 // Add required fields from QAccessible::State when necessary.
 // Don't forget to amend the AccessibilityState::writeTo implementation.
 // This one allows universal initialization, like { .checkable = true }.
+// The "x of y" of a child of a list, painted or a real widget, reported to
+// a screen reader as PositionInSet / SizeOfSet: the 1-based position of the
+// child within the set of its siblings and the size of that set. A zero
+// position means the child is not one of the set, like a divider row
+// between the items or a separator of a menu.
+struct AccessibilitySetPosition {
+	int position = 0;
+	int size = 0;
+};
+
 struct AccessibilityState {
 	bool checkable : 1 = false;
 	bool checked : 1 = false;
@@ -468,6 +478,19 @@ public:
 	// more item. Defaults to accessibilityChildRole().
 	[[nodiscard]] virtual QAccessible::Role accessibilityChildRoleAt(
 		int index) const;
+
+	// By default every child is one of the set; a list with rows outside
+	// it (or a menu with separators) overrides this to skip them, see
+	// AccessibilitySetPosition. Applies to painted children and to the
+	// real child widgets of accessibilityChildWidgets() alike.
+	[[nodiscard]] virtual AccessibilitySetPosition accessibilityChildSetPosition(
+		int index) const;
+
+	// The "x of y" of this widget itself. By default it is placed by the
+	// owner that lists it among its real child widgets (see above); a widget
+	// whose set is not the children of one owner, like a radio button of a
+	// group, overrides this.
+	[[nodiscard]] virtual AccessibilitySetPosition accessibilitySetPosition() const;
 
 	[[nodiscard]] virtual QRect accessibilityChildRect(int index) const;
 	[[nodiscard]] virtual int accessibilityChildColumnCount(int row) const;

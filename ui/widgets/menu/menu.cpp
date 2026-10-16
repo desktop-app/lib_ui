@@ -330,6 +330,33 @@ const std::vector<not_null<QAction*>> &Menu::actions() const {
 	return _actions;
 }
 
+std::vector<not_null<QWidget*>> Menu::accessibilityChildWidgets() const {
+	auto result = std::vector<not_null<QWidget*>>();
+	result.reserve(_actionWidgets.size());
+	for (const auto &widget : _actionWidgets) {
+		result.push_back(widget.get());
+	}
+	return result;
+}
+
+AccessibilitySetPosition Menu::accessibilityChildSetPosition(
+		int index) const {
+	// The set is what the user sees: the visible items of the menu without
+	// its separators, like in a QMenu. A separator keeps a zero position.
+	auto result = AccessibilitySetPosition();
+	for (auto i = 0, count = int(_actionWidgets.size()); i != count; ++i) {
+		const auto action = _actionWidgets[i]->action();
+		if (action->isSeparator() || !action->isVisible()) {
+			continue;
+		}
+		++result.size;
+		if (i == index) {
+			result.position = result.size;
+		}
+	}
+	return result;
+}
+
 QPoint Menu::lastMouseGlobal() const {
 	return _lastMouseGlobal.value_or(QCursor::pos());
 }
