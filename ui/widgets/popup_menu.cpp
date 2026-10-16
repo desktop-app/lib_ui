@@ -822,6 +822,43 @@ void PopupMenu::showStarted() {
 	startOpacityAnimation(false);
 }
 
+void PopupMenu::refreshAnimationCache() {
+	if (isHidden()) {
+		return;
+	}
+	if (_showAnimation) {
+		prepareShowAnimation();
+	}
+	if (_a_opacity.animating()) {
+		auto opacityAnimation = base::take(_a_opacity);
+		const auto hiding = base::take(_hiding);
+		prepareCache();
+		_hiding = hiding;
+		_a_opacity = base::take(opacityAnimation);
+	}
+	if (_showAnimation || _a_opacity.animating()) {
+		hideChildren();
+	}
+	update();
+}
+
+void PopupMenu::prepareShowAnimation() {
+	auto opacityAnimation = base::take(_a_opacity);
+	showChildren();
+	auto cache = grabForPanelAnimation();
+	_a_opacity = base::take(opacityAnimation);
+
+	const auto pixelRatio = style::DevicePixelRatio();
+	_showAnimation = std::make_unique<PanelAnimation>(_st.animation, _origin);
+	_showAnimation->setFinalImage(std::move(cache), QRect(_inner.topLeft() * pixelRatio, _inner.size() * pixelRatio), _st.radius);
+	if (_useTransparency) {
+		_showAnimation->setCornerMasks(Images::CornersMask(_st.radius));
+	} else {
+		_showAnimation->setSkipShadow(true);
+	}
+	_showAnimation->start();
+}
+
 void PopupMenu::startShowAnimation() {
 	if (!_useTransparency) {
 		_a_show.stop();
@@ -829,20 +866,7 @@ void PopupMenu::startShowAnimation() {
 		return;
 	}
 	if (!_a_show.animating()) {
-		auto opacityAnimation = base::take(_a_opacity);
-		showChildren();
-		auto cache = grabForPanelAnimation();
-		_a_opacity = base::take(opacityAnimation);
-
-		const auto pixelRatio = style::DevicePixelRatio();
-		_showAnimation = std::make_unique<PanelAnimation>(_st.animation, _origin);
-		_showAnimation->setFinalImage(std::move(cache), QRect(_inner.topLeft() * pixelRatio, _inner.size() * pixelRatio), _st.radius);
-		if (_useTransparency) {
-			_showAnimation->setCornerMasks(Images::CornersMask(_st.radius));
-		} else {
-			_showAnimation->setSkipShadow(true);
-		}
-		_showAnimation->start();
+		prepareShowAnimation();
 	}
 	_animatePhase = AnimatePhase::StartShow;
 	hideChildren();

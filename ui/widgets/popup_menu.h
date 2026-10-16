@@ -101,6 +101,7 @@ public:
 	bool prepareGeometryFor(const QPoint &p);
 	void popupPrepared();
 	void hideMenu(bool fast = false);
+	void refreshAnimationCache();
 	void setTopShift(int topShift);
 	void setForceWidth(int forceWidth);
 	void setForcedOrigin(PanelAnimation::Origin origin);
@@ -165,6 +166,7 @@ private:
 	void hideAnimated();
 
 	QImage grabForPanelAnimation();
+	void prepareShowAnimation();
 	void startShowAnimation();
 	void startOpacityAnimation(bool hiding);
 	void prepareCache();
