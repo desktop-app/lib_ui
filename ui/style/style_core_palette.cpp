@@ -8,12 +8,14 @@
 
 #include "ui/style/style_palette_colorizer.h"
 
+#include <atomic>
+
 namespace style {
 namespace {
 
 struct MainOverrideState {
 	const palette *active = nullptr;
-	const palette *shadowFor = nullptr;
+	uint64 shadowIdentity = 0;
 	int shadowVersion = -1;
 	std::vector<int> carried;
 	std::unique_ptr<palette> shadow;
@@ -27,7 +29,12 @@ struct MainOverrideState {
 void InvalidateMainOverride() {
 	Expects(!MainOverride().active);
 
-	MainOverride().shadowFor = nullptr;
+	MainOverride().shadowIdentity = 0;
+}
+
+[[nodiscard]] uint64 NextIdentity() {
+	static auto counter = std::atomic<uint64>();
+	return counter.fetch_add(1, std::memory_order_relaxed) + 1;
 }
 
 } // namespace
@@ -64,6 +71,7 @@ color palette::colorAtIndex(int index) const {
 void palette::finalize(const colorizer &with) {
 	if (_ready) return;
 	_ready = true;
+	_identity = NextIdentity();
 
 	_finalizeHelper = PrepareFinalizeHelper(with);
 	palette_data::finalize(*this);
@@ -90,6 +98,7 @@ palette &palette::operator=(const palette &other) {
 			_ready = false;
 		}
 	}
+	_identity = NextIdentity();
 	if (wasReady && !_ready) {
 		finalize();
 	}
@@ -120,6 +129,7 @@ bool palette::load(const QByteArray &cache) {
 	for (auto i = 0; i != kCount; ++i) {
 		setData(i, { p[i * 4 + 0], p[i * 4 + 1], p[i * 4 + 2], p[i * 4 + 3] });
 	}
+	_identity = NextIdentity();
 	return true;
 }
 
@@ -129,6 +139,7 @@ palette::SetResult palette::setColor(QLatin1String name, uchar r, uchar g, uchar
 	auto duplicate = (_status[nameIndex] != Status::Initial);
 
 	setData(nameIndex, { r, g, b, a });
+	_identity = NextIdentity();
 	return duplicate ? SetResult::Duplicate : SetResult::Ok;
 }
 
@@ -154,6 +165,7 @@ palette::SetResult palette::setColor(QLatin1String name, QLatin1String from) {
 	}
 
 	setData(nameIndex, *data(fromIndex));
+	_identity = NextIdentity();
 	return duplicate ? SetResult::Duplicate : SetResult::Ok;
 }
 
@@ -235,7 +247,12 @@ auto palette::PrepareFinalizeHelper(const colorizer &with)
 
 void palette::SwitchMainOverride(const palette *target) {
 	auto &state = MainOverride();
-	if (state.active == target) {
+	if (!target) {
+		if (!state.active) {
+			return;
+		}
+	} else if (state.active == target
+		&& state.shadowIdentity == target->_identity) {
 		return;
 	}
 	auto &main = const_cast<palette&>(*main_palette::get());
@@ -259,7 +276,8 @@ void palette::SwitchMainOverride(const palette *target) {
 	Expects(target->_ready);
 
 	const auto version = PaletteVersion();
-	if (state.shadowFor != target || state.shadowVersion != version) {
+	if (state.shadowIdentity != target->_identity
+		|| state.shadowVersion != version) {
 		if (!state.shadow) {
 			state.shadow = std::make_unique<palette>();
 		}
@@ -270,7 +288,7 @@ void palette::SwitchMainOverride(const palette *target) {
 				state.shadow->setData(i, *target->data(i));
 			}
 		}
-		state.shadowFor = target;
+		state.shadowIdentity = target->_identity;
 		state.shadowVersion = version;
 	}
 	exchange();
@@ -340,8 +358,9 @@ Override::~Override() {
 	palette::SwitchMainOverride(_was);
 }
 
-const palette *CurrentOverride() {
-	return MainOverride().active;
+uint64 CurrentOverrideIdentity() {
+	const auto &state = MainOverride();
+	return state.active ? state.shadowIdentity : 0;
 }
 
 } // namespace main_palette

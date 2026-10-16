@@ -24,7 +24,6 @@ class QPainter;
 
 namespace style {
 struct TextStyle;
-class palette;
 } // namespace style
 
 namespace Ui::Emoji {
@@ -208,7 +207,7 @@ private:
 	QMargins _padding;
 	QImage _frame;
 	int _paletteVersion = 0;
-	const style::palette *_paletteOverride = nullptr;
+	uint64 _paletteIdentity = 0;
 
 };
 

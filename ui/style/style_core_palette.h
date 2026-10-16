@@ -19,6 +19,9 @@ class Override;
 
 class palette : public palette_data {
 public:
+	// WHY: override caches can't key on reused addresses: the first finalize,
+	// reset, assignment and a successful load or setColor renew an identity.
+	// Once ready use setColor (Duplicate still writes), not colorAtIndex(i).set().
 	palette();
 	palette(const palette &other) = delete;
 	palette &operator=(const palette &other);
@@ -61,6 +64,7 @@ private:
 	void setData(int index, const internal::ColorData &value);
 
 	std::unique_ptr<FinalizeHelper> _finalizeHelper;
+	uint64 _identity = 0;
 	bool _ready = false;
 
 };
@@ -77,6 +81,7 @@ void reset();
 void reset(const colorizer &with);
 int indexOfColor(color c);
 
+// Edits apply at the next entry or restore; restore targets must stay alive.
 class Override final {
 public:
 	explicit Override(const palette *with);
@@ -89,7 +94,8 @@ private:
 
 };
 
-[[nodiscard]] const palette *CurrentOverride();
+// Identity of the colours an override applied, or zero without one.
+[[nodiscard]] uint64 CurrentOverrideIdentity();
 
 } // namespace main_palette
 } // namespace style

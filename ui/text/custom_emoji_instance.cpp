@@ -8,6 +8,7 @@
 
 #include "ui/effects/animation_value.h"
 #include "ui/effects/frame_generator.h"
+#include "ui/style/style_core_palette.h"
 #include "ui/dynamic_image.h"
 #include "ui/ui_utility.h"
 #include "ui/painter.h"
@@ -975,10 +976,16 @@ void PaintIconEmoji(
 	const auto ratio = style::DevicePixelRatio();
 	const auto full = size * ratio;
 	const auto invalid = (cache.frame.size() != full);
+	const auto version = style::PaletteVersion();
+	const auto identity = emoji->useIconColor
+		? style::main_palette::CurrentOverrideIdentity()
+		: 0;
 	if (invalid
 		|| (emoji->useIconColor
-			&& cache.paletteVersion != style::PaletteVersion())) {
-		cache.paletteVersion = style::PaletteVersion();
+			&& (cache.paletteVersion != version
+				|| cache.paletteIdentity != identity))) {
+		cache.paletteVersion = version;
+		cache.paletteIdentity = identity;
 		if (invalid) {
 			cache.frame = QImage(full, QImage::Format_ARGB32_Premultiplied);
 		}

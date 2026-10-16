@@ -281,12 +281,12 @@ bool PaletteDependentCustomEmoji::readyInDefaultState() {
 
 void PaletteDependentCustomEmoji::validateFrame() {
 	const auto version = style::PaletteVersion();
-	const auto overridden = style::main_palette::CurrentOverride();
+	const auto identity = style::main_palette::CurrentOverrideIdentity();
 	if (_frame.isNull()
 		|| _paletteVersion != version
-		|| _paletteOverride != overridden) {
+		|| _paletteIdentity != identity) {
 		_paletteVersion = version;
-		_paletteOverride = overridden;
+		_paletteIdentity = identity;
 		_frame = _factory();
 	}
 }
