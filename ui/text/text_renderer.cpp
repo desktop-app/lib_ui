@@ -49,7 +49,105 @@ void AppendRange(
 	ranges.push_back(range);
 }
 
+void AppendOrderedRange(
+		QVarLengthArray<FixedRange> &ranges,
+		FixedRange range,
+		bool &ordered) {
+	if (range.empty()) {
+		return;
+	} else if (ordered && !ranges.empty()) {
+		auto &tail = ranges.back();
+		if (range.from < tail.from) {
+			ordered = false;
+		} else if (!Distinct(tail, range)) {
+			tail = United(tail, range);
+			return;
+		}
+	}
+	ranges.push_back(range);
+}
+
+class SelectionSweep final {
+public:
+	SelectionSweep(
+		const ShapedItem &shaped,
+		int drawFrom,
+		int drawTill,
+		Fixed x);
+
+	[[nodiscard]] FixedRange extent(int selStart, int selEnd);
+
+private:
+	void next();
+
+	const ShapedItem &_shaped;
+	int _drawFrom = 0;
+	int _drawTill = 0;
+	Fixed _x;
+	int _ch = 0;
+	int _ch2 = 0;
+	Fixed _gwidth;
+	Fixed _prefix;
+
+};
+
+SelectionSweep::SelectionSweep(
+	const ShapedItem &shaped,
+	int drawFrom,
+	int drawTill,
+	Fixed x)
+: _shaped(shaped)
+, _drawFrom(drawFrom)
+, _drawTill(drawTill)
+, _x(x) {
+}
+
+FixedRange SelectionSweep::extent(int selStart, int selEnd) {
+	while (_ch2 <= selStart) {
+		next();
+	}
+	auto selX = _x + _prefix;
+	auto selWidth = Fixed();
+	if (_ch < selStart) {
+		selX += Fixed(selStart - _ch) * _gwidth / Fixed(_ch2 - _ch);
+		if (_ch2 >= selEnd) {
+			selWidth += Fixed(selEnd - selStart)
+				* _gwidth
+				/ Fixed(_ch2 - _ch);
+			return { selX, selX + selWidth };
+		}
+		selWidth += Fixed(_ch2 - selStart) * _gwidth / Fixed(_ch2 - _ch);
+		next();
+	}
+	while (_ch2 < selEnd) {
+		selWidth += _gwidth;
+		next();
+	}
+	if (_ch2 == selEnd) {
+		selWidth += _gwidth;
+	} else {
+		selWidth += Fixed(selEnd - _ch) * _gwidth / Fixed(_ch2 - _ch);
+	}
+	return { selX, selX + selWidth };
+}
+
+void SelectionSweep::next() {
+	_prefix += _gwidth;
+	_ch = _ch2;
+	_ch2 = _shaped.clusterEnd(_drawFrom + _ch, _drawTill) - _drawFrom;
+	_gwidth = _shaped.width(_drawFrom + _ch, _drawFrom + _ch2);
+}
+
 } // namespace
+
+struct Renderer::HighlightBatch {
+	QVarLengthArray<TextSelection, 16> ranges;
+	int first = 0;
+	int last = 0;
+	float64 ratio = 1.;
+	QVarLengthArray<FixedRange, 16> extents;
+	bool lineOrdered = true;
+};
 
 FixedRange Intersected(FixedRange a, FixedRange b) {
 	return {
@@ -426,6 +524,59 @@ StateResult Renderer::getState(
 	return _lookupResult;
 }
 
+std::vector<QRect> Renderer::highlightRects(
+		std::span<const TextSelection> ranges,
+		const HighlightRectsRequest &request) {
+	Expects(request.geometry.layout != nullptr);
+	Expects(!request.geometry.outElided);
+	Expects(std::isfinite(request.ratio) && request.ratio > 0.);
+
+	if (_t->isEmpty()) {
+		return {};
+	}
+	auto batch = HighlightBatch{ .ratio = request.ratio };
+	auto &list = batch.ranges;
+	for (const auto &range : ranges) {
+		if (range.from < range.to) {
+			list.push_back(range);
+		}
+	}
+	if (list.empty()) {
+		return {};
+	}
+	const auto byFrom = [](TextSelection a, TextSelection b) {
+		return a.from < b.from;
+	};
+	if (!std::is_sorted(list.begin(), list.end(), byFrom)) {
+		std::sort(list.begin(), list.end(), byFrom);
+	}
+	auto united = list.begin();
+	for (auto i = united + 1; i != list.end(); ++i) {
+		if (i->from <= united->to) {
+			united->to = std::max(united->to, i->to);
+		} else {
+			*++united = *i;
+		}
+	}
+	list.resize(united - list.begin() + 1);
+
+	_batch = &batch;
+	const auto guard = gsl::finally([&] {
+		_batch = nullptr;
+	});
+	_x = _startLeft = request.position.x();
+	_y = _startTop = request.position.y();
+	_yFrom = request.clip.isNull() ? 0 : request.clip.y();
+	_yTo = request.clip.isNull()
+		? -1
+		: (request.clip.y() + request.clip.height());
+	_geometry = request.geometry;
+	_breakEverywhere = _geometry.breakEverywhere;
+	_align = request.align;
+	enumerate();
+	return std::vector<QRect>(_highlightRects.begin(), _highlightRects.end());
+}
+
 crl::time Renderer::now() const {
 	if (!_cachedNow) {
 		_cachedNow = crl::now();
@@ -512,7 +663,11 @@ void Renderer::initParagraphBidi() {
 		(_paragraphDirection == Qt::RightToLeft),
 		int(_paragraphStartBlock - begin(_t->_blocks)),
 		-1,
-		_p ? _p->paintEngine()->paintDevice()->devicePixelRatioF() : 1.);
+		(_p
+			? _p->paintEngine()->paintDevice()->devicePixelRatioF()
+			: _batch
+			? _batch->ratio
+			: 1.));
 }
 
 // The caret at an edge of the line - which edge is which depends on the
@@ -677,6 +832,14 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		x += _wLeft;
 	}
 
+	if (_batch) {
+		return collectLineHighlights(
+			lineText,
+			lineStart,
+			lineLength,
+			x,
+			(trimmedLineEnd == _lineStart) && !_elidedLine);
+	}
 	if (!_p) {
 		if (_lookupX < x) {
 			if (_lookupSymbol) {
@@ -1467,6 +1630,151 @@ FixedRange Renderer::findSelectTextRange(
 	if (rtl) selX = x + itemWidth - (selX - x) - selWidth;
 
 	return { selX, selX + selWidth };
+}
+
+bool Renderer::collectLineHighlights(
+		const QString &lineText,
+		int lineStart,
+		int lineLength,
+		Fixed x,
+		bool emptyLine) {
+	auto &batch = *_batch;
+	const auto &ranges = batch.ranges;
+	const auto count = int(ranges.size());
+	while (batch.first != count && ranges[batch.first].to <= _lineStart) {
+		++batch.first;
+	}
+	if (batch.first == count) {
+		return false;
+	}
+	const auto lineTill = _lineStart + lineLength;
+	if (emptyLine || ranges[batch.first].from >= lineTill) {
+		return !_elidedLine;
+	}
+	batch.last = std::max(batch.last, batch.first);
+	while (batch.last != count && ranges[batch.last].from < lineTill) {
+		++batch.last;
+	}
+
+	if (!_elidedLine) {
+		initParagraphBidi();
+	}
+	auto shaper = LineShaper(
+		_t,
+		_paragraph,
+		_localFrom,
+		lineText,
+		_lineStartBlock,
+		_blocksSize);
+	const auto firstItem = shaper.findItem(lineStart);
+	const auto lastItem = shaper.findItem(lineStart + lineLength - 1);
+	const auto nItems = (firstItem >= 0 && lastItem >= firstItem)
+		? (lastItem - firstItem + 1)
+		: 0;
+	if (!nItems) {
+		return !_elidedLine;
+	}
+	shaper.shapeRange(firstItem, lastItem);
+	const auto &items = shaper.items();
+	const auto visualOrder = shaper.visualOrder();
+
+	batch.lineOrdered = true;
+	for (auto i = 0; i != nItems; ++i) {
+		const auto index = visualOrder[i];
+		const auto &item = items[index];
+		if (item.object) {
+			const auto blockIt = begin(_t->_blocks) + item.blockIndex;
+			const auto type = blockIt->get()->type();
+			if (type == TextBlockType::Emoji
+				|| type == TextBlockType::CustomEmoji) {
+				appendObjectHighlight(item, blockIt, x);
+			}
+			x += item.width;
+			continue;
+		}
+		const auto &shaped = shaper.shape(index);
+		const auto itemStart = std::max(lineStart, item.position);
+		const auto itemEnd = std::min(
+			lineStart + lineLength,
+			item.position + item.length);
+		const auto drawFrom = itemStart - item.position;
+		const auto drawTill = itemEnd - item.position;
+		const auto itemWidth = shaped.width(drawFrom, drawTill);
+		appendTextHighlights(item, shaped, drawFrom, drawTill, x, itemWidth);
+		x += itemWidth;
+	}
+	if (!batch.lineOrdered) {
+		std::sort(
+			_highlightRanges.begin(),
+			_highlightRanges.end(),
+			[](FixedRange a, FixedRange b) { return a.from < b.from; });
+	}
+	fillRectsFromRanges(_highlightRects, _highlightRanges);
+	return !_elidedLine;
+}
+
+void Renderer::appendTextHighlights(
+		const Item &item,
+		const ShapedItem &shaped,
+		int drawFrom,
+		int drawTill,
+		Fixed x,
+		Fixed itemWidth) {
+	auto &extents = _batch->extents;
+	extents.clear();
+	const auto itemStart = _localFrom + item.position + drawFrom;
+	const auto itemEnd = _localFrom + item.position + drawTill;
+	const auto rtl = item.rtl();
+	const auto &ranges = _batch->ranges;
+	const auto till = ranges.begin() + _batch->last;
+	auto i = std::partition_point(
+		ranges.begin() + _batch->first,
+		till,
+		[&](TextSelection range) { return range.to <= itemStart; });
+	auto sweep = std::optional<SelectionSweep>();
+	for (; i != till && i->from < itemEnd; ++i) {
+		if (i->from <= itemStart && i->to >= itemEnd) {
+			extents.push_back({ x, x + itemWidth });
+			continue;
+		} else if (!sweep) {
+			sweep.emplace(shaped, drawFrom, drawTill, x);
+		}
+		auto extent = sweep->extent(
+			std::max(i->from - itemStart, 0),
+			std::min(i->to - itemStart, drawTill - drawFrom));
+		if (rtl) {
+			const auto selWidth = extent.till - extent.from;
+			extent.from = x + itemWidth - (extent.from - x) - selWidth;
+			extent.till = extent.from + selWidth;
+		}
+		extents.push_back(extent);
+	}
+	const auto count = int(extents.size());
+	for (auto k = 0; k != count; ++k) {
+		AppendOrderedRange(
+			_highlightRanges,
+			extents[rtl ? (count - 1 - k) : k],
+			_batch->lineOrdered);
+	}
+}
+
+void Renderer::appendObjectHighlight(
+		const Item &item,
+		std::vector<Block>::const_iterator blockIt,
+		Fixed x) {
+	const auto position = _localFrom + item.position;
+	const auto &ranges = _batch->ranges;
+	const auto till = ranges.begin() + _batch->last;
+	const auto i = std::partition_point(
+		ranges.begin() + _batch->first,
+		till,
+		[&](TextSelection range) { return range.to <= position; });
+	if (i != till) {
+		AppendOrderedRange(
+			_highlightRanges,
+			findSelectObjectRange(item, blockIt, x, *i),
+			_batch->lineOrdered);
+	}
 }
 
 void Renderer::fillSelectRange(FixedRange range) {

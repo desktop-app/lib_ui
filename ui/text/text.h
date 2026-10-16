@@ -253,6 +253,14 @@ struct HighlightInfoRequest {
 	QPainterPath *outPath = nullptr;
 };
 
+struct HighlightRectsRequest {
+	QPoint position;
+	GeometryDescriptor geometry;
+	style::align align = style::al_left;
+	QRect clip;
+	float64 ratio = 1.;
+};
+
 struct PaintContext {
 	QPoint position;
 	int outerWidth = 0; // For automatic RTL Ui inversion.
@@ -392,6 +400,9 @@ public:
 		QPoint point,
 		GeometryDescriptor geometry,
 		StateRequest request = StateRequest()) const;
+	[[nodiscard]] std::vector<QRect> countHighlightRects(
+		std::span<const TextSelection> ranges,
+		const HighlightRectsRequest &request) const;
 
 	void draw(Painter &p, int32 left, int32 top, int32 width, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, TextSelection selection = { 0, 0 }, bool fullWidthSelection = true) const;
 	void drawElided(Painter &p, int32 left, int32 top, int32 width, int32 lines = 1, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, int32 removeFromEnd = 0, bool breakEverywhere = false, TextSelection selection = { 0, 0 }) const;

@@ -42,11 +42,15 @@ public:
 		QPoint point,
 		GeometryDescriptor geometry,
 		StateRequest request);
+	[[nodiscard]] std::vector<QRect> highlightRects(
+		std::span<const TextSelection> ranges,
+		const HighlightRectsRequest &request);
 
 private:
 	static constexpr int kSpoilersRectsSize = 512;
 
 	struct BidiControl;
+	struct HighlightBatch;
 
 	void enumerate();
 
@@ -78,6 +82,23 @@ private:
 		Fixed x,
 		Fixed itemWidth,
 		TextSelection selection) const;
+	[[nodiscard]] bool collectLineHighlights(
+		const QString &lineText,
+		int lineStart,
+		int lineLength,
+		Fixed x,
+		bool emptyLine);
+	void appendTextHighlights(
+		const Item &item,
+		const ShapedItem &shaped,
+		int drawFrom,
+		int drawTill,
+		Fixed x,
+		Fixed itemWidth);
+	void appendObjectHighlight(
+		const Item &item,
+		std::vector<Block>::const_iterator blockIt,
+		Fixed x);
 	void fillSelectRange(FixedRange range);
 	void fillSelectRange(FixedRange range, int top, int height);
 	void pushHighlightRange(FixedRange range);
@@ -143,6 +164,7 @@ private:
 	TextSelection _selection = { 0, 0 };
 	bool _fullWidthSelection = true;
 	HighlightInfoRequest *_highlight = nullptr;
+	HighlightBatch *_batch = nullptr;
 	const QChar *_str = nullptr;
 	mutable crl::time _cachedNow = 0;
 	float64 _spoilerOpacity = 0.;
