@@ -155,6 +155,7 @@ protected:
 	void mousePressEvent(QMouseEvent *e) override;
 
 	bool eventFilter(QObject *o, QEvent *e) override;
+	bool focusNextPrevChild(bool next) override;
 
 private:
 	struct SubmenuAim;
@@ -265,6 +266,7 @@ private:
 	bool _deleteLater = false;
 	bool _reactivateParent = true;
 	bool _grabbingForPanelAnimation = false;
+	bool _refreshingAnimationCache = false;
 
 	TouchForward _touchForward;
 	int _touchBeginCounter = 0;

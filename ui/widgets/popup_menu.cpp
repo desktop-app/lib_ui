@@ -52,6 +52,43 @@ constexpr auto kSubmenuAimDelay = crl::time(300);
 	return !negative || !positive;
 }
 
+struct ChildState {
+	QPointer<QWidget> widget;
+	bool hidden = false;
+	bool transparentForMouse = false;
+};
+
+[[nodiscard]] std::vector<ChildState> MakeChildrenTransparentForMouse(
+		not_null<QWidget*> parent) {
+	auto result = std::vector<ChildState>();
+	for (const auto child : parent->children()) {
+		const auto widget = qobject_cast<QWidget*>(child);
+		if (widget && !widget->isWindow()) {
+			result.push_back({
+				.widget = widget,
+				.hidden = widget->isHidden(),
+				.transparentForMouse = widget->testAttribute(
+					Qt::WA_TransparentForMouseEvents),
+			});
+			widget->setAttribute(Qt::WA_TransparentForMouseEvents);
+		}
+	}
+	return result;
+}
+
+void RestoreChildren(const std::vector<ChildState> &states) {
+	for (const auto &state : states) {
+		if (const auto widget = state.widget.data()) {
+			if (widget->isHidden() != state.hidden) {
+				widget->setVisible(!state.hidden);
+			}
+			widget->setAttribute(
+				Qt::WA_TransparentForMouseEvents,
+				state.transparentForMouse);
+		}
+	}
+}
+
 } // namespace
 
 struct PopupMenu::SubmenuAim {
@@ -663,6 +700,10 @@ bool PopupMenu::eventFilter(QObject *o, QEvent *e) {
 	return false;
 }
 
+bool PopupMenu::focusNextPrevChild(bool next) {
+	return !_refreshingAnimationCache && RpWidget::focusNextPrevChild(next);
+}
+
 void PopupMenu::hideMenu(bool fast) {
 	if (isHidden() || (_hiding && !fast)) {
 		return;
@@ -825,7 +866,12 @@ void PopupMenu::showStarted() {
 void PopupMenu::refreshAnimationCache() {
 	if (isHidden()) {
 		return;
+	} else if (!_showAnimation && !_a_opacity.animating()) {
+		update();
+		return;
 	}
+	_refreshingAnimationCache = true;
+	const auto children = MakeChildrenTransparentForMouse(this);
 	if (_showAnimation) {
 		prepareShowAnimation();
 	}
@@ -836,9 +882,8 @@ void PopupMenu::refreshAnimationCache() {
 		_hiding = hiding;
 		_a_opacity = base::take(opacityAnimation);
 	}
-	if (_showAnimation || _a_opacity.animating()) {
-		hideChildren();
-	}
+	RestoreChildren(children);
+	_refreshingAnimationCache = false;
 	update();
 }
 
