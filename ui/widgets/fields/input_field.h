@@ -275,6 +275,12 @@ public:
 		EditLinkItems items = EditLinkItems::LinkAndDate);
 	void setEditLanguageCallback(
 		Fn<void(QString now, Fn<void(QString)> save)> callback);
+	enum class OpenLinkAction {
+		Check,
+		Open,
+	};
+	void setOpenLinkCallback(
+		Fn<bool(EntityLinkData link, OpenLinkAction action)> callback);
 
 	// A hook gets a chance to customize the popup menu the field is about to
 	// show. It runs synchronously during the menu build; for hooks that need
@@ -489,6 +495,7 @@ private:
 	void focusOutEventInner(QFocusEvent *e);
 	void setFocused(bool focused);
 	void keyPressEventInner(QKeyEvent *e);
+	void keyReleaseEventInner(QKeyEvent *e);
 	void contextMenuEventInner(QContextMenuEvent *e);
 	void dropEventInner(QDropEvent *e);
 	void inputMethodEventInner(QInputMethodEvent *e);
@@ -504,7 +511,45 @@ private:
 	void mouseMoveEventInner(QMouseEvent *e);
 	void leaveEventInner(QEvent *e);
 
+	struct LinkRange {
+		EntityLinkData data;
+		int from = 0;
+		int till = 0;
+
+		explicit operator bool() const {
+			return (data.type != EntityType::Invalid);
+		}
+		friend inline bool operator==(
+			const LinkRange &,
+			const LinkRange &) = default;
+	};
+	struct LinkCache {
+		int revision = -1;
+		QString tag;
+		LinkRange tagLink;
+		bool tagOpenable = false;
+		int parsedBlock = -1;
+		std::vector<LinkRange> parsed;
+		std::vector<std::optional<bool>> parsedOpenable;
+	};
 	[[nodiscard]] int lookupActionQuoteId(QPoint point) const;
+	[[nodiscard]] LinkRange lookupLink(QPoint point);
+	[[nodiscard]] LinkRange lookupTagLink(
+		const QTextBlock &block,
+		int position,
+		QStringView link);
+	[[nodiscard]] LinkRange lookupParsedLink(
+		const QTextBlock &block,
+		int position);
+	[[nodiscard]] LinkRange computeTagLink(
+		const QTextBlock &block,
+		int position,
+		const QString &link) const;
+	[[nodiscard]] std::vector<LinkRange> computeParsedLinks(
+		const QTextBlock &block) const;
+	void updateSelectedLink(QPoint point, Qt::KeyboardModifiers modifiers);
+	void setSelectedLink(LinkRange link);
+	void refreshSelectedLink();
 	void updateCursorShape();
 
 	QMimeData *createMimeDataFromSelectionInner() const;
@@ -518,6 +563,12 @@ private:
 		int charsAdded);
 	void focusInner();
 
+	struct ReplacedObject {
+		int position = 0;
+		int offset = 0;
+		int length = 0;
+	};
+
 	// "start" and "end" are in coordinates of text where emoji are replaced
 	// by ObjectReplacementCharacter. If "end" = -1 means get text till the end.
 	[[nodiscard]] QString getTextPart(
@@ -525,7 +576,8 @@ private:
 		int end,
 		TagList &outTagsList,
 		bool &outTagsChanged,
-		std::vector<MarkdownTag> *outMarkdownTags = nullptr) const;
+		std::vector<MarkdownTag> *outMarkdownTags = nullptr,
+		std::vector<ReplacedObject> *outReplacedObjects = nullptr) const;
 
 	// After any characters added we must postprocess them. This includes:
 	// 1. Replacing font family to semibold for ~ characters, if we used Open Sans 13px.
@@ -642,6 +694,7 @@ private:
 		QString link,
 		EditLinkAction action)> _editLinkCallback;
 	Fn<void(QString now, Fn<void(QString)> save)> _editLanguageCallback;
+	Fn<bool(EntityLinkData link, OpenLinkAction action)> _openLinkCallback;
 	TextWithTags _lastTextWithTags;
 	std::vector<MarkdownTag> _lastMarkdownTags;
 	bool _committingMarkdownReplacement = false;
@@ -722,6 +775,10 @@ private:
 
 	int _selectedActionQuoteId = 0;
 	int _pressedActionQuoteId = -1;
+	LinkRange _selectedLink;
+	int _selectedLinkRevision = -1;
+	LinkRange _pressedLink;
+	LinkCache _linkCache;
 	rpl::variable<int> _scrollTop;
 
 	InstantReplaces _mutableInstantReplaces;
