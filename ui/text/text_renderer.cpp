@@ -1557,7 +1557,8 @@ void Renderer::fillRectsFromRanges(
 void Renderer::paintSpoilerRects() {
 	Expects(_p != nullptr);
 
-	if (!_spoiler) {
+	if (!_spoiler
+		|| (_spoilerRects.empty() && _spoilerSelectedRects.empty())) {
 		return;
 	}
 	const auto opacity = _p->opacity();
