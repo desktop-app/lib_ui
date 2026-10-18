@@ -1221,9 +1221,7 @@ void PopupMenu::showPrepared(TriggeredSource source) {
 	}
 	Platform::ShowOverAll(this);
 	raise();
-	if (!_parent) {
-		activateWindow();
-	}
+	activateWindow();
 	if (Ui::ScreenReaderModeActive()) {
 		_menu->setShowSource(TriggeredSource::Keyboard);
 	} else {
