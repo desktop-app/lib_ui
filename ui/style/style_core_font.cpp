@@ -118,8 +118,11 @@ base::flat_map<uint64, uint32> QtFontsKeys;
 	if (QFile::exists(result)) {
 		QFile::remove(result);
 	}
-	if (!QFile::copy(filePath, result)) {
-		LOG(("Font Error: could not write '%1'.").arg(result));
+	QFile file(filePath);
+	if (!file.copy(result)) {
+		LOG(("Font Error: could not write '%1': %2.").arg(
+			result,
+			file.errorString()));
 		return filePath;
 	}
 	return result;
