@@ -290,6 +290,7 @@ public:
 	using ContextMenuHook = Fn<void(ContextMenuRequest)>;
 
 	void setPlaceholderColorOverride(const style::color &color);
+	void updatePalette();
 
 	void setDocumentMargin(float64 margin);
 	void setAdditionalMargin(int margin);
@@ -469,7 +470,6 @@ private:
 	void updateRootFrameFormat();
 	bool viewportEventInner(QEvent *e);
 
-	void updatePalette();
 	void applyPaletteColors(bool onlyIfChanged);
 	void refreshPlaceholder(const QString &text);
 	int placeholderSkipWidth() const;
