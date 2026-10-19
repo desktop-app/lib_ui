@@ -20,7 +20,10 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #include <qpa/qplatformwindow_p.h>
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 namespace Ui {
 
@@ -116,7 +119,7 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 		p.setX(m.x() - (s.width() / 2));
 	}
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	using namespace QNativeInterface::Private;
 	create();
 	if (const auto native
@@ -133,7 +136,7 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 		// (bottom left origin, no flip_x)
 		native->setExtendedWindowType(QWaylandWindow::Menu);
 	}
-#endif // Qt >= 6.11.0 && wayland
+#endif // Qt >= 6.11.0 && wayland && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 	const auto screen = QGuiApplication::screenAt(m);
 	if (screen) {

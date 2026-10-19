@@ -6,7 +6,7 @@
 //
 #include "ui/rhi/rhi_shader.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 #include "base/debug_log.h"
 
@@ -30,4 +30,4 @@ QShader ShaderFromFile(const QString &path) {
 
 } // namespace Ui::Rhi
 
-#endif // Qt >= 6.7
+#endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API

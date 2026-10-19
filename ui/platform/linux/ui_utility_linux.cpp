@@ -19,8 +19,11 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #include <qpa/qplatformwindow.h>
 #include <qpa/qplatformwindow_p.h>
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 extern "C" {
 
@@ -529,6 +532,7 @@ void WaylandImportedParent::ImportedDestroyed(
 }
 #endif // Qt >= 6.9.0
 
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
 void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 	static const auto wl_proxy_marshal_array = [] {
 		void (*result)(
@@ -578,6 +582,7 @@ void ShowWaylandWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
 			wl_argument{ .i = pos.y() },
 		}.data());
 }
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #endif // wayland
 
 } // namespace
@@ -718,7 +723,7 @@ void SetForeignTransientParent(
 }
 
 bool WindowMarginsSupported() {
-#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+#if !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	static const auto WaylandResult = [] {
 		using namespace QNativeInterface::Private;
 		QWindow window;
@@ -729,7 +734,7 @@ bool WindowMarginsSupported() {
 	if (WaylandResult) {
 		return true;
 	}
-#endif // wayland
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API && wayland
 
 	namespace XCB = base::Platform::XCB;
 	if (::Platform::IsX11()
@@ -743,14 +748,14 @@ bool WindowMarginsSupported() {
 }
 
 void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
-#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+#if !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	using namespace QNativeInterface::Private;
 	const auto window = not_null(widget->windowHandle());
 	if (const auto native = window->nativeInterface<QWaylandWindow>()) {
 		native->setCustomMargins(margins);
 		return;
 	}
-#endif // wayland
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API && wayland
 
 	if (::Platform::IsX11()) {
 		SetXCBFrameExtents(widget, margins);
@@ -759,12 +764,12 @@ void SetWindowMargins(not_null<QWidget*> widget, const QMargins &margins) {
 }
 
 void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
-#if defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+#if !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
 	if (::Platform::IsWayland()) {
 		ShowWaylandWindowMenu(widget, point);
 		return;
 	}
-#endif // wayland
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API && wayland
 
 	if (::Platform::IsX11()) {
 		ShowXCBWindowMenu(widget, point);

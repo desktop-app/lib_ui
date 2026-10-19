@@ -28,7 +28,10 @@
 #include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QApplication>
+
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #include <qpa/qplatformwindow_p.h>
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 namespace Ui {
 namespace {
@@ -1114,7 +1117,7 @@ bool PopupMenu::prepareGeometryFor(
 			0),
 		_padding.top() - _topShift);
 	auto r = screen ? screen->availableGeometry() : QRect();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0) && defined QT_FEATURE_wayland && QT_CONFIG(wayland) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	using namespace QNativeInterface::Private;
 	if (const auto native
 			= windowHandle()->nativeInterface<QWaylandWindow>()) {
@@ -1147,7 +1150,7 @@ bool PopupMenu::prepareGeometryFor(
 			? QWaylandWindow::SubMenu
 			: QWaylandWindow::Menu);
 	}
-#endif // Qt >= 6.11.0 && wayland
+#endif // Qt >= 6.11.0 && wayland && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	const auto parentWidth = _parent ? _parent->inner().width() : 0;
 	if (style::RightToLeft()) {
 		const auto badLeft = !r.isNull() && w.x() - width() < r.x() - _margins.left();

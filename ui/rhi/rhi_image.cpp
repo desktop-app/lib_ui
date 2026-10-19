@@ -6,9 +6,9 @@
 //
 #include "ui/rhi/rhi_image.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #include <rhi/qrhi.h>
-#endif // Qt >= 6.7
+#endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 namespace Ui::Rhi {
 
@@ -33,7 +33,7 @@ void Image::invalidate() {
 	_subimage = QSize();
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 void Image::ensureCreated(QRhi *rhi) {
 	if (_texture && _rhi == rhi && _textureSize == _subimage) {
 		return;
@@ -107,7 +107,7 @@ QRhiTexture *Image::texture() const {
 QRhiSampler *Image::sampler() const {
 	return _sampler;
 }
-#else // Qt >= 6.7
+#else // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 void Image::upload(QRhi *, QRhiResourceUpdateBatch *) {
 }
 
@@ -127,7 +127,7 @@ QRhiSampler *Image::sampler() const {
 
 void Image::ensureCreated(QRhi *) {
 }
-#endif // Qt >= 6.7
+#endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 GL::TexturedRect Image::texturedRect(
 		const QRect &geometry,

@@ -33,7 +33,7 @@
 #include <EGL/egl.h>
 #endif // DESKTOP_APP_USE_ANGLE
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #include <rhi/qrhi.h>
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
 #include <QtGui/QOffscreenSurface>
@@ -42,7 +42,7 @@
 #include <QtGui/QVulkanInstance>
 #endif // QT_CONFIG(vulkan)
 #endif // !Q_OS_MAC && !Q_OS_WIN
-#endif // Qt >= 6.7
+#endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
 extern "C" {
@@ -93,7 +93,7 @@ base::options::toggle OptionForceANGLE({
 });
 
 [[nodiscard]] bool VulkanRhiAvailable() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && QT_CONFIG(vulkan)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && QT_CONFIG(vulkan) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	return !Platform::IsMac()
 		&& !Platform::IsWindows()
 		&& QLibraryInfo::version() >= QVersionNumber(6, 7);
@@ -164,7 +164,7 @@ void CrashCheckStart(CrashCheckStage stage) {
 #endif // Q_OS_MAC || Q_OS_WIN
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN) && QT_CONFIG(vulkan)
 // Before 545 NVIDIA presents Vulkan via egl-wayland, crashing on first frame.
 constexpr auto kNvidiaNativeWaylandWsiSince = 545;
@@ -313,7 +313,7 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 		.compute = compute,
 	};
 }
-#endif // Qt >= 6.7
+#endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 } // namespace
 
@@ -512,7 +512,7 @@ Backend ChooseBackendDefault(Capabilities capabilities) {
 }
 
 bool WidgetsRhiEnabled() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	if (!OptionUseQtRhi.value()
 		|| (OptionForceANGLE.relevant() && OptionForceANGLE.value())) {
 		return false;
@@ -536,7 +536,7 @@ bool WidgetsRhiVulkan() {
 }
 
 RhiCapabilities CheckRhiCapabilities() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	static const auto result = [] {
 		if (!Platform::IsMac()) {
 			if (ForceDisabled || LastCrashCheckFailed()) {

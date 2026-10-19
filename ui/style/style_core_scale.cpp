@@ -7,6 +7,14 @@
 #include "ui/style/style_core_scale.h"
 
 #include "base/assertion.h"
+#include "base/platform/base_platform_info.h"
+
+#include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
+
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
+#include <qpa/qplatformscreen.h>
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 namespace style {
 namespace {
@@ -44,6 +52,16 @@ int CheckScale(int scale) {
 	return (scale == kScaleAuto)
 		? kScaleAuto
 		: std::clamp(scale, kScaleMin, MaxScaleForRatio(DevicePixelRatio()));
+}
+
+int BaseDpi() {
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
+	if (const auto screen = QGuiApplication::primaryScreen()) {
+		const auto pair = screen->handle()->logicalBaseDpi();
+		return int(base::SafeRound((pair.first + pair.second) * 0.5));
+	}
+#endif // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
+	return Platform::IsMac() ? 72 : 96;
 }
 
 } // namespace style

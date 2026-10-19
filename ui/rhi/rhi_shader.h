@@ -6,7 +6,7 @@
 //
 #pragma once
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 
 #include <rhi/qshader.h>
 
@@ -16,4 +16,4 @@ namespace Ui::Rhi {
 
 } // namespace Ui::Rhi
 
-#endif // Qt >= 6.7
+#endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
