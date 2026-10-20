@@ -115,6 +115,7 @@ private:
 	[[nodiscard]] QRect countInner() const;
 	void countApproachSide(RectParts preferSide);
 	void resizeToContent();
+	void updateContentPosition();
 	void checkAnimationFinish();
 	void refreshAnimationCache();
 	[[nodiscard]] QPoint countPosition() const;
@@ -124,7 +125,6 @@ private:
 	object_ptr<RpWidget> _content;
 	QRect _area;
 	RectParts _side = RectPart::Top | RectPart::Left;
-	QPixmap _arrow;
 
 	Ui::Animations::Simple _visibleAnimation;
 	Fn<QPoint(QSize)> _countPosition;

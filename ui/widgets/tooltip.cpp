@@ -246,12 +246,6 @@ void ImportantTooltip::pointAt(
 		QRect area,
 		RectParts side,
 		Fn<QPoint(QSize)> countPosition) {
-	if (_area == area
-		&& _side == side
-		&& !_countPosition
-		&& !countPosition) {
-		return;
-	}
 	_countPosition = std::move(countPosition);
 	_area = area;
 	countApproachSide(side);
@@ -269,7 +263,16 @@ void ImportantTooltip::resizeToContent() {
 		size.setWidth(size.width() + _st.arrow);
 	}
 	setFixedSize(size);
+	updateContentPosition();
 	updateGeometry();
+}
+
+void ImportantTooltip::updateContentPosition() {
+	auto contentTop = _st.padding.top();
+	if (_side & RectPart::Bottom) {
+		contentTop += _st.arrow;
+	}
+	_content->moveToLeft(_st.padding.left(), contentTop);
 }
 
 void ImportantTooltip::countApproachSide(RectParts preferSide) {
@@ -289,28 +292,6 @@ void ImportantTooltip::countApproachSide(RectParts preferSide) {
 		_side = (allowedAbove ? RectPart::Top : RectPart::Bottom)
 			| (preferSide & (RectPart::Left | RectPart::Center));
 	}
-	auto arrow = QImage(
-		QSize(_st.arrow * 2, _st.arrow) * style::DevicePixelRatio(),
-		QImage::Format_ARGB32_Premultiplied);
-	arrow.fill(Qt::transparent);
-	arrow.setDevicePixelRatio(style::DevicePixelRatio());
-	{
-		Painter p(&arrow);
-		PainterHighQualityEnabler hq(p);
-
-		QPainterPath path;
-		path.moveTo(0, 0);
-		path.lineTo(2 * _st.arrow, 0);
-		path.lineTo(_st.arrow, _st.arrow);
-		path.lineTo(0, 0);
-		p.fillPath(path, _st.bg);
-	}
-	if (_side & RectPart::Bottom) {
-		arrow = std::move(arrow).transformed(QTransform(1, 0, 0, -1, 0, 0));
-	} else if (_side & RectPart::Right) {
-		arrow = std::move(arrow).transformed(QTransform().rotate(-90));
-	}
-	_arrow = PixmapFromImage(std::move(arrow));
 }
 
 void ImportantTooltip::toggleAnimated(bool visible) {
@@ -414,11 +395,7 @@ void ImportantTooltip::updateGeometry() {
 }
 
 void ImportantTooltip::resizeEvent(QResizeEvent *e) {
-	auto contentTop = _st.padding.top();
-	if (_side & RectPart::Bottom) {
-		contentTop += _st.arrow;
-	}
-	_content->moveToLeft(_st.padding.left(), contentTop);
+	updateContentPosition();
 }
 
 QRect ImportantTooltip::countInner() const {
@@ -439,23 +416,45 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
 		}
 		p.setBrush(_st.bg);
 		p.setPen(Qt::NoPen);
-		{
-			PainterHighQualityEnabler hq(p);
-			p.drawRoundedRect(inner, _st.radius, _st.radius);
-		}
+		PainterHighQualityEnabler hq(p);
+		p.drawRoundedRect(inner, _st.radius, _st.radius);
+
+		const auto arrow = _st.arrow;
 		auto areaMiddle = _area.x() + (_area.width() / 2) - x();
-		auto arrowLeft = areaMiddle - _st.arrow;
+		auto arrowLeft = areaMiddle - arrow;
+		auto path = QPainterPath();
 		if (_side & RectPart::Top) {
-			p.drawPixmapLeft(arrowLeft, inner.y() + inner.height(), width(), _arrow);
+			const auto r = style::rtlrect(
+				arrowLeft,
+				inner.y() + inner.height(),
+				2 * arrow,
+				arrow,
+				width());
+			path.moveTo(r.x(), r.y());
+			path.lineTo(r.x() + 2 * arrow, r.y());
+			path.lineTo(r.x() + arrow, r.y() + arrow);
 		} else if (_side & RectPart::Bottom) {
-			p.drawPixmapLeft(arrowLeft, inner.y() - _st.arrow, width(), _arrow);
+			const auto r = style::rtlrect(
+				arrowLeft,
+				inner.y() - arrow,
+				2 * arrow,
+				arrow,
+				width());
+			path.moveTo(r.x(), r.y() + arrow);
+			path.lineTo(r.x() + 2 * arrow, r.y() + arrow);
+			path.lineTo(r.x() + arrow, r.y());
 		} else if (_side & RectPart::Right) {
-			p.drawPixmapLeft(
+			const auto r = style::rtlrect(
 				inner.x() + inner.width(),
-				inner.y() + (inner.height() - _st.arrow) / 2,
-				width(),
-				_arrow);
+				inner.y() + (inner.height() - arrow) / 2,
+				arrow,
+				2 * arrow,
+				width());
+			path.moveTo(r.x(), r.y());
+			path.lineTo(r.x(), r.y() + 2 * arrow);
+			path.lineTo(r.x() + arrow, r.y() + arrow);
 		}
+		p.drawPath(path);
 	}
 }
 
