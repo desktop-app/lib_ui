@@ -34,49 +34,54 @@ void Image::invalidate() {
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
-void Image::ensureCreated(QRhi *rhi) {
-	if (_texture && _rhi == rhi && _textureSize == _subimage) {
-		return;
+bool Image::ensureCreated(QRhi *rhi) {
+	if (_texture && _sampler && _rhi == rhi && _textureSize == _subimage) {
+		return true;
 	}
 	delete _sampler;
 	_sampler = nullptr;
 	delete _texture;
 	_texture = nullptr;
 	_rhi = rhi;
+	_cacheKey = 0;
+	_textureSize = QSize();
 	_texture = rhi->newTexture(
 		QRhiTexture::BGRA8,
 		_subimage,
 		1,
 		{});
-	_texture->create();
+	if (!_texture->create()) {
+		delete _texture;
+		_texture = nullptr;
+		return false;
+	}
 	_sampler = rhi->newSampler(
 		QRhiSampler::Nearest,
 		QRhiSampler::Nearest,
 		QRhiSampler::None,
 		QRhiSampler::ClampToEdge,
 		QRhiSampler::ClampToEdge);
-	_sampler->create();
+	if (!_sampler->create()) {
+		delete _sampler;
+		_sampler = nullptr;
+		delete _texture;
+		_texture = nullptr;
+		return false;
+	}
 	_textureSize = _subimage;
+	return true;
 }
 
 void Image::upload(QRhi *rhi, QRhiResourceUpdateBatch *rub) {
-	if (_subimage.isEmpty()) {
-		_textureSize = _subimage;
+	if (!rhi || rhi->isDeviceLost() || !rub || _subimage.isEmpty()) {
+		return;
+	}
+	if (!ensureCreated(rhi)) {
 		return;
 	}
 	const auto cacheKey = _image.cacheKey();
-	const auto needsUpload = (_cacheKey != cacheKey);
-	if (!needsUpload) {
+	if (_cacheKey == cacheKey) {
 		return;
-	}
-	_cacheKey = cacheKey;
-
-	const auto needsRecreate = !_texture
-		|| (_rhi != rhi)
-		|| (_textureSize != _subimage);
-
-	if (needsRecreate) {
-		ensureCreated(rhi);
 	}
 
 	const auto uploadImage = (_subimage == _image.size())
@@ -87,6 +92,7 @@ void Image::upload(QRhi *rhi, QRhiResourceUpdateBatch *rub) {
 		QRhiTextureUploadDescription(
 			QRhiTextureUploadEntry(0, 0,
 				QRhiTextureSubresourceUploadDescription(uploadImage))));
+	_cacheKey = cacheKey;
 }
 
 void Image::destroy() {
@@ -125,7 +131,8 @@ QRhiSampler *Image::sampler() const {
 	return nullptr;
 }
 
-void Image::ensureCreated(QRhi *) {
+bool Image::ensureCreated(QRhi *) {
+	return false;
 }
 #endif // Qt >= 6.7 && !DESKTOP_APP_DISABLE_PRIVATE_QT_API
 

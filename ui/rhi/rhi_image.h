@@ -42,7 +42,7 @@ public:
 	}
 
 private:
-	void ensureCreated(QRhi *rhi);
+	[[nodiscard]] bool ensureCreated(QRhi *rhi);
 
 	QImage _image;
 	QImage _storage;
