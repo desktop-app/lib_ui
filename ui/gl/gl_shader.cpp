@@ -106,7 +106,10 @@ uniform sampler2D v_texture;
 	};
 }
 
-ShaderPart FragmentSampleNV12Texture() {
+ShaderPart FragmentSampleNV12Texture(GLenum chromaFormat) {
+	Expects(chromaFormat == GL_RG || chromaFormat == GL_LUMINANCE_ALPHA);
+
+	const auto channels = (chromaFormat == GL_RG) ? u"rg"_q : u"ra"_q;
 	return {
 		.header = R"(
 varying vec2 v_texcoord;
@@ -115,7 +118,7 @@ uniform sampler2D uv_texture;
 )",
 		.body = R"(
 	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
-	vec2 uv = texture2D(uv_texture, v_texcoord).rg - vec2(0.5, 0.5);
+	vec2 uv = texture2D(uv_texture, v_texcoord).)" + channels + R"( - vec2(0.5, 0.5);
 	float u = uv.x;
 	float v = uv.y;
 )" + FragmentYUV2RGB(),

@@ -6,6 +6,7 @@
 //
 #include "ui/gl/gl_image.h"
 
+#include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
 
 namespace Ui::GL {
@@ -54,6 +55,16 @@ void DestroyFramebuffers(QOpenGLFunctions *f, gsl::span<GLuint> values) {
 }
 
 } // namespace details
+
+GLenum TwoComponentTextureFormat() {
+	const auto context = QOpenGLContext::currentContext();
+	Expects(context != nullptr);
+
+	const auto supportsRG = (context->format().majorVersion() >= 3)
+		|| context->hasExtension("GL_ARB_texture_rg")
+		|| context->hasExtension("GL_EXT_texture_rg");
+	return supportsRG ? GL_RG : GL_LUMINANCE_ALPHA;
+}
 
 void Image::setImage(QImage image, QSize subimage) {
 	Expects(subimage.width() <= image.width()
