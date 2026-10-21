@@ -43,16 +43,17 @@ void WordParser::addNextCluster(int &pos, int end, ScriptLine &line) {
 	pos = till + _lbh.itemPosition;
 }
 
-Paragraph WordParser::ResolveParagraph(not_null<const String*> t) {
-	auto result = Paragraph();
-	result.resolve(
+Paragraph &WordParser::ResolveParagraph(
+		not_null<const String*> t,
+		Paragraph &paragraph) {
+	paragraph.resolve(
 		t,
 		0,
 		int(t->_text.size()),
 		false, // baseRtl
 		0, // blockIndexHint
 		-1); // blockIndexLimit
-	return result;
+	return paragraph;
 }
 
 WordParser::WordParser(not_null<String*> string)
@@ -60,8 +61,7 @@ WordParser::WordParser(not_null<String*> string)
 , _tText(_t->_text)
 , _tBlocks(_t->_blocks)
 , _tWords(_t->_words)
-, _paragraph(ResolveParagraph(_t))
-, _shaper(_t, _paragraph, 0, _tText) {
+, _shaper(_t, ResolveParagraph(_t, _paragraph), 0, _tText) {
 	parse();
 }
 

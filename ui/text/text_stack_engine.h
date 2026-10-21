@@ -31,6 +31,9 @@ public:
 	[[nodiscard]] QTextEngine &wrapped() {
 		return _engine;
 	}
+	[[nodiscard]] const QTextEngine &wrapped() const {
+		return _engine;
+	}
 
 	void itemize();
 	std::vector<Block>::const_iterator shapeGetBlock(int item);

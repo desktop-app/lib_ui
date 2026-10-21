@@ -48,8 +48,9 @@ private:
 		[[nodiscard]] Fixed negativeRightBearing() const;
 
 	};
-	[[nodiscard]] static Paragraph ResolveParagraph(
-		not_null<const String*> t);
+	[[nodiscard]] static Paragraph &ResolveParagraph(
+		not_null<const String*> t,
+		Paragraph &paragraph);
 
 	void parse();
 

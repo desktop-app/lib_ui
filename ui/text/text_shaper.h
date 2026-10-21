@@ -12,7 +12,7 @@
 #include <QtCore/QPointF>
 #include <QtGui/QFont>
 
-#include <memory>
+#include <cstddef>
 #include <vector>
 
 class QPainter;
@@ -123,8 +123,8 @@ private:
 class Paragraph final {
 public:
 	Paragraph();
-	Paragraph(Paragraph &&other);
-	Paragraph &operator=(Paragraph &&other);
+	Paragraph(const Paragraph &other) = delete;
+	Paragraph &operator=(const Paragraph &other) = delete;
 	~Paragraph();
 
 	void clear();
@@ -152,7 +152,13 @@ private:
 
 	struct State;
 
-	std::unique_ptr<State> _state;
+	[[nodiscard]] State &state();
+	[[nodiscard]] const State &state() const;
+
+	// WHY: the Qt backend analyses characters into a 16 KiB QVarLengthArray,
+	// which saves an allocation only on the stack, and a renderer is made for
+	// every paint and hit test - so the state of a backend is kept inline.
+	alignas(std::max_align_t) std::byte _storage[16 * 1024 + 64];
 
 };
 
@@ -167,6 +173,8 @@ public:
 		const QString &text,
 		int blockIndexHint = 0,
 		int blockIndexLimit = -1);
+	LineShaper(const LineShaper &other) = delete;
+	LineShaper &operator=(const LineShaper &other) = delete;
 	~LineShaper();
 
 	// The item a position falls in, or -1. The line is shaped with some text
@@ -195,7 +203,12 @@ private:
 	[[nodiscard]] int itemLength(int index) const;
 
 	struct Backend;
-	std::unique_ptr<Backend> _backend;
+
+	[[nodiscard]] Backend &backend();
+	[[nodiscard]] const Backend &backend() const;
+
+	// Inline as well: QStackTextEngine of the Qt backend is meant for the stack
+	alignas(std::max_align_t) std::byte _storage[11 * 1024];
 
 };
 

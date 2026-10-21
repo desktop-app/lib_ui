@@ -43,6 +43,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <new>
 
 namespace Ui::Text {
 namespace {
@@ -1272,22 +1273,30 @@ struct Paragraph::State {
 	int elideAt = -1;
 };
 
-Paragraph::Paragraph() = default;
+Paragraph::Paragraph() {
+	static_assert(sizeof(State) <= sizeof(_storage));
+	static_assert(alignof(State) <= alignof(std::max_align_t));
+	new (_storage) State;
+}
 
-Paragraph::Paragraph(Paragraph &&other) = default;
+Paragraph::~Paragraph() {
+	state().~State();
+}
 
-Paragraph &Paragraph::operator=(Paragraph &&other) = default;
+Paragraph::State &Paragraph::state() {
+	return *std::launder(reinterpret_cast<State*>(_storage));
+}
 
-Paragraph::~Paragraph() = default;
+const Paragraph::State &Paragraph::state() const {
+	return *std::launder(reinterpret_cast<const State*>(_storage));
+}
 
 void Paragraph::clear() {
-	if (_state) {
-		_state->point(nullptr);
-	}
+	state().point(nullptr);
 }
 
 bool Paragraph::ready() const {
-	return _state && _state->itemized;
+	return state().itemized != nullptr;
 }
 
 namespace {
@@ -1432,11 +1441,8 @@ void Paragraph::resolve(
 		.blockIndexLimit = blockIndexLimit,
 		.baseRtl = baseRtl,
 	};
-	if (!_state) {
-		_state = std::make_unique<State>();
-	}
 	if (const auto kept = KeptFor(key)) {
-		_state->point(kept);
+		state().point(kept);
 		return;
 	}
 
@@ -1449,7 +1455,7 @@ void Paragraph::resolve(
 	});
 	const auto raw = itemized.get();
 	const auto keep = [&] {
-		_state->point(Keep(key, std::move(itemized)));
+		state().point(Keep(key, std::move(itemized)));
 	};
 	if (!length) {
 		keep();
@@ -1543,16 +1549,12 @@ void Paragraph::resolve(
 }
 
 void Paragraph::elide(int position, int count, bool baseRtl) {
-	if (!_state) {
-		return;
-	}
-
 	// Only where it begins is remembered, and here rather than with what the
 	// itemizer worked out: the ellipsis is of this line and not of the text,
 	// which is laid out without one and stays worth keeping for the next
 	// question about it. The way the ellipsis goes is taken from the letter
 	// before it when a line is shaped.
-	_state->elideAt = position;
+	state().elideAt = position;
 }
 
 // Line breaks and caret positions of one line, which Pango works out in a
@@ -1710,7 +1712,7 @@ struct LineShaper::Backend {
 	std::vector<Item> drawn;
 	std::vector<PangoGlyphString*> strings;
 	std::vector<int> visualOrder;
-	LineAttributes attributes;
+	mutable LineAttributes attributes;
 	ClusterTables tables;
 	std::vector<ShapeEntry> entries;
 	std::vector<ShapedItem> shaped;
@@ -1724,8 +1726,8 @@ LineShaper::Backend::Backend(
 	int blockIndexHint,
 	int blockIndexLimit)
 : t(t)
-, paragraph(*paragraph._state->itemized)
-, elideAt(paragraph._state->elideAt)
+, paragraph(*paragraph.state().itemized)
+, elideAt(paragraph.state().elideAt)
 , text(text)
 , offset(offset) {
 	++this->paragraph.borrowers;
@@ -1924,20 +1926,32 @@ LineShaper::LineShaper(
 	int offset,
 	const QString &text,
 	int blockIndexHint,
-	int blockIndexLimit)
-: _backend(std::make_unique<Backend>(
-	t,
-	paragraph,
-	offset,
-	text,
-	blockIndexHint,
-	blockIndexLimit)) {
+	int blockIndexLimit) {
+	static_assert(sizeof(Backend) <= sizeof(_storage));
+	static_assert(alignof(Backend) <= alignof(std::max_align_t));
+	new (_storage) Backend(
+		t,
+		paragraph,
+		offset,
+		text,
+		blockIndexHint,
+		blockIndexLimit);
 }
 
-LineShaper::~LineShaper() = default;
+LineShaper::~LineShaper() {
+	backend().~Backend();
+}
+
+LineShaper::Backend &LineShaper::backend() {
+	return *std::launder(reinterpret_cast<Backend*>(_storage));
+}
+
+const LineShaper::Backend &LineShaper::backend() const {
+	return *std::launder(reinterpret_cast<const Backend*>(_storage));
+}
 
 int LineShaper::findItem(int position) const {
-	const auto &list = _backend->list;
+	const auto &list = backend().list;
 	for (auto i = 0, count = int(list.size()); i != count; ++i) {
 		if (position < list[i].position + list[i].length) {
 			return (position < list[i].position) ? -1 : i;
@@ -1947,32 +1961,32 @@ int LineShaper::findItem(int position) const {
 }
 
 const std::vector<Item> &LineShaper::items() const {
-	return _backend->drawn;
+	return backend().drawn;
 }
 
 gsl::span<const CharAttribute> LineShaper::attributes() const {
-	return _backend->attributes.resolve();
+	return backend().attributes.resolve();
 }
 
 gsl::span<const int> LineShaper::visualOrder() const {
-	return _backend->visualOrder;
+	return backend().visualOrder;
 }
 
 int LineShaper::blockIndex(int position) const {
-	return _backend->blockIndexAt(position);
+	return backend().blockIndexAt(position);
 }
 
 int LineShaper::itemLength(int index) const {
-	return _backend->drawn[index].length;
+	return backend().drawn[index].length;
 }
 
 void LineShaper::shapeRange(int firstItem, int lastItem) {
-	Expects(_backend->entries.empty());
+	Expects(backend().entries.empty());
 
 	// Shaped once for a line, which is what everything shaped counts on: the
 	// glyphs of a second call would leave the ones of the first behind, and
 	// what was handed out about them points into a list this would replace.
-	auto &backend = *_backend;
+	auto &backend = this->backend();
 	const auto count = lastItem - firstItem + 1;
 	backend.first = firstItem;
 	backend.drawn.assign(
@@ -2040,7 +2054,7 @@ void LineShaper::shapeRange(int firstItem, int lastItem) {
 }
 
 const ShapedItem &LineShaper::shape(int index) {
-	auto &backend = *_backend;
+	auto &backend = this->backend();
 	auto &shaped = backend.shaped[index];
 	if (shaped) {
 		return shaped;
