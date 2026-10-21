@@ -35,6 +35,7 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0) && !defined DESKTOP_APP_DISABLE_PRIVATE_QT_API
 #include <rhi/qrhi.h>
+#include <qpa/qplatformbackingstore.h>
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
 #include <QtGui/QOffscreenSurface>
 #include <QtGui/QSurfaceFormat>
@@ -591,6 +592,19 @@ void CrashCheckFirstFrame(not_null<QWidget*> window) {
 	if (Platform::IsMac()) {
 		return;
 	}
+#ifdef QT_RHI_DRIVER_CALL_GUARD
+	// WHY: only Qt and the GPU driver run inside the guarded calls,
+	// so a crash in our own rendering never disables RHI.
+	qt_set_rhi_driver_call_guard([](bool begin) {
+		if (begin) {
+			CrashCheckStart(WidgetsRhiVulkan()
+				? CrashCheckStage::Vulkan
+				: CrashCheckStage::OpenGL);
+		} else {
+			CrashCheckFinish();
+		}
+	});
+#else // QT_RHI_DRIVER_CALL_GUARD
 	struct State {
 		QPointer<QWindow> handle;
 		bool armed = false;
@@ -627,6 +641,7 @@ void CrashCheckFirstFrame(not_null<QWidget*> window) {
 		return base::EventFilterResult::Continue;
 	});
 	attach();
+#endif // QT_RHI_DRIVER_CALL_GUARD
 }
 
 void ForceDisable(bool disable) {
