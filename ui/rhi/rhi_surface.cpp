@@ -81,6 +81,9 @@ SurfaceRhi::~SurfaceRhi() {
 }
 
 void SurfaceRhi::initialize(QRhiCommandBuffer *cb) {
+	if (!cb || !rhi() || rhi()->isDeviceLost() || !renderTarget()) {
+		return;
+	}
 	if (const auto use = rhi()) {
 		[[maybe_unused]] static const auto logged = [&] {
 			LOG(("QRhi: Surface backend=%1 device=%2."
@@ -95,7 +98,12 @@ void SurfaceRhi::initialize(QRhiCommandBuffer *cb) {
 }
 
 void SurfaceRhi::render(QRhiCommandBuffer *cb) {
-	if (!updatesEnabled() || size().isEmpty()) {
+	if (!updatesEnabled()
+		|| size().isEmpty()
+		|| !cb
+		|| !rhi()
+		|| rhi()->isDeviceLost()
+		|| !renderTarget()) {
 		return;
 	}
 	if (const auto r = rhiRenderer()) {
