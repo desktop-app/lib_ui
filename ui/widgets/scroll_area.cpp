@@ -766,6 +766,8 @@ void ScrollArea::touchEvent(QTouchEvent *e) {
 		_touchMaybePressing = false;
 		_touchScrollState = TouchScrollState::Manual;
 		_touchTimer.cancel();
+		_touchScrollTimer.cancel();
+		touchResetSpeed();
 	} break;
 	}
 }
