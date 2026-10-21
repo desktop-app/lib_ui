@@ -9,6 +9,8 @@
 #include "ui/text/text_block.h"
 #include "ui/style/style_core.h"
 #include "styles/style_basic.h"
+#include "ui/integration.h"
+#include "base/debug_log.h"
 
 #include <pango/pangocairo.h>
 
@@ -23,12 +25,13 @@
 #include "ui/platform/linux/ui_font_settings_linux.h"
 #endif // __has_include(<pango/pangofc-font.h>)
 
-#if !PANGO_VERSION_CHECK(1, 48, 0) && __has_include(<dlfcn.h>)
+#if !PANGO_VERSION_CHECK(1, 56, 0) && __has_include(<dlfcn.h>)
 // Only to ask the loader for what these headers are too old to declare.
 #include <dlfcn.h>
-#endif // Pango < 1.48.0 && __has_include(<dlfcn.h>)
+#endif // Pango < 1.56.0 && __has_include(<dlfcn.h>)
 
 #include <QtCore/QtMath>
+#include <QtCore/QDir>
 #include <QtCore/QTextBoundaryFinder>
 #include <QtCore/QThread>
 #include <QtGui/QPainter>
@@ -467,6 +470,39 @@ struct PerThread {
 	return result;
 }
 
+std::vector<QString> ExtractedFonts;
+
+using FontFileAdder = gboolean(*)(PangoFontMap*, const char*, GError**);
+
+[[nodiscard]] FontFileAdder ResolveFontFileAdder() {
+#if PANGO_VERSION_CHECK(1, 56, 0)
+	return pango_font_map_add_font_file;
+#elif __has_include(<dlfcn.h>) // Pango >= 1.56.0
+	static const auto result = reinterpret_cast<FontFileAdder>(
+		dlsym(RTLD_DEFAULT, "pango_font_map_add_font_file"));
+	return result;
+#else // Pango < 1.56.0 && __has_include(<dlfcn.h>)
+	return nullptr;
+#endif // Pango < 1.56.0 && !__has_include(<dlfcn.h>)
+}
+
+// Each map knows only the files given to it, so every thread adds its own
+void AddApplicationFonts(not_null<PangoFontMap*> map) {
+	const auto add = ResolveFontFileAdder();
+	if (!add) {
+		return;
+	}
+	for (const auto &path : ExtractedFonts) {
+		GError *error = nullptr;
+		if (!add(map, path.toUtf8().constData(), &error)) {
+			LOG(("Font Error: Pango could not add '%1': %2.").arg(
+				path,
+				QString::fromUtf8(error->message)));
+			g_error_free(error);
+		}
+	}
+}
+
 // A map of our own, not the default one of cairo: that one is shared with
 // everything else in the process, and it lists the fonts the first time it is
 // asked anything - which GTK, brought in by the platform theme of Qt, does
@@ -481,6 +517,7 @@ struct PerThread {
 	auto &local = ThisThread();
 	if (!local.fontMap) {
 		local.fontMap = pango_cairo_font_map_new();
+		AddApplicationFonts(local.fontMap);
 	}
 	return local.fontMap;
 }
@@ -2469,6 +2506,39 @@ void ShapedItem::draw(
 		}
 		p.restore();
 	}
+}
+
+// WHY: a path in the resources would reach fontconfig through Qt, and Pango,
+// unable to open it, may still prefer it to the file given to a map: it reads
+// the order of a face from FC_SPACING, not FC_ORDER (pangofc-fontmap.c).
+QString FontPath(const QString &path) {
+	const auto directory = Ui::Integration::Instance().fontsCacheFolder();
+	if (directory.isEmpty()) {
+		return QString();
+	} else if (!QDir().mkpath(directory)) {
+		const auto error = qt_error_string();
+		LOG(("Font Error: could not create '%1': %2.").arg(
+			directory,
+			error));
+		return QString();
+	}
+	const auto result = directory + '/' + QFileInfo(path).fileName();
+	QFile existing(result);
+	if (!existing.remove() && existing.exists()) {
+		LOG(("Font Error: could not remove '%1': %2.").arg(
+			result,
+			existing.errorString()));
+		return QString();
+	}
+	QFile file(path);
+	if (!file.copy(result)) {
+		LOG(("Font Error: could not write '%1': %2.").arg(
+			result,
+			file.errorString()));
+		return QString();
+	}
+	ExtractedFonts.push_back(result);
+	return result;
 }
 
 } // namespace Ui::Text

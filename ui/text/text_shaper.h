@@ -199,4 +199,7 @@ private:
 
 };
 
+// What Qt loads a font of the library from, or empty if it should not
+[[nodiscard]] QString FontPath(const QString &path);
+
 } // namespace Ui::Text

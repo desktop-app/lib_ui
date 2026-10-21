@@ -368,7 +368,6 @@ if (DESKTOP_APP_USE_PANGO)
         ui/text/text_stack_engine.cpp
         ui/text/text_stack_engine.h
     )
-    target_compile_definitions(lib_ui PRIVATE LIB_UI_USE_PANGO)
     target_link_libraries(lib_ui PRIVATE desktop-app::external_pango)
 else()
     remove_target_sources(lib_ui ${src_loc}

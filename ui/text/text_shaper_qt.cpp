@@ -505,4 +505,8 @@ int LineShaper::blockIndex(int position) const {
 	return _backend->engine.blockIndex(position);
 }
 
+QString FontPath(const QString &path) {
+	return path;
+}
+
 } // namespace Ui::Text
