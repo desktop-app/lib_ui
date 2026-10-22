@@ -1560,7 +1560,7 @@ void Paragraph::elide(int position, int count, bool baseRtl) {
 
 // The stack QStackTextEngine has, spent on what a character takes here
 constexpr auto kInlineCharacters = (256 * 40)
-	/ (3 * sizeof(int) + sizeof(CharAttribute) + sizeof(uchar));
+	/ (2 * sizeof(int) + sizeof(CharAttribute) + sizeof(uchar));
 
 // Line breaks and caret positions of one line, which Pango works out in a
 // pass over the whole text that costs as much as the shaping does. Drawing a
@@ -1634,9 +1634,6 @@ gsl::span<const CharAttribute> LineAttributes::resolve() {
 // cluster - while a table of its own for every item would be an allocation for
 // every item, and a line of emoji holds a thousand of them.
 struct ClusterTables {
-	// In characters of the item, and in the order they are written in.
-	QVarLengthArray<int, kInlineCharacters> starts;
-
 	// How far the left edge of each is from the left edge of the item, in the
 	// units of Pango, and the first glyph it is drawn as.
 	QVarLengthArray<int, kInlineCharacters> xs;
@@ -1649,14 +1646,9 @@ struct ShapeEntry {
 	// offsets Pango works in.
 	const Text *text = nullptr;
 
-	// The clusters of the line and the range in them that is this item's, and
-	// where the last question about them was answered: they are asked about in
-	// the order the letters go far more often than not, so the next answer is
-	// almost always the next entry, and a search over the whole table for each
-	// of them is work that the walk itself already did.
-	int clusterFrom = 0;
+	// Where the characters of this item start in the tables of the line
+	int charFrom = 0;
 	int clusterCount = 0;
-	mutable int clusterHint = 0;
 
 	// Where the end of the item is, which is its width for text that goes to
 	// the right and the left edge for text that goes to the left.
@@ -2014,7 +2006,6 @@ void LineShaper::shapeRange(
 	if (withAttributes) {
 		backend.resolved = backend.attributes.resolve();
 	}
-	backend.tables.starts.clear();
 	backend.tables.xs.clear();
 	backend.tables.glyphs.clear();
 
@@ -2100,35 +2091,43 @@ ShapedItem LineShaper::shape(int index) {
 	// in when the glyphs are walked the way the item goes, and the distance
 	// to each of them is what was added up before it.
 	auto &tables = backend.tables;
-	entry.clusterFrom = int(tables.starts.size());
+	entry.charFrom = int(tables.glyphs.size());
 	const auto glyphs = backend.strings[index];
-
-	// At most a cluster per glyph, written in place and cut down afterwards
-	const auto most = entry.clusterFrom + glyphs->num_glyphs;
-	tables.starts.resize(most);
-	tables.xs.resize(most);
-	tables.glyphs.resize(most);
-	auto count = entry.clusterFrom;
+	const auto length = drawn.length;
+	tables.xs.resize(entry.charFrom + length);
+	tables.glyphs.resize(entry.charFrom + length);
+	const auto edges = tables.xs.data() + entry.charFrom;
+	const auto firsts = tables.glyphs.data() + entry.charFrom;
 
 	const auto rtl = (drawn.bidiLevel % 2) != 0;
 	const auto base = entry.position;
 	auto x = 0;
 	auto cluster = -1;
+	auto start = 0;
+	auto edge = 0;
+	auto first = -1;
+	const auto close = [&](int till) {
+		for (auto i = start; i < till && i < length; ++i) {
+			edges[i] = edge;
+			firsts[i] = first;
+		}
+	};
 	const auto add = [&](int index) {
 		if (glyphs->log_clusters[index] != cluster) {
 			cluster = glyphs->log_clusters[index];
 			const auto at = entry.text->toUtf16(item->offset + cluster) - base;
-			if (count == entry.clusterFrom || tables.starts[count - 1] != at) {
-				tables.starts[count] = at;
-				tables.xs[count] = x;
-				tables.glyphs[count] = index;
-				++count;
+			if (first < 0 || at != start) {
+				close(at);
+				start = at;
+				edge = x;
+				first = index;
+				++entry.clusterCount;
 				return;
 			}
 		}
 		// The glyphs of a letter are walked the other way around when the text
 		// goes to the left, so the first of them is met last.
-		tables.glyphs[count - 1] = std::min(tables.glyphs[count - 1], index);
+		first = std::min(first, index);
 	};
 	if (rtl) {
 		// Right to left, where the glyphs are drawn the other way around, so
@@ -2148,10 +2147,7 @@ ShapedItem LineShaper::shape(int index) {
 		}
 		entry.endX = x;
 	}
-	tables.starts.resize(count);
-	tables.xs.resize(count);
-	tables.glyphs.resize(count);
-	entry.clusterCount = count - entry.clusterFrom;
+	close(length);
 	return result();
 }
 
@@ -2167,21 +2163,10 @@ int LineShaper::Backend::clusterAt(
 	// first.
 	const auto byte = entry.text->toUtf8(entry.position + offset);
 	const auto at = entry.text->toUtf16(byte) - entry.position;
-	const auto begins = tables.starts.begin();
-	const auto from = begins + entry.clusterFrom;
-	const auto till = from + entry.clusterCount;
-
-	// From where the one before was answered, when the question is not behind
-	// it - the table is sorted, so the answer can only be there or later.
-	const auto hinted = from + std::clamp(
-		entry.clusterHint,
-		0,
-		entry.clusterCount);
-	const auto i = ((hinted != till) && (*hinted <= at))
-		? std::lower_bound(hinted, till, at)
-		: std::lower_bound(from, till, at);
-	entry.clusterHint = int(i - from);
-	return (i != till && *i == at) ? int(i - begins) : -1;
+	const auto firsts = tables.glyphs.data() + entry.charFrom;
+	const auto starts = (firsts[at] >= 0)
+		&& (!at || firsts[at] != firsts[at - 1]);
+	return starts ? (entry.charFrom + at) : -1;
 }
 
 // The glyph a letter is drawn as, or -1 when it is drawn as a part of another.
@@ -2257,17 +2242,14 @@ Fixed ShapedItem::width(int fromOffset, int tillOffset) const {
 
 int ShapedItem::clusterEnd(int offset, int tillOffset) const {
 	const auto &entry = Entry(_view);
-	const auto &starts = _shaper->backend().tables.starts;
-	const auto from = starts.begin() + entry.clusterFrom;
-	const auto till = from + entry.clusterCount;
-	const auto hinted = from + std::clamp(
-		entry.clusterHint,
-		0,
-		entry.clusterCount);
-	const auto i = ((hinted != till) && (*hinted <= offset))
-		? std::upper_bound(hinted, till, offset)
-		: std::upper_bound(from, till, offset);
-	return (i != till) ? std::min(*i, tillOffset) : tillOffset;
+	const auto firsts = _shaper->backend().tables.glyphs.data()
+		+ entry.charFrom;
+	for (auto i = offset + 1; i < tillOffset; ++i) {
+		if (firsts[i] != firsts[offset]) {
+			return i;
+		}
+	}
+	return tillOffset;
 }
 
 int ShapedItem::cutEnd(int offset, int tillOffset) const {
