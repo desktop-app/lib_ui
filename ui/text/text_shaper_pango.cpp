@@ -1664,6 +1664,10 @@ struct ShapeEntry {
 	return entry.attributes->resolve().data() + entry.attributesShift;
 }
 
+[[nodiscard]] const ShapeEntry &Entry(const std::byte *view) {
+	return **std::launder(reinterpret_cast<const ShapeEntry* const*>(view));
+}
+
 struct LineShaper::Backend {
 	Backend(
 		not_null<const String*> t,
@@ -1713,9 +1717,9 @@ struct LineShaper::Backend {
 	std::vector<PangoGlyphString*> strings;
 	std::vector<int> visualOrder;
 	mutable LineAttributes attributes;
+	gsl::span<const CharAttribute> resolved;
 	ClusterTables tables;
 	std::vector<ShapeEntry> entries;
-	std::vector<ShapedItem> shaped;
 };
 
 LineShaper::Backend::Backend(
@@ -1960,12 +1964,18 @@ int LineShaper::findItem(int position) const {
 	return -1;
 }
 
-const std::vector<Item> &LineShaper::items() const {
-	return backend().drawn;
+int LineShaper::itemCount() const {
+	return int(backend().drawn.size());
 }
 
-gsl::span<const CharAttribute> LineShaper::attributes() const {
-	return backend().attributes.resolve();
+Item LineShaper::item(int index) const {
+	return backend().drawn[index];
+}
+
+CharAttribute LineShaper::attribute(int position) const {
+	Expects(!backend().resolved.empty());
+
+	return backend().resolved[position];
 }
 
 gsl::span<const int> LineShaper::visualOrder() const {
@@ -1976,11 +1986,10 @@ int LineShaper::blockIndex(int position) const {
 	return backend().blockIndexAt(position);
 }
 
-int LineShaper::itemLength(int index) const {
-	return backend().drawn[index].length;
-}
-
-void LineShaper::shapeRange(int firstItem, int lastItem) {
+void LineShaper::shapeRange(
+		int firstItem,
+		int lastItem,
+		bool withAttributes) {
 	Expects(backend().entries.empty());
 
 	// Shaped once for a line, which is what everything shaped counts on: the
@@ -1993,8 +2002,10 @@ void LineShaper::shapeRange(int firstItem, int lastItem) {
 		begin(backend.list) + firstItem,
 		begin(backend.list) + lastItem + 1);
 	backend.entries.assign(count, ShapeEntry());
-	backend.shaped.assign(count, ShapedItem());
 	backend.strings.resize(count);
+	if (withAttributes) {
+		backend.resolved = backend.attributes.resolve();
+	}
 	backend.tables.starts.clear();
 	backend.tables.xs.clear();
 	backend.tables.glyphs.clear();
@@ -2053,16 +2064,24 @@ void LineShaper::shapeRange(int firstItem, int lastItem) {
 	}
 }
 
-const ShapedItem &LineShaper::shape(int index) {
+ShapedItem LineShaper::shape(int index) {
 	auto &backend = this->backend();
-	auto &shaped = backend.shaped[index];
-	if (shaped) {
-		return shaped;
+	const auto &drawn = backend.drawn[index];
+	auto &entry = backend.entries[index];
+	const auto result = [&] {
+		const auto view = &std::as_const(entry);
+		return ShapedItem(
+			this,
+			index,
+			drawn.length,
+			(drawn.bidiLevel % 2) != 0,
+			bytes::object_as_span(&view));
+	};
+	if (entry.text) {
+		return result();
 	}
 	const auto &piece = backend.items[backend.first + index];
 	const auto item = piece.item;
-	const auto &drawn = backend.drawn[index];
-	auto &entry = backend.entries[index];
 	entry.item = item;
 	entry.glyphs = backend.strings[index];
 	entry.text = &backend.pieceText(piece);
@@ -2119,11 +2138,7 @@ const ShapedItem &LineShaper::shape(int index) {
 		entry.endX = x;
 	}
 	entry.clusterCount = int(tables.starts.size()) - entry.clusterFrom;
-
-	shaped._entry = &entry;
-	shaped._length = drawn.length;
-	shaped._rtl = (drawn.bidiLevel % 2) != 0;
-	return shaped;
+	return result();
 }
 
 
@@ -2208,7 +2223,7 @@ Fixed ShapedItem::width(int fromOffset, int tillOffset) const {
 		// the rest of the item - which is what the end of it maps to.
 		return {};
 	}
-	const auto &entry = *_entry;
+	const auto &entry = Entry(_view);
 	const auto from = XAt(entry, fromOffset);
 	const auto till = XAt(entry, tillOffset);
 	// In a right-to-left item the later character sits to the left.
@@ -2216,7 +2231,7 @@ Fixed ShapedItem::width(int fromOffset, int tillOffset) const {
 }
 
 int ShapedItem::clusterEnd(int offset, int tillOffset) const {
-	const auto &entry = *_entry;
+	const auto &entry = Entry(_view);
 	const auto from = begin(entry.tables->starts) + entry.clusterFrom;
 	const auto till = from + entry.clusterCount;
 	const auto hinted = from + std::clamp(
@@ -2230,7 +2245,9 @@ int ShapedItem::clusterEnd(int offset, int tillOffset) const {
 }
 
 int ShapedItem::cutEnd(int offset, int tillOffset) const {
-	const auto attributes = Attributes(*_entry);
+	Expects(!_shaper->backend().resolved.empty());
+
+	const auto attributes = Attributes(Entry(_view));
 	auto result = offset + 1;
 	while (result < tillOffset && !attributes[result].graphemeBoundary) {
 		++result;
@@ -2244,12 +2261,14 @@ ShapedItem::Hit ShapedItem::hitTest(
 		Fixed x,
 		int fromOffset,
 		int tillOffset) const {
+	Expects(!_shaper->backend().resolved.empty());
+
 	// Pango answers this question itself, but it divides a cluster between
 	// its code points, and a caret does not go between them: an emoji is two
 	// of them, a letter with a mark above it is two of them as well, and both
 	// are one place to stand. So the division is done here over the same
 	// letters the other backend uses, and by the same steps.
-	const auto attributes = Attributes(*_entry);
+	const auto attributes = Attributes(Entry(_view));
 	auto position = _rtl ? width(fromOffset, tillOffset) : Fixed();
 	auto letters = QVarLengthArray<int, 16>();
 	for (auto ch = fromOffset; ch < tillOffset;) {
@@ -2297,7 +2316,7 @@ ShapedItem::Hit ShapedItem::hitTest(
 }
 
 bool ShapedItem::invisibleAt(int offset) const {
-	const auto &entry = *_entry;
+	const auto &entry = Entry(_view);
 	if (offset < 0 || offset >= entry.length) {
 		return false;
 	}
@@ -2307,7 +2326,7 @@ bool ShapedItem::invisibleAt(int offset) const {
 }
 
 Fixed ShapedItem::rightBearingBefore(int offset) const {
-	const auto &entry = *_entry;
+	const auto &entry = Entry(_view);
 	if (offset <= 0 || offset > entry.length) {
 		return {};
 	}
@@ -2340,7 +2359,7 @@ void ShapedItem::draw(
 	if (fromOffset >= tillOffset) {
 		return;
 	}
-	const auto &entry = *_entry;
+	const auto &entry = Entry(_view);
 	const auto item = entry.item;
 	const auto from = entry.text->toUtf8(entry.position + fromOffset)
 		- item->offset;

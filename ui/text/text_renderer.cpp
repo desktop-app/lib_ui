@@ -926,14 +926,8 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		return !_elidedLine;
 	}
 
-	shaper.shapeRange(firstItem, lastItem);
-	const auto &items = shaper.items();
+	shaper.shapeRange(firstItem, lastItem, _lookupSymbol || _elisionMiddle);
 	const auto visualOrder = shaper.visualOrder();
-
-	// Only a click and a middle elision ask about letters at all.
-	const auto attributes = (_lookupSymbol || _elisionMiddle)
-		? shaper.attributes()
-		: gsl::span<const CharAttribute>();
 
 	auto textY = _y + _lineAscent;
 	auto emojiY = (_t->_st->font->height - st::emojiSize) / 2;
@@ -1008,7 +1002,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 		const auto index = visualOrder[paintRightToMiddleElision
 			? (nItems - 1 - i)
 			: i];
-		const auto &item = items[index];
+		const auto item = shaper.item(index);
 		const auto blockIt = begin(_t->_blocks) + item.blockIndex;
 		const auto block = blockIt->get();
 		const auto isLastItem = (index == nItems - 1);
@@ -1246,7 +1240,7 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 			continue;
 		}
 
-		const auto &shaped = shaper.shape(index);
+		const auto shaped = shaper.shape(index);
 
 		const auto itemStart = std::max(lineStart, item.position);
 		const auto itemEnd = (lineStart + lineLength
@@ -1675,13 +1669,12 @@ bool Renderer::collectLineHighlights(
 		return !_elidedLine;
 	}
 	shaper.shapeRange(firstItem, lastItem);
-	const auto &items = shaper.items();
 	const auto visualOrder = shaper.visualOrder();
 
 	batch.lineOrdered = true;
 	for (auto i = 0; i != nItems; ++i) {
 		const auto index = visualOrder[i];
-		const auto &item = items[index];
+		const auto item = shaper.item(index);
 		if (item.object) {
 			const auto blockIt = begin(_t->_blocks) + item.blockIndex;
 			const auto type = blockIt->get()->type();
@@ -1692,7 +1685,7 @@ bool Renderer::collectLineHighlights(
 			x += item.width;
 			continue;
 		}
-		const auto &shaped = shaper.shape(index);
+		const auto shaped = shaper.shape(index);
 		const auto itemStart = std::max(lineStart, item.position);
 		const auto itemEnd = std::min(
 			lineStart + lineLength,
@@ -1989,11 +1982,11 @@ void Renderer::prepareElidedLine(
 		: 0;
 	auto elisionWidth = _t->_st->font->elidew;
 	if (nItems) {
-		shaper.shapeRange(firstItem, lastItem);
+		const auto withAttributes = true;
+		shaper.shapeRange(firstItem, lastItem, withAttributes);
 	}
-	const auto &items = shaper.items();
 	for (auto i = 0; i != nItems; ++i) {
-		const auto &item = items[i];
+		const auto item = shaper.item(i);
 		const auto blockIndex = item.blockIndex;
 		const auto block = _t->_blocks[blockIndex].get();
 		const auto nextBlock = (blockIndex + 1 < _blocksSize)
@@ -2014,7 +2007,7 @@ void Renderer::prepareElidedLine(
 			}
 			_wLeft -= item.width;
 		} else if (_type == TextBlockType::Text) {
-			const auto &shaped = shaper.shape(i);
+			const auto shaped = shaper.shape(i);
 			const auto itemStart = std::max(lineStart, item.position);
 			const auto itemEnd = (lineStart + lineLength
 				< item.position + item.length)

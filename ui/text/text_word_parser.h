@@ -80,11 +80,11 @@ private:
 	Paragraph _paragraph;
 	LineShaper _shaper;
 	LineBreakHelper _lbh;
-	gsl::span<const CharAttribute> _attributes;
 	int _wordStart = 0;
 	bool _addingEachGrapheme = false;
 	int _lastGraphemeBoundaryPosition = -1;
 	ScriptLine _lastGraphemeBoundaryLine;
+	Item _current;
 	int _item = -1;
 	int _newItem = -1;
 	int _itemEnd = 0;

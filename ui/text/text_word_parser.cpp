@@ -74,25 +74,21 @@ void WordParser::parse() {
 	if (lastItem < 0) {
 		return;
 	}
-	_shaper.shapeRange(0, lastItem);
-	_attributes = _shaper.attributes();
-	if (_attributes.empty()) {
-		return;
-	}
-	const auto &items = _shaper.items();
+	const auto withAttributes = true;
+	_shaper.shapeRange(0, lastItem, withAttributes);
 
 	_newItem = 0;
-	while (_newItem < int(items.size())) {
+	while (_newItem < _shaper.itemCount()) {
 		if (_newItem != _item) {
 			moveToNewItem();
 		}
-		const auto &current = items[_item];
+		const auto &current = _current;
 		const auto atSpaceBreak = [&] {
 			if (!clusterIsWhitespace(_lbh.currentPosition)) {
 				return false;
 			}
 			for (auto index = _lbh.currentPosition; index < _itemEnd; ++index) {
-				if (!_attributes[index].whiteSpace) {
+				if (!_shaper.attribute(index).whiteSpace) {
 					return false;
 				} else if (isSpaceBreak(index)) {
 					return true;
@@ -139,7 +135,8 @@ void WordParser::parse() {
 						-_lbh.negativeRightBearing());
 					wordProcessed(_lbh.currentPosition);
 					break;
-				} else if (_attributes[_lbh.currentPosition].graphemeBoundary) {
+				} else if (_shaper.attribute(
+						_lbh.currentPosition).graphemeBoundary) {
 					maybeStartUnfinishedWord();
 					if (_addingEachGrapheme) {
 						_lbh.calculateRightBearing();
@@ -166,11 +163,11 @@ void WordParser::parse() {
 
 void WordParser::moveToNewItem() {
 	_item = _newItem;
-	const auto &item = _shaper.items()[_item];
+	_current = _shaper.item(_item);
 	_lbh.shaped = _shaper.shape(_item);
-	_lbh.itemPosition = item.position;
-	_lbh.currentPosition = item.position;
-	_itemEnd = item.position + item.length;
+	_lbh.itemPosition = _current.position;
+	_lbh.currentPosition = _current.position;
+	_itemEnd = _current.position + _current.length;
 }
 
 void WordParser::pushAccumulatedWord() {
@@ -213,7 +210,7 @@ void WordParser::wordContinued(int nextPartStart, bool spaces) {
 void WordParser::accumulateWhitespaces() {
 	_lbh.whiteSpaceOrObject = true;
 	while (_lbh.currentPosition < _itemEnd
-		&& _attributes[_lbh.currentPosition].whiteSpace
+		&& _shaper.attribute(_lbh.currentPosition).whiteSpace
 		&& clusterIsWhitespace(_lbh.currentPosition))
 		addNextCluster(_lbh.currentPosition, _itemEnd, _lbh.spaceData);
 }
@@ -267,14 +264,15 @@ void WordParser::pushNewline(uint16 position, int newlineBlockIndex) {
 bool WordParser::isLineBreak(int index) const {
 	// Don't break by '/' or '.' in the middle of the word.
 	// In case of a line break or white space it'll allow break anyway.
-	return _attributes[index].lineBreak
+	return _shaper.attribute(index).lineBreak
 		&& (index <= 0
 			|| (_tText[index - 1] != '/' && _tText[index - 1] != '.'));
 }
 
 bool WordParser::isSpaceBreak(int index) const {
 	// Don't break on &nbsp;
-	return _attributes[index].whiteSpace && (_tText[index] != QChar::Nbsp);
+	return _shaper.attribute(index).whiteSpace
+		&& (_tText[index] != QChar::Nbsp);
 }
 
 bool WordParser::clusterIsWhitespace(int index) const {
@@ -286,7 +284,7 @@ bool WordParser::clusterIsWhitespace(int index) const {
 	const auto from = index - _lbh.itemPosition;
 	const auto till = _lbh.shaped.clusterEnd(from, _itemEnd - _lbh.itemPosition);
 	for (auto i = from; i != till; ++i) {
-		if (!_attributes[i + _lbh.itemPosition].whiteSpace) {
+		if (!_shaper.attribute(i + _lbh.itemPosition).whiteSpace) {
 			return false;
 		}
 	}

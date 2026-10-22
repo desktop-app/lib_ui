@@ -6,6 +6,7 @@
 //
 #pragma once
 
+#include "base/bytes.h"
 #include "ui/ui_fixed.h"
 #include "ui/text/text.h"
 
@@ -13,7 +14,6 @@
 #include <QtGui/QFont>
 
 #include <cstddef>
-#include <vector>
 
 class QPainter;
 
@@ -23,7 +23,7 @@ namespace Ui::Text {
 // of a backend shows through: no glyphs, no clusters, no engine types. That is
 // what lets the implementation be chosen when the library is built without the
 // callers - or anything that includes them - being rebuilt.
-struct ShapeEntry;
+class LineShaper;
 
 // One itemized run: a stretch of text with a single font, direction and
 // script, or a single object block.
@@ -43,7 +43,6 @@ struct Item {
 	}
 };
 
-// Filled by the backend once per line, read in the callers' inner loops.
 struct CharAttribute {
 	bool graphemeBoundary : 1 = false;
 	bool lineBreak : 1 = false;
@@ -57,8 +56,10 @@ struct CharAttribute {
 // last character, as everywhere else in the engine.
 class ShapedItem final {
 public:
+	ShapedItem() = default;
+
 	[[nodiscard]] explicit operator bool() const {
-		return _entry != nullptr;
+		return _shaper != nullptr;
 	}
 
 	[[nodiscard]] int length() const {
@@ -110,9 +111,24 @@ public:
 private:
 	friend class LineShaper;
 
-	const ShapeEntry *_entry = nullptr;
+	ShapedItem(
+		not_null<LineShaper*> shaper,
+		int index,
+		int length,
+		bool rtl,
+		bytes::const_span view)
+	: _shaper(shaper)
+	, _index(index)
+	, _length(length)
+	, _rtl(rtl) {
+		bytes::copy(_view, view);
+	}
+
+	LineShaper *_shaper = nullptr;
+	int _index = 0;
 	int _length = 0;
 	bool _rtl = false;
+	alignas(std::max_align_t) std::byte _view[96] = {};
 
 };
 
@@ -184,12 +200,14 @@ public:
 	// Shapes the items that are drawn, which the renderer needs done before
 	// it can place any of them. Everything below is about these items only,
 	// and indexes them from zero.
-	void shapeRange(int firstItem, int lastItem);
+	void shapeRange(
+		int firstItem,
+		int lastItem,
+		bool withAttributes = false); // For attribute(), cutEnd(), hitTest()
 
-	[[nodiscard]] const std::vector<Item> &items() const;
-
-	// Grapheme, line break and space flags for the whole line, filled once.
-	[[nodiscard]] gsl::span<const CharAttribute> attributes() const;
+	[[nodiscard]] int itemCount() const;
+	[[nodiscard]] Item item(int index) const;
+	[[nodiscard]] CharAttribute attribute(int position) const;
 
 	// Items in the order they are drawn, which is not the order they are in
 	// when the line mixes directions.
@@ -197,10 +215,10 @@ public:
 
 	[[nodiscard]] int blockIndex(int position) const;
 
-	[[nodiscard]] const ShapedItem &shape(int item);
+	[[nodiscard]] ShapedItem shape(int item);
 
 private:
-	[[nodiscard]] int itemLength(int index) const;
+	friend class ShapedItem;
 
 	struct Backend;
 
@@ -208,7 +226,7 @@ private:
 	[[nodiscard]] const Backend &backend() const;
 
 	// Inline as well: QStackTextEngine of the Qt backend is meant for the stack
-	alignas(std::max_align_t) std::byte _storage[11 * 1024];
+	alignas(std::max_align_t) std::byte _storage[14 * 1024];
 
 };
 
