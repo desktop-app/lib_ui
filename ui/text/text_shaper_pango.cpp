@@ -2010,10 +2010,12 @@ void LineShaper::shapeRange(
 	backend.tables.glyphs.clear();
 
 	auto skipIndex = -1;
+	auto characters = 0;
 	for (auto i = 0; i != count; ++i) {
 		const auto &piece = backend.items[firstItem + i];
 		const auto item = piece.item;
 		auto &drawn = backend.list[firstItem + i];
+		characters += drawn.length;
 		if (backend.t->_blocks[drawn.blockIndex]->type()
 			== TextBlockType::Skip) {
 			// A skip is laid out as if it had no direction of its own, so
@@ -2051,6 +2053,8 @@ void LineShaper::shapeRange(
 		drawn.ascent = FromPango(-logical.y, ratio).toInt();
 		drawn.descent = FromPango(logical.height + logical.y, ratio).toInt();
 	}
+	backend.tables.xs.reserve(characters);
+	backend.tables.glyphs.reserve(characters);
 
 	backend.visualOrder.resize(count);
 	ReorderVisually(

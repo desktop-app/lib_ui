@@ -92,8 +92,11 @@ struct ItemView {
 
 } // namespace
 
+// Counted from the bytes Paragraph has room for: QScriptAnalysis is 8 in MSVC
+constexpr auto kInlineAnalysis = (16 * 1024) / sizeof(QScriptAnalysis);
+
 struct Paragraph::State {
-	QVarLengthArray<QScriptAnalysis, 4096> analysis;
+	QVarLengthArray<QScriptAnalysis, kInlineAnalysis> analysis;
 	int position = 0;
 };
 
@@ -122,6 +125,7 @@ struct LineShaper::Backend {
 	int first = 0;
 	int count = 0;
 	QVarLengthArray<int> visualOrder;
+	QVarLengthArray<int> blockIndices;
 	const QCharAttributes *attributes = nullptr;
 
 	// The one this item was shaped with, kept because the engine moves its
@@ -452,7 +456,7 @@ Item LineShaper::item(int index) const {
 		.width = Fixed::FromRaw(si.width.value()),
 		.ascent = si.ascent.toInt(),
 		.descent = si.descent.toInt(),
-		.blockIndex = backend.engine.blockIndex(si.position),
+		.blockIndex = backend.blockIndices[index],
 		.bidiLevel = uchar(si.analysis.bidiLevel),
 		.object = (si.analysis.flags >= QScriptAnalysis::TabOrObject),
 		.newline = (si.analysis.flags
@@ -489,6 +493,7 @@ void LineShaper::shapeRange(
 	backend.first = firstItem;
 	backend.count = count;
 	backend.fontEngines.resize(count);
+	backend.blockIndices.resize(count);
 	if (withAttributes) {
 		// Before shaping: asked for after it, they take the room twice
 		e.attributes();
@@ -499,6 +504,7 @@ void LineShaper::shapeRange(
 	for (auto i = 0; i != count; ++i) {
 		const auto blockIt = backend.engine.shapeGetBlock(firstItem + i);
 		auto &si = e.layoutData->items[firstItem + i];
+		backend.blockIndices[i] = backend.engine.blockIndex(si.position);
 		if ((*blockIt)->type() == TextBlockType::Skip) {
 			// A skip is laid out as if it had no direction of its own, so
 			// that it stays at the end of the line it trails.

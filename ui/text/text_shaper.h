@@ -226,7 +226,7 @@ private:
 	[[nodiscard]] const Backend &backend() const;
 
 	// Inline as well: QStackTextEngine of the Qt backend is meant for the stack
-	alignas(std::max_align_t) std::byte _storage[14 * 1024];
+	alignas(std::max_align_t) std::byte _storage[16 * 1024];
 
 };
 
