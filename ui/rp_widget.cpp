@@ -345,6 +345,8 @@ auto RpWidgetWrap::eventStreams() const -> EventStreams& {
 void AccessibilityState::writeTo(QAccessible::State &state) {
 	state.checkable = checkable ? 1 : 0;
 	state.checked = checked ? 1 : 0;
+	state.expandable = expandable ? 1 : 0;
+	state.expanded = expanded ? 1 : 0;
 	state.extSelectable = extSelectable ? 1 : 0;
 	state.multiSelectable = multiSelectable ? 1 : 0;
 	state.pressed = pressed ? 1 : 0;
