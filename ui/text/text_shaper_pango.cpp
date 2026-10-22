@@ -44,6 +44,7 @@
 #include <atomic>
 #include <mutex>
 #include <new>
+#include <optional>
 
 namespace Ui::Text {
 namespace {
@@ -283,8 +284,8 @@ bool Text::fill(QStringView text) {
 // the line mixes directions - rule L2 of the bidi algorithm, over the levels
 // the items came out with.
 void ReorderVisually(
-		const std::vector<Item> &items,
-		std::vector<int> &order) {
+		gsl::span<const Item> items,
+		gsl::span<int> order) {
 	const auto count = int(items.size());
 	auto highest = uchar(0);
 	auto lowestOdd = uchar(63);
@@ -1557,20 +1558,24 @@ void Paragraph::elide(int position, int count, bool baseRtl) {
 	state().elideAt = position;
 }
 
+// The stack QStackTextEngine has, spent on what a character takes here
+constexpr auto kInlineCharacters = (256 * 40)
+	/ (3 * sizeof(int) + sizeof(CharAttribute) + sizeof(uchar));
+
 // Line breaks and caret positions of one line, which Pango works out in a
 // pass over the whole text that costs as much as the shaping does. Drawing a
 // line never asks about them - only a click and an elision in the middle do -
 // so they are left until something does.
 class LineAttributes final {
 public:
-	void set(not_null<const Text*> text) {
+	void set(not_null<const QString*> text) {
 		_text = text;
 	}
 	[[nodiscard]] gsl::span<const CharAttribute> resolve();
 
 private:
-	const Text *_text = nullptr;
-	std::vector<CharAttribute> _list;
+	const QString *_text = nullptr;
+	QVarLengthArray<CharAttribute, kInlineCharacters> _list;
 	bool _resolved = false;
 
 };
@@ -1592,16 +1597,27 @@ gsl::span<const CharAttribute> LineAttributes::resolve() {
 	// QUnicodeTools::initCharAttributes through QTextEngine, and its white
 	// space is QChar::isSpace() - so following Pango here would be following
 	// the wrong one of the two.
-	const auto &text = _text->utf16();
+	const auto &text = *_text;
 	const auto length = int(text.size());
-	_list.assign(length + 1, CharAttribute());
+	_list.resize(length + 1);
 
-	auto grapheme = QTextBoundaryFinder(QTextBoundaryFinder::Grapheme, text);
+	auto buffer = QVarLengthArray<uchar, kInlineCharacters + 1>(length + 1);
+	auto grapheme = QTextBoundaryFinder(
+		QTextBoundaryFinder::Grapheme,
+		text.constData(),
+		length,
+		buffer.data(),
+		buffer.size());
 	do {
 		_list[grapheme.position()].graphemeBoundary = true;
 	} while (grapheme.toNextBoundary() >= 0);
 
-	auto line = QTextBoundaryFinder(QTextBoundaryFinder::Line, text);
+	auto line = QTextBoundaryFinder(
+		QTextBoundaryFinder::Line,
+		text.constData(),
+		length,
+		buffer.data(),
+		buffer.size());
 	do {
 		_list[line.position()].lineBreak = true;
 	} while (line.toNextBoundary() >= 0);
@@ -1619,33 +1635,25 @@ gsl::span<const CharAttribute> LineAttributes::resolve() {
 // every item, and a line of emoji holds a thousand of them.
 struct ClusterTables {
 	// In characters of the item, and in the order they are written in.
-	std::vector<int> starts;
+	QVarLengthArray<int, kInlineCharacters> starts;
 
 	// How far the left edge of each is from the left edge of the item, in the
 	// units of Pango, and the first glyph it is drawn as.
-	std::vector<int> xs;
-	std::vector<int> glyphs;
+	QVarLengthArray<int, kInlineCharacters> xs;
+	QVarLengthArray<int, kInlineCharacters> glyphs;
 };
 
 // Everything a shaped item is, kept where only this backend can see it.
 struct ShapeEntry {
-	PangoItem *item = nullptr;
-	PangoGlyphString *glyphs = nullptr;
-
 	// The line text, so that character offsets can be turned into the byte
 	// offsets Pango works in.
 	const Text *text = nullptr;
-
-	// The attributes of the whole line and where this item starts in it.
-	LineAttributes *attributes = nullptr;
-	int attributesShift = 0;
 
 	// The clusters of the line and the range in them that is this item's, and
 	// where the last question about them was answered: they are asked about in
 	// the order the letters go far more often than not, so the next answer is
 	// almost always the next entry, and a search over the whole table for each
 	// of them is work that the walk itself already did.
-	const ClusterTables *tables = nullptr;
 	int clusterFrom = 0;
 	int clusterCount = 0;
 	mutable int clusterHint = 0;
@@ -1655,14 +1663,7 @@ struct ShapeEntry {
 	int endX = 0;
 
 	int position = 0;
-	int length = 0;
-	qreal ratio = 1.;
 };
-
-// Shifted so that index zero is the first character of the item.
-[[nodiscard]] const CharAttribute *Attributes(const ShapeEntry &entry) {
-	return entry.attributes->resolve().data() + entry.attributesShift;
-}
 
 [[nodiscard]] const ShapeEntry &Entry(const std::byte *view) {
 	return **std::launder(reinterpret_cast<const ShapeEntry* const*>(view));
@@ -1694,6 +1695,15 @@ struct LineShaper::Backend {
 	[[nodiscard]] const Text &pieceText(const Piece &piece) const;
 	[[nodiscard]] int blockIndexAt(int position) const;
 
+	[[nodiscard]] int clusterAt(const ShapeEntry &entry, int offset) const;
+	[[nodiscard]] int glyphAt(const ShapeEntry &entry, int offset) const;
+	[[nodiscard]] int xAt(
+		const ShapeEntry &entry,
+		int index,
+		int length,
+		int offset) const;
+	[[nodiscard]] const CharAttribute *attributesAt(int index) const;
+
 	const not_null<const String*> t;
 	// What the itemizer worked out for the paragraph this line is in, lent
 	// by whoever keeps it - and borrowed here on its own, because a line is
@@ -1704,7 +1714,8 @@ struct LineShaper::Backend {
 
 	// The line's own text, which the paragraph does not hold when an ellipsis
 	// was added to it.
-	Text text;
+	std::optional<Text> ownText;
+	const QString text;
 	int offset = 0;
 
 
@@ -1713,10 +1724,9 @@ struct LineShaper::Backend {
 	// Every item of the line, and the ones the caller asked to shape, which
 	// is a range out of them.
 	std::vector<Item> list;
-	std::vector<Item> drawn;
-	std::vector<PangoGlyphString*> strings;
-	std::vector<int> visualOrder;
-	mutable LineAttributes attributes;
+	QVarLengthArray<PangoGlyphString*> strings;
+	QVarLengthArray<int> visualOrder;
+	LineAttributes attributes;
 	gsl::span<const CharAttribute> resolved;
 	ClusterTables tables;
 	std::vector<ShapeEntry> entries;
@@ -1795,7 +1805,8 @@ LineShaper::Backend::Backend(
 	// What the line added past the end of the paragraph, which is an ellipsis
 	// and goes the way the text before it goes.
 	if (till > inParagraph) {
-		const auto start = this->text.toUtf8(inParagraph - from);
+		const auto &own = ownText.emplace(text);
+		const auto start = own.toUtf8(inParagraph - from);
 		const auto level = state.levels.empty()
 			? uchar(0)
 			: state.levels[std::min(
@@ -1810,16 +1821,16 @@ LineShaper::Backend::Backend(
 			state.ratio);
 		const auto attribute = pango_attr_font_desc_new(description);
 		attribute->start_index = start;
-		attribute->end_index = this->text.size();
+		attribute->end_index = own.size();
 		pango_attr_list_insert(attributes, attribute);
 		pango_font_description_free(description);
 
 		const auto tail = pango_itemize_with_base_dir(
 			Context(),
 			(level % 2) ? PANGO_DIRECTION_RTL : PANGO_DIRECTION_LTR,
-			this->text.data(),
+			own.data(),
 			start,
-			this->text.size() - start,
+			own.size() - start,
 			attributes,
 			nullptr); // cached_iter
 		pango_attr_list_unref(attributes);
@@ -1886,7 +1897,7 @@ LineShaper::Backend::Backend(
 }
 
 const Text &LineShaper::Backend::pieceText(const Piece &piece) const {
-	return piece.own ? text : paragraph.text;
+	return piece.own ? *ownText : paragraph.text;
 }
 
 int LineShaper::Backend::itemPosition(const Piece &piece) const {
@@ -1965,11 +1976,11 @@ int LineShaper::findItem(int position) const {
 }
 
 int LineShaper::itemCount() const {
-	return int(backend().drawn.size());
+	return int(backend().entries.size());
 }
 
 Item LineShaper::item(int index) const {
-	return backend().drawn[index];
+	return backend().list[backend().first + index];
 }
 
 CharAttribute LineShaper::attribute(int position) const {
@@ -1998,9 +2009,6 @@ void LineShaper::shapeRange(
 	auto &backend = this->backend();
 	const auto count = lastItem - firstItem + 1;
 	backend.first = firstItem;
-	backend.drawn.assign(
-		begin(backend.list) + firstItem,
-		begin(backend.list) + lastItem + 1);
 	backend.entries.assign(count, ShapeEntry());
 	backend.strings.resize(count);
 	if (withAttributes) {
@@ -2014,7 +2022,7 @@ void LineShaper::shapeRange(
 	for (auto i = 0; i != count; ++i) {
 		const auto &piece = backend.items[firstItem + i];
 		const auto item = piece.item;
-		auto &drawn = backend.drawn[i];
+		auto &drawn = backend.list[firstItem + i];
 		if (backend.t->_blocks[drawn.blockIndex]->type()
 			== TextBlockType::Skip) {
 			// A skip is laid out as if it had no direction of its own, so
@@ -2054,7 +2062,9 @@ void LineShaper::shapeRange(
 	}
 
 	backend.visualOrder.resize(count);
-	ReorderVisually(backend.drawn, backend.visualOrder);
+	ReorderVisually(
+		gsl::span(backend.list).subspan(firstItem, count),
+		backend.visualOrder);
 	if (style::RightToLeft() && skipIndex == count - 1) {
 		for (auto i = count; i > 1;) {
 			--i;
@@ -2066,7 +2076,7 @@ void LineShaper::shapeRange(
 
 ShapedItem LineShaper::shape(int index) {
 	auto &backend = this->backend();
-	const auto &drawn = backend.drawn[index];
+	const auto &drawn = backend.list[backend.first + index];
 	auto &entry = backend.entries[index];
 	const auto result = [&] {
 		const auto view = &std::as_const(entry);
@@ -2082,23 +2092,24 @@ ShapedItem LineShaper::shape(int index) {
 	}
 	const auto &piece = backend.items[backend.first + index];
 	const auto item = piece.item;
-	entry.item = item;
-	entry.glyphs = backend.strings[index];
 	entry.text = &backend.pieceText(piece);
-	entry.attributes = &backend.attributes;
-	entry.attributesShift = drawn.position;
 	entry.position = entry.text->toUtf16(item->offset);
-	entry.length = drawn.length;
-	entry.ratio = backend.paragraph.ratio;
 
 	// The same walk Pango takes to answer where a cluster is drawn, taken
 	// once for all of them: the clusters come in the order they are written
 	// in when the glyphs are walked the way the item goes, and the distance
 	// to each of them is what was added up before it.
 	auto &tables = backend.tables;
-	entry.tables = &tables;
 	entry.clusterFrom = int(tables.starts.size());
-	const auto glyphs = entry.glyphs;
+	const auto glyphs = backend.strings[index];
+
+	// At most a cluster per glyph, written in place and cut down afterwards
+	const auto most = entry.clusterFrom + glyphs->num_glyphs;
+	tables.starts.resize(most);
+	tables.xs.resize(most);
+	tables.glyphs.resize(most);
+	auto count = entry.clusterFrom;
+
 	const auto rtl = (drawn.bidiLevel % 2) != 0;
 	const auto base = entry.position;
 	auto x = 0;
@@ -2107,17 +2118,17 @@ ShapedItem LineShaper::shape(int index) {
 		if (glyphs->log_clusters[index] != cluster) {
 			cluster = glyphs->log_clusters[index];
 			const auto at = entry.text->toUtf16(item->offset + cluster) - base;
-			if (int(tables.starts.size()) == entry.clusterFrom
-				|| tables.starts.back() != at) {
-				tables.starts.push_back(at);
-				tables.xs.push_back(x);
-				tables.glyphs.push_back(index);
+			if (count == entry.clusterFrom || tables.starts[count - 1] != at) {
+				tables.starts[count] = at;
+				tables.xs[count] = x;
+				tables.glyphs[count] = index;
+				++count;
 				return;
 			}
 		}
 		// The glyphs of a letter are walked the other way around when the text
 		// goes to the left, so the first of them is met last.
-		tables.glyphs.back() = std::min(tables.glyphs.back(), index);
+		tables.glyphs[count - 1] = std::min(tables.glyphs[count - 1], index);
 	};
 	if (rtl) {
 		// Right to left, where the glyphs are drawn the other way around, so
@@ -2137,23 +2148,26 @@ ShapedItem LineShaper::shape(int index) {
 		}
 		entry.endX = x;
 	}
-	entry.clusterCount = int(tables.starts.size()) - entry.clusterFrom;
+	tables.starts.resize(count);
+	tables.xs.resize(count);
+	tables.glyphs.resize(count);
+	entry.clusterCount = count - entry.clusterFrom;
 	return result();
 }
 
 
-namespace {
-
 // Where a letter starts among the clusters the item was shaped into, in the
 // table of the line, or -1 when it starts inside one of them - a letter drawn
 // as a part of the glyph of the one before it has no place of its own there.
-[[nodiscard]] int ClusterAt(const ShapeEntry &entry, int offset) {
+int LineShaper::Backend::clusterAt(
+		const ShapeEntry &entry,
+		int offset) const {
 	// Both halves of a surrogate pair are one letter and point at the byte the
 	// pair begins with, so a question about the second half is one about the
 	// first.
 	const auto byte = entry.text->toUtf8(entry.position + offset);
 	const auto at = entry.text->toUtf16(byte) - entry.position;
-	const auto begins = begin(entry.tables->starts);
+	const auto begins = tables.starts.begin();
 	const auto from = begins + entry.clusterFrom;
 	const auto till = from + entry.clusterCount;
 
@@ -2171,9 +2185,9 @@ namespace {
 }
 
 // The glyph a letter is drawn as, or -1 when it is drawn as a part of another.
-[[nodiscard]] int GlyphAt(const ShapeEntry &entry, int offset) {
-	const auto cluster = ClusterAt(entry, offset);
-	return (cluster < 0) ? -1 : entry.tables->glyphs[cluster];
+int LineShaper::Backend::glyphAt(const ShapeEntry &entry, int offset) const {
+	const auto cluster = clusterAt(entry, offset);
+	return (cluster < 0) ? -1 : tables.glyphs[cluster];
 }
 
 // Distance from the left edge of the item to a character, which is what Pango
@@ -2181,37 +2195,45 @@ namespace {
 // In the units of Pango, which are finer than the ones of the engine: a
 // distance is the difference of two of these, and turning each of them into
 // the coarser units first would round twice for one answer.
-[[nodiscard]] int XAt(const ShapeEntry &entry, int offset) {
+int LineShaper::Backend::xAt(
+		const ShapeEntry &entry,
+		int index,
+		int length,
+		int offset) const {
 	if (!entry.clusterCount) {
 		// Nothing was drawn for the item, and every position in it is the
 		// same one.
 		return 0;
-	} else if (offset >= entry.length) {
+	} else if (offset >= length) {
 		return entry.endX;
 	}
-	const auto cluster = ClusterAt(entry, offset);
+	const auto cluster = clusterAt(entry, offset);
 	if (cluster >= 0) {
-		return entry.tables->xs[cluster];
+		return tables.xs[cluster];
 	}
 
 	// Inside a letter that is drawn as one glyph, where the answer is not an
 	// edge of anything: the font may say where a caret goes inside a ligature,
 	// and only Pango knows how to ask it.
+	const auto item = items[first + index].item;
 	const auto byte = entry.text->toUtf8(entry.position + offset)
 		- entry.text->toUtf8(entry.position);
 	auto result = 0;
 	pango_glyph_string_index_to_x(
-		entry.glyphs,
-		const_cast<char*>(entry.text->data() + entry.item->offset),
-		entry.item->length,
-		&entry.item->analysis,
+		strings[index],
+		const_cast<char*>(entry.text->data() + item->offset),
+		item->length,
+		&item->analysis,
 		byte,
 		FALSE, // trailing
 		&result);
 	return result;
 }
 
-} // namespace
+// Shifted so that index zero is the first character of the item.
+const CharAttribute *LineShaper::Backend::attributesAt(int index) const {
+	return resolved.data() + list[first + index].position;
+}
 
 Fixed ShapedItem::width() const {
 	return width(0, _length);
@@ -2223,16 +2245,20 @@ Fixed ShapedItem::width(int fromOffset, int tillOffset) const {
 		// the rest of the item - which is what the end of it maps to.
 		return {};
 	}
+	const auto &backend = _shaper->backend();
 	const auto &entry = Entry(_view);
-	const auto from = XAt(entry, fromOffset);
-	const auto till = XAt(entry, tillOffset);
+	const auto from = backend.xAt(entry, _index, _length, fromOffset);
+	const auto till = backend.xAt(entry, _index, _length, tillOffset);
 	// In a right-to-left item the later character sits to the left.
-	return FromPango(_rtl ? (from - till) : (till - from), entry.ratio);
+	return FromPango(
+		_rtl ? (from - till) : (till - from),
+		backend.paragraph.ratio);
 }
 
 int ShapedItem::clusterEnd(int offset, int tillOffset) const {
 	const auto &entry = Entry(_view);
-	const auto from = begin(entry.tables->starts) + entry.clusterFrom;
+	const auto &starts = _shaper->backend().tables.starts;
+	const auto from = starts.begin() + entry.clusterFrom;
 	const auto till = from + entry.clusterCount;
 	const auto hinted = from + std::clamp(
 		entry.clusterHint,
@@ -2247,7 +2273,7 @@ int ShapedItem::clusterEnd(int offset, int tillOffset) const {
 int ShapedItem::cutEnd(int offset, int tillOffset) const {
 	Expects(!_shaper->backend().resolved.empty());
 
-	const auto attributes = Attributes(Entry(_view));
+	const auto attributes = _shaper->backend().attributesAt(_index);
 	auto result = offset + 1;
 	while (result < tillOffset && !attributes[result].graphemeBoundary) {
 		++result;
@@ -2268,7 +2294,7 @@ ShapedItem::Hit ShapedItem::hitTest(
 	// of them, a letter with a mark above it is two of them as well, and both
 	// are one place to stand. So the division is done here over the same
 	// letters the other backend uses, and by the same steps.
-	const auto attributes = Attributes(Entry(_view));
+	const auto attributes = _shaper->backend().attributesAt(_index);
 	auto position = _rtl ? width(fromOffset, tillOffset) : Fixed();
 	auto letters = QVarLengthArray<int, 16>();
 	for (auto ch = fromOffset; ch < tillOffset;) {
@@ -2316,29 +2342,30 @@ ShapedItem::Hit ShapedItem::hitTest(
 }
 
 bool ShapedItem::invisibleAt(int offset) const {
-	const auto &entry = Entry(_view);
-	if (offset < 0 || offset >= entry.length) {
+	if (offset < 0 || offset >= _length) {
 		return false;
 	}
-	const auto glyph = GlyphAt(entry, offset);
+	const auto &backend = _shaper->backend();
+	const auto glyph = backend.glyphAt(Entry(_view), offset);
 	return (glyph >= 0)
-		&& (entry.glyphs->glyphs[glyph].glyph == PANGO_GLYPH_EMPTY);
+		&& (backend.strings[_index]->glyphs[glyph].glyph == PANGO_GLYPH_EMPTY);
 }
 
 Fixed ShapedItem::rightBearingBefore(int offset) const {
-	const auto &entry = Entry(_view);
-	if (offset <= 0 || offset > entry.length) {
+	if (offset <= 0 || offset > _length) {
 		return {};
 	}
-	const auto glyph = GlyphAt(entry, offset - 1);
+	const auto &backend = _shaper->backend();
+	const auto glyph = backend.glyphAt(Entry(_view), offset - 1);
 	if (glyph < 0) {
 		return {};
 	}
+	const auto item = backend.items[backend.first + _index].item;
 	auto ink = PangoRectangle();
 	auto logical = PangoRectangle();
 	pango_font_get_glyph_extents(
-		entry.item->analysis.font,
-		entry.glyphs->glyphs[glyph].glyph,
+		item->analysis.font,
+		backend.strings[_index]->glyphs[glyph].glyph,
 		&ink,
 		&logical);
 	// How much room is left between where the glyph ends and where the next
@@ -2347,7 +2374,9 @@ Fixed ShapedItem::rightBearingBefore(int offset) const {
 	// for the ink, or the text is drawn outside the place that was measured
 	// for it.
 	const auto bearing = logical.width - (ink.x + ink.width);
-	return (bearing < 0) ? FromPango(bearing, entry.ratio) : Fixed();
+	return (bearing < 0)
+		? FromPango(bearing, backend.paragraph.ratio)
+		: Fixed();
 }
 
 void ShapedItem::draw(
@@ -2359,8 +2388,10 @@ void ShapedItem::draw(
 	if (fromOffset >= tillOffset) {
 		return;
 	}
+	const auto &backend = _shaper->backend();
 	const auto &entry = Entry(_view);
-	const auto item = entry.item;
+	const auto item = backend.items[backend.first + _index].item;
+	const auto glyphs = backend.strings[_index];
 	const auto from = entry.text->toUtf8(entry.position + fromOffset)
 		- item->offset;
 	const auto till = entry.text->toUtf8(entry.position + tillOffset)
@@ -2369,19 +2400,19 @@ void ShapedItem::draw(
 	// Only the glyphs of the asked range, so that a cut item draws its part
 	// and nothing of what was cut away - and the item itself where the whole
 	// of it is asked for, which is what a line that was not cut does.
-	const auto whole = (fromOffset <= 0) && (tillOffset >= entry.length);
-	const auto part = whole ? entry.glyphs : pango_glyph_string_new();
+	const auto whole = (fromOffset <= 0) && (tillOffset >= _length);
+	const auto part = whole ? glyphs : pango_glyph_string_new();
 	const auto guard = gsl::finally([&] {
 		if (!whole) {
 			pango_glyph_string_free(part);
 		}
 	});
-	for (auto i = 0; !whole && i != entry.glyphs->num_glyphs; ++i) {
-		const auto cluster = entry.glyphs->log_clusters[i];
+	for (auto i = 0; !whole && i != glyphs->num_glyphs; ++i) {
+		const auto cluster = glyphs->log_clusters[i];
 		if (cluster >= from && cluster < till) {
 			const auto index = part->num_glyphs;
 			pango_glyph_string_set_size(part, index + 1);
-			part->glyphs[index] = entry.glyphs->glyphs[i];
+			part->glyphs[index] = glyphs->glyphs[i];
 			part->log_clusters[index] = cluster - from;
 		}
 	}
@@ -2402,7 +2433,7 @@ void ShapedItem::draw(
 	// of flattening it into an image of its own. So when the destination can
 	// be drawn into directly, it is; the copy below is for when it can not,
 	// and there the antialiasing has to be plain grey.
-	const auto ratio = entry.ratio;
+	const auto ratio = backend.paragraph.ratio;
 
 	// WHY: the lines go where the glyphs go - onto the baseline on whole pixels
 	// and through the same turn - so cairo fills them right after the glyphs, as
@@ -2413,7 +2444,8 @@ void ShapedItem::draw(
 		const auto guardMetrics = gsl::finally([&] {
 			pango_font_metrics_unref(metrics);
 		});
-		const auto advance = XAt(entry, tillOffset) - XAt(entry, fromOffset);
+		const auto advance = backend.xAt(entry, _index, _length, tillOffset)
+			- backend.xAt(entry, _index, _length, fromOffset);
 		const auto line = [&](int position, int thickness) {
 			lines.push_back(QRect(
 				std::min(0, _rtl ? -advance : 0),
