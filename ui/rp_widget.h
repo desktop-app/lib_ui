@@ -477,13 +477,19 @@ public:
 
 	// Announces a child as the one holding accessible focus. Meant for a
 	// browse position that moves while keyboard focus stays put - arrow keys
-	// inside a painted list, say. Taking keyboard focus needs no call: that
-	// raises a focus event of its own which the platform resolves through
-	// focusChild(), so announcing the child here as well reads it twice; make
-	// sure focusChild() points at the right one before focus-in returns
-	// instead. (On Windows that resolution needs Qt 6.2 or the focus child
-	// notification backported into the 5.15 build.)
+	// inside a painted list, say. When keyboard focus itself has just
+	// arrived, use accessibilityChildFocusedByEntry() instead.
 	void accessibilityChildFocused(int index);
+
+	// Announces the child the focus lands on when this widget has just
+	// taken keyboard focus, with focusChild() already pointing at it. The
+	// focus event Qt raises for the widget is resolved to that child by the
+	// Windows bridge (Qt 6.2, or the backport in the 5.15 build) and by
+	// Cocoa, which answers the focused element through focusChild(), so
+	// there a second event would read the child twice and nothing is sent.
+	// AT-SPI sends the focus for the widget itself, so the child event goes
+	// out explicitly there, queued behind it.
+	void accessibilityChildFocusedByEntry(int index);
 
 	// Per-child opt-in for the accessibility action interface (SetFocus /
 	// Invoke / SelectionItem.Select). Returns false by default, so painted
