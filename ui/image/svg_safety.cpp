@@ -305,7 +305,10 @@ QByteArray SanitizeSvg(const QByteArray &bytes) {
 				LOG(("Svg Sanitize: Too many or too deeply nested elements."));
 				return {};
 			}
-			const auto id = attributes.value(QLatin1String("id")).toString();
+			const auto primaryId = attributes.value(QLatin1String("id"));
+			const auto id = (primaryId.isEmpty()
+				? attributes.value(QLatin1String("xml:id"))
+				: primaryId).toString();
 			const auto depth = int(elementIds.size() + 1);
 			elementIds.push_back(id);
 			if (!id.isEmpty()) {
