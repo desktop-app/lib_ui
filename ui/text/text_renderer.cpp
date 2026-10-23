@@ -2070,6 +2070,10 @@ void Renderer::prepareElisionAt(
 		QString &lineText,
 		int &lineLength,
 		uint16 position) {
+	position = uint16(std::clamp(
+		int(position),
+		_lineStart,
+		_localFrom + int(lineText.size())));
 	lineText = lineText.mid(0, position - _localFrom) + kQEllipsis;
 	lineLength = position + kQEllipsis.size() - _lineStart;
 	_selection.to = std::min(_selection.to, position);

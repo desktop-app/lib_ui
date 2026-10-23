@@ -1740,13 +1740,19 @@ LineShaper::Backend::Backend(
 
 	const auto &state = this->paragraph;
 	const auto from = offset - state.position;
+	if (from < 0
+		|| from > state.length
+		|| (elideAt >= 0 && elideAt < from)) {
+		return;
+	}
 	const auto till = from + int(text.size());
 
 	// The paragraph was itemized without the ellipsis a line may end with, so
 	// its part of the line is itemized on its own and put at the end.
-	const auto inParagraph = std::min(
-		till,
-		(elideAt >= 0) ? elideAt : state.length);
+	const auto inParagraph = std::clamp(
+		(elideAt >= 0) ? std::min(elideAt, state.length) : state.length,
+		from,
+		till);
 	// The items of a paragraph follow each other, so the ones of a line are a
 	// range out of them: the first is the one the line starts in, and the walk
 	// stops as soon as an item begins past where the line ends.
@@ -1852,7 +1858,8 @@ LineShaper::Backend::Backend(
 		// and those are text: the object is only what the block paints, and
 		// counting them in would paint it once more. The ellipsis a line adds
 		// belongs to no block at all.
-		const auto space = (position >= 0)
+		const auto space = (type == TextBlockType::Emoji)
+			&& (position >= 0)
 			&& (position < int(text.size()))
 			&& text.at(position).isSpace();
 		const auto object = !piece.own
