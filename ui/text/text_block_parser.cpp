@@ -729,15 +729,17 @@ void BlockParser::parse(const TextParseOptions &options) {
 		_t->insertModifications(0, -(_ptr - _start));
 	}
 
+	const auto full = [&] {
+		return (_tText.size() >= 0x8000); // 32k max
+	};
 	for (; _ptr <= _end; ++_ptr) {
-		while (checkEntities()) {
+		while (!full() && checkEntities()) {
+		}
+		if (full()) {
+			break;
 		}
 		parseCurrentChar();
 		parseEmojiFromCurrent();
-
-		if (_tText.size() >= 0x8000) {
-			break; // 32k max
-		}
 	}
 	createBlock();
 	finalize(options);
