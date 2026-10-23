@@ -299,6 +299,7 @@ void BlockParser::finishEntities() {
 		while (!list.empty()) {
 			if (list.back().type() == StartedEntity::Type::CustomEmoji) {
 				createBlock();
+				_customEmojiData = QString();
 			} else if (const auto flags = list.back().flags()) {
 				if (_flags & (*flags)) {
 					createBlock();
