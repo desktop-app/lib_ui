@@ -59,6 +59,9 @@ struct ParsedLinkTag {
 };
 
 [[nodiscard]] ParsedLinkTag ParseLinkTag(QStringView tag) {
+	if (tag.trimmed().startsWith(u"internal:"_q, Qt::CaseInsensitive)) {
+		return {};
+	}
 	if (IsMentionLink(tag)) {
 		const auto data = MentionEntityData(tag);
 		return data.isEmpty()
