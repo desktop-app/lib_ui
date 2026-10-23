@@ -569,6 +569,7 @@ void BlockParser::skipPassedEntities() {
 	while (_waitingEntity != _entitiesEnd
 		&& _start + _waitingEntity->offset() + _waitingEntity->length() <= _ptr) {
 		++_waitingEntity;
+		skipBadEntities();
 	}
 }
 
