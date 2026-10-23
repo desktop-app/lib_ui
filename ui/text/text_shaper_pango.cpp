@@ -1470,7 +1470,9 @@ void Paragraph::resolve(
 	const auto limit = (blockIndexLimit >= 0)
 		? blockIndexLimit
 		: int(blocks->size());
-	for (auto i = blockIndexHint; i != limit; ++i) {
+	for (auto i = blockIndexHint
+		; i != limit && (*blocks)[i]->position() < position + length
+		; ++i) {
 		const auto block = (*blocks)[i].get();
 		const auto from = std::max(int(block->position()) - position, 0);
 		const auto till = std::min(
