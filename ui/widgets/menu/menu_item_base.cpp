@@ -22,7 +22,9 @@ ItemBase::ItemBase(
 void ItemBase::setSelected(
 		bool selected,
 		TriggeredSource source) {
-	if (selected && !isEnabled()) {
+	if (selected
+		&& !isEnabled()
+		&& (source != TriggeredSource::Keyboard || !isUnavailable())) {
 		return;
 	}
 	if (_selected.current() != selected) {
@@ -40,6 +42,22 @@ void ItemBase::setSelected(
 
 bool ItemBase::isSelected() const {
 	return _selected.current();
+}
+
+bool ItemBase::isUnavailable() const {
+	// Not a separator and not an item that is never chosen, like a caption:
+	// those keep an enabled action and are passed over as before.
+	return !isEnabled()
+		&& !action()->isSeparator()
+		&& !action()->isEnabled();
+}
+
+AccessibilityState ItemBase::accessibilityState() const {
+	auto result = RippleButton::accessibilityState();
+	// The widget itself stays enabled, or it could not hold the focus a
+	// screen reader follows; what is unavailable is the command.
+	result.disabled = isUnavailable();
+	return result;
 }
 
 rpl::producer<CallbackData> ItemBase::selects() const {

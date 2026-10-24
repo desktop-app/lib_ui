@@ -317,7 +317,8 @@ void Menu::setShowSource(TriggeredSource source) {
 		}
 		for (auto i = 0, count = int(_actions.size()); i != count; ++i) {
 			const auto widget = _actionWidgets[i].get();
-			if (widget->isEnabled() && !widget->action()->isSeparator()) {
+			if ((widget->isEnabled() || widget->isUnavailable())
+				&& !widget->action()->isSeparator()) {
 				return i;
 			}
 		}
@@ -414,9 +415,13 @@ void Menu::handleKeyPress(not_null<QKeyEvent*> e) {
 			newSelected -= _actions.size();
 		}
 	} while (newSelected != start
-		&& (!_actionWidgets[newSelected]->isEnabled()));
+		&& (!_actionWidgets[newSelected]->isEnabled())
+		&& (!_actionWidgets[newSelected]->isUnavailable()));
 
-	if (_actionWidgets[newSelected]->isEnabled()) {
+	// A disabled command is stopped on as well, like in a system menu: it
+	// is in the menu, greyed, and can't be chosen.
+	if (_actionWidgets[newSelected]->isEnabled()
+		|| _actionWidgets[newSelected]->isUnavailable()) {
 		setSelected(newSelected, false);
 	}
 }

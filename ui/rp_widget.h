@@ -383,6 +383,9 @@ private:
 struct AccessibilityState {
 	bool checkable : 1 = false;
 	bool checked : 1 = false;
+	// Only for what is unavailable while its widget stays enabled, like a
+	// disabled menu item that holds the focus; a disabled widget needs none.
+	bool disabled : 1 = false;
 	bool extSelectable : 1 = false;
 	bool multiSelectable : 1 = false;
 	bool pressed : 1 = false;
