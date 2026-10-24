@@ -357,6 +357,9 @@ public:
 	QAccessible::Role accessibilityRole() override {
 		return QAccessible::Role::RadioButton;
 	}
+	// The "x of y" among the buttons of the group, which are not always
+	// siblings in one parent.
+	AccessibilitySetPosition accessibilitySetPosition() const override;
 
 protected:
 	void handlePress() override;

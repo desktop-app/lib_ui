@@ -1117,6 +1117,23 @@ void Radiobutton::keyPressEvent(QKeyEvent *e) {
 	}
 }
 
+AccessibilitySetPosition Radiobutton::accessibilitySetPosition() const {
+	// The set is the group, in the order its buttons were made, without
+	// the hidden ones: the correct answer button of an empty quiz row is
+	// not one of the choices yet (see keyPressEvent).
+	auto result = AccessibilitySetPosition();
+	for (const auto &button : _group->_buttons) {
+		if (button->isHidden()) {
+			continue;
+		}
+		++result.size;
+		if (button.get() == this) {
+			result.position = result.size;
+		}
+	}
+	return result;
+}
+
 Radiobutton::~Radiobutton() {
 	_group->unregisterButton(this);
 }
