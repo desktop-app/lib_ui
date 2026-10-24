@@ -447,6 +447,7 @@ base::flat_set<int32> CreateValidTopDomains() {
 	addOne(QString::fromLatin1("asia"));
 	addOne(QString::fromLatin1("biz"));
 	addOne(QString::fromLatin1("cat"));
+	addOne(QString::fromLatin1("ceo"));
 	addOne(QString::fromLatin1("com"));
 	addOne(QString::fromLatin1("coop"));
 	addOne(QString::fromLatin1("info"));
