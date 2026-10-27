@@ -207,6 +207,8 @@ public:
 	void setOverscrollDefaults(int from, int till, bool shift = false);
 	void clearOverscroll();
 	void returnToOverscrollDefaults();
+	// Shrinks a plain bottom bounce so the content stays at that position.
+	void absorbBottomOverscroll(int position);
 	void setOverscrollBg(QColor bg);
 	void setContentBottomInset(int inset);
 
