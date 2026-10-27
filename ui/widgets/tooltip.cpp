@@ -499,6 +499,8 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 		const auto desired = raw->textMaxWidth();
 		if (desired <= maxWidth) {
 			raw->resizeToWidth(desired);
+			// An unchanged natural width won't resize a hidden wrap.
+			SendPendingMoveResizeEvents(raw);
 			return;
 		}
 		raw->resizeToWidth(maxWidth);
@@ -510,6 +512,7 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
 				return raw->heightNoMargins();
 			});
 		raw->resizeToWidth(niceWidth);
+		raw->setNaturalWidth(niceWidth);
 	}, raw->lifetime());
 	return result;
 }
