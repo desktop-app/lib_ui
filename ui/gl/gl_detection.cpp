@@ -209,7 +209,8 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 			< kNvidiaNativeWaylandWsiSince);
 }
 
-[[nodiscard]] std::optional<RhiCapabilities> ProbeVulkanCapabilities() {
+[[nodiscard]] std::optional<RhiCapabilities> ProbeVulkanCapabilities(
+		QRhi::Flags flags) {
 	auto instance = QVulkanInstance();
 	if (instance.supportedApiVersion() >= QVersionNumber(1, 1)) {
 		instance.setApiVersion(QVersionNumber(1, 1));
@@ -221,7 +222,7 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 	auto params = QRhiVulkanInitParams();
 	params.inst = &instance;
 	const auto rhi = std::unique_ptr<QRhi>(
-		QRhi::create(QRhi::Vulkan, &params));
+		QRhi::create(QRhi::Vulkan, &params, flags));
 	if (!rhi) {
 		LOG(("RHI: Vulkan probe failed, no device."));
 		return std::nullopt;
@@ -252,6 +253,10 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 #endif // !Q_OS_MAC && !Q_OS_WIN && QT_CONFIG(vulkan)
 
 [[nodiscard]] RhiCapabilities ProbeRhiCapabilities() {
+	const auto flags = qEnvironmentVariableIntValue(
+		"QSG_RHI_PREFER_SOFTWARE_RENDERER")
+		? QRhi::Flags(QRhi::PreferSoftwareRenderer)
+		: QRhi::Flags();
 #if !defined(Q_OS_MAC) && !defined(Q_OS_WIN)
 	auto offscreen = std::unique_ptr<QOffscreenSurface>();
 #endif // !Q_OS_MAC && !Q_OS_WIN
@@ -259,16 +264,16 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 #ifdef Q_OS_MAC
 	if (Platform::MetalSupported()) {
 		auto params = QRhiMetalInitParams();
-		rhi.reset(QRhi::create(QRhi::Metal, &params));
+		rhi.reset(QRhi::create(QRhi::Metal, &params, flags));
 	}
 #elif defined(Q_OS_WIN) // Q_OS_MAC
 	auto params = QRhiD3D11InitParams();
-	rhi.reset(QRhi::create(QRhi::D3D11, &params));
+	rhi.reset(QRhi::create(QRhi::D3D11, &params, flags));
 #else // Q_OS_MAC || Q_OS_WIN
 #if QT_CONFIG(vulkan)
 	if (OptionEnableVulkanRhi.value()) {
 		CrashCheckStart(CrashCheckStage::Vulkan);
-		if (const auto vulkan = ProbeVulkanCapabilities()) {
+		if (const auto vulkan = ProbeVulkanCapabilities(flags)) {
 			return *vulkan;
 		}
 		LOG(("RHI: Falling back to OpenGL."));
@@ -287,7 +292,7 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 		auto params = QRhiGles2InitParams();
 		params.format = format;
 		params.fallbackSurface = offscreen.get();
-		rhi.reset(QRhi::create(QRhi::OpenGLES2, &params));
+		rhi.reset(QRhi::create(QRhi::OpenGLES2, &params, flags));
 	};
 	// Compute needs a 4.3 core context, plain 3D rendering does not. Probe
 	// the richer format first to detect compute, then fall back so a
@@ -304,11 +309,18 @@ constexpr auto kNvidiaNativeWaylandWsiSince = 545;
 		LOG(("RHI: Probe failed, no device."));
 		return {};
 	}
+	const auto info = rhi->driverInfo();
+	const auto software = (info.deviceType == QRhiDriverInfo::CpuDevice);
 	const auto compute = rhi->isFeatureSupported(QRhi::Compute);
-	LOG(("RHI: Probe backend=%1 device=%2 compute=%3."
+	LOG(("RHI: Probe backend=%1 device=%2 software=%3 compute=%4."
 		).arg(rhi->backendName()
-		).arg(rhi->driverInfo().deviceName
+		).arg(info.deviceName
+		).arg(software ? "yes" : "no"
 		).arg(compute ? "yes" : "no"));
+	if (software) {
+		LOG(("RHI: Not supported, software device."));
+		return {};
+	}
 	return {
 		.supported = true,
 		.compute = compute,
