@@ -130,6 +130,7 @@ struct CustomEmojiData {
 
 struct ExtendedData {
 	std::vector<ClickHandlerPtr> links;
+	std::unique_ptr<std::vector<uint16>> skippedLinkIndices;
 	std::unique_ptr<QuotesData> quotes;
 	std::unique_ptr<SpoilerData> spoiler;
 	std::shared_ptr<CustomEmojiData> customEmoji;
