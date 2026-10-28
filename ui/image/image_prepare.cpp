@@ -21,6 +21,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QBuffer>
 #include <QtCore/QMutex>
+#include <QtGui/QImageIOHandler>
 #include <QtGui/QImageReader>
 #include <QtSvg/QSvgRenderer>
 
@@ -401,19 +402,90 @@ std::array<QImage, 4> PrepareCorners(
 	return result;
 }
 
+bool IsSvgFormat(const QByteArray &format) {
+	const auto lower = format.toLower();
+	return (lower == "svg") || (lower == "svgz");
+}
+
+namespace {
+
+[[nodiscard]] ReadResult RenderSanitizedSvg(
+		const QByteArray &bytes,
+		const ReadArgs &args) {
+	auto renderer = QSvgRenderer(bytes);
+	if (!renderer.isValid()) {
+		LOG(("Svg Error: Invalid data."));
+		return {};
+	}
+	const auto original = renderer.defaultSize();
+	if (!args.gzipSvg
+		&& (original.width() <= 0
+			|| original.height() <= 0
+			|| original.width() > 0xffff
+			|| original.height() > 0xffff
+			|| (qint64(original.width()) * original.height()
+				> kReadMaxArea))) {
+		return {};
+	}
+	auto size = original;
+	if (!args.maxSize.isEmpty()
+		&& (size.width() > args.maxSize.width()
+			|| size.height() > args.maxSize.height())) {
+		size = size.scaled(args.maxSize, Qt::KeepAspectRatio);
+	}
+	if (size.isEmpty()) {
+		LOG(("Svg Error: Bad size %1x%2."
+			).arg(original.width()
+			).arg(original.height()));
+		return {};
+	}
+	auto result = ReadResult();
+	if (size != original) {
+		result.scale = (size.width() > size.height())
+			? float64(size.width()) / original.width()
+			: float64(size.height()) / original.height();
+	}
+	if (args.gzipSvg) {
+		result.image = QImage(size, QImage::Format_ARGB32_Premultiplied);
+	} else {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		if (!QImageIOHandler::allocateImage(
+				size,
+				QImage::Format_ARGB32_Premultiplied,
+				&result.image)) {
+			return {};
+		}
+#else // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		result.image = QImage(size, QImage::Format_ARGB32_Premultiplied);
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		if (result.image.isNull()) {
+			return {};
+		}
+	}
+	result.image.fill(Qt::transparent);
+	{
+		QPainter p(&result.image);
+		renderer.render(&p, QRect(QPoint(), size));
+	}
+	result.format = "svg";
+	return result;
+}
+
+} // namespace
+
 [[nodiscard]] ReadResult ReadGzipSvg(const ReadArgs &args) {
 	auto bytes = UnpackGzip(args.content);
 	if (bytes.isEmpty()) {
 		LOG(("Svg Error: Couldn't unpack gzip-ed content."));
 		return {};
 	}
-	auto result = ReadResult();
+	auto svgCutOutContent = QByteArray();
 	if (const auto &id = args.svgCutOutId; !id.isEmpty()) {
 		const auto start = bytes.indexOf("<g id=\""_q + id + '"');
 		if (start > 0) {
 			const auto end = bytes.indexOf("</g>"_q, start);
 			if (end > start) {
-				result.svgCutOutContent = bytes.mid(start, end + 4 - start);
+				svgCutOutContent = bytes.mid(start, end + 4 - start);
 				bytes.remove(start, end + 4 - start);
 			}
 		}
@@ -423,36 +495,10 @@ std::array<QImage, 4> PrepareCorners(
 		LOG(("Svg Error: Unsafe data."));
 		return {};
 	}
-	auto renderer = QSvgRenderer(bytes);
-	if (!renderer.isValid()) {
-		LOG(("Svg Error: Invalid data."));
-		return {};
+	auto result = RenderSanitizedSvg(bytes, args);
+	if (!result.image.isNull()) {
+		result.svgCutOutContent = std::move(svgCutOutContent);
 	}
-	const auto original = renderer.defaultSize();
-	auto size = original;
-	if (!args.maxSize.isEmpty()
-		&& (size.width() > args.maxSize.width()
-			|| size.height() > args.maxSize.height())) {
-		size = size.scaled(args.maxSize, Qt::KeepAspectRatio);
-	}
-	if (size.isEmpty()) {
-		LOG(("Svg Error: Bad size %1x%2."
-			).arg(renderer.defaultSize().width()
-			).arg(renderer.defaultSize().height()));
-		return {};
-	}
-	if (size != original) {
-		result.scale = (size.width() > size.height())
-			? float64(size.width()) / original.width()
-			: float64(size.height()) / original.height();
-	}
-	result.image = QImage(size, QImage::Format_ARGB32_Premultiplied);
-	result.image.fill(Qt::transparent);
-	{
-		QPainter p(&result.image);
-		renderer.render(&p, QRect(QPoint(), size));
-	}
-	result.format = "svg";
 	return result;
 }
 
@@ -466,6 +512,16 @@ std::array<QImage, 4> PrepareCorners(
 	reader.setAutoTransform(true);
 	if (!reader.canRead()) {
 		return {};
+	}
+	const auto format = reader.format().toLower();
+	if (IsSvgFormat(format)) {
+		const auto svg = (format == "svgz") ? UnpackGzip(bytes) : bytes;
+		const auto sanitized = SanitizeSvg(svg);
+		if (sanitized.isEmpty()) {
+			LOG(("Svg Error: Unsafe data."));
+			return {};
+		}
+		return RenderSanitizedSvg(sanitized, args);
 	}
 	const auto size = reader.size();
 	if (size.width() <= 0

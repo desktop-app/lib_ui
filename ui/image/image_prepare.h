@@ -127,6 +127,8 @@ struct ReadResult {
 };
 [[nodiscard]] ReadResult Read(ReadArgs &&args);
 
+[[nodiscard]] bool IsSvgFormat(const QByteArray &format);
+
 enum class Option {
 	None                  = 0,
 	FastTransform         = (1 << 0),
