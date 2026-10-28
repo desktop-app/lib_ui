@@ -15,6 +15,8 @@
 #include <QtCore/QVector>
 #include <QtGui/QClipboard>
 
+#include <vector>
+
 struct TextWithEntities;
 
 namespace style {
@@ -175,6 +177,23 @@ private:
 	int _offset = 0;
 	int _length = 0;
 	QString _data;
+
+};
+
+[[nodiscard]] bool EntityReplacesText(const EntityInText &entity);
+
+class ReplacedTextRanges final {
+public:
+	void add(int from, int till);
+	void prepare();
+	[[nodiscard]] bool overlaps(int from, int till) const;
+
+private:
+	struct Range {
+		int from = 0;
+		int till = 0;
+	};
+	std::vector<Range> _ranges;
 
 };
 

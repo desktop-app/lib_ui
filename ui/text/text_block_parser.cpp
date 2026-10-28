@@ -403,9 +403,7 @@ bool BlockParser::checkEntities() {
 		const auto entityData = _waitingEntity->data();
 		const auto [dateValue, dateFlags] = DeserializeFormattedDateData(
 			entityData);
-		const auto customText = (dateFlags != FormattedDateFlags())
-			&& _context.formattedDateFactory;
-		if (customText) {
+		if (isReplacedEntity(*_waitingEntity)) {
 			createBlock();
 
 			const auto result = _context.formattedDateFactory(
@@ -484,12 +482,26 @@ bool BlockParser::checkEntities() {
 		|| entityType == EntityType::Hashtag
 		|| entityType == EntityType::Cashtag
 		|| entityType == EntityType::BotCommand) {
-		pushSimpleUrl(entityType);
+		if (!hasReplacedPart(*_waitingEntity)) {
+			pushSimpleUrl(entityType);
+		} else if (entityType == EntityType::Url) {
+			const auto data = QString(entityBegin, entityLength);
+			// A raw internal: url stays rejected, not a confirmed custom one.
+			if (data.startsWith(u"internal:"_q, Qt::CaseInsensitive)) {
+				pushSimpleUrl(entityType);
+			} else {
+				link.type = EntityType::CustomUrl;
+				link.data = data;
+				link.text = data;
+			}
+		}
 	} else if (entityType == EntityType::CustomUrl) {
 		const auto url = _waitingEntity->data();
 		const auto text = QString(entityBegin, entityLength);
 		// An indexed link stays custom even when it shows its own data.
-		if (url == text && !IsIndexedLinkData(url)) {
+		if (url == text
+			&& !IsIndexedLinkData(url)
+			&& !hasReplacedPart(*_waitingEntity)) {
 			pushSimpleUrl(EntityType::Url);
 		} else {
 			pushComplexUrl();
@@ -717,9 +729,42 @@ bool BlockParser::isLinkEntity(const EntityInText &entity) const {
 	return ranges::find(urls, type) != std::end(urls);
 }
 
+bool BlockParser::isReplacedEntity(const EntityInText &entity) const {
+	return EntityReplacesText(entity)
+		&& ((entity.type() != EntityType::FormattedDate)
+			|| _context.formattedDateFactory);
+}
+
+void BlockParser::collectReplacedRanges() {
+	// WHY: skipBadEntities() admitted the first waiting entity against the
+	// untrimmed length before trimSourceRange() shortened _end, and traversal
+	// renders it without revalidating, so collect it against that same length.
+	const auto originalLength = int(_source.text.size());
+	const auto trimmedLength = int(_end - _start);
+	for (auto i = _source.entities.begin(); i != _entitiesEnd; ++i) {
+		const auto &entity = *i;
+		const auto length = (i == _waitingEntity)
+			? originalLength
+			: trimmedLength;
+		if (entity.validForText(length) && isReplacedEntity(entity)) {
+			_replacedRanges.add(
+				entity.offset(),
+				entity.offset() + entity.length());
+		}
+	}
+	_replacedRanges.prepare();
+}
+
+bool BlockParser::hasReplacedPart(const EntityInText &entity) const {
+	return _replacedRanges.overlaps(
+		entity.offset(),
+		entity.offset() + entity.length());
+}
+
 void BlockParser::parse(const TextParseOptions &options) {
 	skipBadEntities();
 	trimSourceRange(options);
+	collectReplacedRanges();
 
 	_tText.resize(0);
 	if (_t->_extended) {

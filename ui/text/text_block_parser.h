@@ -88,6 +88,10 @@ private:
 
 	bool isInvalidEntity(const EntityInText &entity) const;
 	bool isLinkEntity(const EntityInText &entity) const;
+	bool isReplacedEntity(const EntityInText &entity) const;
+
+	void collectReplacedRanges();
+	[[nodiscard]] bool hasReplacedPart(const EntityInText &entity) const;
 
 	bool processCustomIndex(uint16 index);
 	[[nodiscard]] uint16 pushInternal(EntityLinkData &&data);
@@ -114,6 +118,7 @@ private:
 	std::vector<uint16> _linksIndexes;
 	base::flat_map<uint16, uint16> _customLinkIndices; // _links -> custom.
 	std::vector<int> _internalBlocks; // Blocks with _internals indices.
+	ReplacedTextRanges _replacedRanges;
 
 	std::vector<EntityLinkData> _links;
 	std::vector<EntityLinkData> _internals;
