@@ -535,7 +535,10 @@ bool WindowHelper::filterNativeEvent(
 		if (_title->isHidden() || !wParam) {
 			return false;
 		}
-		if (window()->isFullScreen()) {
+		const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
+		const auto fullscreen = (style & WS_POPUP)
+			&& !(style & (WS_DLGFRAME | WS_THICKFRAME));
+		if (fullscreen) {
 			// Whole window is client, and Qt must not apply custom
 			// margins of normal state (they stay set in full screen).
 			if (result) {
