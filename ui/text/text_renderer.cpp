@@ -656,6 +656,8 @@ void Renderer::initNextLine() {
 }
 
 void Renderer::initParagraphBidi() {
+	// A painter that failed to begin has no paint engine.
+	const auto engine = _p ? _p->paintEngine() : nullptr;
 	_paragraph.resolve(
 		_t,
 		_paragraphStart,
@@ -663,8 +665,8 @@ void Renderer::initParagraphBidi() {
 		(_paragraphDirection == Qt::RightToLeft),
 		int(_paragraphStartBlock - begin(_t->_blocks)),
 		-1,
-		(_p
-			? _p->paintEngine()->paintDevice()->devicePixelRatioF()
+		(engine
+			? engine->paintDevice()->devicePixelRatioF()
 			: _batch
 			? _batch->ratio
 			: 1.));

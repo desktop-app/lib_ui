@@ -1075,7 +1075,11 @@ void FillLines(cairo_t *context, QPointF from, const Lines &lines) {
 	// Painting a widget, the device of the painter is the widget itself and
 	// the pixels live in the buffer of the window behind it - which the engine
 	// is given and the painter is not.
-	const auto device = p.paintEngine()->paintDevice();
+	const auto engine = p.paintEngine();
+	if (!engine) {
+		return false;
+	}
+	const auto device = engine->paintDevice();
 	if (device->devType() != QInternal::Image) {
 		return false;
 	}
@@ -1120,7 +1124,7 @@ void FillLines(cairo_t *context, QPointF from, const Lines &lines) {
 	// already on the screen.
 	auto clip = QRegion();
 	auto clipping = false;
-	const auto system = p.paintEngine()->systemClip();
+	const auto system = engine->systemClip();
 	if (!system.isEmpty()) {
 		// Already in the pixels of the device.
 		clip = system;
