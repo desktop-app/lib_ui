@@ -12,7 +12,6 @@
 #include "ui/rp_widget.h"
 #include "ui/effects/animations.h"
 #include "ui/text/text_entity.h"
-#include "ui/text/text_custom_emoji.h"
 
 #include <rpl/variable.h>
 
@@ -28,6 +27,7 @@ class QContextMenuEvent;
 class Painter;
 
 namespace Ui::Text {
+struct MarkedContext;
 struct QuotePaintCache;
 } // namespace Ui::Text
 
