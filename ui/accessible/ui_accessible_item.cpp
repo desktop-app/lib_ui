@@ -345,6 +345,13 @@ QString SubItem::text(QAccessible::Text t) const {
 		return parent->accessibilityChildSubItemName(row, _column);
 	case QAccessible::Value:
 		return parent->accessibilityChildSubItemValue(row, _column);
+#ifdef Q_OS_MAC
+	case QAccessible::Description:
+		// Qt's macOS bridge exposes Value only for text, value and
+		// checkable roles, never for a Cell, so a client would get only
+		// the column name. Description reaches it as AXDescription.
+		return parent->accessibilityChildSubItemValue(row, _column);
+#endif // Q_OS_MAC
 	}
 	return {};
 }
