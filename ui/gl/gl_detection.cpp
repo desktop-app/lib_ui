@@ -108,7 +108,7 @@ base::options::toggle OptionEnableVulkanRhi({
 	.name = "Enable Vulkan renderer",
 	.description = "Use Vulkan for GPU rendering "
 		"instead of OpenGL when it is available.",
-	.defaultValue = false,
+	.defaultValue = true,
 	.scope = [] { return VulkanRhiAvailable(); },
 	.restartRequired = true,
 });
