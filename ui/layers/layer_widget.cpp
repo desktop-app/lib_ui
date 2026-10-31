@@ -213,12 +213,13 @@ void LayerStackWidget::BackgroundWidget::setLayerShown(bool shown) {
 
 void LayerStackWidget::BackgroundWidget::checkWasShown(bool wasShown) {
 	if (isShown() != wasShown) {
+		// Hiding fades the dim linearly, matching the box fade.
 		_a_shown.start(
 			[this] { animationCallback(); },
 			wasShown ? 1. : 0.,
 			wasShown ? 0. : 1.,
 			_duration,
-			anim::easeOutCirc);
+			wasShown ? anim::linear : anim::easeOutCirc);
 	}
 }
 
