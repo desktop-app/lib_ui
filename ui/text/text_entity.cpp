@@ -2114,13 +2114,21 @@ QString JoinTag(const QList<QStringView> &list) {
 	for (const auto &entry : list) {
 		length += entry.size();
 	}
+	const auto quote = [](QStringView tag) {
+		return (tag == Ui::InputField::kTagBlockquote)
+			|| (tag == Ui::InputField::kTagBlockquoteCollapsed);
+	};
 	auto result = QString();
 	result.reserve(length);
 	result.append(list.front());
+	auto onlyQuotes = quote(list.front());
 	for (auto i = 1, count = int(list.size()); i != count; ++i) {
-		if (!IsSeparateTag(list[i])) {
-			result.append(kTagSeparator).append(list[i]);
+		const auto tag = list[i];
+		if (!IsSeparateTag(tag)
+			|| (onlyQuotes && tag == Ui::InputField::kTagCode)) {
+			result.append(kTagSeparator).append(tag);
 		}
+		onlyQuotes = onlyQuotes && quote(tag);
 	}
 	return result;
 }

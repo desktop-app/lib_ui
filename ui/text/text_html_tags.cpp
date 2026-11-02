@@ -392,6 +392,9 @@ void AddUnique(
 		return { { HtmlTag::Pre } };
 	}
 	if (hasCode) {
+		if (HasTag(result, HtmlTag::Blockquote)) {
+			return { { HtmlTag::Blockquote }, { HtmlTag::Code } };
+		}
 		return { { HtmlTag::Code } };
 	}
 	if (!link.isEmpty() && !suppressLink) {
@@ -535,6 +538,9 @@ void AddLinkRunSegment(
 		return { { HtmlTag::Pre } };
 	}
 	if (counts.code > 0) {
+		if (counts.blockquote > 0) {
+			return { { HtmlTag::Blockquote }, { HtmlTag::Code } };
+		}
 		return { { HtmlTag::Code } };
 	}
 	if (counts.blockquote > 0) {
@@ -1083,7 +1089,11 @@ void AppendEscaped(QString &result, QStringView text, bool preserveNewlines) {
 		return Ui::InputField::kTagPre;
 	}
 	if (active.code > 0) {
-		return Ui::InputField::kTagCode;
+		return (active.blockquote > 0)
+			? TextUtilities::TagWithAdded(
+				Ui::InputField::kTagBlockquote,
+				Ui::InputField::kTagCode)
+			: Ui::InputField::kTagCode;
 	}
 	auto tags = QList<QStringView>();
 	if (active.blockquote > 0) {
