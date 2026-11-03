@@ -335,6 +335,7 @@ public:
 	void setToggleLocked(bool locked);
 	void setColorOverride(std::optional<QColor> textColorOverride);
 	void setPaddingOverride(style::margins padding);
+	void setAllowTextLines(int lines = 0);
 
 	[[nodiscard]] const style::SettingsButton &st() const;
 	[[nodiscard]] int fullTextWidth() const;
@@ -358,10 +359,13 @@ protected:
 private:
 	void setText(TextWithEntities &&text);
 	[[nodiscard]] QRect toggleRect() const;
+	[[nodiscard]] int textAvailableWidth(int outerw) const;
 
 	const style::SettingsButton &_st;
 	style::margins _padding;
 	Ui::Text::String _text;
+	TextWithEntities _textSource;
+	int _allowTextLines = 1;
 	std::unique_ptr<Ui::ToggleView> _toggle;
 	std::optional<QColor> _textColorOverride;
 	Text::MarkedContext _context;
