@@ -46,6 +46,14 @@ struct FontResolveResult {
 };
 [[nodiscard]] const FontResolveResult *FindAdjustResult(const QFont &font);
 
+// WHY: a localization check sees every text cut with an ellipsis, so it
+// can report phrases that do not fit; null outside such checks.
+using ElisionObserver = void(*)(const QString &text, int width);
+// It runs on any layout thread; removing it does not wait for running calls.
+void SetElisionObserver(ElisionObserver observer);
+[[nodiscard]] bool ElisionObserved();
+void NotifyElided(const QString &text, int width);
+
 } // namespace style
 
 namespace style::internal {
@@ -108,11 +116,9 @@ public:
 		return int(std::ceil(_m.horizontalAdvance(ch)));
 	}
 	[[nodiscard]] QString elided(
-			const QString &str,
-			int width,
-			Qt::TextElideMode mode = Qt::ElideRight) const {
-		return _m.elidedText(str, mode, width);
-	}
+		const QString &str,
+		int width,
+		Qt::TextElideMode mode = Qt::ElideRight) const;
 	[[nodiscard]] const QFontMetricsF &metrics() const {
 		return _m;
 	}

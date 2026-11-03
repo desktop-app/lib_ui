@@ -11,6 +11,8 @@
 #include "base/base_file_utilities.h"
 #include "ui/text/text_shaper.h"
 
+#include <atomic>
+
 #include <QtCore/QMap>
 #include <QtCore/QVector>
 #include <QtCore/QDir>
@@ -523,12 +525,44 @@ void Font::init(
 	_data = &i->second->data;
 }
 
+QString FontData::elided(
+		const QString &str,
+		int width,
+		Qt::TextElideMode mode) const {
+	auto result = _m.elidedText(str, mode, width);
+	if (result != str) {
+		NotifyElided(str, width);
+	}
+	return result;
+}
+
 OwnedFont::OwnedFont(const QString &custom, FontFlags flags, int size)
 : _data(ResolveFont(custom, flags, size), nullptr) {
 	_font._data = &_data;
 }
 
 } // namespace internal
+
+namespace {
+
+std::atomic<ElisionObserver> ElisionObserverInstance = nullptr;
+
+} // namespace
+
+void SetElisionObserver(ElisionObserver observer) {
+	ElisionObserverInstance.store(observer, std::memory_order_release);
+}
+
+bool ElisionObserved() {
+	return ElisionObserverInstance.load(std::memory_order_acquire) != nullptr;
+}
+
+void NotifyElided(const QString &text, int width) {
+	if (const auto observer = ElisionObserverInstance.load(
+			std::memory_order_acquire)) {
+		observer(text, width);
+	}
+}
 
 const FontResolveResult *FindAdjustResult(const QFont &font) {
 	const auto key = internal::QtFontKey(font);
