@@ -1528,6 +1528,71 @@ bool WasInsertTillTheEndOfTag(
 	return true;
 }
 
+struct FragmentState {
+	not_null<const QTextDocument*> document;
+	QTextBlock block;
+	QTextBlock::iterator i;
+};
+
+[[nodiscard]] FragmentState FragmentStateAt(
+		not_null<const QTextDocument*> document,
+		int position) {
+	auto state = FragmentState{ document, document->findBlock(position) };
+	if (state.block != document->end()) {
+		state.i = state.block.begin();
+	}
+	return state;
+}
+
+bool SkipInvalidFragments(FragmentState &state) {
+	const auto document = state.document;
+	if (state.block == document->end()) {
+		return false;
+	}
+	while (state.i.atEnd()) {
+		state.block = state.block.next();
+		if (state.block == document->end()) {
+			return false;
+		}
+		state.i = state.block.begin();
+	}
+	return true;
+}
+
+void MoveToNextFragment(FragmentState &state) {
+	const auto document = state.document;
+	Expects(state.block != document->end());
+	Expects(!state.i.atEnd());
+
+	++state.i;
+}
+
+bool MoveToPreviousFragment(FragmentState &state) {
+	const auto document = state.document;
+	Expects(state.block != document->end());
+	Expects(!state.i.atEnd());
+
+	while (state.i == state.block.begin()) {
+		if (state.block == document->begin()) {
+			state.block = document->end();
+			return false;
+		}
+		state.block = state.block.previous();
+		state.i = state.block.end();
+	}
+	--state.i;
+	return true;
+}
+
+[[nodiscard]] int FragmentStart(const FragmentState &state) {
+	return state.i.fragment().position();
+}
+
+[[nodiscard]] int FragmentEnd(const FragmentState &state) {
+	const auto fragment = state.i.fragment();
+	return fragment.position() + fragment.length();
+}
+
 struct FormattingAction {
 	enum class Type {
 		Invalid,
@@ -4755,68 +4820,19 @@ auto InputField::selectionEditLinkData(EditLinkSelection selection) const
 	}
 	Assert(!link.isEmpty());
 
-	struct State {
-		QTextBlock block;
-		QTextBlock::iterator i;
-	};
-	const auto document = _inner->document();
-	const auto skipInvalid = [&](State &state) {
-		if (state.block == document->end()) {
-			return false;
-		}
-		while (state.i.atEnd()) {
-			state.block = state.block.next();
-			if (state.block == document->end()) {
-				return false;
-			}
-			state.i = state.block.begin();
-		}
-		return true;
-	};
-	const auto moveToNext = [&](State &state) {
-		Expects(state.block != document->end());
-		Expects(!state.i.atEnd());
-
-		++state.i;
-	};
-	const auto moveToPrevious = [&](State &state) {
-		Expects(state.block != document->end());
-		Expects(!state.i.atEnd());
-
-		while (state.i == state.block.begin()) {
-			if (state.block == document->begin()) {
-				state.block = document->end();
-				return false;
-			}
-			state.block = state.block.previous();
-			state.i = state.block.end();
-		}
-		--state.i;
-		return true;
-	};
-	const auto stateTag = [&](const State &state) {
+	const auto stateTag = [&](const FragmentState &state) {
 		const auto format = state.i.fragment().charFormat();
 		return format.property(kTagProperty).toString();
 	};
-	const auto stateTagHasLink = [&](const State &state) {
+	const auto stateTagHasLink = [&](const FragmentState &state) {
 		const auto tag = stateTag(state);
 		return (tag == link)
 			|| TextUtilities::SplitTags(tag).contains(QStringView(link));
 	};
-	const auto stateStart = [&](const State &state) {
-		return state.i.fragment().position();
-	};
-	const auto stateEnd = [&](const State &state) {
-		const auto fragment = state.i.fragment();
-		return fragment.position() + fragment.length();
-	};
-	auto state = State{ document->findBlock(position) };
-	if (state.block != document->end()) {
-		state.i = state.block.begin();
-	}
-	for (; skipInvalid(state); moveToNext(state)) {
-		const auto fragmentStart = stateStart(state);
-		const auto fragmentEnd = stateEnd(state);
+	auto state = FragmentStateAt(_inner->document(), position);
+	for (; SkipInvalidFragments(state); MoveToNextFragment(state)) {
+		const auto fragmentStart = FragmentStart(state);
+		const auto fragmentEnd = FragmentEnd(state);
 		if (fragmentEnd <= position) {
 			continue;
 		} else if (fragmentStart >= selection.till) {
@@ -4826,12 +4842,12 @@ auto InputField::selectionEditLinkData(EditLinkSelection selection) const
 			auto start = fragmentStart;
 			auto finish = fragmentEnd;
 			auto copy = state;
-			while (moveToPrevious(copy) && stateTagHasLink(copy)) {
-				start = stateStart(copy);
+			while (MoveToPreviousFragment(copy) && stateTagHasLink(copy)) {
+				start = FragmentStart(copy);
 			}
-			while (skipInvalid(state) && stateTagHasLink(state)) {
-				finish = stateEnd(state);
-				moveToNext(state);
+			while (SkipInvalidFragments(state) && stateTagHasLink(state)) {
+				finish = FragmentEnd(state);
+				MoveToNextFragment(state);
 			}
 			return { start, finish, link };
 		}
@@ -4868,64 +4884,15 @@ InputFieldTextRange InputField::selectionEditMarkdownTagRange(
 		? (selection.from - 1)
 		: selection.from;
 
-	struct State {
-		QTextBlock block;
-		QTextBlock::iterator i;
-	};
-	const auto document = _inner->document();
-	const auto skipInvalid = [&](State &state) {
-		if (state.block == document->end()) {
-			return false;
-		}
-		while (state.i.atEnd()) {
-			state.block = state.block.next();
-			if (state.block == document->end()) {
-				return false;
-			}
-			state.i = state.block.begin();
-		}
-		return true;
-	};
-	const auto moveToNext = [&](State &state) {
-		Expects(state.block != document->end());
-		Expects(!state.i.atEnd());
-
-		++state.i;
-	};
-	const auto moveToPrevious = [&](State &state) {
-		Expects(state.block != document->end());
-		Expects(!state.i.atEnd());
-
-		while (state.i == state.block.begin()) {
-			if (state.block == document->begin()) {
-				state.block = document->end();
-				return false;
-			}
-			state.block = state.block.previous();
-			state.i = state.block.end();
-		}
-		--state.i;
-		return true;
-	};
-	const auto stateTagHasMatch = [&](const State &state) {
+	const auto stateTagHasMatch = [&](const FragmentState &state) {
 		const auto format = state.i.fragment().charFormat();
 		return TextUtilities::SplitTags(
 			format.property(kTagProperty).toString()).contains(tag);
 	};
-	const auto stateStart = [&](const State &state) {
-		return state.i.fragment().position();
-	};
-	const auto stateEnd = [&](const State &state) {
-		const auto fragment = state.i.fragment();
-		return fragment.position() + fragment.length();
-	};
-	auto state = State{ document->findBlock(position) };
-	if (state.block != document->end()) {
-		state.i = state.block.begin();
-	}
-	for (; skipInvalid(state); moveToNext(state)) {
-		const auto fragmentStart = stateStart(state);
-		const auto fragmentEnd = stateEnd(state);
+	auto state = FragmentStateAt(_inner->document(), position);
+	for (; SkipInvalidFragments(state); MoveToNextFragment(state)) {
+		const auto fragmentStart = FragmentStart(state);
+		const auto fragmentEnd = FragmentEnd(state);
 		if (fragmentEnd <= position) {
 			continue;
 		} else if (fragmentStart > position) {
@@ -4935,12 +4902,12 @@ InputFieldTextRange InputField::selectionEditMarkdownTagRange(
 			auto from = fragmentStart;
 			auto till = fragmentEnd;
 			auto copy = state;
-			while (moveToPrevious(copy) && stateTagHasMatch(copy)) {
-				from = stateStart(copy);
+			while (MoveToPreviousFragment(copy) && stateTagHasMatch(copy)) {
+				from = FragmentStart(copy);
 			}
-			while (skipInvalid(state) && stateTagHasMatch(state)) {
-				till = stateEnd(state);
-				moveToNext(state);
+			while (SkipInvalidFragments(state) && stateTagHasMatch(state)) {
+				till = FragmentEnd(state);
+				MoveToNextFragment(state);
 			}
 			return { from, till };
 		}
