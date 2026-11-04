@@ -157,7 +157,13 @@ void PathShiftGradient::activateAnimation() {
 	} else {
 		const auto tillSlideFinish = kSlideDuration - period;
 		if (!raw->animation.animating()) {
-			raw->animation.start(globalCallback, 0., 1., tillSlideFinish);
+			raw->animation.start(
+				globalCallback,
+				0.,
+				1.,
+				tillSlideFinish,
+				anim::linear,
+				Ui::Animations::Simple::Tracking::None);
 		}
 	}
 }
