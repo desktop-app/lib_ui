@@ -276,6 +276,7 @@ PRIVATE
     ui/widgets/separate_panel.h
     ui/widgets/scroll_area.cpp
     ui/widgets/scroll_area.h
+    ui/widgets/scroll_math.h
     ui/widgets/side_bar_button.cpp
     ui/widgets/side_bar_button.h
     ui/widgets/shadow.cpp
