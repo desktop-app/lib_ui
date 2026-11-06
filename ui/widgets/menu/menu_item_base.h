@@ -31,6 +31,9 @@ public:
 		bool selected,
 		TriggeredSource source = TriggeredSource::Mouse);
 	bool isSelected() const;
+	// The focus a selected item takes for a screen reader, on its own:
+	// for an item that stayed selected while the focus was elsewhere.
+	void takeAccessibilityFocus();
 
 	int index() const;
 	void setIndex(int index);
