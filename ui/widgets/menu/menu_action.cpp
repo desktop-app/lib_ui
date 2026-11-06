@@ -63,6 +63,7 @@ Action::Action(
 	+ _st.itemStyle.font->height
 	+ _st.itemPadding.bottom()) {
 	setAcceptBoth(true);
+	_unavailable = isUnavailable();
 
 	fitToMenuWidth();
 	processAction();
@@ -155,6 +156,11 @@ void Action::paint(Painter &p) {
 }
 
 void Action::processAction() {
+	const auto unavailable = isUnavailable();
+	if (_unavailable != unavailable) {
+		_unavailable = unavailable;
+		accessibilityStateChanged({ .disabled = true });
+	}
 	accessibilityNameChanged();
 
 	setPointerCursor(isEnabled());
