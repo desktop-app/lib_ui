@@ -26,6 +26,8 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
+	[[nodiscard]] style::font fittingFont(int width) const;
+
 	const style::IconButtonWithText &_st;
 	QString _text;
 

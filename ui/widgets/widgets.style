@@ -369,6 +369,7 @@ IconButtonWithText {
 	textAlign: align;
 
 	font: font;
+	minFontSize: pixels;
 }
 
 MediaSlider {
