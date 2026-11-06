@@ -78,6 +78,10 @@ boxTitle: FlatLabel(defaultFlatLabel) {
 		font: boxTitleFont;
 	}
 }
+boxTitleWrap: FlatLabel(boxTitle) {
+	minWidth: 1px;
+	maxHeight: 48px;
+}
 boxTitlePosition: point(24px, 13px);
 boxTitleHeight: 48px;
 boxTitleAdditionalSkip: 9px;
@@ -127,7 +131,7 @@ defaultBox: Box {
 	button: defaultBoxButton;
 	margin: margins(0px, 10px, 0px, 10px);
 	bg: boxBg;
-	title: boxTitle;
+	title: boxTitleWrap;
 	titleAdditionalFg: boxTitleAdditionalFg;
 }
 layerBox: Box(defaultBox) {
