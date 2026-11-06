@@ -121,6 +121,8 @@ private:
 	[[nodiscard]] const style::Box &st() const;
 	[[nodiscard]] bool hasTitle() const;
 	[[nodiscard]] int titleHeight() const;
+	[[nodiscard]] int titleExtraHeight() const;
+	void updateContentGeometry();
 	[[nodiscard]] int buttonsHeight() const;
 	[[nodiscard]] int buttonsTop() const;
 	[[nodiscard]] int contentTop() const;
@@ -135,6 +137,7 @@ private:
 	not_null<LayerStackDelegate*> _layer;
 	rpl::variable<int> _realHeightMax;
 	rpl::variable<int> _contentHeightMax;
+	int _titleExtra = 0;
 	int _fullHeight = 0;
 	bool _layerType = false;
 

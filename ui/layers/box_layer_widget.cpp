@@ -69,7 +69,16 @@ void BoxLayerWidget::setLayerType(bool layerType) {
 }
 
 int BoxLayerWidget::titleHeight() const {
-	return st::boxTitleHeight;
+	return st::boxTitleHeight + _titleExtra;
+}
+
+int BoxLayerWidget::titleExtraHeight() const {
+	if (!_title) {
+		return 0;
+	}
+	const auto &style = st().title.style;
+	const auto line = style.lineHeight ? style.lineHeight : style.font->height;
+	return std::max(_title->height() - line, 0);
 }
 
 const style::Box &BoxLayerWidget::st() const {
@@ -226,6 +235,7 @@ void BoxLayerWidget::setTitle(
 		}, _title->lifetime());
 	} else {
 		_title.destroy();
+		updateTitlePosition();
 	}
 	if (wasTitle != hasTitle()) {
 		updateSize();
@@ -323,6 +333,20 @@ void BoxLayerWidget::updateTitlePosition() {
 			width() - _titleLeft * 2 - topButtonsSkip);
 		_title->moveToLeft(_titleLeft, _titleTop);
 	}
+	const auto extra = titleExtraHeight();
+	if (_titleExtra != extra) {
+		_titleExtra = extra;
+		updateMaxRealHeight();
+		updateSize();
+		updateContentGeometry();
+		update();
+	}
+}
+
+void BoxLayerWidget::updateContentGeometry() {
+	const auto top = contentTop();
+	_content->resize(width(), height() - top - buttonsHeight());
+	_content->moveToLeft(0, top);
 }
 
 void BoxLayerWidget::setCustomCornersFilling(RectParts corners) {
@@ -477,10 +501,7 @@ int BoxLayerWidget::contentTop() const {
 void BoxLayerWidget::resizeEvent(QResizeEvent *e) {
 	updateButtonsPositions();
 	updateTitlePosition();
-
-	const auto top = contentTop();
-	_content->resize(width(), height() - top - buttonsHeight());
-	_content->moveToLeft(0, top);
+	updateContentGeometry();
 
 	LayerWidget::resizeEvent(e);
 }
