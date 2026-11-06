@@ -15,6 +15,21 @@ IconButtonWithText::IconButtonWithText(
 , _st(st) {
 }
 
+style::font IconButtonWithText::fittingFont(int width) const {
+	const auto &font = _st.font;
+	const auto min = _st.minFontSize;
+	if (min <= 0 || font->width(_text) <= width) {
+		return font;
+	}
+	for (auto size = font->size() - 1; size > min; --size) {
+		auto smaller = style::font(size, font->flags(), font->family());
+		if (smaller->width(_text) <= width) {
+			return smaller;
+		}
+	}
+	return style::font(min, font->flags(), font->family());
+}
+
 void IconButtonWithText::paintEvent(QPaintEvent *e) {
 	IconButton::paintEvent(e);
 
@@ -22,7 +37,7 @@ void IconButtonWithText::paintEvent(QPaintEvent *e) {
 	const auto overIconOpacity = IconButton::iconOverOpacity();
 
 	auto p = QPainter(this);
-	p.setFont(_st.font);
+	p.setFont(fittingFont(r.width()));
 	p.setPen((overIconOpacity == 1.) ? _st.textFgOver : _st.textFg);
 	p.drawText(r, _text, _st.textAlign);
 
