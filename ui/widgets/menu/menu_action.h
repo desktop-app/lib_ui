@@ -68,6 +68,7 @@ private:
 	Text::String _text;
 	QString _shortcut;
 	const not_null<QAction*> _action;
+	bool _unavailable = false;
 	const style::Menu &_st;
 	const style::icon *_icon;
 	const style::icon *_iconOver;

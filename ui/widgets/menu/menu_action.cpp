@@ -63,6 +63,7 @@ Action::Action(
 	+ _st.itemStyle.font->height
 	+ _st.itemPadding.bottom()) {
 	setAcceptBoth(true);
+	_unavailable = isUnavailable();
 
 	fitToMenuWidth();
 	processAction();
@@ -123,7 +124,10 @@ void Action::paint(Painter &p) {
 	if (const auto icon = (selected ? _iconOver : _icon)) {
 		icon->paint(p, _st.itemIconPosition, width());
 	}
-	p.setPen(selected ? _st.itemFgOver : (enabled ? _st.itemFg : _st.itemFgDisabled));
+	// A disabled item stays greyed when the keyboard stops on it.
+	p.setPen(!enabled
+		? _st.itemFgDisabled
+		: (selected ? _st.itemFgOver : _st.itemFg));
 	paintText(p);
 	if (hasSubmenu()) {
 		const auto skip = _st.itemRightSkip;
@@ -140,9 +144,9 @@ void Action::paint(Painter &p) {
 				_st.itemFgDisabled->c);
 		}
 	} else if (!_shortcut.isEmpty()) {
-		p.setPen(selected
-			? _st.itemFgShortcutOver
-			: (enabled ? _st.itemFgShortcut : _st.itemFgShortcutDisabled));
+		p.setPen(!enabled
+			? _st.itemFgShortcutDisabled
+			: (selected ? _st.itemFgShortcutOver : _st.itemFgShortcut));
 		p.drawTextRight(
 			_st.itemPadding.right(),
 			_st.itemPadding.top(),
@@ -152,6 +156,11 @@ void Action::paint(Painter &p) {
 }
 
 void Action::processAction() {
+	const auto unavailable = isUnavailable();
+	if (_unavailable != unavailable) {
+		_unavailable = unavailable;
+		accessibilityStateChanged({ .disabled = true });
+	}
 	accessibilityNameChanged();
 
 	setPointerCursor(isEnabled());
