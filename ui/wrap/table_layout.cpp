@@ -109,6 +109,23 @@ int TableLayout::resizeGetHeight(int newWidth) {
 	if (labelMax <= 0 || valueMin <= 0 || _rows.empty()) {
 		return 0;
 	}
+	auto valuesNatural = 0;
+	for (auto &row : _rows) {
+		if (!row.label || !row.value) {
+			continue;
+		}
+		const auto natural = row.value->naturalWidth();
+		if (natural < 0) {
+			valuesNatural = -1;
+			break;
+		}
+		valuesNatural = std::max(
+			valuesNatural,
+			natural + row.valueMargin.left() + row.valueMargin.right());
+	}
+	const auto labelLimit = (valuesNatural >= 0)
+		? std::max(labelMax, available - valuesNatural)
+		: labelMax;
 	auto label = _st.labelMinWidth;
 	for (auto &row : _rows) {
 		const auto natural = (row.label && row.value)
@@ -116,8 +133,8 @@ int TableLayout::resizeGetHeight(int newWidth) {
 				+ row.labelMargin.left()
 				+ row.labelMargin.right())
 			: 0;
-		if (natural < 0 || natural >= labelMax) {
-			label = labelMax;
+		if (natural < 0 || natural >= labelLimit) {
+			label = labelLimit;
 			break;
 		} else if (natural > label) {
 			label = natural;
