@@ -197,8 +197,11 @@ void TitleWidget::refreshAdditionalPaddings(
 		&& (normal.right == geometry.right)
 		&& (normal.top == geometry.top)
 		&& (normal.bottom == geometry.bottom);
+	const auto style = GetWindowLongPtr(handle, GWL_STYLE);
+	const auto fullscreen = (style & WS_POPUP)
+		&& !(style & (WS_DLGFRAME | WS_THICKFRAME));
 	const auto padding = [&] {
-		if (!rounded) {
+		if (!rounded || fullscreen) {
 			return 0;
 		}
 		const auto monitor = MonitorFromWindow(
