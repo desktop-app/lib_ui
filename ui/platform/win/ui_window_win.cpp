@@ -556,16 +556,27 @@ bool WindowHelper::filterNativeEvent(
 		const auto addBorders = maximized || nativeResize();
 		if (addBorders) {
 			const auto dpi = _dpi.current();
-			const auto borderWidth = (GetSystemMetricsForDpiSupported() && dpi)
+			auto borderWidth = (GetSystemMetricsForDpiSupported() && dpi)
 				? GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi)
 					+ GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)
 				: GetSystemMetrics(SM_CXSIZEFRAME)
 					+ GetSystemMetrics(SM_CXPADDEDBORDER);
-			const auto borderHeight = (GetSystemMetricsForDpiSupported() && dpi)
+			auto borderHeight = (GetSystemMetricsForDpiSupported() && dpi)
 				? GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi)
 					+ GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)
 				: GetSystemMetrics(SM_CYSIZEFRAME)
 					+ GetSystemMetrics(SM_CXPADDEDBORDER);
+			if (maximized) {
+				auto frame = RECT();
+				const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
+				const auto adjusted = (AdjustWindowRectExForDpiSupported() && dpi)
+					? AdjustWindowRectExForDpi(&frame, style, false, styleEx, dpi)
+					: AdjustWindowRectEx(&frame, style, false, styleEx);
+				if (adjusted) {
+					borderWidth = -frame.left;
+					borderHeight = frame.bottom;
+				}
+			}
 			r->left += borderWidth;
 			r->right -= borderWidth;
 			if (maximized) {
