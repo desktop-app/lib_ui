@@ -7,6 +7,7 @@
 #include "ui/widgets/menu/menu_item_base.h"
 
 #include "ui/widgets/menu/menu.h"
+#include "base/weak_qptr.h"
 
 #include <QtGui/QtEvents>
 
@@ -22,13 +23,17 @@ ItemBase::ItemBase(
 void ItemBase::setSelected(
 		bool selected,
 		TriggeredSource source) {
-	if (selected && !isEnabled()) {
+	if (selected && !isSelectable()) {
 		return;
 	}
 	if (_selected.current() != selected) {
 		setMouseTracking(!selected);
 		_lastTriggeredSource = source;
+		const auto weak = base::make_weak(this);
 		_selected = selected;
+		if (!weak) {
+			return;
+		}
 		update();
 		if (selected && focusPolicy() != Qt::NoFocus) {
 			setFocus();
@@ -40,6 +45,10 @@ void ItemBase::setSelected(
 
 bool ItemBase::isSelected() const {
 	return _selected.current();
+}
+
+bool ItemBase::isSelectable() const {
+	return !action()->isSeparator() && isEnabled();
 }
 
 rpl::producer<CallbackData> ItemBase::selects() const {
