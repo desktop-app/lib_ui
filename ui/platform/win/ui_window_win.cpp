@@ -850,7 +850,6 @@ bool WindowHelper::nativeResize() const {
 	if (::Platform::IsWindows11OrGreater()) {
 		switch (window()->windowHandle()->surfaceType()) {
 		case QSurface::RasterSurface:
-		case QSurface::RasterGLSurface:
 			return window()->windowHandle()->format().alphaBufferSize() <= 0;
 		}
 

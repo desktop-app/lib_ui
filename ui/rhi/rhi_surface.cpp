@@ -174,7 +174,6 @@ void LogWindowRhi(const char *tag, not_null<QWidget*> widget) {
 		switch (handle->surfaceType()) {
 		case QSurface::RasterSurface: return u"Raster"_q;
 		case QSurface::OpenGLSurface: return u"OpenGL"_q;
-		case QSurface::RasterGLSurface: return u"RasterGL"_q;
 		case QSurface::VulkanSurface: return u"Vulkan"_q;
 		case QSurface::MetalSurface: return u"Metal"_q;
 		case QSurface::Direct3DSurface: return u"Direct3D"_q;
