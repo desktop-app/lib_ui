@@ -49,12 +49,7 @@ public:
 		// load directions of string, and determine isolate pairs
 		for (int i = 0; i < length; ++i) {
 			int pos = i;
-			const auto info = infoAt(i);
-			if (info.surrogate) {
-				++i;
-				analysis[i].bidiDirection = QChar::DirNSM;
-			}
-			const auto p = info.properties;
+			const auto p = propertiesAt(i);
 			analysis[pos].bidiDirection = QChar::Direction(p->direction);
 			switch (QChar::Direction(p->direction)) {
 			case QChar::DirON:
@@ -620,7 +615,7 @@ public:
 				int pos = *it;
 				QChar::Direction dir = analysis[pos].bidiDirection;
 				if (dir == QChar::DirON) {
-					const QUnicodeTables::Properties *p = infoAt(pos).properties;
+					const QUnicodeTables::Properties *p = propertiesAt(pos);
 					if (p->mirrorDiff) {
 						// either opening or closing bracket
 						if (p->category == QChar::Punctuation_Open) {
@@ -687,7 +682,7 @@ public:
 				BIDI_DEBUG() << "    2: resolve bracket pair" << i << "to" << lastStrong;
 			}
 			for (int i = pair.second + 1; i < length; ++i) {
-				if (infoAt(i).properties->direction == QChar::DirNSM)
+				if (propertiesAt(i)->direction == QChar::DirNSM)
 					analysis[i].bidiDirection = analysis[pair.second].bidiDirection;
 				else
 					break;
@@ -856,7 +851,7 @@ public:
 			return true;
 		for (int i = 0; i < length; ++i) {
 			if (text[i].unicode() >= 0x590) {
-				switch (infoAt(i).properties->direction) {
+				switch (propertiesAt(i)->direction) {
 				case QChar::DirR: case QChar::DirAN:
 				case QChar::DirLRE: case QChar::DirLRO: case QChar::DirAL:
 				case QChar::DirRLE: case QChar::DirRLO: case QChar::DirPDF:
@@ -968,11 +963,10 @@ public:
 	mutable Blocks::const_iterator _currentBlock;
 	int _offsetInBlocks;
 
-	struct Info {
-		const QUnicodeTables::Properties *properties = nullptr;
-		bool surrogate = false;
-	};
-	[[nodiscard]] Info infoAt(int i) const {
+	[[nodiscard]] const QUnicodeTables::Properties *propertiesAt(int i) const {
+		if (i > 0 && text[i].isLowSurrogate() && text[i - 1].isHighSurrogate()) {
+			--i;
+		}
 		if (_currentBlock != _startInBlocks
 			&& (*_currentBlock)->position() > _offsetInBlocks + i) {
 			_currentBlock = _startInBlocks;
@@ -996,19 +990,13 @@ public:
 		if (QChar::isHighSurrogate(uc) && i < length - 1 && text[i + 1].isLowSurrogate()) {
 			uc = QChar::surrogateToUcs4(ushort(uc), text[i + 1].unicode());
 
-			return {
-				.properties = QUnicodeTables::properties(object
-					? wide(QChar::ObjectReplacementCharacter)
-					: uc),
-				.surrogate = true,
-			};
+			return QUnicodeTables::properties(object
+				? wide(QChar::ObjectReplacementCharacter)
+				: uc);
 		}
-		return {
-			.properties = QUnicodeTables::properties(object
-				? narrow(QChar::ObjectReplacementCharacter)
-				: narrow(uc)),
-			.surrogate = false,
-		};
+		return QUnicodeTables::properties(object
+			? narrow(QChar::ObjectReplacementCharacter)
+			: narrow(uc));
 	}
 };
 
