@@ -403,12 +403,13 @@ inline decltype(auto) Simple::BasicCallback(
 		auto deleted = false;
 		data->markOnDelete = &deleted;
 		const auto result = callback(data->value) && !finished;
+		if (!deleted && finished && data->finishedCallback) {
+			const auto onstack = data->finishedCallback;
+			onstack();
+		}
 		if (!deleted) {
 			data->markOnDelete = nullptr;
-			if (finished && data->finishedCallback) {
-				data->finishedCallback();
-			}
-			if (!deleted && !result) {
+			if (!result) {
 				data->tracker.release();
 			}
 		}
