@@ -23,6 +23,85 @@ struct IconEmojiData {
 	std::vector<not_null<const style::IconEmoji*>> list;
 };
 
+enum class UpperRules {
+	Default,
+	Turkic,
+	Georgian,
+	Armenian,
+};
+
+UpperRules GlobalUpperRules = UpperRules::Default;
+
+[[nodiscard]] bool IsMkhedruli(QChar ch) {
+	const auto code = ch.unicode();
+	return (code >= 0x10D0 && code <= 0x10FF);
+}
+
+[[nodiscard]] QString UpperKeepingGeorgian(const QString &text) {
+	auto result = QString();
+	result.reserve(text.size());
+	const auto size = int(text.size());
+	for (auto from = 0; from < size;) {
+		const auto georgian = IsMkhedruli(text[from]);
+		auto till = from + 1;
+		while (till < size && IsMkhedruli(text[till]) == georgian) {
+			++till;
+		}
+		const auto part = text.mid(from, till - from);
+		result.append(georgian ? part : part.toUpper());
+		from = till;
+	}
+	return result;
+}
+
+[[nodiscard]] bool HasGreekTonos(QChar ch) {
+	const auto code = ch.unicode();
+	return (code >= 0x0386 && code <= 0x0390)
+		|| (code >= 0x03AC && code <= 0x03B0)
+		|| (code >= 0x03CC && code <= 0x03CE);
+}
+
+[[nodiscard]] QChar WithoutGreekTonos(QChar ch) {
+	switch (ch.unicode()) {
+	case 0x0386: return QChar(0x0391);
+	case 0x0388: return QChar(0x0395);
+	case 0x0389: return QChar(0x0397);
+	case 0x038A: return QChar(0x0399);
+	case 0x038C: return QChar(0x039F);
+	case 0x038E: return QChar(0x03A5);
+	case 0x038F: return QChar(0x03A9);
+	case 0x0390: return QChar(0x03CA);
+	case 0x03AC: return QChar(0x03B1);
+	case 0x03AD: return QChar(0x03B5);
+	case 0x03AE: return QChar(0x03B7);
+	case 0x03AF: return QChar(0x03B9);
+	case 0x03B0: return QChar(0x03CB);
+	case 0x03CC: return QChar(0x03BF);
+	case 0x03CD: return QChar(0x03C5);
+	case 0x03CE: return QChar(0x03C9);
+	}
+	return ch;
+}
+
+// A tonos on the first vowel of a pair moves as a dialytika to the second.
+[[nodiscard]] std::optional<QChar> GreekDialytika(QChar accented, QChar next) {
+	const auto first = WithoutGreekTonos(accented).toLower().unicode();
+	const auto second = next.toLower().unicode();
+	const auto alpha = 0x03B1, epsilon = 0x03B5, omicron = 0x03BF;
+	const auto iota = 0x03B9, upsilon = 0x03C5;
+	if (second == iota
+		&& (first == alpha
+			|| first == epsilon
+			|| first == omicron
+			|| first == upsilon)) {
+		return QChar(0x03CA);
+	} else if (second == upsilon
+		&& (first == alpha || first == epsilon || first == omicron)) {
+		return QChar(0x03CB);
+	}
+	return std::nullopt;
+}
+
 [[nodiscard]] TextWithEntities WithSingleEntity(
 		const QString &text,
 		EntityType type,
@@ -307,6 +386,91 @@ QString StripUrlProtocol(const QString &link) {
 		: link.startsWith(u"http://"_q)
 		? link.mid(7)
 		: link;
+}
+
+QString Upper(const QString &text) {
+	const auto size = int(text.size());
+	const auto letter = [&](int index) {
+		return (index >= 0) && (index < size) && text[index].isLetter();
+	};
+	auto result = text;
+	const auto greek = std::any_of(text.begin(), text.end(), HasGreekTonos);
+	for (auto i = 0; greek && i != size; ++i) {
+		const auto ch = text[i];
+		if (!HasGreekTonos(ch)) {
+			continue;
+		}
+		const auto code = ch.unicode();
+		const auto disjunctive = (code == 0x03AE || code == 0x0389)
+			&& !letter(i - 1)
+			&& !letter(i + 1);
+		if (disjunctive) {
+			continue;
+		}
+		result[i] = WithoutGreekTonos(ch);
+		if (i + 1 < size) {
+			if (const auto dialytika = GreekDialytika(ch, text[i + 1])) {
+				result[i + 1] = *dialytika;
+			}
+		}
+	}
+	switch (GlobalUpperRules) {
+	case UpperRules::Turkic:
+		return result.replace(QChar('i'), QChar(0x0130)).toUpper();
+	case UpperRules::Georgian:
+		return UpperKeepingGeorgian(result);
+	case UpperRules::Armenian:
+		// The reformed spelling capitalizes "և" as "ԵՎ", not "ԵՒ".
+		return result.replace(QChar(0x0587), u"եվ"_q).toUpper();
+	case UpperRules::Default:
+		break;
+	}
+	return result.toUpper();
+}
+
+QString Capitalized(const QString &text) {
+	if (text.isEmpty()) {
+		return text;
+	}
+	const auto first = text[0];
+	switch (GlobalUpperRules) {
+	case UpperRules::Turkic:
+		if (first == QChar('i')) {
+			return QChar(0x0130) + text.mid(1);
+		}
+		break;
+	case UpperRules::Georgian:
+		if (IsMkhedruli(first)) {
+			return text;
+		}
+		break;
+	case UpperRules::Armenian:
+		if (first.unicode() == 0x0587) {
+			return u"Եվ"_q + text.mid(1);
+		}
+		break;
+	case UpperRules::Default:
+		break;
+	}
+	auto result = text;
+	result[0] = first.toTitleCase();
+	return result;
+}
+
+void SetUpperLanguage(const QString &languageId) {
+	auto base = languageId.toLower();
+	for (const auto separator : { QChar('-'), QChar('_') }) {
+		if (const auto cut = base.indexOf(separator); cut >= 0) {
+			base = base.left(cut);
+		}
+	}
+	GlobalUpperRules = (base == u"tr"_q || base == u"az"_q)
+		? UpperRules::Turkic
+		: (base == u"ka"_q)
+		? UpperRules::Georgian
+		: (base == u"hy"_q)
+		? UpperRules::Armenian
+		: UpperRules::Default;
 }
 
 } // namespace Text

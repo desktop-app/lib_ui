@@ -414,7 +414,7 @@ void RoundButton::resizeToText(const TextWithEntities &text) {
 	if (_transform == RoundButtonTextTransform::ToUpper) {
 		_text.setMarkedText(
 			_st.style,
-			{ text.text.toUpper(), text.entities },
+			{ Text::Upper(text.text), text.entities },
 			kMarkupTextOptions,
 			_context);
 	} else {
