@@ -295,6 +295,8 @@ PRIVATE
     ui/wrap/slide_wrap.h
     ui/wrap/table_layout.cpp
     ui/wrap/table_layout.h
+    ui/wrap/vertical_blocks.cpp
+    ui/wrap/vertical_blocks.h
     ui/wrap/vertical_layout.cpp
     ui/wrap/vertical_layout.h
     ui/wrap/vertical_layout_reorder.cpp
