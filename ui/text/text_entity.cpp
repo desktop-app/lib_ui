@@ -1219,7 +1219,8 @@ inline QChar RemoveOneAccent(uint32 code) {
 }
 
 const QRegularExpression &RegExpWordSplit() {
-	static const auto result = QRegularExpression(QString::fromLatin1("[\\@\\s\\-\\+\\(\\)\\[\\]\\{\\}\\<\\>\\,\\.\\:\\!\\_\\;\\\"\\'\\x0]"));
+	// Typographic quotes split words like the ASCII ones: „Telegram“.
+	static const auto result = QRegularExpression(QString::fromLatin1("[\\@\\s\\-\\+\\(\\)\\[\\]\\{\\}\\<\\>\\,\\.\\:\\!\\_\\;\\\"\\'\\x0\\x{AB}\\x{BB}\\x{2018}\\x{2019}\\x{201A}\\x{201C}\\x{201D}\\x{201E}]"));
 	return result;
 }
 
