@@ -1060,6 +1060,8 @@ defaultInputField: InputField {
 	widthMin: 64px;
 }
 defaultInputFieldLimit: defaultSubTextLabel;
+inputFieldLinkRipplePadding: margins(3px, 0px, 3px, 0px);
+inputFieldLinkRippleRadius: 3px;
 
 defaultIconButton: IconButton {
 	iconPosition: point(-1px, -1px);
