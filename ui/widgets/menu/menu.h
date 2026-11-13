@@ -128,6 +128,12 @@ public:
 	[[nodiscard]] rpl::producer<> resizesFromInner() const;
 	[[nodiscard]] rpl::producer<ScrollToRequest> scrollToRequests() const;
 
+	// The items in their order, so a screen reader says "3 of 7" on one;
+	// a separator is not one of the set, like in a QMenu.
+	std::vector<not_null<QWidget*>> accessibilityChildWidgets() const override;
+	AccessibilitySetPosition accessibilityChildSetPosition(
+		int index) const override;
+
 protected:
 	void keyPressEvent(QKeyEvent *e) override;
 	void mouseMoveEvent(QMouseEvent *e) override;
