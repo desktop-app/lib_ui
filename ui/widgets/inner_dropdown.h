@@ -63,6 +63,10 @@ public:
 	void setHiddenCallback(Fn<void()> callback) {
 		_hiddenCallback = std::move(callback);
 	}
+	// Fired once the dropdown is fully shown, with its content visible.
+	void setShownCallback(Fn<void()> callback) {
+		_shownCallback = std::move(callback);
+	}
 
 	bool isHiding() const {
 		return _hiding && _a_opacity.animating();
@@ -100,10 +104,12 @@ private:
 	void showAnimationCallback();
 	void opacityAnimationCallback();
 
+	void saveFocusWidget();
 	void saveFocusWidgetAndShow();
 	void maybeReturnFocus();
 	void hideFinished();
 	void showStarted();
+	void showFinished();
 
 	void scrolled();
 
@@ -117,6 +123,7 @@ private:
 
 	bool _autoHiding = true;
 	bool _hiding = false;
+	bool _showPending = false;
 	QPixmap _cache;
 	Animations::Simple _a_opacity;
 
@@ -125,6 +132,7 @@ private:
 	Fn<void()> _showStartCallback;
 	Fn<void()> _hideStartCallback;
 	Fn<void()> _hiddenCallback;
+	Fn<void()> _shownCallback;
 
 	object_ptr<ScrollArea> _scroll;
 
