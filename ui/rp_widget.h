@@ -428,6 +428,11 @@ public:
 	void accessibilityStateChanged(AccessibilityState changes);
 	[[nodiscard]] virtual QString accessibilityValue() const;
 	void accessibilityValueChanged();
+	// A message a screen reader speaks as it is, without a focus change:
+	// the emoji just inserted while the focus stays in the panel, say.
+	// Assertive interrupts what is being spoken, polite waits for it.
+	// Nothing where Qt has no announcement event.
+	void accessibilityAnnounce(const QString &message, bool assertive = false);
 	[[nodiscard]] virtual QStringList accessibilityActionNames();
 	virtual void accessibilityDoAction(const QString &name);
 	[[nodiscard]] virtual int accessibilityChildCount() const;
