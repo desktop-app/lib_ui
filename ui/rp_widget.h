@@ -393,6 +393,14 @@ struct AccessibilityState {
 	void writeTo(QAccessible::State &state);
 };
 
+// Numeric value of a control that picks a point on a range (e.g. a slider).
+struct AccessibilityValueRange {
+	double current = 0.;
+	double minimum = 0.;
+	double maximum = 0.;
+	double step = 1.;
+};
+
 class RpWidget : public RpWidgetBase<QWidget> {
 	// The Q_OBJECT meta info is used for qobject_cast above!
 	Q_OBJECT
@@ -427,7 +435,17 @@ public:
 	[[nodiscard]] virtual AccessibilityState accessibilityState() const;
 	void accessibilityStateChanged(AccessibilityState changes);
 	[[nodiscard]] virtual QString accessibilityValue() const;
+	// Announces a new value: the text, and on Windows also the number of a
+	// control that reports an accessibilityValueRange().
 	void accessibilityValueChanged();
+
+	// Numeric range value of a slider-like control. nullopt (the default)
+	// means the widget exposes no range; a widget returning one gets
+	// QAccessibleValueInterface, which the platform maps to a range value
+	// pattern so a screen reader can read and change the number.
+	[[nodiscard]] virtual std::optional<AccessibilityValueRange> accessibilityValueRange() const;
+	// The platform may deliver the new value on a background thread.
+	virtual void accessibilitySetValue(double value);
 	[[nodiscard]] virtual QStringList accessibilityActionNames();
 	virtual void accessibilityDoAction(const QString &name);
 	[[nodiscard]] virtual int accessibilityChildCount() const;
