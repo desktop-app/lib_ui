@@ -24,12 +24,16 @@
 #include "styles/style_widgets.h"
 
 #include <QtCore/QPoint>
+#include <QtGui/QScreen>
 #include <QtGui/QWindow>
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QApplication>
 #include <qpa/qplatformnativeinterface.h>
 #include <qpa/qwindowsysteminterface.h>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <private/qhighdpiscaling_p.h>
+#include <qpa/qplatformscreen.h>
+#include <qpa/qplatformwindow.h>
 #include <qpa/qplatformwindow_p.h>
 #endif // Qt >= 6.0.0
 
@@ -42,6 +46,8 @@ Q_DECLARE_METATYPE(QMargins);
 
 namespace Ui::Platform {
 namespace {
+
+constexpr auto kMaxGeometryDeliveries = 4;
 
 constexpr auto kDWMWCP_ROUND = DWORD(2);
 constexpr auto kDWMWCP_DONOTROUND = DWORD(1);
@@ -319,10 +325,12 @@ void WindowHelper::updateCornersRounding() {
 }
 
 void WindowHelper::setMinimumSize(QSize size) {
+	_minimumBodyHeight = size.height();
 	window()->setMinimumSize(size.width(), titleHeight() + size.height());
 }
 
 void WindowHelper::setFixedSize(QSize size) {
+	_minimumBodyHeight = _maximumBodyHeight = size.height();
 	window()->setFixedSize(size.width(), titleHeight() + size.height());
 	_title->setResizeEnabled(false);
 	if (_shadow) {
@@ -331,6 +339,29 @@ void WindowHelper::setFixedSize(QSize size) {
 }
 
 void WindowHelper::setGeometry(QRect rect) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	if (_handle
+		&& !_isFullScreen
+		&& !IsZoomed(_handle)
+		&& !IsIconic(_handle)
+		&& ((window()->maximumWidth() == QWIDGETSIZE_MAX
+				&& window()->maximumHeight() == QWIDGETSIZE_MAX)
+			|| nativeMoveExclusive(rect))) {
+		if (const auto cloaked = cloakForPlacement()) {
+			const auto held = std::exchange(
+				_cloakedForPlacement,
+				_cloakedForPlacement || !window()->isHidden());
+			const auto guard = gsl::finally([&] {
+				_cloakedForPlacement = held;
+				if (*cloaked) {
+					updateCloaking();
+				}
+			});
+			window()->setGeometry(moveNativeWindow(rect));
+			return;
+		}
+	}
+#endif // Qt >= 6.0.0
 	SetGeometryAndScreen(
 		window(),
 		rect.marginsAdded({ 0, titleHeight(), 0, 0 }));
@@ -891,7 +922,8 @@ void WindowHelper::updateCloaking() {
 	if (!_handle) {
 		return;
 	}
-	const auto enabled = window()->isHidden() && !_isFullScreen;
+	const auto enabled = _cloakedForPlacement
+		|| (window()->isHidden() && !_isFullScreen);
 	const auto flag = BOOL(enabled ? TRUE : FALSE);
 	DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &flag, sizeof(flag));
 }
@@ -915,6 +947,31 @@ void WindowHelper::enableCloakingForHidden() {
 		return base::EventFilterResult::Continue;
 	};
 	*firstExposeFilter = base::install_event_filter(qwindow, filter);
+}
+
+std::optional<bool> WindowHelper::cloakForPlacement() {
+	if (window()->isHidden() || _cloakedForPlacement) {
+		return false;
+	}
+	auto cloaked = DWORD();
+	if (DwmGetWindowAttribute(
+			_handle,
+			DWMWA_CLOAKED,
+			&cloaked,
+			sizeof(cloaked)) != S_OK) {
+		return std::nullopt;
+	} else if (cloaked & DWM_CLOAKED_APP) {
+		return false;
+	}
+	const auto flag = BOOL(TRUE);
+	if (DwmSetWindowAttribute(
+			_handle,
+			DWMWA_CLOAK,
+			&flag,
+			sizeof(flag)) != S_OK) {
+		return std::nullopt;
+	}
+	return true;
 }
 
 void WindowHelper::updateMargins() {
@@ -1038,6 +1095,261 @@ void WindowHelper::fixMaximizedWindow() {
 		}
 	}
 }
+
+void WindowHelper::updateSizeConstraints() {
+	const auto title = titleHeight();
+	if (_minimumBodyHeight) {
+		window()->setMinimumHeight(title + *_minimumBodyHeight);
+	}
+	if (_maximumBodyHeight) {
+		window()->setMaximumHeight(title + *_maximumBodyHeight);
+	}
+}
+
+QRect WindowHelper::moveNativeWindow(QRect rect) {
+	const auto qwindow = window()->windowHandle();
+	const auto dpi = [&] {
+		return GetDpiForWindowSupported()
+			? GetDpiForWindow(_handle)
+			: _dpi.current();
+	};
+	const auto constrained = [&](QRect geometry) {
+		const auto limited = geometry.size().boundedTo(window()->maximumSize());
+		const auto size = limited.expandedTo(window()->minimumSize());
+		return QRect(geometry.topLeft(), size);
+	};
+	auto fallback = std::optional<QRect>();
+	const auto request = [&] {
+		const auto body = fallback.value_or(rect);
+		return constrained(body.marginsAdded({ 0, titleHeight(), 0, 0 }));
+	};
+	updateSizeConstraints();
+	auto visited = base::flat_set<uint>{ dpi() };
+	// A move that changes the DPI keeps the old margins, so move again.
+	for (auto i = 0; i != kMaxGeometryDeliveries; ++i) {
+		const auto was = dpi();
+		const auto delivered = request();
+		qwindow->setGeometry(delivered);
+		updateSizeConstraints();
+		const auto now = dpi();
+		const auto actual = qwindow->geometry();
+		const auto left = kMaxGeometryDeliveries - i - (fallback ? 1 : 2);
+		if (now == was && actual == request()) {
+			break;
+		} else if (left > 0
+			&& (now == was
+				? (delivered != request())
+				: visited.emplace(now).second)) {
+			continue;
+		} else if (actual == constrained(actual)) {
+			break;
+		} else if (!fallback) {
+			fallback = constrained(actual).marginsRemoved(
+				{ 0, titleHeight(), 0, 0 });
+		}
+	}
+	return qwindow->geometry();
+}
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+bool WindowHelper::nativeMoveExclusive(QRect rect) const {
+	const auto qwindow = window()->windowHandle();
+	const auto current = qwindow->screen();
+	auto frame = RECT();
+	if (!current
+		|| !_marginsDelta.isNull()
+		|| window()->hasHeightForWidth()
+		|| window()->minimumSize().isEmpty()
+		|| rect.height() > QWIDGETSIZE_MAX
+		|| !AdjustWindowRectExForDpiSupported()
+		|| !GetDpiForWindowSupported()
+		|| !GetWindowRect(_handle, &frame)) {
+		return false;
+	}
+	const auto visible = !window()->isHidden();
+	const auto size = window()->size();
+	if (visible) {
+		const auto title = titleHeight();
+		auto lower = window()->minimumSize();
+		auto upper = window()->maximumSize();
+		if (_minimumBodyHeight
+			&& lower.height() != title + *_minimumBodyHeight) {
+			lower.setHeight(title + *_minimumBodyHeight);
+			if (size.expandedTo(lower) != size) {
+				return false;
+			}
+		}
+		if (_maximumBodyHeight
+			&& upper.height() != title + *_maximumBodyHeight) {
+			upper.setHeight(title + *_maximumBodyHeight);
+			const auto bounded = size.boundedTo(upper);
+			if (bounded != size && bounded.expandedTo(lower) != size) {
+				return false;
+			}
+		}
+	}
+	const auto client = qwindow->handle()->geometry();
+	const auto measured = QMargins(
+		client.x() - frame.left,
+		client.y() - frame.top,
+		frame.right - client.x() - client.width(),
+		frame.bottom - client.y() - client.height());
+	if (measured.left() < 0 || measured.top() < 0) {
+		return false;
+	}
+	const auto screens = current->virtualSiblings();
+	auto dpis = base::flat_set<uint>{
+		GetDpiForWindow(_handle),
+		_dpi.current(),
+	};
+	for (const auto sibling : screens) {
+		if (sibling->devicePixelRatio() < 1.) {
+			return false;
+		}
+		dpis.emplace(uint(qRound(sibling->handle()->logicalDpi().first)));
+	}
+	const auto shown = !_title->isHidden();
+	const auto custom = [&](QMargins system) {
+		return !shown
+			? QMargins()
+			: nativeResize()
+			? QMargins(0, -system.top(), 0, 0)
+			: -system;
+	};
+	const auto sum = [](QMargins margins) {
+		return QSize(
+			margins.left() + margins.right(),
+			margins.top() + margins.bottom());
+	};
+	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
+	const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
+	auto systems = std::vector<QMargins>();
+	auto padding = 0;
+	for (const auto dpi : dpis) {
+		auto r = RECT();
+		if (!dpi || !AdjustWindowRectExForDpi(&r, style, false, styleEx, dpi)) {
+			return false;
+		}
+		systems.emplace_back(-r.left, -r.top, r.right, r.bottom);
+		padding = std::max(padding, int(dpi / USER_DEFAULT_SCREEN_DPI) + 1);
+	}
+	auto leading = QSize(measured.left(), measured.top());
+	auto nearest = leading;
+	auto trailing = QSize(measured.right(), measured.bottom());
+	auto most = sum(measured);
+	auto least = most;
+	for (const auto &system : systems) {
+		const auto full = system + custom(system);
+		const auto start = QSize(full.left(), full.top());
+		leading = leading.expandedTo(start);
+		nearest = nearest.boundedTo(start);
+		trailing = trailing.expandedTo(QSize(full.right(), full.bottom()));
+		for (const auto &other : systems) {
+			const auto mixed = sum(system + custom(other));
+			most = most.expandedTo(mixed);
+			least = least.boundedTo(mixed);
+		}
+	}
+	const auto low = shown ? _title->st()->height : 0;
+	const auto high = (shown && CheckTitlePaddingRequired())
+		? std::max(titleHeight(), low + padding)
+		: titleHeight();
+	const auto maximum = [&](int title) {
+		return QSize(
+			window()->maximumWidth(),
+			(_maximumBodyHeight
+				? (title + *_maximumBodyHeight)
+				: window()->maximumHeight()));
+	};
+	const auto minimum = [&](int title) {
+		return QSize(
+			window()->minimumWidth(),
+			(_minimumBodyHeight
+				? (title + *_minimumBodyHeight)
+				: window()->minimumHeight()));
+	};
+	const auto request = [&](int title) {
+		return QSize(rect.width(), rect.height() + title)
+			.boundedTo(maximum(title))
+			.expandedTo(minimum(title));
+	};
+	const auto lowest = request(low);
+	const auto largest = request(high);
+	const auto center = [](int64 edge, int length) {
+		return (edge * 2 + length - 1) / 2;
+	};
+	const auto centerX = center(rect.x(), largest.width());
+	const auto centerTop = center(int64(rect.y()) - high, lowest.height());
+	const auto centerBottom = center(int64(rect.y()) - low, largest.height());
+	auto screen = (QScreen*)nullptr;
+	for (const auto sibling : screens) {
+		const auto area = sibling->geometry();
+		if (centerX < area.left()
+			|| centerX > area.right()
+			|| centerBottom < area.top()
+			|| centerTop > area.bottom()) {
+			continue;
+		} else if (screen
+			|| centerTop < area.top()
+			|| centerBottom > area.bottom()) {
+			return false;
+		}
+		screen = sibling;
+	}
+	if (!screen) {
+		return false;
+	}
+	const auto corner = [&](int title) {
+		return QHighDpi::toNativeGlobalPosition(
+			QPoint(rect.x(), rect.y() - title),
+			screen);
+	};
+	const auto resizes = visible && (high > low);
+	const auto slack = resizes
+		? (int(std::ceil(screen->devicePixelRatio())) - 1)
+		: 0;
+	const auto extra = resizes
+		? (most + most - least + QSize(slack * 2, slack * 2))
+		: (trailing + most - least);
+	auto target = QHighDpi::toNativePixels(largest, screen)
+		.expandedTo(QHighDpi::toNativePixels(minimum(high), current));
+	auto shortest = QHighDpi::toNativePixels(lowest, screen)
+		.boundedTo(QHighDpi::toNativePixels(lowest, current));
+	if (resizes) {
+		shortest = shortest.boundedTo(
+			QHighDpi::toNativePixels(minimum(low), screen));
+		if ((_minimumBodyHeight && size.expandedTo(minimum(high)) != size)
+			|| (_maximumBodyHeight
+				&& size.boundedTo(maximum(low)) != size)) {
+			target = target.expandedTo(
+				QHighDpi::toNativePixels(size, screen));
+		}
+	}
+	const auto sizes = target + extra;
+	const auto reach = shortest + least;
+	const auto from = corner(high)
+		- QPoint(leading.width() + slack, leading.height() + slack);
+	const auto till = corner(low) + QPoint(sizes.width(), sizes.height());
+	const auto last = corner(low)
+		+ QPoint(slack - nearest.width(), slack - nearest.height());
+	const auto monitor = screen->handle()->geometry();
+	if (reach.isEmpty()
+		|| last.x() > monitor.right()
+		|| last.y() > monitor.bottom()
+		|| from.x() + reach.width() <= monitor.left()
+		|| from.y() + reach.height() <= monitor.top()) {
+		return false;
+	}
+	const auto envelope = QRect(from, till - QPoint(1, 1));
+	for (const auto sibling : screens) {
+		if (sibling != screen
+			&& sibling->handle()->geometry().intersects(envelope)) {
+			return false;
+		}
+	}
+	return true;
+}
+#endif // Qt >= 6.0.0
 
 HWND GetCurrentHandle(not_null<QWidget*> widget) {
 	const auto toplevel = widget->window();
