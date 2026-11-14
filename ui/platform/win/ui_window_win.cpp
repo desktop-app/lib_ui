@@ -441,6 +441,22 @@ void WindowHelper::init() {
 		Ui::ForceFullRepaint(window());
 	}, window()->lifetime());
 
+	const auto queueSizeConstraintsUpdate = [=] {
+		InvokeQueued(_title, [=] {
+			if (_title->isHidden() || (_handle && IsIconic(_handle))) {
+				return;
+			}
+			const auto qwindow = window()->windowHandle();
+			// Wait for QWidget to receive the native size before changing limits.
+			if (!window()->isHidden()
+				&& qwindow
+				&& window()->size() != qwindow->size()) {
+				return;
+			}
+			updateSizeConstraints();
+		});
+	};
+
 	rpl::combine(
 		window()->sizeValue(),
 		_title->heightValue(),
@@ -454,6 +470,9 @@ void WindowHelper::init() {
 			titleShown ? titleHeight : 0,
 			size.width(),
 			size.height() - (titleShown ? titleHeight : 0));
+		if (titleShown) {
+			queueSizeConstraintsUpdate();
+		}
 	}, _body->lifetime());
 
 	_dpi.value() | rpl::on_next([=](uint dpi) {
@@ -479,6 +498,7 @@ void WindowHelper::init() {
 				_isMaximizedAndTranslucent = is;
 				updateCornersRounding();
 			}
+			queueSizeConstraintsUpdate();
 		}
 	};
 	Ui::Connect(
