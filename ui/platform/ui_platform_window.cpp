@@ -135,6 +135,13 @@ QMargins BasicWindowHelper::frameMargins() {
 	return nativeFrameMargins();
 }
 
+QRect BasicWindowHelper::fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const {
+	return body;
+}
+
 int BasicWindowHelper::additionalContentPadding() const {
 	return 0;
 }

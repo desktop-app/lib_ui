@@ -244,6 +244,64 @@ QMargins WindowHelper::frameMargins() {
 		: QMargins{ 0, _title->height(), 0, 0 };
 }
 
+QRect WindowHelper::fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	if (!_handle || _title->isHidden() || !nativeResize()) {
+		return body;
+	}
+	const auto platform = screen->handle();
+	const auto work = platform->availableGeometry();
+	const auto dpi = uint(qRound(platform->logicalDpi().first));
+	const auto border = int(
+		(dpi + USER_DEFAULT_SCREEN_DPI / 2) / USER_DEFAULT_SCREEN_DPI);
+	const auto title = titleHeight();
+	const auto minimum = QSize(
+		window()->minimumWidth(),
+		_minimumBodyHeight.value_or(window()->minimumHeight() - title)
+	).expandedTo({ 1, 1 });
+	const auto frame = [&](QRect rect) {
+		return QHighDpi::toNativeGlobalPosition(
+			rect.marginsAdded({ 0, title, 0, 0 }),
+			screen.get()
+		).marginsAdded({ border, 0, border, border });
+	};
+	// Qt rounds position and size apart, so step one pixel at a time.
+	auto result = body;
+	while (frame(result).left() < work.left()) {
+		result.translate(1, 0);
+	}
+	while (result.right() > space.right()
+		|| frame(result).right() > work.right()) {
+		const auto moved = result.translated(-1, 0);
+		if (moved.left() >= space.left()
+			&& frame(moved).left() >= work.left()) {
+			result = moved;
+		} else if (result.width() > minimum.width()) {
+			result.setWidth(result.width() - 1);
+		} else {
+			result = QRect(body.x(), result.y(), body.width(), result.height());
+			break;
+		}
+	}
+	while (frame(result).bottom() > work.bottom()) {
+		if (result.top() > space.top()) {
+			result.translate(0, -1);
+		} else if (result.height() > minimum.height()) {
+			result.setHeight(result.height() - 1);
+		} else {
+			result = QRect(result.x(), body.y(), result.width(), body.height());
+			break;
+		}
+	}
+	return result;
+#else // Qt >= 6.0.0
+	return body;
+#endif // Qt >= 6.0.0
+}
+
 int WindowHelper::additionalContentPadding() const {
 	return _title->isHidden() ? 0 : _title->additionalPadding();
 }

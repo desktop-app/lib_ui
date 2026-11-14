@@ -61,6 +61,13 @@ QMargins RpWindow::frameMargins() const {
 	return _helper->frameMargins();
 }
 
+QRect RpWindow::fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const {
+	return _helper->fitFrameInWorkArea(body, space, screen);
+}
+
 int RpWindow::additionalContentPadding() const {
 	return _helper->additionalContentPadding();
 }
