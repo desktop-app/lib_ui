@@ -6,6 +6,7 @@
 //
 #include "ui/platform/ui_platform_window.h"
 
+#include "base/platform/base_platform_info.h"
 #include "ui/platform/ui_platform_window_title.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/widgets/rp_window.h"
@@ -520,14 +521,54 @@ QMargins DefaultWindowHelper::frameMargins() {
 		: QMargins{ 0, _title->height(), 0, 0 };
 }
 
+QRect DefaultWindowHelper::fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const {
+	// The window manager leaves a declared shadow out of its placement.
+	if (!::Platform::IsX11() || hasShadow()) {
+		return body;
+	}
+	const auto area = normalResizeArea();
+	if (area.isNull()) {
+		return body;
+	}
+	const auto inner = space.marginsRemoved(area);
+	const auto floor = _fixedSize.value_or(
+		_minimumSize.value_or(QSize())
+	).expandedTo({ 1, 1 });
+	auto result = body;
+	if (inner.width() >= floor.width()) {
+		result.setWidth(std::min(body.width(), inner.width()));
+		result.moveLeft(std::clamp(
+			body.x(),
+			inner.x(),
+			inner.x() + inner.width() - result.width()));
+	}
+	if (inner.height() >= floor.height()) {
+		result.setHeight(std::min(body.height(), inner.height()));
+		result.moveTop(std::clamp(
+			body.y(),
+			inner.y(),
+			inner.y() + inner.height() - result.height()));
+	}
+	return result;
+}
+
 bool DefaultWindowHelper::hasShadow() const {
 	return WindowMarginsSupported() && TranslucentWindowsSupported();
 }
 
 QMargins DefaultWindowHelper::resizeArea() const {
-	if (window()->isMaximized()
-		|| window()->isFullScreen()
-		|| _title->isHidden()
+	if (window()->isMaximized() || window()->isFullScreen()) {
+		return QMargins();
+	}
+
+	return normalResizeArea();
+}
+
+QMargins DefaultWindowHelper::normalResizeArea() const {
+	if (_title->isHidden()
 		|| (!hasShadow() && !_title->controlsGeometry().height())) {
 		return QMargins();
 	}

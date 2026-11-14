@@ -106,6 +106,10 @@ public:
 	not_null<RpWidget*> body() override;
 	RpWidget *titleWidget() override;
 	QMargins frameMargins() override;
+	QRect fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const override;
 	void setTitle(const QString &title) override;
 	void setTitleStyle(const style::WindowTitle &st) override;
 	void setNativeFrame(bool enabled) override;
@@ -122,6 +126,7 @@ private:
 	void updateRoundingOverlay();
 	[[nodiscard]] bool hasShadow() const;
 	[[nodiscard]] QMargins resizeArea() const;
+	[[nodiscard]] QMargins normalResizeArea() const;
 	[[nodiscard]] Qt::Edges edgesFromPos(const QPoint &pos) const;
 	void paintBorders(QPainter &p);
 	void updateWindowMargins();
