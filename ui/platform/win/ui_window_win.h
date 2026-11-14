@@ -26,6 +26,10 @@ public:
 	not_null<RpWidget*> body() override;
 	RpWidget *titleWidget() override;
 	QMargins frameMargins() override;
+	QRect fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const override;
 	int additionalContentPadding() const override;
 	rpl::producer<int> additionalContentPaddingValue() const override;
 	void setTitle(const QString &title) override;

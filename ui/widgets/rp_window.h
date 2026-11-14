@@ -9,6 +9,8 @@
 #include "ui/rp_widget.h"
 #include "base/flags.h"
 
+class QScreen;
+
 namespace style {
 struct WindowTitle;
 struct TextStyle;
@@ -45,6 +47,10 @@ public:
 	[[nodiscard]] RpWidget *titleWidget();
 	[[nodiscard]] const RpWidget *titleWidget() const;
 	[[nodiscard]] QMargins frameMargins() const;
+	[[nodiscard]] QRect fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const;
 
 	// In Windows 11 the window rounding shadow takes about
 	// round(1px * system_scale) from the window geometry on each side.

@@ -10,6 +10,8 @@
 #include "base/object_ptr.h"
 #include "ui/round_rect.h"
 
+class QScreen;
+
 namespace style {
 struct WindowTitle;
 struct TextStyle;
@@ -42,6 +44,10 @@ public:
 	[[nodiscard]] virtual not_null<RpWidget*> body();
 	[[nodiscard]] virtual RpWidget *titleWidget();
 	[[nodiscard]] virtual QMargins frameMargins();
+	[[nodiscard]] virtual QRect fitFrameInWorkArea(
+		QRect body,
+		QRect space,
+		not_null<const QScreen*> screen) const;
 	[[nodiscard]] virtual int additionalContentPadding() const;
 	[[nodiscard]] virtual auto additionalContentPaddingValue() const
 		-> rpl::producer<int>;
