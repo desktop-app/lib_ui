@@ -249,7 +249,10 @@ QRect WindowHelper::fitFrameInWorkArea(
 		QRect space,
 		not_null<const QScreen*> screen) const {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-	if (!_handle || _title->isHidden() || !nativeResize()) {
+	if (!_handle
+		|| (_title->isHidden()
+			? !::Platform::IsWindows11OrGreater()
+			: !nativeResize())) {
 		return body;
 	}
 	const auto platform = screen->handle();
@@ -258,6 +261,18 @@ QRect WindowHelper::fitFrameInWorkArea(
 	const auto border = int(
 		(dpi + USER_DEFAULT_SCREEN_DPI / 2) / USER_DEFAULT_SCREEN_DPI);
 	const auto title = titleHeight();
+	auto caption = 0;
+	if (_title->isHidden()) {
+		auto r = RECT();
+		const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
+		const auto styleEx = GetWindowLongPtr(_handle, GWL_EXSTYLE);
+		if (!AdjustWindowRectExForDpiSupported()
+			|| !dpi
+			|| !AdjustWindowRectExForDpi(&r, style, false, styleEx, dpi)) {
+			return body;
+		}
+		caption = -r.top;
+	}
 	const auto minimum = QSize(
 		window()->minimumWidth(),
 		_minimumBodyHeight.value_or(window()->minimumHeight() - title)
@@ -266,7 +281,7 @@ QRect WindowHelper::fitFrameInWorkArea(
 		return QHighDpi::toNativeGlobalPosition(
 			rect.marginsAdded({ 0, title, 0, 0 }),
 			screen.get()
-		).marginsAdded({ border, 0, border, border });
+		).marginsAdded({ border, caption, border, border });
 	};
 	// Qt rounds position and size apart, so step one pixel at a time.
 	auto result = body;
@@ -287,8 +302,11 @@ QRect WindowHelper::fitFrameInWorkArea(
 		}
 	}
 	while (frame(result).bottom() > work.bottom()) {
-		if (result.top() > space.top()) {
-			result.translate(0, -1);
+		const auto moved = result.translated(0, -1);
+		// The caption in space is rounded, so check the native one too.
+		if (moved.top() >= space.top()
+			&& frame(moved).top() >= work.top()) {
+			result = moved;
 		} else if (result.height() > minimum.height()) {
 			result.setHeight(result.height() - 1);
 		} else {
