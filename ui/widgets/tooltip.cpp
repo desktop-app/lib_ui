@@ -124,8 +124,12 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
 	create();
 	if (const auto native
 			= windowHandle()->nativeInterface<QWaylandWindow>()) {
-		// Tooltip::performShow ensures our window is active
-		const auto w = not_null(QApplication::activeWindow())->pos();
+		const auto activeWindow = QApplication::activeWindow();
+		if (!activeWindow) {
+			Hide();
+			return;
+		}
+		const auto w = activeWindow->pos();
 		native->setParentControlGeometry(
 			QRect(
 				QPoint(
