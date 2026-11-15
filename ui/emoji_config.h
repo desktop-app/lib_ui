@@ -41,7 +41,7 @@ void ClearNeedSwitchToId();
 
 [[nodiscard]] int GetSizeNormal();
 [[nodiscard]] int GetSizeLarge();
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 [[nodiscard]] int GetSizeTouchbar();
 #endif
 

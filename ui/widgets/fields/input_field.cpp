@@ -1955,7 +1955,7 @@ InputField::InputField(
 	nullptr,
 	nullptr,
 	Qt::WidgetShortcut) {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	_systemTextReplaces = std::make_unique<SystemTextReplaces>();
 #endif
 	_inner->setDocument(CreateChild<InputDocument>(_inner.get(), _st));
@@ -4626,7 +4626,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 			|| key == Qt::Key_PageUp
 			|| key == Qt::Key_PageDown)) {
 		e->ignore();
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	} else if (key == Qt::Key_E && e->modifiers().testFlag(Qt::ControlModifier)) {
 		const auto cursor = textCursor();
 		const auto start = cursor.selectionStart();
@@ -4636,7 +4636,7 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
 				getTextWithTagsPart(start, end).text,
 				QClipboard::FindBuffer);
 		}
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 	} else {
 		const auto text = e->text();
 		auto cursor = textCursor();

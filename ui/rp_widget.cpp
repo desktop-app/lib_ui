@@ -158,14 +158,14 @@ rpl::producer<> RpWidgetWrap::death() const {
 }
 
 rpl::producer<> RpWidgetWrap::macWindowDeactivateEvents() const {
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	return windowActiveValue()
 		| rpl::skip(1)
 		| rpl::filter(!rpl::mappers::_1)
 		| rpl::to_empty;
-#else // Q_OS_MAC
+#else // Q_OS_MACOS
 	return rpl::never<rpl::empty_value>();
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 }
 
 rpl::producer<WId> RpWidgetWrap::winIdValue() const {
@@ -367,9 +367,9 @@ RpWidget::RpWidget(QWidget *parent)
 		format.setGreenBufferSize(8);
 		format.setBlueBufferSize(8);
 #endif // DESKTOP_APP_USE_ANGLE
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 		format.setColorSpace(QColorSpace::SRgb);
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 		QSurfaceFormat::setDefaultFormat(format);
 		return true;
 	}();

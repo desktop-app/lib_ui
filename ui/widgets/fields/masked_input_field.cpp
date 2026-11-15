@@ -415,13 +415,13 @@ void MaskedInputField::keyPressEvent(QKeyEvent *e) {
 		cancelled();
 	} else if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) {
 		submitted(e->modifiers());
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	} else if (e->key() == Qt::Key_E && e->modifiers().testFlag(Qt::ControlModifier)) {
 		auto selected = selectedText();
 		if (!selected.isEmpty() && echoMode() == QLineEdit::Normal) {
 			QGuiApplication::clipboard()->setText(selected, QClipboard::FindBuffer);
 		}
-#endif // Q_OS_MAC
+#endif // Q_OS_MACOS
 	}
 }
 

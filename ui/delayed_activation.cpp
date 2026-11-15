@@ -11,9 +11,9 @@
 #include "base/invoke_queued.h"
 #include "base/platform/base_platform_info.h"
 
-#if !defined Q_OS_WIN && !defined Q_OS_MAC
+#if !defined Q_OS_WIN && !defined Q_OS_MACOS
 #include "base/platform/linux/base_linux_xcb_utilities.h"
-#endif // !Q_OS_WIN && !Q_OS_MAC
+#endif // !Q_OS_WIN && !Q_OS_MACOS
 
 #include <QtCore/QPointer>
 #include <QtWidgets/QApplication>
@@ -53,7 +53,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 	} else if (std::exchange(Window, widget.get())) {
 		return;
 	}
-#if !defined Q_OS_WIN && !defined Q_OS_MAC
+#if !defined Q_OS_WIN && !defined Q_OS_MACOS
 	const auto focusAncestor = [&] {
 		const auto focusWidget = QApplication::focusWidget();
 		if (!focusWidget || !widget->window()) {
@@ -61,7 +61,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		}
 		return widget->window()->isAncestorOf(focusWidget);
 	}();
-#endif // !Q_OS_WIN && !Q_OS_MAC
+#endif // !Q_OS_WIN && !Q_OS_MACOS
 	crl::on_main(Window, [=] {
 		const auto widget = base::take(Window);
 		if (!widget) {
@@ -73,7 +73,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 		}
 		window->raise();
 		window->activateWindow();
-#if !defined Q_OS_WIN && !defined Q_OS_MAC
+#if !defined Q_OS_WIN && !defined Q_OS_MACOS
 		if (::Platform::IsX11() && focusAncestor) {
 			using namespace base::Platform::XCB::Library;
 			static const auto xcb_set_input_focus_checked = LoadSymbol<
@@ -94,7 +94,7 @@ void ActivateWindowDelayed(not_null<QWidget*> widget) {
 							XCB_CURRENT_TIME)));
 			}
 		}
-#endif // !Q_OS_WIN && !Q_OS_MAC
+#endif // !Q_OS_WIN && !Q_OS_MACOS
 	});
 }
 

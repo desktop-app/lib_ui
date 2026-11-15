@@ -35,7 +35,7 @@ void ApplyRhiApi(QRhiWidget *widget) {
 		widget->setApi(QRhiWidget::Api::Vulkan);
 		return;
 	}
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	if (!::Platform::MetalSupported()) {
 		widget->setApi(QRhiWidget::Api::OpenGL);
 	}
