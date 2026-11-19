@@ -6,6 +6,9 @@
 //
 #include "ui/widgets/dropdown_menu.h"
 
+#include "ui/screen_reader_mode.h"
+#include "ui/widgets/menu/menu_item_base.h"
+
 #include <QtGui/QtEvents>
 
 namespace Ui {
@@ -31,6 +34,7 @@ DropdownMenu::DropdownMenu(QWidget *parent, const style::DropdownMenu &st) : Inn
 //}
 
 void DropdownMenu::init() {
+	InnerDropdown::setShownCallback([this] { showFinish(); });
 	InnerDropdown::setHiddenCallback([this] { hideFinish(); });
 
 	_menu->resizesFromInner(
@@ -228,6 +232,25 @@ void DropdownMenu::hideMenu(bool fast) {
 void DropdownMenu::childHiding(DropdownMenu *child) {
 	if (_activeSubmenu && _activeSubmenu == child) {
 		_activeSubmenu = SubmenuPointer();
+	}
+}
+
+void DropdownMenu::showFinish() {
+	// A popup menu opens for a screen reader as if from the keyboard: the
+	// first item is selected, takes the focus and is announced, and the
+	// arrows go on from there. A dropdown just appeared in the window,
+	// with nothing selected and nothing to hear. Do the same here, once
+	// the content is visible - a selected item that is still hidden
+	// behind the show animation could not hold the focus. A hide that
+	// was reversed keeps its selected item, as it does for everyone; the
+	// focus was given back when the hide started, so that item only has
+	// to take it again.
+	if (!ScreenReaderModeActive()) {
+		return;
+	} else if (const auto selected = _menu->findSelectedAction()) {
+		selected->takeAccessibilityFocus();
+	} else {
+		_menu->setShowSource(TriggeredSource::Keyboard);
 	}
 }
 
