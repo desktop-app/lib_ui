@@ -517,7 +517,9 @@ RpWidget *DefaultWindowHelper::titleWidget() {
 QMargins DefaultWindowHelper::frameMargins() {
 	return _title->isHidden()
 		? BasicWindowHelper::nativeFrameMargins()
-		: QMargins{ 0, _title->height(), 0, 0 };
+		: QMargins{ 0, _title->height(), 0, 0 } + (hasShadow()
+			? QMargins()
+			: normalResizeArea());
 }
 
 bool DefaultWindowHelper::hasShadow() const {
