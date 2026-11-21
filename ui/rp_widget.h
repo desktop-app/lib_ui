@@ -509,6 +509,10 @@ public:
 	// on a replacement row.
 	virtual void accessibilityChildSetFocus(quintptr identity);
 	virtual void accessibilityChildActivate(quintptr identity);
+	[[nodiscard]] virtual bool accessibilityChildSubItemSupportsActions(
+		int row,
+		int column) const;
+	virtual void accessibilityChildSubItemActivate(quintptr identity, int column);
 
 	// The showMenu action of a child that reports itself expandable: the
 	// assistive technology expands it with it when collapsed, and
