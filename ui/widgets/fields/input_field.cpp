@@ -3618,7 +3618,10 @@ void InputField::performUndoRedo(bool redo) {
 	checkContentHeight();
 }
 
-void InputField::processFormatting(int insertPosition, int insertEnd) {
+void InputField::processFormatting(
+		int insertPosition,
+		int insertEnd,
+		bool exact) {
 	// First tag handling (the one we inserted text to).
 	bool startTagFound = false;
 	bool breakTagOnNotLetter = false;
@@ -3638,6 +3641,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 		_insertedTagsReplace,
 		_instantViewEditorTagsEnabled,
 		insertedTagsProcessor);
+	const auto decodePairs = exact && (breakTagOnNotLetterTill == insertEnd);
 	using ActionType = FormattingAction::Type;
 	while (true) {
 		FormattingAction action;
@@ -3807,7 +3811,15 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 						break;
 					}
 
-					if (breakTagOnNotLetter && !ch->isLetterOrNumber()) {
+					const auto surrogatePair = (ch + 1 < textEnd)
+						&& ch->isHighSurrogate()
+						&& (ch + 1)->isLowSurrogate();
+					const auto insertedPair = surrogatePair
+						&& (fragmentPosition + (ch - textStart) + 1 < insertEnd);
+					if (breakTagOnNotLetter
+						&& !QChar::isLetterOrNumber((decodePairs && insertedPair)
+							? QChar::surrogateToUcs4(*ch, *(ch + 1))
+							: ch->unicode())) {
 						// Remove tag name till the end if no current action is prepared.
 						if (action.type != ActionType::Invalid) {
 							break;
@@ -3820,7 +3832,7 @@ void InputField::processFormatting(int insertPosition, int insertEnd) {
 							break;
 						}
 					}
-					if (ch + 1 < textEnd && ch->isHighSurrogate() && (ch + 1)->isLowSurrogate()) {
+					if (surrogatePair) {
 						++ch;
 					}
 				}
@@ -4016,6 +4028,8 @@ void InputField::documentContentsChanged(
 	if (_correcting) {
 		return;
 	}
+	const auto rawPosition = position;
+	const auto rawInserted = charsRemoved ? 0 : charsAdded;
 	// In case of input method events Qt emits
 	// document content change signals for a whole
 	// text block where the even took place.
@@ -4058,14 +4072,20 @@ void InputField::documentContentsChanged(
 		_correcting = true;
 		QTextCursor(document).joinPreviousEditBlock();
 
+		const auto countBefore = document->characterCount();
 		chopByMaxLength(insertPosition, insertLength);
+		const auto chopped = countBefore - document->characterCount();
 		const auto inserted = (_maxLength > 0)
 			? (std::max(
 				std::min(insertPosition + insertLength, _maxLength),
 				insertPosition) - insertPosition)
 			: insertLength;
+		const auto exact = (rawInserted > 0) && (insertLength == rawInserted)
+			&& (insertPosition == rawPosition)
+			&& (rawInserted <= countBefore - 1 - rawPosition)
+			&& (inserted == std::max(rawInserted - chopped, 0));
 		const auto pageSize = document->pageSize();
-		processFormatting(insertPosition, insertPosition + inserted);
+		processFormatting(insertPosition, insertPosition + inserted, exact);
 		if (document->pageSize() != pageSize) {
 			document->setPageSize(pageSize);
 		}

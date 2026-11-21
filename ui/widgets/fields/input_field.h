@@ -534,7 +534,7 @@ private:
 	// 4. Interrupting tags in which the text was inserted by any char except a letter.
 	// 5. Applying tags from "_insertedTags" in case we pasted text with tags, not just text.
 	// Rule 4 applies only if we inserted chars not in the middle of a tag (but at the end).
-	void processFormatting(int changedPosition, int changedEnd);
+	void processFormatting(int changedPosition, int changedEnd, bool exact);
 
 	void chopByMaxLength(int insertPosition, int insertLength);
 	void performUndoRedo(bool redo);
