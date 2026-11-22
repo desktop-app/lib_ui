@@ -464,6 +464,12 @@ private:
 		QString tag;
 		MarkdownActionType type = MarkdownActionType::ToggleTag;
 	};
+	struct InputMethodCommit {
+		[[nodiscard]] static bool Perform(
+			not_null<QTextEdit*> edit,
+			not_null<QInputMethodEvent*> e,
+			Fn<void(not_null<QInputMethodEvent*>)> forward);
+	};
 
 	void handleContentsChanged();
 	void refreshSpoilerOverlay();
