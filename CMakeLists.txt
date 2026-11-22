@@ -234,6 +234,7 @@ PRIVATE
     ui/widgets/fields/custom_field_object.h
     ui/widgets/fields/input_field.cpp
     ui/widgets/fields/input_field.h
+    ui/widgets/fields/input_method_commit.cpp
     ui/widgets/fields/masked_input_field.cpp
     ui/widgets/fields/masked_input_field.h
     ui/widgets/fields/number_input.cpp

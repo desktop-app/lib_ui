@@ -5015,13 +5015,17 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 			return;
 		}
 	}
-	_inputMethodCommit = e->commitString();
-
+	const auto text = e->commitString();
 	const auto weak = base::make_weak(this);
-	_inner->QTextEdit::inputMethodEvent(e);
-
-	if (weak && _inputMethodCommit.has_value()) {
-		const auto text = *base::take(_inputMethodCommit);
+	const auto forward = [&](not_null<QInputMethodEvent*> event) {
+		_inputMethodCommit = event->commitString();
+		_inner->QTextEdit::inputMethodEvent(event);
+		return weak && base::take(_inputMethodCommit).has_value();
+	};
+	_inputMethodCommit = std::nullopt;
+	if (InputMethodCommit::Perform(_inner.get(), e, forward)
+		? bool(weak)
+		: forward(e)) {
 		if (!processMarkdownReplaces(text)) {
 			processInstantReplaces(text);
 		}
