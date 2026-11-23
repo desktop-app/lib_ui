@@ -465,10 +465,21 @@ private:
 		MarkdownActionType type = MarkdownActionType::ToggleTag;
 	};
 	struct InputMethodCommit {
+		[[nodiscard]] static bool Paste(
+			not_null<InputField*> field,
+			not_null<QInputMethodEvent*> e);
 		[[nodiscard]] static bool Perform(
 			not_null<QTextEdit*> edit,
 			not_null<QInputMethodEvent*> e,
 			Fn<void(not_null<QInputMethodEvent*>)> forward);
+	};
+	struct ContentsChange {
+		[[nodiscard]] static bool Compose(
+			QStringView before,
+			QStringView after,
+			int &position,
+			int &removed,
+			int &added);
 	};
 
 	void handleContentsChanged();
@@ -678,10 +689,6 @@ private:
 	// (like drag-n-drop in the same text edit field).
 	int _realInsertPosition = -1;
 	int _realCharsAdded = 0;
-
-	// Calculate the amount of emoji extra chars
-	// before _documentContentsChanges fire.
-	int _emojiSurrogateAmount = 0;
 
 	Fn<QString(QStringView)> _tagMimeProcessor;
 	std::unique_ptr<CustomFieldObject> _customObject;
