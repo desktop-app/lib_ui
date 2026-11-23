@@ -3805,9 +3805,6 @@ void InputField::processFormatting(
 							action.intervalStart = fragmentPosition + (ch - textStart);
 							action.intervalEnd = action.intervalStart + emojiLength;
 						}
-						if (emojiLength > 1) {
-							_emojiSurrogateAmount += emojiLength - 1;
-						}
 						break;
 					}
 
@@ -4068,7 +4065,9 @@ void InputField::documentContentsChanged(
 		? _realCharsAdded
 		: charsAdded;
 
+	auto publish = true;
 	if (!_performingUndoRedo) {
+		const auto uncorrected = document->toRawText();
 		_correcting = true;
 		QTextCursor(document).joinPreviousEditBlock();
 
@@ -4095,6 +4094,12 @@ void InputField::documentContentsChanged(
 		updateRootFrameFormat();
 		_correcting = false;
 		QTextCursor(document).endEditBlock();
+		publish = ContentsChange::Compose(
+			uncorrected,
+			document->toRawText(),
+			position,
+			charsRemoved,
+			charsAdded);
 	}
 
 	if (_formattingCursorUpdate) {
@@ -4103,9 +4108,9 @@ void InputField::documentContentsChanged(
 	}
 
 	handleContentsChanged();
-	const auto added = charsAdded - _emojiSurrogateAmount;
-	_documentContentsChanges.fire({ position, charsRemoved, added });
-	_emojiSurrogateAmount = 0;
+	if (publish) {
+		_documentContentsChanges.fire({ position, charsRemoved, charsAdded });
+	}
 }
 
 void InputField::updateRootFrameFormat() {
@@ -4996,6 +5001,9 @@ void InputField::inputMethodEventInner(QInputMethodEvent *e) {
 	if (_lastPreEditText != preedit) {
 		_lastPreEditText = preedit;
 		startPlaceholderAnimation();
+	}
+	if (InputMethodCommit::Paste(this, e)) {
+		return;
 	}
 	if (!e->commitString().isEmpty()) {
 		if (Emoji::Find(e->commitString(), nullptr)) {

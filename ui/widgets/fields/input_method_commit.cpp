@@ -6,6 +6,7 @@
 //
 #include "ui/widgets/fields/input_field.h"
 
+#include <QtCore/QMimeData>
 #include <QtGui/QTextBlock>
 #include <QtGui/QTextLayout>
 #include <QtWidgets/QTextEdit>
@@ -17,18 +18,65 @@ namespace {
 	return edit->textCursor().block().layout()->preeditAreaText();
 }
 
-[[nodiscard]] bool HasMimeData(not_null<QInputMethodEvent*> e) {
+[[nodiscard]] QMimeData *Payload(not_null<QInputMethodEvent*> e) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	for (const auto &attribute : e->attributes()) {
 		if (attribute.type == QInputMethodEvent::MimeData) {
-			return true;
+			return attribute.value.value<QMimeData*>();
 		}
 	}
 #endif // Qt >= 6.10
-	return false;
+	return nullptr;
+}
+
+[[nodiscard]] QList<QInputMethodEvent::Attribute> WithoutMimeData(
+		QList<QInputMethodEvent::Attribute> attributes) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	attributes.removeIf([](const QInputMethodEvent::Attribute &attribute) {
+		return (attribute.type == QInputMethodEvent::MimeData);
+	});
+#endif // Qt >= 6.10
+	return attributes;
 }
 
 } // namespace
+
+bool InputField::InputMethodCommit::Paste(
+		not_null<InputField*> field,
+		not_null<QInputMethodEvent*> e) {
+	const auto payload = Payload(e);
+	const auto edit = field->rawTextEdit();
+	if (!payload
+		|| edit->textCursor().isNull()
+		|| !(edit->textInteractionFlags() & Qt::TextEditable)
+		|| (e->commitString().isEmpty() && !e->replacementLength())) {
+		return false;
+	}
+	const auto alive = QPointer<QTextEdit>(edit.get());
+	const auto attributes = WithoutMimeData(e->attributes());
+	if (!field->canInsertFromMimeDataInner(payload)) {
+		if (alive) {
+			auto plain = QInputMethodEvent(e->preeditString(), attributes);
+			plain.setCommitString(
+				e->commitString(),
+				e->replacementStart(),
+				e->replacementLength());
+			field->inputMethodEventInner(&plain);
+		}
+		return true;
+	} else if (!alive) {
+		return true;
+	}
+	field->insertFromMimeDataInner(payload);
+	if (alive
+		&& (!e->preeditString().isEmpty()
+			|| !attributes.isEmpty()
+			|| !Composition(edit).isEmpty())) {
+		auto rest = QInputMethodEvent(e->preeditString(), attributes);
+		field->inputMethodEventInner(&rest);
+	}
+	return true;
+}
 
 bool InputField::InputMethodCommit::Perform(
 		not_null<QTextEdit*> edit,
@@ -36,8 +84,7 @@ bool InputField::InputMethodCommit::Perform(
 		Fn<void(not_null<QInputMethodEvent*>)> forward) {
 	auto removal = edit->textCursor();
 	if (removal.isNull()
-		|| !(edit->textInteractionFlags() & Qt::TextEditable)
-		|| HasMimeData(e)) {
+		|| !(edit->textInteractionFlags() & Qt::TextEditable)) {
 		return false;
 	}
 	const auto commit = e->commitString();
