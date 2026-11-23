@@ -155,7 +155,7 @@ private:
 		crl::time duration,
 		anim::transition transition);
 
-	static constexpr auto kLongAnimationDuration = crl::time(1000);
+	static constexpr auto kLongAnimationDuration = crl::time(400);
 
 	mutable std::unique_ptr<Data> _data;
 
