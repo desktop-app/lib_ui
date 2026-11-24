@@ -23,6 +23,10 @@
 #include <glib.h>
 #endif // __has_include(<glib.h>)
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif // Q_OS_WIN
+
 void style_InitFontsResource() {
 #ifdef Q_OS_MACOS // Use resources from the .app bundle on macOS.
 
@@ -158,6 +162,19 @@ bool LoadCustomFont(const QString &filePath) {
 	}();
 
 	return family;
+}
+
+[[nodiscard]] bool FontSmoothingDisabled() {
+#ifdef Q_OS_WIN
+	static const auto result = [] {
+		BOOL enabled = TRUE;
+		SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &enabled, 0);
+		return !enabled;
+	}();
+	return result;
+#else // Q_OS_WIN
+	return false;
+#endif // Q_OS_WIN
 }
 
 struct Metrics {
@@ -310,7 +327,10 @@ struct Metrics {
 	auto font = QFont(QFont().family());
 
 	const auto monospace = (flags & FontFlag::Monospace) != 0;
-	const auto system = !monospace && (family == SystemFontTag());
+	// Open Sans has no horizontal hints for rendering without smoothing
+	const auto system = !monospace
+		&& ((family == SystemFontTag())
+			|| (family.isEmpty() && FontSmoothingDisabled()));
 	const auto overriden = !monospace && !system && !family.isEmpty();
 	if (monospace) {
 		font.setFamily(MonospaceFont());
