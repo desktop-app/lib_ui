@@ -72,7 +72,11 @@ base::options::toggle OptionUseQtRhi({
 	.description = "Render the main window on the GPU instead of the CPU.",
 	.defaultValue = true,
 	.scope = [] {
+#ifndef DESKTOP_APP_DISABLE_PRIVATE_QT_API
 		return QLibraryInfo::version() >= QVersionNumber(6, 7);
+#else // !DESKTOP_APP_DISABLE_PRIVATE_QT_API
+		return false;
+#endif // DESKTOP_APP_DISABLE_PRIVATE_QT_API
 	},
 	.restartRequired = true,
 });
