@@ -10,6 +10,7 @@
 #include "ui/widgets/menu/menu_item_base.h"
 #include "ui/widgets/menu/menu_separator.h"
 #include "ui/widgets/scroll_area.h"
+#include "base/weak_qptr.h"
 #include "styles/style_widgets.h"
 
 #include <QtGui/QtEvents>
@@ -138,8 +139,17 @@ not_null<QAction*> Menu::insertAction(
 				_actionWidgets[i]->setSelected(false);
 			}
 		}
-		if (_activatedCallback) {
-			_activatedCallback(data);
+		const auto weak = base::make_weak(this);
+		const auto weakItem = base::make_weak(raw);
+		if (weak && weakItem && raw->isSelected() && _activatedCallback) {
+			_activatedCallback({
+				raw->action(),
+				raw->y(),
+				raw->lastTriggeredSource(),
+				raw->index(),
+				true,
+				raw->preventClose(),
+			});
 		}
 	}, raw->lifetime());
 
@@ -317,7 +327,7 @@ void Menu::setShowSource(TriggeredSource source) {
 		}
 		for (auto i = 0, count = int(_actions.size()); i != count; ++i) {
 			const auto widget = _actionWidgets[i].get();
-			if (widget->isEnabled() && !widget->action()->isSeparator()) {
+			if (widget->isSelectable()) {
 				return i;
 			}
 		}
@@ -414,9 +424,9 @@ void Menu::handleKeyPress(not_null<QKeyEvent*> e) {
 			newSelected -= _actions.size();
 		}
 	} while (newSelected != start
-		&& (!_actionWidgets[newSelected]->isEnabled()));
+		&& !_actionWidgets[newSelected]->isSelectable());
 
-	if (_actionWidgets[newSelected]->isEnabled()) {
+	if (_actionWidgets[newSelected]->isSelectable()) {
 		setSelected(newSelected, false);
 	}
 }
@@ -507,31 +517,36 @@ void Menu::handleMousePress(QPoint globalPosition) {
 	const auto visible = visibleRect();
 	const auto inner = rect().marginsRemoved(margins).intersected(visible);
 	const auto localPosition = mapFromGlobal(globalPosition);
-	const auto pressed = (inner.contains(localPosition)
-		&& _lastSelectedByMouse)
-		? findSelectedAction()
-		: nullptr;
-	if (pressed) {
-		pressed->setClicked();
-	} else {
+	if (!inner.contains(localPosition)) {
 		if (_mousePressDelegate) {
 			_mousePressDelegate(globalPosition);
 		}
+		return;
+	}
+	const auto pressed = _lastSelectedByMouse ? findSelectedAction() : nullptr;
+	if (pressed
+		&& pressed->rect().contains(pressed->mapFromGlobal(globalPosition))) {
+		pressed->setClicked();
 	}
 }
 
 void Menu::handleMouseRelease(QPoint globalPosition) {
-	if (_pressedOutside) {
-		_pressedOutside = false;
-		updateSelected(globalPosition);
-		if (const auto selected = findSelectedAction()) {
-			selected->setClicked(TriggeredSource::Mouse);
-		}
-		return;
-	}
 	const auto margins = style::margins(0, _st.skip, 0, _st.skip);
 	const auto visible = visibleRect();
 	const auto inner = rect().marginsRemoved(margins).intersected(visible);
+	if (_pressedOutside) {
+		_pressedOutside = false;
+		if (inner.contains(mapFromGlobal(globalPosition))) {
+			updateSelected(globalPosition);
+			const auto selected = findSelectedAction();
+			if (selected
+				&& selected->rect().contains(
+					selected->mapFromGlobal(globalPosition))) {
+				selected->setClicked(TriggeredSource::Mouse);
+			}
+		}
+		return;
+	}
 	if (!inner.contains(mapFromGlobal(globalPosition))
 		&& _mouseReleaseDelegate) {
 		_mouseReleaseDelegate(globalPosition);

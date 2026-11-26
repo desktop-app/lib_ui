@@ -123,7 +123,9 @@ void Action::paint(Painter &p) {
 	if (const auto icon = (selected ? _iconOver : _icon)) {
 		icon->paint(p, _st.itemIconPosition, width());
 	}
-	p.setPen(selected ? _st.itemFgOver : (enabled ? _st.itemFg : _st.itemFgDisabled));
+	p.setPen(!enabled
+		? _st.itemFgDisabled
+		: (selected ? _st.itemFgOver : _st.itemFg));
 	paintText(p);
 	if (hasSubmenu()) {
 		const auto skip = _st.itemRightSkip;
@@ -140,9 +142,9 @@ void Action::paint(Painter &p) {
 				_st.itemFgDisabled->c);
 		}
 	} else if (!_shortcut.isEmpty()) {
-		p.setPen(selected
-			? _st.itemFgShortcutOver
-			: (enabled ? _st.itemFgShortcut : _st.itemFgShortcutDisabled));
+		p.setPen(!enabled
+			? _st.itemFgShortcutDisabled
+			: (selected ? _st.itemFgShortcutOver : _st.itemFgShortcut));
 		p.drawTextRight(
 			_st.itemPadding.right(),
 			_st.itemPadding.top(),
@@ -152,6 +154,8 @@ void Action::paint(Painter &p) {
 }
 
 void Action::processAction() {
+	QWidget::setEnabled(_action->isEnabled());
+
 	accessibilityNameChanged();
 
 	setPointerCursor(isEnabled());

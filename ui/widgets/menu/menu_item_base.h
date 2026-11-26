@@ -31,6 +31,7 @@ public:
 		bool selected,
 		TriggeredSource source = TriggeredSource::Mouse);
 	bool isSelected() const;
+	[[nodiscard]] bool isSelectable() const;
 
 	int index() const;
 	void setIndex(int index);
