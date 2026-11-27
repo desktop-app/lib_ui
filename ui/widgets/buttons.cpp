@@ -22,6 +22,11 @@
 namespace Ui {
 namespace {
 
+rpl::variable<bool> &InterfaceButtonPills() {
+	static auto result = rpl::variable<bool>(false);
+	return result;
+}
+
 class SimpleRippleButton : public RippleButton {
 public:
 	using RippleButton::RippleButton;
@@ -118,6 +123,14 @@ void LinkButton::onStateChanged(State was, StateChangeSource source) {
 	update();
 }
 
+void SetInterfaceButtonPills(bool enabled) {
+	InterfaceButtonPills() = enabled;
+}
+
+rpl::producer<bool> InterfaceButtonPillsValue() {
+	return InterfaceButtonPills().value();
+}
+
 RippleButton::RippleButton(QWidget *parent, const style::RippleAnimation &st)
 : AbstractButton(parent)
 , _st(st) {
@@ -201,6 +214,15 @@ void RippleButton::onStateChanged(State was, StateChangeSource source) {
 	} else if (!down && _ripple) {
 		// Finish ripple anyway.
 		_ripple->lastStop();
+	}
+}
+
+void RippleButton::refreshRippleMask() {
+	_ripple.reset();
+	if (_forceRippled) {
+		ensureRipple();
+		_ripple->addFading();
+		_ripple->lastFinish();
 	}
 }
 
@@ -306,6 +328,23 @@ RoundButton::RoundButton(
 , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
 , _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver)
 , _fullRadius(st.fullRadius) {
+	if (st.interfaceRadius && !st.fullRadius) {
+		InterfaceButtonPillsValue(
+		) | rpl::on_next([=](bool enabled) {
+			if (_fullRadius == enabled) {
+				return;
+			}
+			_fullRadius = enabled;
+			if (!_cornerRadii) {
+				if (_fullWidthOverride > 0
+					&& (_st.padding.left() + _st.padding.right())) {
+					resizeToText(_textFull.current());
+				}
+				refreshRippleMask();
+				update();
+			}
+		}, lifetime());
+	}
 	_textFull.value(
 	) | rpl::on_next([=](const TextWithEntities &text) {
 		accessibilityNameChanged();
@@ -396,17 +435,25 @@ void RoundButton::setFullWidth(int newFullWidth) {
 	resizeToText(_textFull.current());
 }
 
-void RoundButton::setFullRadius(bool enabled) {
-	_fullRadius = enabled;
-	update();
-}
-
 void RoundButton::setCornerRadii(
 		int topLeft,
 		int topRight,
 		int bottomLeft,
 		int bottomRight) {
-	_cornerRadii = { { topLeft, topRight, bottomLeft, bottomRight } };
+	const auto radii = std::array{
+		topLeft, topRight, bottomLeft, bottomRight,
+	};
+	if (_cornerRadii == radii) {
+		return;
+	}
+	const auto hadFullRadius = _fullRadius && !_cornerRadii;
+	_cornerRadii = radii;
+	if (hadFullRadius
+		&& _fullWidthOverride > 0
+		&& (_st.padding.left() + _st.padding.right())) {
+		resizeToText(_textFull.current());
+	}
+	refreshRippleMask();
 	update();
 }
 
@@ -422,7 +469,7 @@ void RoundButton::resizeToText(const TextWithEntities &text) {
 	}
 	int innerWidth = _text.maxWidth() + addedWidth();
 	if (_fullWidthOverride > 0) {
-		const auto padding = _fullRadius
+		const auto padding = (_fullRadius && !_cornerRadii)
 			? (_st.padding.left() + _st.padding.right())
 			: 0;
 		resize(
@@ -462,7 +509,7 @@ int RoundButton::contentWidth() const {
 	if (_fullWidthOverride < 0) {
 		return result;
 	} else if (_fullWidthOverride > 0) {
-		const auto padding = _fullRadius
+		const auto padding = (_fullRadius && !_cornerRadii)
 			? (_st.padding.left() + _st.padding.right())
 			: 0;
 		const auto delta = _st.height - _st.style.font->height;
@@ -485,7 +532,7 @@ void RoundButton::paintEvent(QPaintEvent *e) {
 	}
 	const auto drawRect = [&](const RoundRect &rect) {
 		const auto fill = myrtlrect(rounded);
-		if (_fullRadius) {
+		if (_fullRadius && !_cornerRadii) {
 			const auto radius = rounded.height() / 2;
 			PainterHighQualityEnabler hq(p);
 			p.setPen(_penOverride ? *_penOverride : Qt::NoPen);
@@ -587,7 +634,7 @@ QImage RoundButton::prepareRippleMask() const {
 	if (_fullWidthOverride < 0) {
 		rounded = QRect(0, rounded.top(), innerWidth - _fullWidthOverride, rounded.height());
 	}
-	if (_fullRadius) {
+	if (_fullRadius && !_cornerRadii) {
 		return RippleAnimation::RoundRectMask(
 			rounded.size(),
 			rounded.height() / 2);

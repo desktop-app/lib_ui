@@ -101,6 +101,7 @@ RoundButton {
 	height: pixels;
 	radius: pixels;
 	fullRadius: bool;
+	interfaceRadius: bool;
 	padding: margins;
 
 	textTop: pixels;
@@ -717,6 +718,7 @@ defaultRippleAnimationBgOver: RippleAnimation(defaultRippleAnimation) {
 buttonRadius: 4px;
 
 defaultActiveButton: RoundButton {
+	interfaceRadius: true;
 	textFg: activeButtonFg;
 	textFgOver: activeButtonFgOver;
 	numbersTextFg: activeButtonSecondaryFg;
@@ -741,6 +743,7 @@ defaultActiveButton: RoundButton {
 	}
 }
 customEmojiTextBadge: RoundButton(defaultActiveButton) {
+	interfaceRadius: false;
 	width: -8px;
 	height: 16px;
 	radius: 4px;
@@ -779,6 +782,7 @@ defaultTableValue: FlatLabel(defaultFlatLabel) {
 	}
 }
 defaultTableSmallButton: RoundButton(defaultActiveButton) {
+	interfaceRadius: false;
 	textFg: windowActiveTextFg;
 	textFgOver: windowActiveTextFg;
 	textBg: lightButtonBgOver;

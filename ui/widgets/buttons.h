@@ -58,6 +58,9 @@ private:
 
 };
 
+void SetInterfaceButtonPills(bool enabled);
+[[nodiscard]] rpl::producer<bool> InterfaceButtonPillsValue();
+
 class RippleButton : public AbstractButton {
 public:
 	RippleButton(QWidget *parent, const style::RippleAnimation &st);
@@ -92,6 +95,7 @@ public:
 protected:
 	void onStateChanged(State was, StateChangeSource source) override;
 
+	void refreshRippleMask();
 	virtual QImage prepareRippleMask() const;
 	virtual QPoint prepareRippleStartPosition() const;
 
@@ -178,7 +182,6 @@ public:
 	[[nodiscard]] int contentWidth() const;
 
 	void setFullWidth(int newFullWidth);
-	void setFullRadius(bool enabled);
 	void setCornerRadii(
 		int topLeft,
 		int topRight,

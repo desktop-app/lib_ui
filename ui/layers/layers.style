@@ -42,6 +42,7 @@ defaultBoxButtonTextStyle: TextStyle(semiboldTextStyle) {
 	font: font(14px semibold);
 }
 defaultBoxButton: RoundButton(defaultLightButton) {
+	interfaceRadius: false;
 	width: -30px;
 	height: 34px;
 	textTop: 7px;
