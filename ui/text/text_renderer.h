@@ -45,6 +45,9 @@ public:
 	[[nodiscard]] std::vector<QRect> highlightRects(
 		std::span<const TextSelection> ranges,
 		const HighlightRectsRequest &request);
+	[[nodiscard]] std::vector<LetterRect> letterRects(
+		TextSelection range,
+		const HighlightRectsRequest &request);
 
 private:
 	static constexpr int kSpoilersRectsSize = 512;
@@ -53,6 +56,9 @@ private:
 	struct HighlightBatch;
 
 	void enumerate();
+	void enumerateBatch(
+		HighlightBatch &batch,
+		const HighlightRectsRequest &request);
 
 	[[nodiscard]] crl::time now() const;
 	void initNextParagraph(
@@ -99,6 +105,14 @@ private:
 		const Item &item,
 		std::vector<Block>::const_iterator blockIt,
 		Fixed x);
+	void appendTextLetters(
+		const Item &item,
+		const ShapedItem &shaped,
+		int drawFrom,
+		int drawTill,
+		Fixed x,
+		Fixed itemWidth);
+	void appendLetter(int from, int till, Fixed left, Fixed right);
 	void fillSelectRange(FixedRange range);
 	void fillSelectRange(FixedRange range, int top, int height);
 	void pushHighlightRange(FixedRange range);

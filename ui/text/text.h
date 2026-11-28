@@ -261,6 +261,11 @@ struct HighlightRectsRequest {
 	float64 ratio = 1.;
 };
 
+struct LetterRect {
+	TextSelection range;
+	QRect rect;
+};
+
 struct PaintContext {
 	QPoint position;
 	int outerWidth = 0; // For automatic RTL Ui inversion.
@@ -402,6 +407,9 @@ public:
 		StateRequest request = StateRequest()) const;
 	[[nodiscard]] std::vector<QRect> countHighlightRects(
 		std::span<const TextSelection> ranges,
+		const HighlightRectsRequest &request) const;
+	[[nodiscard]] std::vector<LetterRect> countLetterRects(
+		TextSelection range,
 		const HighlightRectsRequest &request) const;
 
 	void draw(Painter &p, int32 left, int32 top, int32 width, style::align align = style::al_left, int32 yFrom = 0, int32 yTo = -1, TextSelection selection = { 0, 0 }, bool fullWidthSelection = true) const;

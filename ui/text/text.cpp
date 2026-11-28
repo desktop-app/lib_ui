@@ -1410,6 +1410,12 @@ std::vector<QRect> String::countHighlightRects(
 	return Renderer(*this).highlightRects(ranges, request);
 }
 
+std::vector<LetterRect> String::countLetterRects(
+		TextSelection range,
+		const HighlightRectsRequest &request) const {
+	return Renderer(*this).letterRects(range, request);
+}
+
 void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
 //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
 	Renderer(*this).draw(p, {

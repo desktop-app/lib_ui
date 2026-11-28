@@ -147,6 +147,7 @@ struct Renderer::HighlightBatch {
 	float64 ratio = 1.;
 	QVarLengthArray<FixedRange, 16> extents;
 	bool lineOrdered = true;
+	std::vector<LetterRect> *letters = nullptr;
 };
 
 FixedRange Intersected(FixedRange a, FixedRange b) {
@@ -560,6 +561,30 @@ std::vector<QRect> Renderer::highlightRects(
 	}
 	list.resize(united - list.begin() + 1);
 
+	enumerateBatch(batch, request);
+	return std::vector<QRect>(_highlightRects.begin(), _highlightRects.end());
+}
+
+std::vector<LetterRect> Renderer::letterRects(
+		TextSelection range,
+		const HighlightRectsRequest &request) {
+	Expects(request.geometry.layout != nullptr);
+	Expects(!request.geometry.outElided);
+	Expects(std::isfinite(request.ratio) && request.ratio > 0.);
+
+	auto result = std::vector<LetterRect>();
+	if (_t->isEmpty() || range.from >= range.to) {
+		return result;
+	}
+	auto batch = HighlightBatch{ .ratio = request.ratio, .letters = &result };
+	batch.ranges.push_back(range);
+	enumerateBatch(batch, request);
+	return result;
+}
+
+void Renderer::enumerateBatch(
+		HighlightBatch &batch,
+		const HighlightRectsRequest &request) {
 	_batch = &batch;
 	const auto guard = gsl::finally([&] {
 		_batch = nullptr;
@@ -574,7 +599,6 @@ std::vector<QRect> Renderer::highlightRects(
 	_breakEverywhere = _geometry.breakEverywhere;
 	_align = request.align;
 	enumerate();
-	return std::vector<QRect>(_highlightRects.begin(), _highlightRects.end());
 }
 
 crl::time Renderer::now() const {
@@ -1673,7 +1697,7 @@ bool Renderer::collectLineHighlights(
 	if (!nItems) {
 		return !_elidedLine;
 	}
-	shaper.shapeRange(firstItem, lastItem);
+	shaper.shapeRange(firstItem, lastItem, batch.letters != nullptr);
 	const auto visualOrder = shaper.visualOrder();
 
 	batch.lineOrdered = true;
@@ -1685,7 +1709,16 @@ bool Renderer::collectLineHighlights(
 			const auto type = blockIt->get()->type();
 			if (type == TextBlockType::Emoji
 				|| type == TextBlockType::CustomEmoji) {
-				appendObjectHighlight(item, blockIt, x);
+				if (batch.letters) {
+					const auto position = _localFrom + item.position;
+					appendLetter(
+						position,
+						position + item.length,
+						x,
+						x + item.width);
+				} else {
+					appendObjectHighlight(item, blockIt, x);
+				}
 			}
 			x += item.width;
 			continue;
@@ -1698,7 +1731,17 @@ bool Renderer::collectLineHighlights(
 		const auto drawFrom = itemStart - item.position;
 		const auto drawTill = itemEnd - item.position;
 		const auto itemWidth = shaped.width(drawFrom, drawTill);
-		appendTextHighlights(item, shaped, drawFrom, drawTill, x, itemWidth);
+		if (batch.letters) {
+			appendTextLetters(item, shaped, drawFrom, drawTill, x, itemWidth);
+		} else {
+			appendTextHighlights(
+				item,
+				shaped,
+				drawFrom,
+				drawTill,
+				x,
+				itemWidth);
+		}
 		x += itemWidth;
 	}
 	if (!batch.lineOrdered) {
@@ -1773,6 +1816,44 @@ void Renderer::appendObjectHighlight(
 			findSelectObjectRange(item, blockIt, x, *i),
 			_batch->lineOrdered);
 	}
+}
+
+void Renderer::appendTextLetters(
+		const Item &item,
+		const ShapedItem &shaped,
+		int drawFrom,
+		int drawTill,
+		Fixed x,
+		Fixed itemWidth) {
+	const auto start = _localFrom + item.position;
+	const auto stop = int(_batch->ranges.front().to);
+	auto passed = Fixed();
+	for (auto from = drawFrom; from < drawTill && start + from < stop;) {
+		const auto next = shaped.cutEnd(from, drawTill);
+		const auto width = shaped.width(from, next);
+		const auto left = item.rtl()
+			? (x + itemWidth - passed - width)
+			: (x + passed);
+		appendLetter(start + from, start + next, left, left + width);
+		passed += width;
+		from = next;
+	}
+}
+
+void Renderer::appendLetter(int from, int till, Fixed left, Fixed right) {
+	const auto range = _batch->ranges.front();
+	if (from >= range.to || till <= range.from) {
+		return;
+	}
+	const auto x = left.toInt();
+	_batch->letters->push_back({
+		.range = { uint16(from), uint16(till) },
+		.rect = QRect(
+			x,
+			(_y + _yDelta).toInt(),
+			right.toInt() - x,
+			_fontHeight),
+	});
 }
 
 void Renderer::fillSelectRange(FixedRange range) {
